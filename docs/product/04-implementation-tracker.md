@@ -33,6 +33,9 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
 - `packages/action`: Action runner for dry-run summaries, fixture-first proposal pull requests, and
   event-path live GitHub collection in propose mode
 - root `action.yml`: composite Action defaulting to `propose` and exposing explicit `dry-run`
+- root `package.json`: configured `docs` and `smoke` validation scripts for documentation
+  integrity, CLI subprocess smoke coverage, Action dry-run coverage, and default propose
+  fail-closed behavior
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
   `event-path` inputs
 - `.github/workflows/clarissimi-propose-fixture.yml`: manual-only fixture propose dogfood
@@ -243,9 +246,13 @@ Completed deliverables:
 - propose mode docs are added only when implementation exists
 - release or versioning policy blocks package publication until release gates are satisfied
 - manual-only fixture propose dogfood workflow is available
+- docs validation checks required documentation targets and local Markdown links
+- smoke validation exercises the built CLI and Action bins without live provider credentials
 
 Validation:
 
+- `pnpm run docs`
+- `pnpm run smoke`
 - `pnpm run check`
 - `ssealed doctor . --json`
 - repository hygiene checks

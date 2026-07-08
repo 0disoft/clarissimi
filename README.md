@@ -172,6 +172,8 @@ The current executable checks are:
 - `pnpm run typecheck`
 - `pnpm run test`
 - `pnpm run contract`
+- `pnpm run smoke`
+- `pnpm run docs`
 - `pnpm run check`
 
 Unimplemented validation names intentionally fail until configured.

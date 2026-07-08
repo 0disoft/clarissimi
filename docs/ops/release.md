@@ -34,6 +34,8 @@ Public package publication and versioned Action tags require:
   passes
 - `pnpm run check`
 - `pnpm run contract`
+- `pnpm run smoke`
+- `pnpm run docs`
 - `ssealed doctor . --json`
 - `actionlint` for workflow examples
 - root `action.yml` parses with `yq`

@@ -12,8 +12,8 @@
     "test": "pnpm run build && node --test packages/schemas/test/*.test.mjs packages/redaction/test/*.test.mjs packages/core/test/*.test.mjs packages/github/test/*.test.mjs packages/providers/test/*.test.mjs packages/renderers/test/*.test.mjs packages/cli/test/*.test.mjs packages/action/test/*.test.mjs",
     "contract": "pnpm run typecheck && pnpm run test",
     "migration-check": "node -e \"console.error('migration-check is not configured. Configure this validation before relying on pnpm run migration-check.'); process.exit(1)\"",
-    "smoke": "node -e \"console.error('smoke is not configured. Configure this validation before relying on pnpm run smoke.'); process.exit(1)\"",
-    "docs": "node -e \"console.error('docs is not configured. Configure this validation before relying on pnpm run docs.'); process.exit(1)\"",
+    "smoke": "pnpm run build && node scripts/smoke.mjs",
+    "docs": "node scripts/validate-docs.mjs",
     "check": "pnpm run typecheck && pnpm run test"
   },
   "devDependencies": {

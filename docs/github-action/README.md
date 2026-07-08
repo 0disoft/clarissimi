@@ -39,6 +39,10 @@ The current `action.yml` is a dry-run-only composite action. It builds the local
 source at runtime and emits a bounded summary. It does not read provider credentials, use GitHub
 write tokens, create branches, open pull requests, or update repository files.
 
+Detailed dry-run outputs and failure behavior are defined in `docs/github-action/action-contract.md`.
+The write-mode implementation sequence is tracked in
+`docs/github-action/propose-implementation-plan.md`.
+
 Example read-only workflow:
 
 ```yaml

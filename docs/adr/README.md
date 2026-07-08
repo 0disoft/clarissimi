@@ -28,6 +28,7 @@ engine.
 - `0015-add-fixture-first-github-collector.md`: add fixture-first GitHub merged PR evidence collection
 - `0016-add-dry-run-action-skeleton.md`: add dry-run-only GitHub Action entrypoint skeleton
 - `0017-propose-mode-write-boundary.md`: define propose-mode branch, pull request, and permission boundaries
+- `0018-add-live-github-collector-boundary.md`: add live GitHub collector boundary
 
 ## Review Blockers
 

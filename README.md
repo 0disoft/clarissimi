@@ -2,7 +2,7 @@
 
 [![Clarissimi dry run](https://github.com/0disoft/clarissimi/actions/workflows/clarissimi-dry-run.yml/badge.svg?branch=main)](https://github.com/0disoft/clarissimi/actions/workflows/clarissimi-dry-run.yml)
 
-- Status: Fixture-first MVP with dry-run and proposal boundaries
+- Status: Fixture-first MVP with live GitHub collector and proposal boundaries
 - Scope: public open-source repositories
 - Repository Type: monorepo
 - Addons: cli-tool, github-action
@@ -65,14 +65,15 @@ This repository is a single public-ready monorepo. The intended implementation p
 
 The Action and CLI are execution shells. They must not own domain policy.
 
-Implemented fixture-first slices:
+Implemented MVP slices:
 
 - `packages/schemas`: TypeScript vocabulary and runtime validation for contribution assessment
   drafts
 - `packages/core`: pure policy glue for prepared evidence and approval gates
 - `packages/redaction`: deterministic redaction for evidence text and JSON-like values before
   provider calls
-- `packages/github`: fixture-first GitHub merged pull request evidence collection
+- `packages/github`: fixture-first and injected-client live GitHub merged pull request evidence
+  collection
 - `packages/providers`: provider adapter interface and deterministic fake contribution draft
   provider for tests and fixture-first workflows
 - `packages/renderers`: deterministic JSONL, contributor JSON, Markdown, and static-data output
@@ -84,10 +85,10 @@ Implemented fixture-first slices:
 
 Not implemented yet:
 
-- live GitHub API collection
 - live provider calls
-- repository write modes such as `propose` and `commit`
-- direct branch, pull request, comment, or default-branch mutation
+- Action wiring for live GitHub API collection
+- repository write modes such as direct `commit`
+- comment updates or default-branch mutation
 
 ## Fixture-First CLI
 
@@ -121,8 +122,9 @@ bounded dry-run summary and does not render public outputs or propose repository
 The root `action.yml` also supports fixture-first `propose` mode. Propose mode requires explicit
 write permissions, an approved or auto-approved fixture, and a checked-out repository. It stages
 public output, publishes `clarissimi/recognition/<source-kind>-<source-id>`, and opens or updates a
-pull request for maintainer review. Live provider calls and live GitHub evidence collection are
-still future work.
+pull request for maintainer review. `packages/github` includes live merged pull request collection
+behind an injected GitHub API client, but the Action still uses fixture-first collection until live
+event wiring is added. Live provider calls are still future work.
 
 ## Design Sources
 

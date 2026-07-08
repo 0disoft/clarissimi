@@ -21,12 +21,12 @@ documents into one operational view so the next work item is not hidden across s
 
 ## Current Implemented Surface
 
-The repository currently has a fixture-first MVP skeleton:
+The repository currently has a fixture-first MVP skeleton with a live GitHub collector boundary:
 
 - `packages/schemas`: contribution assessment vocabulary and runtime validation
 - `packages/core`: prepared-evidence policy glue and approval gates
 - `packages/redaction`: deterministic string and JSON-like redaction
-- `packages/github`: fixture-first merged pull request evidence collection
+- `packages/github`: fixture-first and injected-client live merged pull request evidence collection
 - `packages/providers`: provider adapter interface and deterministic fake provider
 - `packages/renderers`: JSONL, contributor JSON, Markdown, and static-data renderers
 - `packages/cli`: fixture-first validation, recognition dry-run, and rebuild commands
@@ -159,15 +159,21 @@ Validation:
 
 Source: `docs/product/01-roadmap.md`
 
+Status: Completed for the `packages/github` collector boundary in `packages/github/src/live.ts`
+and `packages/github/src/api-client.ts`. Action live-event wiring remains a future integration
+slice.
+
 Goal: move beyond fixture-first GitHub evidence collection while preserving the no-untrusted-head-code
 boundary.
 
-Expected deliverables:
+Completed deliverables:
 
 - public merged pull request evidence collection from GitHub API or Action event context
 - bounded collection of PR body, author, labels, changed files, review comments, linked issue
   candidates, and merge commit metadata
-- redaction before provider input
+- injected REST client with no token or environment loading inside `packages/github`
+- provider input still crosses the existing core redaction boundary; the live collector does not
+  call providers or redaction directly
 - no default `pull_request_target` workflow path
 
 Validation:
@@ -176,7 +182,28 @@ Validation:
 - fake-client tests
 - `pnpm run contract`
 
-### 7. Live Provider Adapter
+### 7. Action Live GitHub Wiring
+
+Source: `docs/product/01-roadmap.md`, `docs/adr/0018-add-live-github-collector-boundary.md`
+
+Goal: let the GitHub Action use live merged pull request collection without executing untrusted pull
+request head code.
+
+Expected deliverables:
+
+- Action routing from merged pull request events to the live collector
+- GitHub token injection into the live collector client without token logging
+- redaction before provider input remains enforced
+- `dry-run` and fixture-first paths remain available
+- no default `pull_request_target` workflow path
+
+Validation:
+
+- fake-client Action tests
+- fixture Action tests continue to pass
+- `pnpm run contract`
+
+### 8. Live Provider Adapter
 
 Source: `docs/adr/0007-provider-adapter-boundary.md`
 
@@ -196,7 +223,7 @@ Validation:
 - fake-provider core tests continue to pass
 - live-provider smoke tests are explicit and optional
 
-### 8. Documentation And Release Readiness
+### 9. Documentation And Release Readiness
 
 Source: `README.md`, `docs/product/01-roadmap.md`
 

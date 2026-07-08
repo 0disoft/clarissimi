@@ -17,7 +17,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
   docs/adr/0014-add-fixture-first-cli-package.md,
   docs/adr/0015-add-fixture-first-github-collector.md,
   docs/adr/0016-add-dry-run-action-skeleton.md,
-  docs/adr/0017-propose-mode-write-boundary.md
+  docs/adr/0017-propose-mode-write-boundary.md,
+  docs/adr/0018-add-live-github-collector-boundary.md
 
 ## Required Decisions
 
@@ -37,7 +38,7 @@ This repository type owns workspace boundaries, package ownership, dependency po
 | `packages/schemas` | Implemented | Contribution assessment types, fixed vocabulary, runtime validation, public ranking-language guardrails | GitHub collection, provider calls, redaction, rendering, approval workflow, CLI orchestration, Action orchestration |
 | `packages/core` | Implemented | Pure policy glue, prepared evidence redaction, evidence ref derivation, assessment publication gates | Provider API calls, GitHub API calls, prompt construction, filesystem writes, Action runtime concerns |
 | `packages/redaction` | Implemented | String and JSON-like value redaction, redaction reports, secret/email/private-key/provider-token masking | Provider API calls, prompt construction, security severity decisions, recognition approval |
-| `packages/github` | Implemented | Fixture-first GitHub merged pull request event and evidence collection | Live GitHub API calls, token handling, domain policy, provider calls, redaction policy, CLI orchestration, Action orchestration |
+| `packages/github` | Implemented | Fixture-first and injected-client live GitHub merged pull request evidence collection | Token loading, environment handling, domain policy, provider calls, redaction policy, CLI orchestration, Action orchestration, repository writes |
 | `packages/providers` | Implemented | Provider adapter interface and deterministic fake contribution draft provider | Schema vocabulary ownership, redaction policy, maintainer approval policy, live LLM SDK clients |
 | `packages/renderers` | Implemented | JSONL, derived contributor JSON, Markdown, static-data rendering, output path constants | Evidence collection, provider calls, approval policy, filesystem writes, CLI orchestration, Action orchestration |
 | `packages/cli` | Implemented | Local command parsing, fixture-first orchestration, config and ledger validation, rebuild command I/O | Domain policy, schema vocabulary, provider behavior, GitHub API collection, Action runtime |

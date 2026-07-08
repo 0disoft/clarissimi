@@ -219,7 +219,8 @@ test("environment runner accepts GITHUB_EVENT_PATH", async () => {
 
   const exitCode = await runActionFromEnvironment(
     {
-      GITHUB_EVENT_PATH: eventPath
+      GITHUB_EVENT_PATH: eventPath,
+      INPUT_MODE: "dry-run"
     },
     {
       stdout: (value) => {
@@ -249,7 +250,7 @@ test("environment runner ignores blank optional inputs and writes GitHub outputs
         GITHUB_OUTPUT: outputPath,
         INPUT_EVENT_PATH: "",
         INPUT_GITHUB_FIXTURE: fixturePath,
-        INPUT_MODE: ""
+        INPUT_MODE: "dry-run"
       },
       {
         stdout: (value) => {
@@ -281,7 +282,8 @@ test("environment runner writes a bounded GitHub step summary", async () => {
     const exitCode = await runActionFromEnvironment(
       {
         GITHUB_STEP_SUMMARY: summaryPath,
-        INPUT_GITHUB_FIXTURE: fixturePath
+        INPUT_GITHUB_FIXTURE: fixturePath,
+        INPUT_MODE: "dry-run"
       },
       {
         stdout: (value) => {
@@ -317,7 +319,8 @@ test("environment runner prefers explicit fixture over implicit GitHub event pat
     const exitCode = await runActionFromEnvironment(
       {
         GITHUB_EVENT_PATH: eventPath,
-        INPUT_GITHUB_FIXTURE: fixturePath
+        INPUT_GITHUB_FIXTURE: fixturePath,
+        INPUT_MODE: "dry-run"
       },
       {
         stdout: (value) => {
@@ -340,7 +343,9 @@ test("environment runner returns usage failure for missing input source", async 
   let stderr = "";
 
   const exitCode = await runActionFromEnvironment(
-    {},
+    {
+      INPUT_MODE: "dry-run"
+    },
     {
       stdout: (value) => {
         stdout += value;
@@ -415,6 +420,37 @@ test("environment runner requires a GitHub token before propose mode writes outp
   });
 });
 
+test("environment runner defaults to propose mode", async () => {
+  await withTempDir(async (dir) => {
+    const outputPath = join(dir, "github-output.txt");
+    const summaryPath = join(dir, "step-summary.md");
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        GITHUB_OUTPUT: outputPath,
+        GITHUB_STEP_SUMMARY: summaryPath,
+        INPUT_GITHUB_FIXTURE: "unused.json"
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        }
+      }
+    );
+
+    assert.equal(exitCode, 1);
+    assert.equal(stdout, "");
+    assert.equal(stderr, "GITHUB_TOKEN is required for propose mode.\n");
+    await assert.rejects(() => readFile(outputPath, "utf8"));
+    await assert.rejects(() => readFile(summaryPath, "utf8"));
+  });
+});
+
 test("environment runner returns usage failure for explicit source conflict", async () => {
   await withTempDir(async (dir) => {
     const fixturePath = join(dir, "github-fixture.json");
@@ -427,7 +463,8 @@ test("environment runner returns usage failure for explicit source conflict", as
     const exitCode = await runActionFromEnvironment(
       {
         INPUT_EVENT_PATH: eventPath,
-        INPUT_GITHUB_FIXTURE: fixturePath
+        INPUT_GITHUB_FIXTURE: fixturePath,
+        INPUT_MODE: "dry-run"
       },
       {
         stdout: (value) => {
@@ -454,7 +491,8 @@ test("environment runner returns unexpected failure for malformed event JSON", a
 
     const exitCode = await runActionFromEnvironment(
       {
-        GITHUB_EVENT_PATH: eventPath
+        GITHUB_EVENT_PATH: eventPath,
+        INPUT_MODE: "dry-run"
       },
       {
         stdout: (value) => {
@@ -506,7 +544,8 @@ test("environment runner treats unmerged pull request events as skipped success"
     const exitCode = await runActionFromEnvironment(
       {
         GITHUB_EVENT_PATH: eventPath,
-        GITHUB_STEP_SUMMARY: summaryPath
+        GITHUB_STEP_SUMMARY: summaryPath,
+        INPUT_MODE: "dry-run"
       },
       {
         stdout: (value) => {
@@ -554,7 +593,8 @@ test("environment runner writes JSON summary and returns success", async () => {
 
     const exitCode = await runActionFromEnvironment(
       {
-        INPUT_GITHUB_FIXTURE: fixturePath
+        INPUT_GITHUB_FIXTURE: fixturePath,
+        INPUT_MODE: "dry-run"
       },
       {
         stdout: (value) => {

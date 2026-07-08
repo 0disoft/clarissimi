@@ -35,13 +35,13 @@ code.
 
 ## Action Usage
 
-The current `action.yml` supports read-only `dry-run` mode and `propose` mode. It builds the local
-Action package from source at runtime. Dry-run mode emits a bounded summary and does not read
-provider credentials, use GitHub write tokens, create branches, open pull requests, or update
-repository files. Propose mode stages approved recognition output, publishes a proposal branch, and
-opens or updates a pull request. When `propose` receives `GITHUB_EVENT_PATH`, it routes the merged
-pull request through the live GitHub collector using `GITHUB_TOKEN`; fixture inputs remain the
-deterministic local and test path.
+The current `action.yml` defaults to `propose` mode and also supports explicit read-only `dry-run`
+mode. It builds the local Action package from source at runtime. Dry-run mode emits a bounded
+summary and does not read provider credentials, use GitHub write tokens, create branches, open pull
+requests, or update repository files. Propose mode stages approved recognition output, publishes a
+proposal branch, and opens or updates a pull request. When `propose` receives `GITHUB_EVENT_PATH`,
+it routes the merged pull request through the live GitHub collector using `GITHUB_TOKEN`; fixture
+inputs remain the deterministic local and test path.
 
 Detailed outputs and failure behavior are defined in `docs/github-action/action-contract.md`. The
 remaining implementation sequence is tracked in `docs/github-action/propose-implementation-plan.md`.

@@ -13,7 +13,7 @@
 
 - `event-path`: explicit event payload path for local runs, tests, and propose-mode live collection
 - `github-fixture`: explicit GitHub merged pull request fixture path for fixture-first runs
-- `mode`: `dry-run` or `propose`
+- `mode`: `dry-run` or `propose`, default `propose`
 - `base-branch`: base branch for proposal pull requests
 - `remote-name`: Git remote used to publish proposal branches
 - `staging-dir`: optional temporary staging directory for proposal outputs

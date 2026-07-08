@@ -30,8 +30,6 @@ update this operational contract.
 Public package publication and versioned Action tags require:
 
 - live provider adapter credential handling is implemented and documented without fake secrets
-- default Action mode is reconciled with the product decision that `propose` is the default write
-  mode
 - a maintainer-triggered propose dogfood workflow or equivalent public repository scenario passes
 - `pnpm run check`
 - `pnpm run contract`
@@ -51,5 +49,5 @@ Public package publication and versioned Action tags require:
 
 - Required validation names: `check`, `contract`, `smoke`, `docs`
 - Release blocker status: public package publication and versioned Action tags are blocked
-- Remaining operational risk: live provider behavior and default write-mode readiness are not
-  complete
+- Remaining operational risk: live provider behavior and maintainer-triggered propose dogfood are
+  not complete

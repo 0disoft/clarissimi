@@ -19,7 +19,7 @@ This document breaks `propose` mode into implementation slices so repository mut
 as one large branch-writing and pull-request-opening change. It is an execution plan, not a new
 permission or product decision.
 
-The current root `action.yml` supports read-only `dry-run` mode and fixture-first `propose` mode.
+The current root `action.yml` defaults to `propose` mode and supports explicit read-only `dry-run`.
 Live GitHub evidence collection and live provider calls remain separate implementation slices.
 
 ## Implementation Slices

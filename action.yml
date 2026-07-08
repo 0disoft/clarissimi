@@ -6,7 +6,7 @@ inputs:
   mode:
     description: Action mode. Use dry-run for summaries or propose to open a recognition pull request.
     required: false
-    default: dry-run
+    default: propose
   event-path:
     description: Optional GitHub event payload path for local runs and propose-mode live collection.
     required: false

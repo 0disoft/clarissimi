@@ -32,7 +32,7 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
 - `packages/cli`: fixture-first validation, recognition dry-run, and rebuild commands
 - `packages/action`: Action runner for dry-run summaries, fixture-first proposal pull requests, and
   event-path live GitHub collection in propose mode
-- root `action.yml`: composite Action exposing `dry-run` and fixture-first `propose` modes
+- root `action.yml`: composite Action defaulting to `propose` and exposing explicit `dry-run`
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
   `event-path` inputs
 

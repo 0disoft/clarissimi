@@ -145,7 +145,7 @@ export async function runActionFromEnvironment(
       ? readEnvInput(env.GITHUB_EVENT_PATH)
       : undefined;
     const input: ActionDryRunInput = {
-      mode: readEnvInput(env.INPUT_MODE) ?? "dry-run"
+      mode: readEnvInput(env.INPUT_MODE) ?? "propose"
     };
     assignOptional(input, "eventPath", explicitEventPath ?? fallbackEventPath);
     assignOptional(input, "githubFixturePath", githubFixturePath);

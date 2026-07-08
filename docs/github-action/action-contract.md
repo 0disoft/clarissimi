@@ -20,7 +20,7 @@ The Action supports dry-run summaries and a fixture-first `propose` write path. 
 - `GITHUB_EVENT_PATH`: GitHub event payload path
 - `INPUT_EVENT_PATH`: explicit event payload path override for tests and local runs
 - `INPUT_GITHUB_FIXTURE`: explicit GitHub merged pull request fixture path
-- `INPUT_MODE`: `dry-run` or `propose`
+- `INPUT_MODE`: `dry-run` or `propose`, default `propose`
 - `INPUT_BASE_BRANCH`: base branch for proposal pull requests, default `main`
 - `INPUT_REMOTE_NAME`: remote name used to publish proposal branches, default `origin`
 - `INPUT_STAGING_DIR`: optional temporary directory for generated proposal files
@@ -29,7 +29,7 @@ The Action supports dry-run summaries and a fixture-first `propose` write path. 
 
 The root `action.yml` exposes the same surface as a composite action:
 
-- `mode`: defaults to `dry-run`
+- `mode`: defaults to `propose`
 - `event-path`: optional event payload path override
 - `github-fixture`: optional GitHub merged pull request fixture path
 - `base-branch`: defaults to `main`
@@ -47,11 +47,11 @@ The future expanded action contract should include:
 
 Secret values must be read from GitHub Actions secrets or environment variables, not action inputs.
 
-Dry-run mode does not read provider API keys or GitHub tokens in the default environment path.
-The current `propose` mode reads `GITHUB_TOKEN` for live GitHub collection and proposal pull request
-creation or update; provider credentials are still not read. Fixture-first `propose` succeeds only
-when the fixture explicitly carries an approved or auto-approved maintainer approval status. Normal
-provider drafts remain non-public and fail closed before branch mutation.
+Dry-run mode does not read provider API keys or GitHub tokens. The default Action mode is
+`propose`, which reads `GITHUB_TOKEN` for live GitHub collection and proposal pull request creation
+or update; provider credentials are still not read. Fixture-first `propose` succeeds only when the
+fixture explicitly carries an approved or auto-approved maintainer approval status. Normal provider
+drafts remain non-public and fail closed before branch mutation.
 
 ## Outputs
 

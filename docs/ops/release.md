@@ -30,7 +30,8 @@ update this operational contract.
 Public package publication and versioned Action tags require:
 
 - live provider adapter credential handling is implemented and documented without fake secrets
-- a maintainer-triggered propose dogfood workflow or equivalent public repository scenario passes
+- `.github/workflows/clarissimi-propose-fixture.yml` or an equivalent public repository scenario
+  passes
 - `pnpm run check`
 - `pnpm run contract`
 - `ssealed doctor . --json`
@@ -49,5 +50,5 @@ Public package publication and versioned Action tags require:
 
 - Required validation names: `check`, `contract`, `smoke`, `docs`
 - Release blocker status: public package publication and versioned Action tags are blocked
-- Remaining operational risk: live provider behavior and maintainer-triggered propose dogfood are
-  not complete
+- Remaining operational risk: live provider behavior and a passing maintainer-triggered propose
+  dogfood run are not complete

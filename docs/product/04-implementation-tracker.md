@@ -35,6 +35,7 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
 - root `action.yml`: composite Action defaulting to `propose` and exposing explicit `dry-run`
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
   `event-path` inputs
+- `.github/workflows/clarissimi-propose-fixture.yml`: manual-only fixture propose dogfood
 
 ## Active Work Queue
 
@@ -241,6 +242,7 @@ Completed deliverables:
 - installation and dry-run examples match the root Action contract
 - propose mode docs are added only when implementation exists
 - release or versioning policy blocks package publication until release gates are satisfied
+- manual-only fixture propose dogfood workflow is available
 
 Validation:
 

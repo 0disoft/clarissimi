@@ -1,0 +1,54 @@
+name: Clarissimi propose fixture
+
+on:
+  workflow_dispatch:
+    inputs:
+      base-branch:
+        description: Base branch for the recognition proposal pull request.
+        required: false
+        default: main
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+concurrency:
+  group: clarissimi-propose-fixture-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  dogfood-propose:
+    name: Fixture propose dogfood
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Run fixture propose action
+        id: propose
+        uses: ./
+        with:
+          mode: propose
+          github-fixture: fixtures/github-merged-pr-approved.json
+          base-branch: ${{ inputs.base-branch }}
+
+      - name: Verify fixture propose outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.propose.outputs.draft-count }}" = "1"
+          test "${{ steps.propose.outputs.proposed-entry-count }}" = "1"
+          test "${{ steps.propose.outputs.skipped-entry-count }}" = "0"
+          test "${{ steps.propose.outputs.mode }}" = "propose"
+          test "${{ steps.propose.outputs.input-source }}" = "github_fixture"
+          test "${{ steps.propose.outputs.approval-status }}" = "approved"
+          test "${{ steps.propose.outputs.staged-file-count }}" = "4"
+          test -n "${{ steps.propose.outputs.proposal-branch }}"
+          test -n "${{ steps.propose.outputs.proposal-commit-sha }}"
+          test -n "${{ steps.propose.outputs.proposal-pull-request-number }}"
+          test -n "${{ steps.propose.outputs.proposal-pull-request-url }}"
+          test -n "${{ steps.propose.outputs.proposal-pull-request-action }}"

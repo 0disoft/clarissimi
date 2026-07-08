@@ -8,7 +8,7 @@ inputs:
     required: false
     default: dry-run
   event-path:
-    description: Optional GitHub event payload path for local or fixture-based runs.
+    description: Optional GitHub event payload path for local runs and propose-mode live collection.
     required: false
   github-fixture:
     description: Optional GitHub merged pull request fixture path for fixture-first runs.

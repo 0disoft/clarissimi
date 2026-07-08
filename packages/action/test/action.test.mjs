@@ -73,6 +73,58 @@ function pullRequestEvent(overrides = {}) {
   };
 }
 
+class FakeLiveGitHubClient {
+  calls = [];
+
+  async getPullRequest(input) {
+    this.calls.push(["getPullRequest", input]);
+    return {
+      number: 42,
+      title: "Add parser regression coverage for #7",
+      body: "Live collector body closes #8.",
+      htmlUrl: "https://github.com/sample/project/pull/42",
+      mergedAt: "2026-07-08T00:00:00.000Z",
+      mergeCommitSha: "abc123def4567890",
+      user: {
+        id: 123456,
+        login: "octocat",
+        htmlUrl: "https://github.com/octocat"
+      },
+      labels: [
+        {
+          name: "tests"
+        }
+      ]
+    };
+  }
+
+  async listPullRequestFiles(input) {
+    this.calls.push(["listPullRequestFiles", input]);
+    return [
+      {
+        filename: "tests/parser.spec.ts",
+        status: "added",
+        additions: 32,
+        deletions: 0,
+        patch: "test(\"parses nested input\", () => {})"
+      }
+    ];
+  }
+
+  async listPullRequestReviewComments(input) {
+    this.calls.push(["listPullRequestReviewComments", input]);
+    return [
+      {
+        id: 9001,
+        body: "LIVE_REVIEW_BODY_SENTINEL",
+        htmlUrl: "https://github.com/sample/project/pull/42#discussion_r9001",
+        path: "tests/parser.spec.ts",
+        diffHunk: "@@ -0,0 +1,12 @@"
+      }
+    ];
+  }
+}
+
 async function withTempDir(callback) {
   const dir = await mkdtemp(join(tmpdir(), "clarissimi-action-"));
   try {
@@ -116,6 +168,34 @@ test("maps a merged pull request event from GITHUB_EVENT_PATH", async () => {
     assert.equal(summary.draftCount, 1);
     assert.equal(summary.assessment.source.repository, "sample/project");
     assert.equal(summary.assessment.source.pullRequestNumber, 42);
+  });
+});
+
+test("uses an injected live GitHub collector for merged pull request events", async () => {
+  await withTempDir(async (dir) => {
+    const eventPath = join(dir, "event.json");
+    const liveGitHubClient = new FakeLiveGitHubClient();
+    await writeFile(eventPath, JSON.stringify(pullRequestEvent()), "utf8");
+
+    const summary = await runActionDryRun({
+      eventPath,
+      liveGitHubClient
+    });
+
+    assert.equal(summary.inputSource, "github_event_path");
+    assert.equal(summary.draftCount, 1);
+    assert.deepEqual(
+      liveGitHubClient.calls.map((call) => call[0]),
+      [
+        "getPullRequest",
+        "listPullRequestFiles",
+        "listPullRequestReviewComments"
+      ]
+    );
+    assert.equal(summary.assessment.evidenceRefs.some((ref) => ref.kind === "review"), true);
+    assert.equal(summary.assessment.evidenceRefs.some((ref) => ref.kind === "issue"), true);
+    assert.equal(JSON.stringify(summary).includes("LIVE_REVIEW_BODY_SENTINEL"), false);
+    assert.equal(JSON.stringify(summary).includes("@@ -0,0 +1,12 @@"), false);
   });
 });
 

@@ -30,7 +30,8 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
 - `packages/providers`: provider adapter interface and deterministic fake provider
 - `packages/renderers`: JSONL, contributor JSON, Markdown, and static-data renderers
 - `packages/cli`: fixture-first validation, recognition dry-run, and rebuild commands
-- `packages/action`: Action runner for dry-run summaries and fixture-first proposal pull requests
+- `packages/action`: Action runner for dry-run summaries, fixture-first proposal pull requests, and
+  event-path live GitHub collection in propose mode
 - root `action.yml`: composite Action exposing `dry-run` and fixture-first `propose` modes
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
   `event-path` inputs
@@ -186,10 +187,12 @@ Validation:
 
 Source: `docs/product/01-roadmap.md`, `docs/adr/0018-add-live-github-collector-boundary.md`
 
+Status: Completed in `packages/action/src/run.ts`.
+
 Goal: let the GitHub Action use live merged pull request collection without executing untrusted pull
 request head code.
 
-Expected deliverables:
+Completed deliverables:
 
 - Action routing from merged pull request events to the live collector
 - GitHub token injection into the live collector client without token logging

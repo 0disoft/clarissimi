@@ -1,4 +1,5 @@
 import type { ContributionAssessment } from "@clarissimi/schemas";
+import type { LiveGitHubClient } from "@clarissimi/github";
 import type { ProposalPullRequestClient } from "./pull-request.js";
 
 export type ActionMode = "dry-run" | "propose";
@@ -9,6 +10,7 @@ export interface ActionDryRunInput {
   readonly mode?: ActionMode | string;
   readonly eventPath?: string;
   readonly githubFixturePath?: string;
+  readonly liveGitHubClient?: LiveGitHubClient;
 }
 
 export interface ActionProposeInput extends ActionDryRunInput {

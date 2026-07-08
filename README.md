@@ -80,13 +80,12 @@ Implemented MVP slices:
   rendering
 - `packages/cli`: fixture-first local command orchestration for validation, recognition dry runs,
   and rebuild previews
-- `packages/action`: GitHub Action entrypoint for dry-run summaries and fixture-first proposal
-  branch/pull-request flows
+- `packages/action`: GitHub Action entrypoint for dry-run summaries, fixture-first proposal
+  branch/pull-request flows, and event-path live GitHub collection in propose mode
 
 Not implemented yet:
 
 - live provider calls
-- Action wiring for live GitHub API collection
 - repository write modes such as direct `commit`
 - comment updates or default-branch mutation
 
@@ -122,9 +121,9 @@ bounded dry-run summary and does not render public outputs or propose repository
 The root `action.yml` also supports fixture-first `propose` mode. Propose mode requires explicit
 write permissions, an approved or auto-approved fixture, and a checked-out repository. It stages
 public output, publishes `clarissimi/recognition/<source-kind>-<source-id>`, and opens or updates a
-pull request for maintainer review. `packages/github` includes live merged pull request collection
-behind an injected GitHub API client, but the Action still uses fixture-first collection until live
-event wiring is added. Live provider calls are still future work.
+pull request for maintainer review. When `propose` receives `GITHUB_EVENT_PATH`, it routes the
+merged pull request through the live GitHub collector using `GITHUB_TOKEN`; fixture inputs remain
+the deterministic test and local path. Live provider calls are still future work.
 
 ## Design Sources
 

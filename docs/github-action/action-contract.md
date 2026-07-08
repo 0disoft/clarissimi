@@ -11,6 +11,7 @@
 - Propose-mode decision: `docs/adr/0008-propose-mode-default.md`
 - Dry-run skeleton decision: `docs/adr/0016-add-dry-run-action-skeleton.md`
 - Propose write boundary: `docs/adr/0017-propose-mode-write-boundary.md`
+- Live GitHub collector boundary: `docs/adr/0018-add-live-github-collector-boundary.md`
 
 ## Inputs
 
@@ -23,7 +24,8 @@ The Action supports dry-run summaries and a fixture-first `propose` write path. 
 - `INPUT_BASE_BRANCH`: base branch for proposal pull requests, default `main`
 - `INPUT_REMOTE_NAME`: remote name used to publish proposal branches, default `origin`
 - `INPUT_STAGING_DIR`: optional temporary directory for generated proposal files
-- `GITHUB_TOKEN`: token used only by `propose` mode to create or update the proposal pull request
+- `GITHUB_TOKEN`: token used only by `propose` mode for live GitHub collection and proposal pull
+  request creation or update
 
 The root `action.yml` exposes the same surface as a composite action:
 
@@ -45,11 +47,11 @@ The future expanded action contract should include:
 
 Secret values must be read from GitHub Actions secrets or environment variables, not action inputs.
 
-Dry-run mode does not read provider API keys or GitHub tokens. The current `propose` mode reads
-`GITHUB_TOKEN` for proposal pull request creation only; provider credentials are still not read.
-Fixture-first `propose` succeeds only when the fixture explicitly carries an approved or
-auto-approved maintainer approval status. Normal provider drafts remain non-public and fail closed
-before branch mutation.
+Dry-run mode does not read provider API keys or GitHub tokens in the default environment path.
+The current `propose` mode reads `GITHUB_TOKEN` for live GitHub collection and proposal pull request
+creation or update; provider credentials are still not read. Fixture-first `propose` succeeds only
+when the fixture explicitly carries an approved or auto-approved maintainer approval status. Normal
+provider drafts remain non-public and fail closed before branch mutation.
 
 ## Outputs
 

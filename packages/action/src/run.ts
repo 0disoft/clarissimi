@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import { prepareEvidenceForProvider } from "@clarissimi/core";
 import {
   collectMergedPullRequestEvidence,
+  collectLiveMergedPullRequestEvidence,
+  createGitHubApiClient,
   parseGitHubMergedPullRequestFixture
 } from "@clarissimi/github";
 import { createFakeContributionDraftProvider } from "@clarissimi/providers";
@@ -127,6 +129,8 @@ export async function runActionPropose(input: ActionProposeInput): Promise<Actio
 
 export interface ActionEnvironmentRuntime {
   readonly pullRequestClient?: ProposalPullRequestClient;
+  readonly liveGitHubClient?: ActionDryRunInput["liveGitHubClient"];
+  readonly fetch?: typeof fetch;
 }
 
 export async function runActionFromEnvironment(
@@ -145,6 +149,7 @@ export async function runActionFromEnvironment(
     };
     assignOptional(input, "eventPath", explicitEventPath ?? fallbackEventPath);
     assignOptional(input, "githubFixturePath", githubFixturePath);
+    assignOptional(input, "liveGitHubClient", runtime.liveGitHubClient);
 
     const summary = input.mode === "propose"
       ? await runActionPropose(buildActionProposeInput(input, env, runtime))
@@ -169,6 +174,13 @@ function buildActionProposeInput(
     token: requireEnvInput(env.GITHUB_TOKEN, "GITHUB_TOKEN")
   };
   assignOptional(clientOptions, "apiUrl", readEnvInput(env.GITHUB_API_URL));
+  assignOptional(clientOptions, "fetch", runtime.fetch);
+
+  const liveGitHubClientOptions: Parameters<typeof createGitHubApiClient>[0] = {
+    token: clientOptions.token
+  };
+  assignOptional(liveGitHubClientOptions, "apiUrl", clientOptions.apiUrl);
+  assignOptional(liveGitHubClientOptions, "fetch", runtime.fetch);
 
   const proposeInput: ActionProposeInput = {
     ...input,
@@ -177,7 +189,8 @@ function buildActionProposeInput(
     stagingDir: readEnvInput(env.INPUT_STAGING_DIR)
       ?? join(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-propose"),
     baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
-    pullRequestClient: runtime.pullRequestClient ?? createGitHubPullRequestClient(clientOptions)
+    pullRequestClient: runtime.pullRequestClient ?? createGitHubPullRequestClient(clientOptions),
+    liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(liveGitHubClientOptions)
   };
   assignOptional(proposeInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
 
@@ -216,7 +229,13 @@ async function prepareActionAssessment(input: ActionDryRunInput): Promise<Prepar
     };
   }
 
-  const collected = collectMergedPullRequestEvidence(resolution.fixture);
+  const collected = source.kind === "github_event_path" && input.liveGitHubClient !== undefined
+    ? await collectLiveMergedPullRequestEvidence({
+        client: input.liveGitHubClient,
+        repository: resolution.fixture.repository.fullName,
+        pullRequestNumber: resolution.fixture.pullRequest.number
+      })
+    : collectMergedPullRequestEvidence(resolution.fixture);
   const preparedEvidence = prepareEvidenceForProvider(collected.evidence);
   const provider = createFakeContributionDraftProvider();
   const draft = await provider.createAssessment({

@@ -47,6 +47,34 @@ function githubFixture(overrides = {}) {
   };
 }
 
+function pullRequestEvent(overrides = {}) {
+  return {
+    maintainerApprovalStatus: "approved",
+    repository: {
+      full_name: "sample/project"
+    },
+    pull_request: {
+      number: 42,
+      title: "Add parser regression coverage",
+      body: "Event body should not be copied to outputs.",
+      html_url: "https://github.com/sample/project/pull/42",
+      merged_at: "2026-07-08T00:00:00.000Z",
+      merge_commit_sha: "abc123def4567890",
+      user: {
+        id: 123456,
+        login: "octocat",
+        html_url: "https://github.com/octocat"
+      },
+      labels: [
+        {
+          name: "tests"
+        }
+      ],
+      ...overrides
+    }
+  };
+}
+
 async function withTempDir(callback) {
   const dir = await mkdtemp(join(tmpdir(), "clarissimi-propose-runner-"));
   try {
@@ -142,6 +170,110 @@ test("environment runner writes bounded propose outputs and step summary", async
   });
 });
 
+test("environment propose mode routes merged pull request events through the live collector", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const remoteDir = join(dir, "remote.git");
+    const stagingDir = join(dir, "staged");
+    const eventPath = join(dir, "event.json");
+    const outputPath = join(dir, "github-output.txt");
+    const summaryPath = join(dir, "step-summary.md");
+    const client = new FakePullRequestClient();
+    const liveRequests = [];
+    await initRepositoryWithRemote(repositoryDir, remoteDir);
+    await writeFile(eventPath, JSON.stringify(pullRequestEvent()), "utf8");
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        GITHUB_OUTPUT: outputPath,
+        GITHUB_STEP_SUMMARY: summaryPath,
+        GITHUB_WORKSPACE: repositoryDir,
+        INPUT_BASE_BRANCH: "main",
+        GITHUB_EVENT_PATH: eventPath,
+        INPUT_MODE: "propose",
+        INPUT_STAGING_DIR: stagingDir,
+        GITHUB_TOKEN: "live-token"
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        }
+      },
+      {
+        fetch: async (url, init) => {
+          liveRequests.push({
+            url: String(url),
+            authorization: init.headers.Authorization
+          });
+
+          if (String(url).endsWith("/pulls/42")) {
+            return jsonResponse({
+              number: 42,
+              title: "Add parser regression coverage for #7",
+              body: "LIVE_BODY_SENTINEL closes #8.",
+              html_url: "https://github.com/sample/project/pull/42",
+              merged_at: "2026-07-08T00:00:00.000Z",
+              merge_commit_sha: "abc123def4567890",
+              user: {
+                id: 123456,
+                login: "octocat",
+                html_url: "https://github.com/octocat"
+              },
+              labels: [
+                {
+                  name: "tests"
+                }
+              ]
+            });
+          }
+
+          if (String(url).includes("/files?")) {
+            return jsonResponse([
+              {
+                filename: "tests/parser.spec.ts",
+                status: "added",
+                additions: 32,
+                deletions: 0,
+                patch: "PATCH_SENTINEL"
+              }
+            ]);
+          }
+
+          return jsonResponse([
+            {
+              id: 9001,
+              body: "REVIEW_SENTINEL",
+              html_url: "https://github.com/sample/project/pull/42#discussion_r9001",
+              path: "tests/parser.spec.ts",
+              diff_hunk: "@@ -0,0 +1,12 @@"
+            }
+          ]);
+        },
+        pullRequestClient: client
+      }
+    );
+    const parsed = JSON.parse(stdout);
+    const outputText = await readFile(outputPath, "utf8");
+    const summaryText = await readFile(summaryPath, "utf8");
+
+    assert.equal(exitCode, 0);
+    assert.equal(stderr, "");
+    assert.equal(parsed.inputSource, "github_event_path");
+    assert.equal(parsed.mode, "propose");
+    assert.equal(liveRequests.length, 3);
+    assert.equal(liveRequests.every((request) => request.authorization === "Bearer live-token"), true);
+    assert.equal(client.created.length, 1);
+    assert.equal(outputText.includes("LIVE_BODY_SENTINEL"), false);
+    assert.equal(summaryText.includes("PATCH_SENTINEL"), false);
+    assert.equal(client.created[0].body.includes("REVIEW_SENTINEL"), false);
+  });
+});
+
 async function initRepositoryWithRemote(repositoryDir, remoteDir) {
   await mkdir(repositoryDir);
   await git(repositoryDir, ["init", "-b", "main"]);
@@ -210,4 +342,14 @@ class FakePullRequestClient {
   async updatePullRequest() {
     throw new Error("updatePullRequest was not expected in this test.");
   }
+}
+
+function jsonResponse(body, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    async text() {
+      return JSON.stringify(body);
+    }
+  };
 }

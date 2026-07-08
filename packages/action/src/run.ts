@@ -95,6 +95,7 @@ export async function runActionFromEnvironment(
 
     const summary = await runActionDryRun(input);
     await writeGitHubOutputs(env.GITHUB_OUTPUT, summary);
+    await writeGitHubStepSummary(env.GITHUB_STEP_SUMMARY, summary);
     io.stdout(`${JSON.stringify(summary, null, 2)}\n`);
     return 0;
   } catch (error) {
@@ -158,6 +159,47 @@ async function writeGitHubOutputs(
   ];
 
   await appendFile(outputPath, `${lines.join("\n")}\n`, "utf8");
+}
+
+async function writeGitHubStepSummary(
+  summaryPath: string | undefined,
+  summary: ActionDryRunSummary
+): Promise<void> {
+  if (summaryPath === undefined || summaryPath.trim().length === 0) {
+    return;
+  }
+
+  const rows = [
+    ["Mode", summary.mode],
+    ["Input source", summary.inputSource],
+    ["Drafts", String(summary.draftCount)],
+    ["Proposed entries", String(summary.proposedEntryCount)],
+    ["Skipped entries", String(summary.skippedEntryCount)],
+    ["Approval status", summary.approvalStatus ?? "none"],
+    ["Redaction matches", String(summary.redactionMatchCount)]
+  ];
+
+  if (summary.skippedReason !== undefined) {
+    rows.push(["Skipped reason", summary.skippedReason]);
+  }
+
+  const markdown = [
+    "## Clarissimi dry-run summary",
+    "",
+    "| Field | Value |",
+    "| --- | --- |",
+    ...rows.map(
+      ([field, value]) =>
+        `| ${escapeMarkdownTableCell(field)} | ${escapeMarkdownTableCell(value)} |`
+    ),
+    ""
+  ].join("\n");
+
+  await appendFile(summaryPath, markdown, "utf8");
+}
+
+function escapeMarkdownTableCell(value: string): string {
+  return value.replaceAll("|", "\\|").replaceAll("\n", " ");
 }
 
 function assignOptional<T extends object, K extends keyof T>(

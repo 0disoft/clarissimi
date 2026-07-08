@@ -55,11 +55,27 @@ The root `action.yml` maps these fields to GitHub Action outputs using the same 
 `draft-count`, `proposed-entry-count`, `skipped-entry-count`, `mode`, `input-source`,
 `approval-status`, and `redaction-match-count`.
 
+When `GITHUB_STEP_SUMMARY` is available, the dry-run skeleton appends a bounded Markdown summary
+with the same count and status fields. The step summary must not include raw pull request bodies,
+raw patch excerpts, raw diffs, provider raw output, tokens, or secrets.
+
 The future full action contract should also expose a path to a summary artifact or generated files
 when available.
 
 Outputs must not include raw provider responses, raw diffs, secrets, or sensitive security details.
 The dry-run skeleton also omits raw pull request bodies and raw patch excerpts.
+
+## Failure Contract
+
+The dry-run skeleton uses the following process outcomes:
+
+- Missing input source: exit `1`, empty stdout, usage message on stderr.
+- Unsupported mode: exit `1`, empty stdout, usage message on stderr.
+- Explicit `event-path` and `github-fixture` together: exit `1`, empty stdout, usage message on
+  stderr.
+- Malformed JSON or unexpected runtime failure: exit `4`, empty stdout, diagnostic on stderr.
+- Unmerged pull request event: exit `0`, JSON stdout with `skipped-entry-count=1`, and bounded step
+  summary when `GITHUB_STEP_SUMMARY` is available.
 
 ## Permissions
 

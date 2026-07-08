@@ -45,6 +45,9 @@ Outputs must not include raw provider output, raw diff text, raw issue text, tok
 raw pull request bodies, raw patch excerpts, or sensitive security details.
 
 The root `action.yml` currently exposes all candidate outputs except `summary-path`.
+The current package skeleton also writes the same bounded count and status fields to
+`GITHUB_STEP_SUMMARY` when the runner provides that path. Step summary content follows the same
+raw-evidence exclusion rules as action outputs.
 
 ## Review Blockers
 

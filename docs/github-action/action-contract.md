@@ -20,7 +20,13 @@ The first package skeleton supports only dry-run local execution. It accepts:
 - `INPUT_GITHUB_FIXTURE`: explicit GitHub merged pull request fixture path
 - `INPUT_MODE`: only `dry-run`
 
-The future `action.yml` contract should include:
+The root `action.yml` exposes the same dry-run-only surface as a composite action:
+
+- `mode`: defaults to `dry-run`
+- `event-path`: optional event payload path override
+- `github-fixture`: optional GitHub merged pull request fixture path
+
+The future expanded action contract should include:
 
 - config path
 - mode: `dry-run`, `propose`, or `commit`
@@ -44,6 +50,10 @@ The dry-run skeleton emits a bounded JSON summary with:
 - input source
 - approval status when a draft exists
 - redaction match count
+
+The root `action.yml` maps these fields to GitHub Action outputs using the same names:
+`draft-count`, `proposed-entry-count`, `skipped-entry-count`, `mode`, `input-source`,
+`approval-status`, and `redaction-match-count`.
 
 The future full action contract should also expose a path to a summary artifact or generated files
 when available.

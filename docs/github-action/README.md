@@ -33,6 +33,46 @@ committing to the default branch.
 Avoid default `pull_request_target` behavior. Do not checkout or execute untrusted fork PR head
 code.
 
+## Dry-Run Usage
+
+The current `action.yml` is a dry-run-only composite action. It builds the local Action package from
+source at runtime and emits a bounded summary. It does not read provider credentials, use GitHub
+write tokens, create branches, open pull requests, or update repository files.
+
+Example read-only workflow:
+
+```yaml
+name: Clarissimi dry run
+
+on:
+  pull_request:
+    types:
+      - closed
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  recognize:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: 0disoft/clarissimi@main
+        with:
+          mode: dry-run
+```
+
+For local fixture checks, pass `github-fixture`:
+
+```yaml
+- uses: 0disoft/clarissimi@main
+  with:
+    mode: dry-run
+    github-fixture: fixtures/github-merged-pr-basic.json
+```
+
 ## Review Blockers
 
 - Action permission changes lack least-privilege review.

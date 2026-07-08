@@ -156,6 +156,40 @@ test("environment runner accepts GITHUB_EVENT_PATH", async () => {
   assert.equal(JSON.parse(stdout).inputSource, "github_event_path");
 });
 
+test("environment runner ignores blank optional inputs and writes GitHub outputs", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "github-fixture.json");
+    const outputPath = join(dir, "github-output.txt");
+    await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        GITHUB_OUTPUT: outputPath,
+        INPUT_EVENT_PATH: "",
+        INPUT_GITHUB_FIXTURE: fixturePath,
+        INPUT_MODE: ""
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        }
+      }
+    );
+    const outputText = await readFile(outputPath, "utf8");
+
+    assert.equal(exitCode, 0);
+    assert.equal(stderr, "");
+    assert.equal(JSON.parse(stdout).draftCount, 1);
+    assert.equal(outputText.includes("draft-count=1"), true);
+    assert.equal(outputText.includes("input-source=github_fixture"), true);
+  });
+});
+
 test("skips an unmerged pull request event without drafting", async () => {
   await withTempDir(async (dir) => {
     const eventPath = join(dir, "event.json");

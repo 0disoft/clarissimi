@@ -1,0 +1,55 @@
+name: Clarissimi
+description: Draft maintainer-approved contribution recognition summaries.
+author: 0disoft
+
+inputs:
+  mode:
+    description: Dry-run mode only for the current action skeleton.
+    required: false
+    default: dry-run
+  event-path:
+    description: Optional GitHub event payload path for local or fixture-based dry runs.
+    required: false
+  github-fixture:
+    description: Optional GitHub merged pull request fixture path for dry-run tests.
+    required: false
+
+outputs:
+  draft-count:
+    description: Number of recognition drafts created.
+    value: ${{ steps.clarissimi.outputs.draft-count }}
+  proposed-entry-count:
+    description: Number of proposed public entries. Always zero in the dry-run skeleton.
+    value: ${{ steps.clarissimi.outputs.proposed-entry-count }}
+  skipped-entry-count:
+    description: Number of skipped events.
+    value: ${{ steps.clarissimi.outputs.skipped-entry-count }}
+  mode:
+    description: Action output mode.
+    value: ${{ steps.clarissimi.outputs.mode }}
+  input-source:
+    description: Source used for the dry-run input.
+    value: ${{ steps.clarissimi.outputs.input-source }}
+  approval-status:
+    description: Draft approval status when a draft exists.
+    value: ${{ steps.clarissimi.outputs.approval-status }}
+  redaction-match-count:
+    description: Number of redaction matches found before drafting.
+    value: ${{ steps.clarissimi.outputs.redaction-match-count }}
+
+runs:
+  using: composite
+  steps:
+    - name: Run dry-run recognition summary
+      id: clarissimi
+      shell: bash
+      env:
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_EVENT_PATH: ${{ inputs.event-path }}
+        INPUT_GITHUB_FIXTURE: ${{ inputs.github-fixture }}
+      run: |
+        set -euo pipefail
+        corepack enable
+        pnpm --dir "$GITHUB_ACTION_PATH" install --frozen-lockfile
+        pnpm --dir "$GITHUB_ACTION_PATH" --filter @clarissimi/action build
+        node "$GITHUB_ACTION_PATH/packages/action/dist/bin/clarissimi-action.js"

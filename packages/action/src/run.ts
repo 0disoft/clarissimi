@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { appendFile, readFile } from "node:fs/promises";
 
 import { prepareEvidenceForProvider } from "@clarissimi/core";
 import {
@@ -83,12 +83,17 @@ export async function runActionFromEnvironment(
 ): Promise<number> {
   try {
     const input: ActionDryRunInput = {
-      mode: env.INPUT_MODE ?? "dry-run"
+      mode: readEnvInput(env.INPUT_MODE) ?? "dry-run"
     };
-    assignOptional(input, "eventPath", env.INPUT_EVENT_PATH ?? env.GITHUB_EVENT_PATH);
-    assignOptional(input, "githubFixturePath", env.INPUT_GITHUB_FIXTURE);
+    assignOptional(
+      input,
+      "eventPath",
+      readEnvInput(env.INPUT_EVENT_PATH) ?? readEnvInput(env.GITHUB_EVENT_PATH)
+    );
+    assignOptional(input, "githubFixturePath", readEnvInput(env.INPUT_GITHUB_FIXTURE));
 
     const summary = await runActionDryRun(input);
+    await writeGitHubOutputs(env.GITHUB_OUTPUT, summary);
     io.stdout(`${JSON.stringify(summary, null, 2)}\n`);
     return 0;
   } catch (error) {
@@ -123,6 +128,35 @@ function selectInputSource(input: ActionDryRunInput): {
   }
 
   throw new ActionUsageError("The action skeleton requires GITHUB_EVENT_PATH or INPUT_GITHUB_FIXTURE.");
+}
+
+function readEnvInput(value: string | undefined): string | undefined {
+  if (value === undefined || value.trim().length === 0) {
+    return undefined;
+  }
+
+  return value;
+}
+
+async function writeGitHubOutputs(
+  outputPath: string | undefined,
+  summary: ActionDryRunSummary
+): Promise<void> {
+  if (outputPath === undefined || outputPath.trim().length === 0) {
+    return;
+  }
+
+  const lines = [
+    `draft-count=${summary.draftCount}`,
+    `proposed-entry-count=${summary.proposedEntryCount}`,
+    `skipped-entry-count=${summary.skippedEntryCount}`,
+    `mode=${summary.mode}`,
+    `input-source=${summary.inputSource}`,
+    `approval-status=${summary.approvalStatus ?? ""}`,
+    `redaction-match-count=${summary.redactionMatchCount}`
+  ];
+
+  await appendFile(outputPath, `${lines.join("\n")}\n`, "utf8");
 }
 
 function assignOptional<T extends object, K extends keyof T>(

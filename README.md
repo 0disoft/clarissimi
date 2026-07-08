@@ -108,6 +108,9 @@ node packages/action/dist/bin/clarissimi-action.js
 The skeleton also accepts `GITHUB_EVENT_PATH` for a merged pull request event payload. It emits a
 bounded dry-run summary and does not render public outputs or propose repository changes.
 
+The root `action.yml` exposes this as a dry-run-only composite action. It intentionally does not
+ship `propose` or `commit` mode yet.
+
 ## Design Sources
 
 - Product contract: `docs/product/02-spec.md`

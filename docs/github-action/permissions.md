@@ -21,6 +21,9 @@ The current package skeleton performs only local event-file or fixture-file read
 GitHub token permissions, create branches, write comments, create pull requests, or update
 repository files.
 
+The root `action.yml` dry-run example should stay read-only. Do not document `pull_request_target`
+as the default event.
+
 ## Propose Mode
 
 Expected permissions:

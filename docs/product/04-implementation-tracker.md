@@ -31,7 +31,7 @@ The repository currently has a fixture-first MVP skeleton:
 - `packages/renderers`: JSONL, contributor JSON, Markdown, and static-data renderers
 - `packages/cli`: fixture-first validation, recognition dry-run, and rebuild commands
 - `packages/action`: dry-run-only Action runner for event payloads and GitHub fixtures, plus
-  internal proposal output staging for future `propose` mode
+  internal proposal output staging and proposal branch writing for future `propose` mode
 - root `action.yml`: dry-run-only composite Action
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
   `event-path` inputs
@@ -66,14 +66,18 @@ Validation:
 
 Source: `docs/github-action/propose-implementation-plan.md`
 
+Status: Completed in `packages/action/src/branch-writer.ts`.
+
 Goal: isolate branch mutation behind a narrow interface after staging is deterministic.
 
-Expected deliverables:
+Completed deliverables:
 
 - branch writer interface that accepts only staged manifest and configured branch/base metadata
 - deterministic branch name: `clarissimi/recognition/<source-kind>-<source-id>`
 - temporary-repository tests proving the default branch is not mutated
-- diagnostics for missing base branch, source id, or staged manifest
+- diagnostics for missing base branch, repository directory, staged output directory, staged
+  manifest, unsafe output paths, hash mismatches, and existing proposal branches with unowned
+  changes
 
 Validation:
 

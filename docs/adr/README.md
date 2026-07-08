@@ -26,6 +26,7 @@ engine.
 - `0013-add-renderers-package.md`: add deterministic repository output renderers
 - `0014-add-fixture-first-cli-package.md`: add local fixture-first CLI orchestration
 - `0015-add-fixture-first-github-collector.md`: add fixture-first GitHub merged PR evidence collection
+- `0016-add-dry-run-action-skeleton.md`: add dry-run-only GitHub Action entrypoint skeleton
 
 ## Review Blockers
 

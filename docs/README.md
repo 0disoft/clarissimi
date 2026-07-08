@@ -29,3 +29,4 @@
 - Provider package source: packages/providers
 - Renderer package source: packages/renderers
 - CLI package source: packages/cli
+- Action package source: packages/action

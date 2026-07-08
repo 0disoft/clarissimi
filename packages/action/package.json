@@ -1,0 +1,30 @@
+{
+  "name": "@clarissimi/action",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "clarissimi-action": "./dist/bin/clarissimi-action.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@clarissimi/core": "workspace:*",
+    "@clarissimi/github": "workspace:*",
+    "@clarissimi/providers": "workspace:*",
+    "@clarissimi/schemas": "workspace:*"
+  }
+}

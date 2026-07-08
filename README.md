@@ -77,6 +77,8 @@ Implemented packages:
   rendering
 - `packages/cli`: fixture-first local command orchestration for validation, recognition dry runs,
   and rebuild previews
+- `packages/action`: dry-run-only GitHub Action entrypoint skeleton for event-file and fixture
+  summaries
 
 ## Fixture-First CLI
 
@@ -91,6 +93,20 @@ node packages/cli/dist/bin/clarissimi.js recognize --github-fixture fixtures/git
 The command creates a deterministic fake-provider assessment from either a Clarissimi evidence
 fixture or a GitHub-shaped merged pull request fixture. Public output previews are rendered only
 when the fixture explicitly carries maintainer approval.
+
+## Dry-Run Action Skeleton
+
+The first Action package slice runs without GitHub API writes, live provider credentials, or
+repository file changes:
+
+```powershell
+pnpm --filter @clarissimi/action build
+$env:INPUT_GITHUB_FIXTURE = "fixtures/github-merged-pr-basic.json"
+node packages/action/dist/bin/clarissimi-action.js
+```
+
+The skeleton also accepts `GITHUB_EVENT_PATH` for a merged pull request event payload. It emits a
+bounded dry-run summary and does not render public outputs or propose repository changes.
 
 ## Design Sources
 

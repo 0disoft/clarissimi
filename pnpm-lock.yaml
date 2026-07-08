@@ -15,6 +15,21 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
+  packages/action:
+    dependencies:
+      '@clarissimi/core':
+        specifier: workspace:*
+        version: link:../core
+      '@clarissimi/github':
+        specifier: workspace:*
+        version: link:../github
+      '@clarissimi/providers':
+        specifier: workspace:*
+        version: link:../providers
+      '@clarissimi/schemas':
+        specifier: workspace:*
+        version: link:../schemas
+
   packages/cli:
     dependencies:
       '@clarissimi/core':

@@ -38,6 +38,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
   rendering.
 - `packages/cli`: Fixture-first local command orchestration for config validation, ledger
   validation, recognition dry runs, and rebuild previews.
+- `packages/action`: Dry-run-only GitHub Action entrypoint skeleton for event-file and fixture
+  summaries.
 
 ## Review Blockers
 

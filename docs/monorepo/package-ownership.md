@@ -15,7 +15,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
   docs/adr/0012-add-fake-provider-package.md,
   docs/adr/0013-add-renderers-package.md,
   docs/adr/0014-add-fixture-first-cli-package.md,
-  docs/adr/0015-add-fixture-first-github-collector.md
+  docs/adr/0015-add-fixture-first-github-collector.md,
+  docs/adr/0016-add-dry-run-action-skeleton.md
 
 ## Required Decisions
 
@@ -39,7 +40,7 @@ This repository type owns workspace boundaries, package ownership, dependency po
 | `packages/providers` | Implemented | Provider adapter interface and deterministic fake contribution draft provider | Schema vocabulary ownership, redaction policy, maintainer approval policy, live LLM SDK clients |
 | `packages/renderers` | Implemented | JSONL, derived contributor JSON, Markdown, static-data rendering, output path constants | Evidence collection, provider calls, approval policy, filesystem writes, CLI orchestration, Action orchestration |
 | `packages/cli` | Implemented | Local command parsing, fixture-first orchestration, config and ledger validation, rebuild command I/O | Domain policy, schema vocabulary, provider behavior, GitHub API collection, Action runtime |
-| `packages/action` | Planned | GitHub Action entrypoint | Domain policy |
+| `packages/action` | Implemented | Dry-run-only GitHub Action entrypoint, environment input resolution, event file reading, bounded dry-run summary | Live GitHub API calls, token handling, branch or PR writes, domain policy, provider behavior, renderer file writes |
 
 ## Review Blockers
 

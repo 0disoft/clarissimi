@@ -9,10 +9,18 @@
 - Runtime flow: `docs/architecture/02-runtime-flow.md`
 - Action-first decision: `docs/adr/0005-action-first-no-saas.md`
 - Propose-mode decision: `docs/adr/0008-propose-mode-default.md`
+- Dry-run skeleton decision: `docs/adr/0016-add-dry-run-action-skeleton.md`
 
 ## Inputs
 
-The exact `action.yml` contract is not implemented yet. The first action contract should include:
+The first package skeleton supports only dry-run local execution. It accepts:
+
+- `GITHUB_EVENT_PATH`: GitHub event payload path
+- `INPUT_EVENT_PATH`: explicit event payload path override for tests and local runs
+- `INPUT_GITHUB_FIXTURE`: explicit GitHub merged pull request fixture path
+- `INPUT_MODE`: only `dry-run`
+
+The future `action.yml` contract should include:
 
 - config path
 - mode: `dry-run`, `propose`, or `commit`
@@ -23,17 +31,25 @@ The exact `action.yml` contract is not implemented yet. The first action contrac
 
 Secret values must be read from GitHub Actions secrets or environment variables, not action inputs.
 
+The dry-run skeleton does not read provider API keys or GitHub tokens.
+
 ## Outputs
 
-The first action contract should expose:
+The dry-run skeleton emits a bounded JSON summary with:
 
 - recognition draft count
-- approved or proposed entry count
+- proposed entry count
 - skipped entry count
 - output mode
-- path to summary artifact or generated files when available
+- input source
+- approval status when a draft exists
+- redaction match count
+
+The future full action contract should also expose a path to a summary artifact or generated files
+when available.
 
 Outputs must not include raw provider responses, raw diffs, secrets, or sensitive security details.
+The dry-run skeleton also omits raw pull request bodies and raw patch excerpts.
 
 ## Permissions
 

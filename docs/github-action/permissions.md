@@ -17,6 +17,10 @@ Expected permissions:
 
 Dry-run mode should not write recognition files, branches, comments, or pull requests.
 
+The current package skeleton performs only local event-file or fixture-file reads. It does not use
+GitHub token permissions, create branches, write comments, create pull requests, or update
+repository files.
+
 ## Propose Mode
 
 Expected permissions:

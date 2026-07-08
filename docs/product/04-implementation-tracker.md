@@ -30,7 +30,8 @@ The repository currently has a fixture-first MVP skeleton:
 - `packages/providers`: provider adapter interface and deterministic fake provider
 - `packages/renderers`: JSONL, contributor JSON, Markdown, and static-data renderers
 - `packages/cli`: fixture-first validation, recognition dry-run, and rebuild commands
-- `packages/action`: dry-run-only Action runner for event payloads and GitHub fixtures
+- `packages/action`: dry-run-only Action runner for event payloads and GitHub fixtures, plus
+  internal proposal output staging for future `propose` mode
 - root `action.yml`: dry-run-only composite Action
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
   `event-path` inputs
@@ -41,16 +42,18 @@ The repository currently has a fixture-first MVP skeleton:
 
 Source: `docs/github-action/propose-implementation-plan.md`
 
+Status: Completed in `packages/action/src/staging.ts`.
+
 Goal: create a deterministic staging function for the files `propose` mode would write, without
 git branch mutation, pull request creation, or default-branch writes.
 
-Expected deliverables:
+Completed deliverables:
 
 - internal Action staging types, including a staged-file manifest with path, byte count, and sha256
 - temporary-directory staging that reuses `packages/renderers`
 - rejection of draft assessments before public output rendering
-- tests proving staged metadata excludes raw evidence, provider raw output, secrets, raw diffs, and
-  patch excerpts
+- tests proving staged metadata and staged output files exclude raw evidence, provider raw output,
+  sensitive sentinels, raw diffs, and patch excerpts
 
 Validation:
 

@@ -26,6 +26,9 @@ importers:
       '@clarissimi/providers':
         specifier: workspace:*
         version: link:../providers
+      '@clarissimi/renderers':
+        specifier: workspace:*
+        version: link:../renderers
       '@clarissimi/schemas':
         specifier: workspace:*
         version: link:../schemas

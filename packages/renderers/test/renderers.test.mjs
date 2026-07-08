@@ -57,6 +57,30 @@ test("renders approved assessments as parseable JSONL", () => {
   assert.equal(parsed[0].publicRecognitionText, "Added regression coverage for the parser crash.");
 });
 
+test("renders only public contribution record fields", () => {
+  const jsonl = renderContributionsJsonl([
+    assessment({
+      evidenceRefs: [
+        {
+          kind: "pull_request",
+          id: "PR-42",
+          url: "https://github.com/example/project/pull/42",
+          title: "Add parser regression coverage",
+          excerpt: "PATCH_EXCERPT_SENTINEL"
+        }
+      ],
+      rawProviderOutput: "PROVIDER_RAW_SENTINEL",
+      rawEvidence: "RAW_EVIDENCE_SENTINEL"
+    })
+  ]);
+  const parsed = parseContributionsJsonl(jsonl);
+
+  assert.equal(jsonl.includes("PATCH_EXCERPT_SENTINEL"), false);
+  assert.equal(jsonl.includes("PROVIDER_RAW_SENTINEL"), false);
+  assert.equal(jsonl.includes("RAW_EVIDENCE_SENTINEL"), false);
+  assert.equal(parsed[0].evidenceRefs[0].excerpt, undefined);
+});
+
 test("renders empty JSONL as an empty file", () => {
   assert.equal(renderContributionsJsonl([]), "");
   assert.deepEqual(parseContributionsJsonl(""), []);

@@ -13,7 +13,7 @@ export function toPublicContributionRecord(value: unknown): PublicContributionRe
     );
   }
 
-  return result.value.assessment;
+  return sanitizePublicContributionRecord(result.value.assessment);
 }
 
 export function toPublicContributionRecords(
@@ -29,6 +29,40 @@ export function renderContributionsJsonl(values: readonly unknown[]): string {
   }
 
   return `${records.map((record) => stableStringify(record)).join("\n")}\n`;
+}
+
+function sanitizePublicContributionRecord(
+  assessment: ContributionAssessment
+): PublicContributionRecord {
+  return {
+    schemaVersion: assessment.schemaVersion,
+    contributor: {
+      platform: assessment.contributor.platform,
+      id: assessment.contributor.id,
+      login: assessment.contributor.login,
+      profileUrl: assessment.contributor.profileUrl
+    },
+    contributionType: assessment.contributionType,
+    affectedArea: assessment.affectedArea,
+    impactLevel: assessment.impactLevel,
+    evidenceSummary: assessment.evidenceSummary,
+    evidenceRefs: assessment.evidenceRefs.map((ref) => ({
+      kind: ref.kind,
+      id: ref.id,
+      ...(ref.url === undefined ? {} : { url: ref.url }),
+      ...(ref.title === undefined ? {} : { title: ref.title })
+    })),
+    suggestedBadge: assessment.suggestedBadge,
+    publicRecognitionText: assessment.publicRecognitionText,
+    confidence: assessment.confidence,
+    maintainerApprovalStatus: assessment.maintainerApprovalStatus,
+    source: {
+      repository: assessment.source.repository,
+      event: assessment.source.event,
+      pullRequestNumber: assessment.source.pullRequestNumber,
+      ...(assessment.source.mergedAt === undefined ? {} : { mergedAt: assessment.source.mergedAt })
+    }
+  };
 }
 
 export function parseContributionsJsonl(input: string): readonly PublicContributionRecord[] {

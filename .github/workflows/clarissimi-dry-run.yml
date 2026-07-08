@@ -1,0 +1,35 @@
+name: Clarissimi dry run
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fixture-dry-run:
+    name: Fixture dry run
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Run local dry-run action
+        id: clarissimi
+        uses: ./
+        with:
+          mode: dry-run
+          github-fixture: fixtures/github-merged-pr-basic.json
+
+      - name: Verify dry-run outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.clarissimi.outputs.draft-count }}" = "1"
+          test "${{ steps.clarissimi.outputs.proposed-entry-count }}" = "0"
+          test "${{ steps.clarissimi.outputs.skipped-entry-count }}" = "0"
+          test "${{ steps.clarissimi.outputs.mode }}" = "dry-run"
+          test "${{ steps.clarissimi.outputs.input-source }}" = "github_fixture"
+          test "${{ steps.clarissimi.outputs.approval-status }}" = "draft"
+          test "${{ steps.clarissimi.outputs.redaction-match-count }}" = "0"

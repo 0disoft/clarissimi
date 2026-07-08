@@ -25,6 +25,7 @@
 - Schema package source: packages/schemas
 - Core package source: packages/core
 - Redaction package source: packages/redaction
+- GitHub package source: packages/github
 - Provider package source: packages/providers
 - Renderer package source: packages/renderers
 - CLI package source: packages/cli

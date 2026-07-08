@@ -25,6 +25,7 @@ engine.
 - `0012-add-fake-provider-package.md`: add deterministic fake provider adapter package
 - `0013-add-renderers-package.md`: add deterministic repository output renderers
 - `0014-add-fixture-first-cli-package.md`: add local fixture-first CLI orchestration
+- `0015-add-fixture-first-github-collector.md`: add fixture-first GitHub merged PR evidence collection
 
 ## Review Blockers
 

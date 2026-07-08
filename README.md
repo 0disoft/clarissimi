@@ -70,6 +70,7 @@ Implemented packages:
 - `packages/core`: pure policy glue for prepared evidence and approval gates
 - `packages/redaction`: deterministic redaction for evidence text and JSON-like values before
   provider calls
+- `packages/github`: fixture-first GitHub merged pull request evidence collection
 - `packages/providers`: provider adapter interface and deterministic fake contribution draft
   provider for tests and fixture-first workflows
 - `packages/renderers`: deterministic JSONL, contributor JSON, Markdown, and static-data output

@@ -31,6 +31,7 @@ This repository type owns workspace boundaries, package ownership, dependency po
 - `packages/core`: Pure policy glue for prepared provider evidence and public approval gates.
 - `packages/redaction`: Deterministic redaction for text and JSON-like evidence values before
   provider boundaries.
+- `packages/github`: Fixture-first GitHub merged pull request event and evidence collection.
 - `packages/providers`: Provider adapter interface and deterministic fake contribution draft
   provider.
 - `packages/renderers`: Deterministic JSONL, contributor JSON, Markdown, and static-data output

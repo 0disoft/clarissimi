@@ -1,0 +1,28 @@
+# Architecture Decisions
+
+- Status: Draft
+- Owner: Repository maintainers
+
+## Purpose
+
+Architecture decisions record the product boundaries that keep Clarissimi from drifting into a
+scoring product, hosted SaaS, or provider-specific workflow before the MVP proves the recognition
+engine.
+
+## Accepted ADRs
+
+- `0001-initial-architecture-boundaries.md`: use a public monorepo
+- `0002-contract-source-of-truth.md`: treat JSONL ledger as source of truth
+- `0003-ai-as-drafter-not-judge.md`: AI drafts; maintainers approve
+- `0004-no-public-leaderboard.md`: do not ship public rankings or total scores
+- `0005-action-first-no-saas.md`: start with GitHub Action and CLI
+- `0006-redaction-before-provider.md`: redact before provider calls
+- `0007-provider-adapter-boundary.md`: keep model providers behind adapters
+- `0008-propose-mode-default.md`: default write mode is proposed pull request
+
+## Review Blockers
+
+- A change contradicts an accepted ADR without adding a superseding ADR.
+- A change exposes public contributor scores or rankings.
+- A change moves domain policy into the CLI or GitHub Action shell.
+- A change bypasses redaction, schema validation, or maintainer approval boundaries.

@@ -73,6 +73,15 @@ For local fixture checks, pass `github-fixture`:
     github-fixture: fixtures/github-merged-pr-basic.json
 ```
 
+For local or CI checks against a GitHub event payload file, pass `event-path`:
+
+```yaml
+- uses: 0disoft/clarissimi@main
+  with:
+    mode: dry-run
+    event-path: fixtures/github-pull-request-merged-event.json
+```
+
 This repository dogfoods the root Action with both `github-fixture` and `event-path` inputs in
 `.github/workflows/clarissimi-dry-run.yml`.
 

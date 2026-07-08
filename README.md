@@ -2,7 +2,7 @@
 
 [![Clarissimi dry run](https://github.com/0disoft/clarissimi/actions/workflows/clarissimi-dry-run.yml/badge.svg?branch=main)](https://github.com/0disoft/clarissimi/actions/workflows/clarissimi-dry-run.yml)
 
-- Status: Design scaffold
+- Status: Fixture-first MVP skeleton
 - Scope: public open-source repositories
 - Repository Type: monorepo
 - Addons: cli-tool, github-action
@@ -65,7 +65,7 @@ This repository is a single public-ready monorepo. The intended implementation p
 
 The Action and CLI are execution shells. They must not own domain policy.
 
-Implemented packages:
+Implemented fixture-first slices:
 
 - `packages/schemas`: TypeScript vocabulary and runtime validation for contribution assessment
   drafts
@@ -81,6 +81,13 @@ Implemented packages:
   and rebuild previews
 - `packages/action`: dry-run-only GitHub Action entrypoint skeleton for event-file and fixture
   summaries
+
+Not implemented yet:
+
+- live GitHub API collection
+- live provider calls
+- repository write modes such as `propose` and `commit`
+- direct branch, pull request, comment, or default-branch mutation
 
 ## Fixture-First CLI
 

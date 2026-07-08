@@ -303,6 +303,38 @@ test("environment runner returns usage failure for unsupported mode", async () =
   assert.equal(stderr, "The action skeleton currently supports only dry-run mode.\n");
 });
 
+test("environment runner does not write outputs or summaries for propose mode", async () => {
+  await withTempDir(async (dir) => {
+    const outputPath = join(dir, "github-output.txt");
+    const summaryPath = join(dir, "step-summary.md");
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        GITHUB_OUTPUT: outputPath,
+        GITHUB_STEP_SUMMARY: summaryPath,
+        INPUT_GITHUB_FIXTURE: "unused.json",
+        INPUT_MODE: "propose"
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        }
+      }
+    );
+
+    assert.equal(exitCode, 1);
+    assert.equal(stdout, "");
+    assert.equal(stderr, "The action skeleton currently supports only dry-run mode.\n");
+    await assert.rejects(() => readFile(outputPath, "utf8"));
+    await assert.rejects(() => readFile(summaryPath, "utf8"));
+  });
+});
+
 test("environment runner returns usage failure for explicit source conflict", async () => {
   await withTempDir(async (dir) => {
     const fixturePath = join(dir, "github-fixture.json");

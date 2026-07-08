@@ -3,7 +3,8 @@ import test from "node:test";
 
 import {
   GitHubEvidenceCollectionError,
-  collectMergedPullRequestEvidence
+  collectMergedPullRequestEvidence,
+  parseGitHubMergedPullRequestFixture
 } from "../dist/index.js";
 
 const fixture = {
@@ -71,6 +72,14 @@ test("collects merged pull request fixture evidence", () => {
   assert.equal(collected.evidence.items.some((item) => item.kind === "commit"), true);
 });
 
+test("parses a GitHub merged pull request fixture from unknown JSON", () => {
+  const parsed = parseGitHubMergedPullRequestFixture(fixture);
+
+  assert.equal(parsed.repository.fullName, "sample/project");
+  assert.equal(parsed.pullRequest.user.login, "octocat");
+  assert.equal(parsed.pullRequest.changedFiles.length, 2);
+});
+
 test("preserves explicit contributor profile URL", () => {
   const collected = collectMergedPullRequestEvidence({
     ...fixture,
@@ -131,6 +140,27 @@ test("rejects invalid repository names before evidence leaves the collector", ()
     GitHubEvidenceCollectionError
   );
 });
+
+test("rejects malformed fixture JSON before collection", () => {
+  assert.throws(
+    () =>
+      parseGitHubMergedPullRequestFixture({
+        repository: {
+          fullName: "sample/project"
+        },
+        pullRequest: {
+          number: "42",
+          title: "Add parser regression coverage",
+          user: {
+            id: 123456,
+            login: "octocat"
+          }
+        }
+      }),
+    GitHubEvidenceCollectionError
+  );
+});
+
 test("rejects non-https fixture URLs", () => {
   assert.throws(
     () =>

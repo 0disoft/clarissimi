@@ -23,6 +23,65 @@ export class GitHubEvidenceCollectionError extends Error {
   }
 }
 
+export function parseGitHubMergedPullRequestFixture(
+  value: unknown
+): GitHubMergedPullRequestFixture {
+  assertRecord(value, "$");
+  assertRecord(value.repository, "$.repository");
+  assertRecord(value.pullRequest, "$.pullRequest");
+
+  const pullRequest = value.pullRequest;
+  assertRecord(pullRequest.user, "$.pullRequest.user");
+
+  const fixture: GitHubMergedPullRequestFixture = {
+    repository: {
+      fullName: expectString(value.repository.fullName, "$.repository.fullName")
+    },
+    pullRequest: {
+      number: expectNumber(pullRequest.number, "$.pullRequest.number"),
+      title: expectString(pullRequest.title, "$.pullRequest.title"),
+      user: {
+        id: expectStringOrNumber(pullRequest.user.id, "$.pullRequest.user.id"),
+        login: expectString(pullRequest.user.login, "$.pullRequest.user.login")
+      }
+    }
+  };
+
+  assignOptional(fixture.pullRequest, "body", expectOptionalString(pullRequest.body, "$.pullRequest.body"));
+  assignOptional(
+    fixture.pullRequest,
+    "htmlUrl",
+    expectOptionalString(pullRequest.htmlUrl, "$.pullRequest.htmlUrl")
+  );
+  assignOptional(
+    fixture.pullRequest,
+    "mergedAt",
+    expectOptionalString(pullRequest.mergedAt, "$.pullRequest.mergedAt")
+  );
+  assignOptional(
+    fixture.pullRequest.user,
+    "htmlUrl",
+    expectOptionalString(pullRequest.user.htmlUrl, "$.pullRequest.user.htmlUrl")
+  );
+  assignOptional(
+    fixture.pullRequest,
+    "labels",
+    parseOptionalLabels(pullRequest.labels, "$.pullRequest.labels")
+  );
+  assignOptional(
+    fixture.pullRequest,
+    "changedFiles",
+    parseOptionalChangedFiles(pullRequest.changedFiles, "$.pullRequest.changedFiles")
+  );
+  assignOptional(
+    fixture.pullRequest,
+    "mergeCommitSha",
+    expectOptionalString(pullRequest.mergeCommitSha, "$.pullRequest.mergeCommitSha")
+  );
+
+  return fixture;
+}
+
 export function collectMergedPullRequestEvidence(
   fixture: GitHubMergedPullRequestFixture
 ): CollectedGitHubEvidence {
@@ -215,6 +274,112 @@ function normalizeRequiredString(value: string, field: string): string {
   }
 
   return normalized;
+}
+
+function parseOptionalLabels(
+  value: unknown,
+  field: string
+): readonly GitHubLabelFixture[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    throw new GitHubEvidenceCollectionError(field, `${field} must be an array when provided.`);
+  }
+
+  return value.map((entry, index) => {
+    assertRecord(entry, `${field}[${index}]`);
+    return {
+      name: expectString(entry.name, `${field}[${index}].name`)
+    };
+  });
+}
+
+function parseOptionalChangedFiles(
+  value: unknown,
+  field: string
+): readonly GitHubChangedFileFixture[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    throw new GitHubEvidenceCollectionError(field, `${field} must be an array when provided.`);
+  }
+
+  return value.map((entry, index) => {
+    const itemPath = `${field}[${index}]`;
+    assertRecord(entry, itemPath);
+
+    const changedFile: GitHubChangedFileFixture = {
+      filename: expectString(entry.filename, `${itemPath}.filename`)
+    };
+    assignOptional(changedFile, "status", expectOptionalString(entry.status, `${itemPath}.status`));
+    assignOptional(
+      changedFile,
+      "additions",
+      expectOptionalNumber(entry.additions, `${itemPath}.additions`)
+    );
+    assignOptional(
+      changedFile,
+      "deletions",
+      expectOptionalNumber(entry.deletions, `${itemPath}.deletions`)
+    );
+    assignOptional(
+      changedFile,
+      "patchExcerpt",
+      expectOptionalString(entry.patchExcerpt, `${itemPath}.patchExcerpt`)
+    );
+
+    return changedFile;
+  });
+}
+
+function expectString(value: unknown, field: string): string {
+  if (typeof value !== "string") {
+    throw new GitHubEvidenceCollectionError(field, `${field} must be a string.`);
+  }
+
+  return value;
+}
+
+function expectOptionalString(value: unknown, field: string): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return expectString(value, field);
+}
+
+function expectNumber(value: unknown, field: string): number {
+  if (typeof value !== "number") {
+    throw new GitHubEvidenceCollectionError(field, `${field} must be a number.`);
+  }
+
+  return value;
+}
+
+function expectOptionalNumber(value: unknown, field: string): number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return expectNumber(value, field);
+}
+
+function expectStringOrNumber(value: unknown, field: string): string | number {
+  if (typeof value !== "string" && typeof value !== "number") {
+    throw new GitHubEvidenceCollectionError(field, `${field} must be a string or number.`);
+  }
+
+  return value;
+}
+
+function assertRecord(value: unknown, field: string): asserts value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new GitHubEvidenceCollectionError(field, `${field} must be an object.`);
+  }
 }
 
 function normalizeOptionalString(value: string | undefined): string | undefined {

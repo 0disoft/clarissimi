@@ -1,7 +1,7 @@
 import { prepareEvidenceForProvider, type EvidenceBundleInput } from "@clarissimi/core";
 import {
   collectMergedPullRequestEvidence,
-  type GitHubMergedPullRequestFixture
+  parseGitHubMergedPullRequestFixture
 } from "@clarissimi/github";
 import {
   createFakeContributionDraftProvider,
@@ -43,9 +43,7 @@ export async function recognizeFixture(path: string): Promise<FixtureRecognition
 
 export async function recognizeGitHubFixture(path: string): Promise<FixtureRecognitionResult> {
   const parsed = parseJsonText(await readTextFile(path), path);
-  const collected = collectMergedPullRequestEvidence(
-    parsed as GitHubMergedPullRequestFixture
-  );
+  const collected = collectMergedPullRequestEvidence(parseGitHubMergedPullRequestFixture(parsed));
 
   return recognizeCollectedFixture(
     {

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -117,6 +117,43 @@ test("maps a merged pull request event from GITHUB_EVENT_PATH", async () => {
     assert.equal(summary.assessment.source.repository, "sample/project");
     assert.equal(summary.assessment.source.pullRequestNumber, 42);
   });
+});
+
+test("maps the repository merged pull request event fixture", async () => {
+  const eventPath = join(process.cwd(), "fixtures", "github-pull-request-merged-event.json");
+  const eventText = await readFile(eventPath, "utf8");
+  const summary = await runActionDryRun({
+    eventPath
+  });
+
+  assert.equal(summary.inputSource, "github_event_path");
+  assert.equal(summary.draftCount, 1);
+  assert.equal(summary.assessment.source.repository, "sample/project");
+  assert.equal(JSON.stringify(summary).includes(JSON.parse(eventText).pull_request.body), false);
+});
+
+test("environment runner accepts GITHUB_EVENT_PATH", async () => {
+  const eventPath = join(process.cwd(), "fixtures", "github-pull-request-merged-event.json");
+  let stdout = "";
+  let stderr = "";
+
+  const exitCode = await runActionFromEnvironment(
+    {
+      GITHUB_EVENT_PATH: eventPath
+    },
+    {
+      stdout: (value) => {
+        stdout += value;
+      },
+      stderr: (value) => {
+        stderr += value;
+      }
+    }
+  );
+
+  assert.equal(exitCode, 0);
+  assert.equal(stderr, "");
+  assert.equal(JSON.parse(stdout).inputSource, "github_event_path");
 });
 
 test("skips an unmerged pull request event without drafting", async () => {

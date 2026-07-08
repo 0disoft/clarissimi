@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { prepareEvidenceForProvider } from "@clarissimi/core";
 import {
   collectMergedPullRequestEvidence,
-  type GitHubMergedPullRequestFixture
+  parseGitHubMergedPullRequestFixture
 } from "@clarissimi/github";
 import { createFakeContributionDraftProvider } from "@clarissimi/providers";
 
@@ -34,7 +34,7 @@ export async function runActionDryRun(input: ActionDryRunInput): Promise<ActionD
   const resolution = source.kind === "github_fixture"
     ? {
         kind: "merged_pull_request" as const,
-        fixture: eventPayload as GitHubMergedPullRequestFixture
+        fixture: parseGitHubMergedPullRequestFixture(eventPayload)
       }
     : resolveGitHubEventPayload(eventPayload);
 

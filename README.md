@@ -85,10 +85,12 @@ The first CLI slice runs without GitHub API access or live LLM credentials:
 ```powershell
 pnpm --filter @clarissimi/cli build
 node packages/cli/dist/bin/clarissimi.js recognize --fixture fixtures/merged-pr-basic.json --mode dry-run --json
+node packages/cli/dist/bin/clarissimi.js recognize --github-fixture fixtures/github-merged-pr-basic.json --mode dry-run --json
 ```
 
-The command creates a deterministic fake-provider assessment from the fixture. Public output
-previews are rendered only when the fixture explicitly carries maintainer approval.
+The command creates a deterministic fake-provider assessment from either a Clarissimi evidence
+fixture or a GitHub-shaped merged pull request fixture. Public output previews are rendered only
+when the fixture explicitly carries maintainer approval.
 
 ## Design Sources
 

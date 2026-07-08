@@ -11,6 +11,7 @@ provider internals.
 Human output should summarize:
 
 - event or fixture processed
+- fixture kind
 - drafts created
 - entries skipped
 - redaction warnings
@@ -22,6 +23,7 @@ JSON output should be stable enough for CI and must not include:
 - raw provider response
 - raw diff
 - raw issue or PR body
+- raw patch excerpt
 - secrets or redacted source text
 - private environment values
 

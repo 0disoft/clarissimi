@@ -15,11 +15,12 @@ redaction, providers, or renderers.
 
 - `clarissimi validate-config`
 - `clarissimi validate-ledger`
-- `clarissimi recognize --fixture <path> --mode dry-run`
+- `clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run`
 - `clarissimi rebuild`
 
-Fixture-first behavior is acceptable for the first implementation. Live GitHub collection can be
-added after schemas, redaction, fake provider, and renderers are stable.
+Fixture-first behavior is acceptable for the first implementation. `--fixture` accepts Clarissimi's
+internal evidence fixture shape. `--github-fixture` accepts a GitHub-shaped merged pull request
+fixture and routes it through `packages/github` without live GitHub API access.
 
 The fixture-first CLI implements these commands locally without GitHub API access or live provider
 credentials.

@@ -24,10 +24,17 @@ deferred until a safe loader decision exists.
 
 Validates `.clarissimi/contributions.jsonl` schema versions, required fields, and parseability.
 
-### `clarissimi recognize --fixture <path> --mode dry-run`
+### `clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run`
 
 Runs a fixture-based recognition flow. The first implementation may use only fixtures and fake
 provider output.
+
+`--fixture` accepts Clarissimi's internal evidence fixture shape: contributor identity, prepared
+evidence input, optional provider hints, and optional maintainer approval status.
+
+`--github-fixture` accepts a GitHub-shaped merged pull request fixture and routes it through
+`packages/github` before redaction and fake-provider drafting. It does not call the live GitHub API,
+read tokens, or infer linked issues and review comments.
 
 The fixture-first implementation does not write files in this command. If a fixture explicitly
 contains approved maintainer status, the command may render public output previews.

@@ -16,7 +16,7 @@ import {
 import { CliUsageError, getBooleanFlag, getStringFlag, parseArgs, type ParsedArgs } from "./args.js";
 import { validateConfigFile } from "./config.js";
 import { CLI_EXIT_CODES, type CliExitCode } from "./exit-codes.js";
-import { recognizeFixture } from "./fixture.js";
+import { recognizeFixture, recognizeGitHubFixture } from "./fixture.js";
 import {
   fileExists,
   readTextFile,
@@ -106,13 +106,27 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   }
 
   const fixturePath = getStringFlag(args, "fixture");
-  if (fixturePath === undefined) {
-    io.stderr("recognize requires --fixture <path>.\n");
+  const githubFixturePath = getStringFlag(args, "github-fixture");
+  if (fixturePath === undefined && githubFixturePath === undefined) {
+    io.stderr("recognize requires --fixture <path> or --github-fixture <path>.\n");
+    return CLI_EXIT_CODES.usage;
+  }
+
+  if (fixturePath !== undefined && githubFixturePath !== undefined) {
+    io.stderr("recognize accepts only one fixture input: use --fixture or --github-fixture.\n");
     return CLI_EXIT_CODES.usage;
   }
 
   try {
-    const result = await recognizeFixture(resolveFromCwd(io.cwd, fixturePath));
+    const selectedFixturePath = fixturePath ?? githubFixturePath;
+    if (selectedFixturePath === undefined) {
+      io.stderr("recognize requires a fixture path.\n");
+      return CLI_EXIT_CODES.usage;
+    }
+
+    const result = fixturePath !== undefined
+      ? await recognizeFixture(resolveFromCwd(io.cwd, selectedFixturePath))
+      : await recognizeGitHubFixture(resolveFromCwd(io.cwd, selectedFixturePath));
     const canRenderPublicOutputs =
       result.assessment.maintainerApprovalStatus === "approved" ||
       result.assessment.maintainerApprovalStatus === "auto_approved";
@@ -129,13 +143,14 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
       ok: true,
       command: "recognize",
       mode,
-      fixturePath,
+      fixtureKind: result.fixtureKind,
+      fixturePath: selectedFixturePath,
       draftCreated: true,
       approvalStatus: result.assessment.maintainerApprovalStatus,
       publicOutputsRendered: outputs !== null,
       redactionChanged: result.redactionChanged,
       redactionMatchCount: result.redactionMatchCount,
-      assessment: result.assessment,
+      assessment: sanitizeAssessmentForCliOutput(result.assessment),
       outputPreview: outputs,
       message: outputs === null
         ? "Draft created; public outputs were not rendered because the assessment is not approved."
@@ -224,8 +239,20 @@ function renderHelp(): string {
     "Commands:",
     "  clarissimi validate-config [--config <path>] [--json]",
     "  clarissimi validate-ledger [--ledger <path>] [--json]",
-    "  clarissimi recognize --fixture <path> --mode dry-run [--json]",
+    "  clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run [--json]",
     "  clarissimi rebuild [--ledger <path>] [--out-dir <path>] [--json]",
     ""
   ].join("\n");
+}
+
+function sanitizeAssessmentForCliOutput<T extends { evidenceRefs: readonly object[] }>(
+  assessment: T
+): T {
+  return {
+    ...assessment,
+    evidenceRefs: assessment.evidenceRefs.map((ref) => {
+      const { excerpt: _excerpt, ...safeRef } = ref as Record<string, unknown>;
+      return safeRef;
+    })
+  };
 }

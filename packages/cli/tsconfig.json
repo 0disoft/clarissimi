@@ -27,6 +27,9 @@
       "path": "../core"
     },
     {
+      "path": "../github"
+    },
+    {
       "path": "../providers"
     },
     {

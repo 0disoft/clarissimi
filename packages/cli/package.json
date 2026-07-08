@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@clarissimi/core": "workspace:*",
+    "@clarissimi/github": "workspace:*",
     "@clarissimi/providers": "workspace:*",
     "@clarissimi/renderers": "workspace:*",
     "@clarissimi/schemas": "workspace:*"

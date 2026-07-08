@@ -74,6 +74,41 @@ function fixture(overrides = {}) {
   };
 }
 
+function githubFixture(overrides = {}) {
+  return {
+    repository: {
+      fullName: "example/project"
+    },
+    pullRequest: {
+      number: 42,
+      title: "Add parser regression coverage",
+      body: "Adds a failing parser case and keeps it covered.",
+      htmlUrl: "https://github.com/example/project/pull/42",
+      mergedAt: "2026-07-08T00:00:00.000Z",
+      user: {
+        id: 123456,
+        login: "octocat",
+        htmlUrl: "https://github.com/octocat"
+      },
+      labels: [
+        {
+          name: "tests"
+        }
+      ],
+      changedFiles: [
+        {
+          filename: "tests/parser.spec.ts",
+          status: "added",
+          additions: 32,
+          deletions: 0,
+          patchExcerpt: "test(\"parses nested input\", () => {})"
+        }
+      ],
+      ...overrides
+    }
+  };
+}
+
 async function withTempDir(callback) {
   const dir = await mkdtemp(join(tmpdir(), "clarissimi-cli-"));
   try {
@@ -176,6 +211,51 @@ test("recognize renders previews when fixture explicitly carries approval", asyn
     assert.equal(output.approvalStatus, "approved");
     assert.equal(output.publicOutputsRendered, true);
     assert.equal(output.outputPreview.contributorsMarkdown.includes("## octocat"), true);
+  });
+});
+
+test("recognize collects GitHub merged PR fixture evidence", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "github-fixture.json");
+    await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+
+    const result = await run(
+      ["recognize", "--github-fixture", fixturePath, "--mode", "dry-run", "--json"],
+      dir
+    );
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(output.fixtureKind, "github");
+    assert.equal(output.approvalStatus, "draft");
+    assert.equal(output.assessment.contributor.login, "octocat");
+    assert.equal(output.assessment.source.pullRequestNumber, 42);
+    assert.equal(JSON.stringify(output).includes("Adds a failing parser case"), false);
+  });
+});
+
+test("recognize rejects ambiguous fixture inputs", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "fixture.json");
+    const githubFixturePath = join(dir, "github-fixture.json");
+    await writeFile(fixturePath, JSON.stringify(fixture()), "utf8");
+    await writeFile(githubFixturePath, JSON.stringify(githubFixture()), "utf8");
+
+    const result = await run(
+      [
+        "recognize",
+        "--fixture",
+        fixturePath,
+        "--github-fixture",
+        githubFixturePath,
+        "--mode",
+        "dry-run"
+      ],
+      dir
+    );
+
+    assert.equal(result.exitCode, 1);
+    assert.equal(result.stderr.includes("only one fixture input"), true);
   });
 });
 

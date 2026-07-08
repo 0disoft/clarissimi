@@ -1,5 +1,9 @@
 import { prepareEvidenceForProvider, type EvidenceBundleInput } from "@clarissimi/core";
 import {
+  collectMergedPullRequestEvidence,
+  type GitHubMergedPullRequestFixture
+} from "@clarissimi/github";
+import {
   createFakeContributionDraftProvider,
   type ProviderAssessmentHints
 } from "@clarissimi/providers";
@@ -20,6 +24,7 @@ export interface RecognitionFixture {
 }
 
 export interface FixtureRecognitionResult {
+  readonly fixtureKind: "evidence" | "github";
   readonly draft: ContributionAssessment;
   readonly assessment: ContributionAssessment;
   readonly redactionChanged: boolean;
@@ -33,6 +38,28 @@ export async function readRecognitionFixture(path: string): Promise<RecognitionF
 
 export async function recognizeFixture(path: string): Promise<FixtureRecognitionResult> {
   const fixture = await readRecognitionFixture(path);
+  return recognizeCollectedFixture(fixture, "evidence");
+}
+
+export async function recognizeGitHubFixture(path: string): Promise<FixtureRecognitionResult> {
+  const parsed = parseJsonText(await readTextFile(path), path);
+  const collected = collectMergedPullRequestEvidence(
+    parsed as GitHubMergedPullRequestFixture
+  );
+
+  return recognizeCollectedFixture(
+    {
+      contributor: collected.contributor,
+      evidence: collected.evidence
+    },
+    "github"
+  );
+}
+
+async function recognizeCollectedFixture(
+  fixture: RecognitionFixture,
+  fixtureKind: FixtureRecognitionResult["fixtureKind"]
+): Promise<FixtureRecognitionResult> {
   const preparedEvidence = prepareEvidenceForProvider(fixture.evidence);
   const provider = createFakeContributionDraftProvider();
   const providerInput = {
@@ -50,6 +77,7 @@ export async function recognizeFixture(path: string): Promise<FixtureRecognition
   const assessment = applyFixtureApproval(draft, fixture.maintainerApprovalStatus);
 
   return {
+    fixtureKind,
     draft,
     assessment,
     redactionChanged: preparedEvidence.redactionReport.changed,

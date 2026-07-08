@@ -20,6 +20,9 @@ importers:
       '@clarissimi/core':
         specifier: workspace:*
         version: link:../core
+      '@clarissimi/github':
+        specifier: workspace:*
+        version: link:../github
       '@clarissimi/providers':
         specifier: workspace:*
         version: link:../providers

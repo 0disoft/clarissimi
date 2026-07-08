@@ -72,6 +72,8 @@ Implemented packages:
   provider calls
 - `packages/providers`: provider adapter interface and deterministic fake contribution draft
   provider for tests and fixture-first workflows
+- `packages/renderers`: deterministic JSONL, contributor JSON, Markdown, and static-data output
+  rendering
 
 ## Design Sources
 

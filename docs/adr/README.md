@@ -23,6 +23,7 @@ engine.
 - `0010-add-redaction-package-boundary.md`: add deterministic redaction before provider calls
 - `0011-add-core-policy-package.md`: add pure policy glue for prepared evidence and approval gates
 - `0012-add-fake-provider-package.md`: add deterministic fake provider adapter package
+- `0013-add-renderers-package.md`: add deterministic repository output renderers
 
 ## Review Blockers
 

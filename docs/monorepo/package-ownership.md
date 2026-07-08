@@ -12,7 +12,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
 - Product decision: docs/product/02-spec.md
 - Technical owner: Repository maintainers
 - Related ADRs: docs/adr/0009-start-schema-package-implementation.md,
-  docs/adr/0012-add-fake-provider-package.md
+  docs/adr/0012-add-fake-provider-package.md,
+  docs/adr/0013-add-renderers-package.md
 
 ## Required Decisions
 
@@ -34,7 +35,7 @@ This repository type owns workspace boundaries, package ownership, dependency po
 | `packages/redaction` | Implemented | String and JSON-like value redaction, redaction reports, secret/email/private-key/provider-token masking | Provider API calls, prompt construction, security severity decisions, recognition approval |
 | `packages/github` | Planned | GitHub event and evidence collection | Domain policy or provider calls |
 | `packages/providers` | Implemented | Provider adapter interface and deterministic fake contribution draft provider | Schema vocabulary ownership, redaction policy, maintainer approval policy, live LLM SDK clients |
-| `packages/renderers` | Planned | JSONL, JSON, Markdown, and static-data rendering | Evidence collection or provider calls |
+| `packages/renderers` | Implemented | JSONL, derived contributor JSON, Markdown, static-data rendering, output path constants | Evidence collection, provider calls, approval policy, filesystem writes, CLI orchestration, Action orchestration |
 | `packages/cli` | Planned | Local command orchestration | Domain policy |
 | `packages/action` | Planned | GitHub Action entrypoint | Domain policy |
 

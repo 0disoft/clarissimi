@@ -32,6 +32,15 @@ importers:
 
   packages/redaction: {}
 
+  packages/renderers:
+    dependencies:
+      '@clarissimi/core':
+        specifier: workspace:*
+        version: link:../core
+      '@clarissimi/schemas':
+        specifier: workspace:*
+        version: link:../schemas
+
   packages/schemas: {}
 
 packages:

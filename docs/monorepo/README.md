@@ -33,6 +33,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
   provider boundaries.
 - `packages/providers`: Provider adapter interface and deterministic fake contribution draft
   provider.
+- `packages/renderers`: Deterministic JSONL, contributor JSON, Markdown, and static-data output
+  rendering.
 
 ## Review Blockers
 

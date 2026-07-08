@@ -125,6 +125,9 @@ pull request for maintainer review. When `propose` receives `GITHUB_EVENT_PATH`,
 merged pull request through the live GitHub collector using `GITHUB_TOKEN`; fixture inputs remain
 the deterministic test and local path. Live provider calls are still future work.
 
+Workflow examples and permission details live in `docs/github-action/README.md` and
+`docs/github-action/permissions.md`.
+
 ## Design Sources
 
 - Product contract: `docs/product/02-spec.md`

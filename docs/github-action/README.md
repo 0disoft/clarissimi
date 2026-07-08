@@ -35,11 +35,13 @@ code.
 
 ## Action Usage
 
-The current `action.yml` supports read-only `dry-run` mode and fixture-first `propose` mode. It
-builds the local Action package from source at runtime. Dry-run mode emits a bounded summary and
-does not read provider credentials, use GitHub write tokens, create branches, open pull requests, or
-update repository files. Propose mode stages approved fixture-first recognition output, publishes a
-proposal branch, and opens or updates a pull request.
+The current `action.yml` supports read-only `dry-run` mode and `propose` mode. It builds the local
+Action package from source at runtime. Dry-run mode emits a bounded summary and does not read
+provider credentials, use GitHub write tokens, create branches, open pull requests, or update
+repository files. Propose mode stages approved recognition output, publishes a proposal branch, and
+opens or updates a pull request. When `propose` receives `GITHUB_EVENT_PATH`, it routes the merged
+pull request through the live GitHub collector using `GITHUB_TOKEN`; fixture inputs remain the
+deterministic local and test path.
 
 Detailed outputs and failure behavior are defined in `docs/github-action/action-contract.md`. The
 remaining implementation sequence is tracked in `docs/github-action/propose-implementation-plan.md`.
@@ -90,7 +92,38 @@ For local or CI checks against a GitHub event payload file, pass `event-path`:
 This repository dogfoods the root Action with both `github-fixture` and `event-path` inputs in
 `.github/workflows/clarissimi-dry-run.yml`.
 
-Fixture-first propose mode requires an approved or auto-approved fixture and write permissions:
+Propose mode against a merged pull request event requires checkout, explicit write permissions, and
+repository settings that allow GitHub Actions to create pull requests:
+
+```yaml
+name: Clarissimi propose
+
+on:
+  pull_request:
+    types:
+      - closed
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+jobs:
+  recognize:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: 0disoft/clarissimi@main
+        with:
+          mode: propose
+          base-branch: main
+```
+
+Fixture-first propose mode requires an approved or auto-approved fixture and the same write
+permissions:
 
 ```yaml
 permissions:

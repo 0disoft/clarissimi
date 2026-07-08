@@ -21,7 +21,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
   ADRs before other packages depend on them.
 - Monorepo validation evidence: `pnpm run typecheck`, `pnpm run test`, `pnpm run contract`, and
   `pnpm run check` cover implemented packages.
-- Monorepo release or rollout policy: UNDECIDED.
+- Monorepo release or rollout policy: no public package publication before `docs/ops/release.md`
+  pre-release gates are satisfied.
 - Monorepo compatibility and migration policy: schema changes must preserve or explicitly migrate
   accepted schema versions.
 
@@ -31,15 +32,16 @@ This repository type owns workspace boundaries, package ownership, dependency po
 - `packages/core`: Pure policy glue for prepared provider evidence and public approval gates.
 - `packages/redaction`: Deterministic redaction for text and JSON-like evidence values before
   provider boundaries.
-- `packages/github`: Fixture-first GitHub merged pull request event and evidence collection.
+- `packages/github`: Fixture-first and injected-client live GitHub merged pull request evidence
+  collection.
 - `packages/providers`: Provider adapter interface and deterministic fake contribution draft
   provider.
 - `packages/renderers`: Deterministic JSONL, contributor JSON, Markdown, and static-data output
   rendering.
 - `packages/cli`: Fixture-first local command orchestration for config validation, ledger
   validation, recognition dry runs, and rebuild previews.
-- `packages/action`: Dry-run-only GitHub Action entrypoint skeleton for event-file and fixture
-  summaries.
+- `packages/action`: GitHub Action entrypoint for dry-run summaries, fixture-first proposal pull
+  requests, and event-path live GitHub collection in propose mode.
 
 ## Review Blockers
 

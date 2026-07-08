@@ -230,14 +230,17 @@ Validation:
 
 Source: `README.md`, `docs/product/01-roadmap.md`
 
+Status: Completed for current implementation alignment. Public package publication remains blocked
+by `docs/ops/release.md` pre-release gates.
+
 Goal: keep public documentation aligned with the implementation state.
 
-Expected deliverables:
+Completed deliverables:
 
 - README status stays accurate
 - installation and dry-run examples match the root Action contract
 - propose mode docs are added only when implementation exists
-- release or versioning policy is decided before package publication
+- release or versioning policy blocks package publication until release gates are satisfied
 
 Validation:
 

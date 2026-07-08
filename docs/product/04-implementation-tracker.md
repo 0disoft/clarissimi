@@ -31,8 +31,8 @@ The repository currently has a fixture-first MVP skeleton:
 - `packages/renderers`: JSONL, contributor JSON, Markdown, and static-data renderers
 - `packages/cli`: fixture-first validation, recognition dry-run, and rebuild commands
 - `packages/action`: dry-run-only Action runner for event payloads and GitHub fixtures, plus
-  internal proposal output staging, proposal branch writing, and fake-client-tested pull request
-  creation/update boundaries for future `propose` mode
+  internal proposal output staging, proposal branch writing, proposal branch publishing, and
+  fake-client-tested pull request creation/update boundaries for future `propose` mode
 - root `action.yml`: dry-run-only composite Action
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
   `event-path` inputs
@@ -108,12 +108,36 @@ Validation:
 - adapter-level fake-client tests
 - `pnpm run contract`
 
-### 4. Action `mode=propose`
+### 4. Proposal Branch Publisher Boundary
+
+Source: `docs/adr/0017-propose-mode-write-boundary.md`
+
+Status: Completed in `packages/action/src/branch-publisher.ts`.
+
+Goal: publish the deterministic proposal branch before pull request creation without changing the
+default branch.
+
+Completed deliverables:
+
+- branch publisher interface that accepts only a branch writer result and configured remote
+  metadata
+- `git push --force-with-lease` publication to the deterministic proposal branch
+- bare-remote tests proving remote `main` is not mutated
+- diagnostics for missing repository directory, branch name, commit sha, remote name, and stale
+  branch-writer results
+
+Validation:
+
+- `pnpm run test`
+- `pnpm run contract`
+- temporary bare git repository tests
+
+### 5. Action `mode=propose`
 
 Source: `docs/github-action/action-contract.md`
 
-Goal: wire `mode=propose` only after staging, branch writing, and pull request creation have
-separate tests.
+Goal: wire `mode=propose` only after staging, branch writing, branch publishing, and pull request
+creation have separate tests.
 
 Expected deliverables:
 
@@ -121,7 +145,8 @@ Expected deliverables:
 - unsupported modes still fail as usage errors
 - explicit permission guidance remains in `docs/github-action/permissions.md`
 - Action outputs and step summaries stay bounded
-- provider, schema, policy, renderer, or redaction failures fail closed before mutation
+- provider, schema, policy, renderer, redaction, branch publishing, or pull request failures fail
+  closed before mutation
 
 Validation:
 
@@ -129,7 +154,7 @@ Validation:
 - read-only dry-run dogfood remains unchanged
 - maintainer-triggered propose dogfood only after fake-client and temporary-repository tests pass
 
-### 5. Live GitHub Collection
+### 6. Live GitHub Collection
 
 Source: `docs/product/01-roadmap.md`
 
@@ -150,7 +175,7 @@ Validation:
 - fake-client tests
 - `pnpm run contract`
 
-### 6. Live Provider Adapter
+### 7. Live Provider Adapter
 
 Source: `docs/adr/0007-provider-adapter-boundary.md`
 
@@ -170,7 +195,7 @@ Validation:
 - fake-provider core tests continue to pass
 - live-provider smoke tests are explicit and optional
 
-### 7. Documentation And Release Readiness
+### 8. Documentation And Release Readiness
 
 Source: `README.md`, `docs/product/01-roadmap.md`
 

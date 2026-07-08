@@ -19,10 +19,14 @@ engine.
 - `0006-redaction-before-provider.md`: redact before provider calls
 - `0007-provider-adapter-boundary.md`: keep model providers behind adapters
 - `0008-propose-mode-default.md`: default write mode is proposed pull request
+- `0009-start-schema-package-implementation.md`: start implementation with `packages/schemas`
+- `0010-add-redaction-package-boundary.md`: add deterministic redaction before provider calls
+- `0011-add-core-policy-package.md`: add pure policy glue for prepared evidence and approval gates
 
 ## Review Blockers
 
 - A change contradicts an accepted ADR without adding a superseding ADR.
 - A change exposes public contributor scores or rankings.
 - A change moves domain policy into the CLI or GitHub Action shell.
+- A change duplicates schema vocabulary instead of importing it from `packages/schemas`.
 - A change bypasses redaction, schema validation, or maintainer approval boundaries.

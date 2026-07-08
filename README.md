@@ -63,6 +63,14 @@ This repository is a single public-ready monorepo. The intended implementation p
 
 The Action and CLI are execution shells. They must not own domain policy.
 
+Implemented packages:
+
+- `packages/schemas`: TypeScript vocabulary and runtime validation for contribution assessment
+  drafts
+- `packages/core`: pure policy glue for prepared evidence and approval gates
+- `packages/redaction`: deterministic redaction for evidence text and JSON-like values before
+  provider calls
+
 ## Design Sources
 
 - Product contract: `docs/product/02-spec.md`
@@ -72,6 +80,7 @@ The Action and CLI are execution shells. They must not own domain policy.
 - Domain model: `docs/architecture/01-domain-model.md`
 - Runtime flow: `docs/architecture/02-runtime-flow.md`
 - Architecture decisions: `docs/adr/*.md`
+- Package ownership: `docs/monorepo/package-ownership.md`
 - License: `LICENSE`
 - Notices: `NOTICE`
 - Security policy: `SECURITY.md`
@@ -96,6 +105,21 @@ build outputs, caches, and secret files under control.
 
 Project-specific implementation choices belong in the product, architecture, and ADR documents
 before code is generated.
+
+## Validation
+
+The current executable checks are:
+
+- `pnpm run typecheck`
+- `pnpm run test`
+- `pnpm run contract`
+- `pnpm run check`
+
+Unimplemented validation names intentionally fail until configured.
+
+`package.json` is project-owned after the first implementation package. `ssealed doctor` remains
+useful for scaffold provenance, but it is not the implementation merge gate once runner scripts are
+customized for real packages.
 
 ## License
 

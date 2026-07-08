@@ -4,9 +4,8 @@
 
 Scope: general
 
-This repository owns product, architecture, ADR, engineering, and operational design scaffolds.
-
-It does not own implementation source code.
+This repository owns product, architecture, ADR, engineering, operational design, and the MVP
+implementation packages described by the source-of-truth documents.
 
 ## Repository Shape
 
@@ -22,13 +21,17 @@ It does not own implementation source code.
 
 - Product scope: docs/product/02-spec.md
 - Architecture decisions: docs/adr/*.md
+- Package ownership: docs/monorepo/package-ownership.md
 - Validation: VALIDATION.md
 - Agent routing: .agents/context-map.md
 - Repository hygiene: .editorconfig, .gitattributes, .gitignore
 
 ## Hard Rules
 
-- Do not generate or infer application source code from this scaffold.
+- Generate or change implementation source only when a product spec, ADR, or package ownership
+  document names the boundary.
+- Keep domain schema vocabulary in `packages/schemas`; do not duplicate contribution type,
+  impact level, approval status, or evidence kind lists in other packages.
 - Do not invent technology choices. Use UNDECIDED when a decision is not known.
 - Do not create fake credentials, tokens, secrets, or private values.
 - Do not rely on generated, cache, or build output as source truth.
@@ -49,7 +52,7 @@ It does not own implementation source code.
 
 ## Out of Scope
 
-- Application source scaffolding.
+- Implementation packages not accepted by product specs, ADRs, or package ownership docs.
 - Runtime infrastructure such as Docker, Kubernetes, Terraform, or framework apps.
 - Project-specific credentials or deployment secrets.
 

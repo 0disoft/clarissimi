@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/schemas"
+    },
+    {
+      "path": "./packages/redaction"
+    },
+    {
+      "path": "./packages/core"
+    }
+  ]
+}

@@ -31,7 +31,8 @@ The repository currently has a fixture-first MVP skeleton:
 - `packages/renderers`: JSONL, contributor JSON, Markdown, and static-data renderers
 - `packages/cli`: fixture-first validation, recognition dry-run, and rebuild commands
 - `packages/action`: dry-run-only Action runner for event payloads and GitHub fixtures, plus
-  internal proposal output staging and proposal branch writing for future `propose` mode
+  internal proposal output staging, proposal branch writing, and fake-client-tested pull request
+  creation/update boundaries for future `propose` mode
 - root `action.yml`: dry-run-only composite Action
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
   `event-path` inputs
@@ -89,16 +90,18 @@ Validation:
 
 Source: `docs/adr/0017-propose-mode-write-boundary.md`
 
+Status: Completed in `packages/action/src/pull-request.ts`.
+
 Goal: add pull request creation or update behind a fake-client-tested adapter before any live GitHub
 API dependency is introduced.
 
-Expected deliverables:
+Completed deliverables:
 
 - fake GitHub client tests
 - pull request title prefix: `Clarissimi recognition:`
 - bounded pull request body with source reference, changed files, approval summary, redaction match
   count, and maintainer approval note
-- actionable diagnostics for blocked pull request creation permissions
+- actionable diagnostics for blocked pull request creation permissions and repository settings
 
 Validation:
 

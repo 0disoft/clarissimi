@@ -41,7 +41,7 @@ This repository type owns workspace boundaries, package ownership, dependency po
 | `packages/providers` | Implemented | Provider adapter interface and deterministic fake contribution draft provider | Schema vocabulary ownership, redaction policy, maintainer approval policy, live LLM SDK clients |
 | `packages/renderers` | Implemented | JSONL, derived contributor JSON, Markdown, static-data rendering, output path constants | Evidence collection, provider calls, approval policy, filesystem writes, CLI orchestration, Action orchestration |
 | `packages/cli` | Implemented | Local command parsing, fixture-first orchestration, config and ledger validation, rebuild command I/O | Domain policy, schema vocabulary, provider behavior, GitHub API collection, Action runtime |
-| `packages/action` | Implemented | Dry-run-only GitHub Action entrypoint, environment input resolution, event file reading, bounded dry-run summary, internal propose-mode output staging into temporary directories, proposal branch writing behind a narrow local git boundary | Live GitHub API calls, token handling, pull request writes, default-branch writes, domain policy, provider behavior |
+| `packages/action` | Implemented | Dry-run-only GitHub Action entrypoint, environment input resolution, event file reading, bounded dry-run summary, internal propose-mode output staging into temporary directories, proposal branch writing behind a narrow local git boundary, fake-client-tested proposal pull request creation/update boundary | Live GitHub API calls, token handling, default-branch writes, domain policy, provider behavior |
 
 ## Review Blockers
 

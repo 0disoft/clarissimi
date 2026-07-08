@@ -190,6 +190,36 @@ test("environment runner ignores blank optional inputs and writes GitHub outputs
   });
 });
 
+test("environment runner prefers explicit fixture over implicit GitHub event path", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "github-fixture.json");
+    const eventPath = join(dir, "event.json");
+    await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+    await writeFile(eventPath, JSON.stringify(pullRequestEvent()), "utf8");
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        GITHUB_EVENT_PATH: eventPath,
+        INPUT_GITHUB_FIXTURE: fixturePath
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        }
+      }
+    );
+
+    assert.equal(exitCode, 0);
+    assert.equal(stderr, "");
+    assert.equal(JSON.parse(stdout).inputSource, "github_fixture");
+  });
+});
+
 test("skips an unmerged pull request event without drafting", async () => {
   await withTempDir(async (dir) => {
     const eventPath = join(dir, "event.json");

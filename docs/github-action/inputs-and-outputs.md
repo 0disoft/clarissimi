@@ -27,6 +27,8 @@ The current package skeleton supports `INPUT_EVENT_PATH`, `GITHUB_EVENT_PATH`,
 `INPUT_GITHUB_FIXTURE`, and `INPUT_MODE=dry-run` only.
 
 The root `action.yml` currently exposes `event-path`, `github-fixture`, and `mode`.
+An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`
+fallback. An explicit `event-path` and `github-fixture` must not be provided together.
 
 ## Candidate Outputs
 

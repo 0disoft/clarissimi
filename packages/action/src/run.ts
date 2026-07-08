@@ -82,15 +82,16 @@ export async function runActionFromEnvironment(
   io: ActionProcessIo
 ): Promise<number> {
   try {
+    const explicitEventPath = readEnvInput(env.INPUT_EVENT_PATH);
+    const githubFixturePath = readEnvInput(env.INPUT_GITHUB_FIXTURE);
+    const fallbackEventPath = githubFixturePath === undefined
+      ? readEnvInput(env.GITHUB_EVENT_PATH)
+      : undefined;
     const input: ActionDryRunInput = {
       mode: readEnvInput(env.INPUT_MODE) ?? "dry-run"
     };
-    assignOptional(
-      input,
-      "eventPath",
-      readEnvInput(env.INPUT_EVENT_PATH) ?? readEnvInput(env.GITHUB_EVENT_PATH)
-    );
-    assignOptional(input, "githubFixturePath", readEnvInput(env.INPUT_GITHUB_FIXTURE));
+    assignOptional(input, "eventPath", explicitEventPath ?? fallbackEventPath);
+    assignOptional(input, "githubFixturePath", githubFixturePath);
 
     const summary = await runActionDryRun(input);
     await writeGitHubOutputs(env.GITHUB_OUTPUT, summary);

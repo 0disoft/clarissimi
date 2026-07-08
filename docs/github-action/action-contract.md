@@ -10,6 +10,7 @@
 - Action-first decision: `docs/adr/0005-action-first-no-saas.md`
 - Propose-mode decision: `docs/adr/0008-propose-mode-default.md`
 - Dry-run skeleton decision: `docs/adr/0016-add-dry-run-action-skeleton.md`
+- Propose write boundary: `docs/adr/0017-propose-mode-write-boundary.md`
 
 ## Inputs
 
@@ -80,8 +81,8 @@ The dry-run skeleton uses the following process outcomes:
 ## Permissions
 
 Dry-run mode should need read permissions only. Propose mode needs the minimum write permissions
-required to create a branch and pull request. Commit mode requires explicit configuration and should
-not be the default.
+required to create a proposal branch and pull request. Commit mode requires explicit configuration
+and should not be the default.
 
 ## Review Blockers
 

@@ -6,6 +6,18 @@
 ## Permission Principle
 
 Clarissimi should request the narrowest permissions required for the selected mode.
+Workflow examples must use explicit `permissions`. A workflow must not use `write-all`.
+
+## Permission Matrix
+
+| Mode | `contents` | `pull-requests` | `issues` | Writes repository files | Opens pull request |
+| --- | --- | --- | --- | --- | --- |
+| `dry-run` | `read` | `read` | `read` | No | No |
+| `propose` | `write` | `write` | `read` | Proposal branch only | Yes |
+| `commit` | `write` | `read` | `read` | Current branch | No |
+
+Any permission not listed in a workflow should remain unset, which GitHub treats as `none` when
+the workflow uses an explicit `permissions` block.
 
 ## Dry-Run Mode
 
@@ -34,6 +46,14 @@ Expected permissions:
 
 Propose mode writes to a branch and opens a pull request for maintainer review.
 
+The proposal branch name should be deterministic and scoped under
+`clarissimi/recognition/<source-kind>-<source-id>`. The proposal pull request title should start
+with `Clarissimi recognition:`.
+
+The target repository or organization may need to allow GitHub Actions to create pull requests.
+If that setting blocks pull request creation, Clarissimi should fail with an actionable diagnostic
+instead of falling back to direct commits or broader credentials.
+
 ## Commit Mode
 
 Commit mode requires explicit configuration and should not be the default.
@@ -49,9 +69,13 @@ Expected permissions:
 Avoid default `pull_request_target` examples. Do not checkout or execute untrusted pull request head
 code.
 
+`propose` mode should run after safe post-merge events, explicit manual dispatch, or another event
+that does not require running untrusted pull request head code.
+
 ## Review Blockers
 
 - A workflow asks for broad write permissions in dry-run mode.
+- A workflow uses `write-all`.
 - `pull_request_target` is documented as the default path.
 - Secrets are exposed to untrusted fork code.
 - Permission changes are not reflected in examples and tests.

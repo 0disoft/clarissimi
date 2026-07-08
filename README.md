@@ -1,5 +1,7 @@
 # Clarissimi
 
+[![Clarissimi dry run](https://github.com/0disoft/clarissimi/actions/workflows/clarissimi-dry-run.yml/badge.svg?branch=main)](https://github.com/0disoft/clarissimi/actions/workflows/clarissimi-dry-run.yml)
+
 - Status: Design scaffold
 - Scope: public open-source repositories
 - Repository Type: monorepo

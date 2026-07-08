@@ -73,6 +73,9 @@ For local fixture checks, pass `github-fixture`:
     github-fixture: fixtures/github-merged-pr-basic.json
 ```
 
+This repository dogfoods the root Action with both `github-fixture` and `event-path` inputs in
+`.github/workflows/clarissimi-dry-run.yml`.
+
 ## Review Blockers
 
 - Action permission changes lack least-privilege review.

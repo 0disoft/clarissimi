@@ -7,29 +7,48 @@ permissions:
   contents: read
 
 jobs:
-  fixture-dry-run:
-    name: Fixture dry run
+  dogfood-dry-run:
+    name: Dry-run dogfood
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Run local dry-run action
-        id: clarissimi
+      - name: Run fixture dry-run action
+        id: fixture
         uses: ./
         with:
           mode: dry-run
           github-fixture: fixtures/github-merged-pr-basic.json
 
-      - name: Verify dry-run outputs
+      - name: Verify fixture dry-run outputs
         shell: bash
         run: |
           set -euo pipefail
-          test "${{ steps.clarissimi.outputs.draft-count }}" = "1"
-          test "${{ steps.clarissimi.outputs.proposed-entry-count }}" = "0"
-          test "${{ steps.clarissimi.outputs.skipped-entry-count }}" = "0"
-          test "${{ steps.clarissimi.outputs.mode }}" = "dry-run"
-          test "${{ steps.clarissimi.outputs.input-source }}" = "github_fixture"
-          test "${{ steps.clarissimi.outputs.approval-status }}" = "draft"
-          test "${{ steps.clarissimi.outputs.redaction-match-count }}" = "0"
+          test "${{ steps.fixture.outputs.draft-count }}" = "1"
+          test "${{ steps.fixture.outputs.proposed-entry-count }}" = "0"
+          test "${{ steps.fixture.outputs.skipped-entry-count }}" = "0"
+          test "${{ steps.fixture.outputs.mode }}" = "dry-run"
+          test "${{ steps.fixture.outputs.input-source }}" = "github_fixture"
+          test "${{ steps.fixture.outputs.approval-status }}" = "draft"
+          test "${{ steps.fixture.outputs.redaction-match-count }}" = "0"
+
+      - name: Run event-path dry-run action
+        id: event
+        uses: ./
+        with:
+          mode: dry-run
+          event-path: fixtures/github-pull-request-merged-event.json
+
+      - name: Verify event-path dry-run outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.event.outputs.draft-count }}" = "1"
+          test "${{ steps.event.outputs.proposed-entry-count }}" = "0"
+          test "${{ steps.event.outputs.skipped-entry-count }}" = "0"
+          test "${{ steps.event.outputs.mode }}" = "dry-run"
+          test "${{ steps.event.outputs.input-source }}" = "github_event_path"
+          test "${{ steps.event.outputs.approval-status }}" = "draft"
+          test "${{ steps.event.outputs.redaction-match-count }}" = "0"

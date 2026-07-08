@@ -9,12 +9,19 @@
 - Product behavior: `docs/product/02-spec.md`
 - Default mode: `docs/adr/0008-propose-mode-default.md`
 
-## Candidate Inputs
+## Current Inputs
 
 - `event-path`: explicit event payload path for local or test runs
-- `github-fixture`: explicit GitHub merged pull request fixture path for dry-run tests
+- `github-fixture`: explicit GitHub merged pull request fixture path for fixture-first runs
+- `mode`: `dry-run` or `propose`
+- `base-branch`: base branch for proposal pull requests
+- `remote-name`: Git remote used to publish proposal branches
+- `staging-dir`: optional temporary staging directory for proposal outputs
+
+## Future Inputs
+
 - `config-path`: path to `clarissimi.config.ts` or `.clarissimi/config.json`
-- `mode`: `dry-run`, `propose`, or `commit`
+- `mode`: `commit`
 - `provider`: provider adapter name
 - `model`: provider model name
 - `pull-request`: explicit pull request number when event resolution is not enough
@@ -23,14 +30,15 @@
 Provider API keys and GitHub tokens are not plain inputs. They must come from secrets or the
 workflow environment.
 
-The current package skeleton supports `INPUT_EVENT_PATH`, `GITHUB_EVENT_PATH`,
-`INPUT_GITHUB_FIXTURE`, and `INPUT_MODE=dry-run` only.
+The current package supports `INPUT_EVENT_PATH`, `GITHUB_EVENT_PATH`, `INPUT_GITHUB_FIXTURE`,
+`INPUT_MODE`, `INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`, and `INPUT_STAGING_DIR`.
 
-The root `action.yml` currently exposes `event-path`, `github-fixture`, and `mode`.
+The root `action.yml` currently exposes `event-path`, `github-fixture`, `mode`, `base-branch`,
+`remote-name`, and `staging-dir`.
 An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`
 fallback. An explicit `event-path` and `github-fixture` must not be provided together.
 
-## Candidate Outputs
+## Current Outputs
 
 - `draft-count`
 - `proposed-entry-count`
@@ -39,13 +47,22 @@ fallback. An explicit `event-path` and `github-fixture` must not be provided tog
 - `input-source`
 - `approval-status`
 - `redaction-match-count`
+- `staged-file-count`
+- `proposal-branch`
+- `proposal-commit-sha`
+- `proposal-pull-request-number`
+- `proposal-pull-request-url`
+- `proposal-pull-request-action`
+
+## Future Outputs
+
 - `summary-path`
 
 Outputs must not include raw provider output, raw diff text, raw issue text, tokens, private keys,
 raw pull request bodies, raw patch excerpts, or sensitive security details.
 
-The root `action.yml` currently exposes all candidate outputs except `summary-path`.
-The current package skeleton also writes the same bounded count and status fields to
+The root `action.yml` currently exposes all current outputs.
+The current package also writes the same bounded count, status, and proposal fields to
 `GITHUB_STEP_SUMMARY` when the runner provides that path. Step summary content follows the same
 raw-evidence exclusion rules as action outputs.
 

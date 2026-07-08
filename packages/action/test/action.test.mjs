@@ -286,7 +286,7 @@ test("environment runner returns usage failure for unsupported mode", async () =
   const exitCode = await runActionFromEnvironment(
     {
       INPUT_GITHUB_FIXTURE: "unused.json",
-      INPUT_MODE: "propose"
+      INPUT_MODE: "commit"
     },
     {
       stdout: (value) => {
@@ -300,10 +300,10 @@ test("environment runner returns usage failure for unsupported mode", async () =
 
   assert.equal(exitCode, 1);
   assert.equal(stdout, "");
-  assert.equal(stderr, "The action skeleton currently supports only dry-run mode.\n");
+  assert.equal(stderr, "runActionDryRun supports only dry-run mode.\n");
 });
 
-test("environment runner does not write outputs or summaries for propose mode", async () => {
+test("environment runner requires a GitHub token before propose mode writes outputs", async () => {
   await withTempDir(async (dir) => {
     const outputPath = join(dir, "github-output.txt");
     const summaryPath = join(dir, "step-summary.md");
@@ -329,7 +329,7 @@ test("environment runner does not write outputs or summaries for propose mode", 
 
     assert.equal(exitCode, 1);
     assert.equal(stdout, "");
-    assert.equal(stderr, "The action skeleton currently supports only dry-run mode.\n");
+    assert.equal(stderr, "GITHUB_TOKEN is required for propose mode.\n");
     await assert.rejects(() => readFile(outputPath, "utf8"));
     await assert.rejects(() => readFile(summaryPath, "utf8"));
   });

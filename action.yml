@@ -4,14 +4,25 @@ author: 0disoft
 
 inputs:
   mode:
-    description: Dry-run mode only for the current action skeleton.
+    description: Action mode. Use dry-run for summaries or propose to open a recognition pull request.
     required: false
     default: dry-run
   event-path:
-    description: Optional GitHub event payload path for local or fixture-based dry runs.
+    description: Optional GitHub event payload path for local or fixture-based runs.
     required: false
   github-fixture:
-    description: Optional GitHub merged pull request fixture path for dry-run tests.
+    description: Optional GitHub merged pull request fixture path for fixture-first runs.
+    required: false
+  base-branch:
+    description: Base branch for propose mode pull requests.
+    required: false
+    default: main
+  remote-name:
+    description: Git remote name used to publish propose mode branches.
+    required: false
+    default: origin
+  staging-dir:
+    description: Optional temporary staging directory for propose mode generated files.
     required: false
 
 outputs:
@@ -19,7 +30,7 @@ outputs:
     description: Number of recognition drafts created.
     value: ${{ steps.clarissimi.outputs.draft-count }}
   proposed-entry-count:
-    description: Number of proposed public entries. Always zero in the dry-run skeleton.
+    description: Number of proposed public entries.
     value: ${{ steps.clarissimi.outputs.proposed-entry-count }}
   skipped-entry-count:
     description: Number of skipped events.
@@ -28,7 +39,7 @@ outputs:
     description: Action output mode.
     value: ${{ steps.clarissimi.outputs.mode }}
   input-source:
-    description: Source used for the dry-run input.
+    description: Source used for the action input.
     value: ${{ steps.clarissimi.outputs.input-source }}
   approval-status:
     description: Draft approval status when a draft exists.
@@ -36,17 +47,39 @@ outputs:
   redaction-match-count:
     description: Number of redaction matches found before drafting.
     value: ${{ steps.clarissimi.outputs.redaction-match-count }}
+  staged-file-count:
+    description: Number of generated files staged in propose mode.
+    value: ${{ steps.clarissimi.outputs.staged-file-count }}
+  proposal-branch:
+    description: Proposal branch name created in propose mode.
+    value: ${{ steps.clarissimi.outputs.proposal-branch }}
+  proposal-commit-sha:
+    description: Proposal branch commit SHA created in propose mode.
+    value: ${{ steps.clarissimi.outputs.proposal-commit-sha }}
+  proposal-pull-request-number:
+    description: Proposal pull request number created or updated in propose mode.
+    value: ${{ steps.clarissimi.outputs.proposal-pull-request-number }}
+  proposal-pull-request-url:
+    description: Proposal pull request URL created or updated in propose mode.
+    value: ${{ steps.clarissimi.outputs.proposal-pull-request-url }}
+  proposal-pull-request-action:
+    description: Whether propose mode created or updated the pull request.
+    value: ${{ steps.clarissimi.outputs.proposal-pull-request-action }}
 
 runs:
   using: composite
   steps:
-    - name: Run dry-run recognition summary
+    - name: Run Clarissimi
       id: clarissimi
       shell: bash
       env:
+        GITHUB_TOKEN: ${{ inputs.mode == 'propose' && github.token || '' }}
         INPUT_MODE: ${{ inputs.mode }}
         INPUT_EVENT_PATH: ${{ inputs.event-path }}
         INPUT_GITHUB_FIXTURE: ${{ inputs.github-fixture }}
+        INPUT_BASE_BRANCH: ${{ inputs.base-branch }}
+        INPUT_REMOTE_NAME: ${{ inputs.remote-name }}
+        INPUT_STAGING_DIR: ${{ inputs.staging-dir }}
       run: |
         set -euo pipefail
         corepack enable

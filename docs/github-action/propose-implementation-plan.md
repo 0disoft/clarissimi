@@ -19,7 +19,8 @@ This document breaks `propose` mode into implementation slices so repository mut
 as one large branch-writing and pull-request-opening change. It is an execution plan, not a new
 permission or product decision.
 
-The current root `action.yml` remains dry-run-only until these slices are implemented and validated.
+The current root `action.yml` supports read-only `dry-run` mode and fixture-first `propose` mode.
+Live GitHub evidence collection and live provider calls remain separate implementation slices.
 
 ## Implementation Slices
 
@@ -80,8 +81,10 @@ Validation target:
 
 ### 4. Action Mode Switch
 
-Wire `mode=propose` into the Action only after staging, branch writing, and pull request creation
-have separate tests.
+Status: Completed for fixture-first `propose` mode in `packages/action/src/run.ts`.
+
+Wire `mode=propose` into the Action only after staging, branch writing, branch publishing, and pull
+request creation have separate tests.
 
 The mode switch should:
 
@@ -93,8 +96,8 @@ The mode switch should:
 
 Validation target:
 
-- end-to-end fixture tests that prove `dry-run` writes nothing and `propose` writes only a proposal
-  branch plus pull request metadata
+- end-to-end fixture tests that prove `dry-run` writes nothing and fixture-first `propose` writes
+  only a proposal branch plus pull request metadata
 
 ### 5. Dogfood Strategy
 

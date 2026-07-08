@@ -1,4 +1,6 @@
 import { appendFile, readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 import { prepareEvidenceForProvider } from "@clarissimi/core";
 import {
@@ -6,13 +8,25 @@ import {
   parseGitHubMergedPullRequestFixture
 } from "@clarissimi/github";
 import { createFakeContributionDraftProvider } from "@clarissimi/providers";
+import {
+  isApprovalStatus,
+  type ApprovalStatus,
+  type ContributionAssessment
+} from "@clarissimi/schemas";
 
+import { publishProposalBranch } from "./branch-publisher.js";
+import { writeProposalBranch } from "./branch-writer.js";
 import { resolveGitHubEventPayload } from "./event.js";
+import { createGitHubPullRequestClient } from "./github-client.js";
+import { createOrUpdateProposalPullRequest, type ProposalPullRequestClient } from "./pull-request.js";
+import { stageProposalRecognitionOutputs } from "./staging.js";
 import { sanitizeAssessmentForActionSummary } from "./summary.js";
 import type {
   ActionDryRunInput,
   ActionDryRunSummary,
   ActionInputSource,
+  ActionProposeInput,
+  ActionProposeSummary,
   ActionProcessIo
 } from "./types.js";
 
@@ -26,23 +40,16 @@ export class ActionUsageError extends Error {
 export async function runActionDryRun(input: ActionDryRunInput): Promise<ActionDryRunSummary> {
   const mode = input.mode ?? "dry-run";
   if (mode !== "dry-run") {
-    throw new ActionUsageError("The action skeleton currently supports only dry-run mode.");
+    throw new ActionUsageError("runActionDryRun supports only dry-run mode.");
   }
 
-  const source = selectInputSource(input);
-  const eventPayload = JSON.parse(await readFile(source.path, "utf8")) as unknown;
-  const resolution = source.kind === "github_fixture"
-    ? {
-        kind: "merged_pull_request" as const,
-        fixture: parseGitHubMergedPullRequestFixture(eventPayload)
-      }
-    : resolveGitHubEventPayload(eventPayload);
+  const prepared = await prepareActionAssessment(input);
 
-  if (resolution.kind === "skipped") {
+  if (prepared.kind === "skipped") {
     return {
       ok: true,
       mode: "dry-run",
-      inputSource: source.kind,
+      inputSource: prepared.inputSource,
       draftCount: 0,
       proposedEntryCount: 0,
       skippedEntryCount: 1,
@@ -50,36 +57,82 @@ export async function runActionDryRun(input: ActionDryRunInput): Promise<ActionD
       approvalStatus: null,
       redactionChanged: false,
       redactionMatchCount: 0,
-      skippedReason: resolution.reason
+      skippedReason: prepared.reason
     };
   }
-
-  const collected = collectMergedPullRequestEvidence(resolution.fixture);
-  const preparedEvidence = prepareEvidenceForProvider(collected.evidence);
-  const provider = createFakeContributionDraftProvider();
-  const assessment = await provider.createAssessment({
-    contributor: collected.contributor,
-    preparedEvidence
-  });
 
   return {
     ok: true,
     mode: "dry-run",
-    inputSource: source.kind,
+    inputSource: prepared.inputSource,
     draftCount: 1,
     proposedEntryCount: 0,
     skippedEntryCount: 0,
     publicOutputsRendered: false,
-    approvalStatus: assessment.maintainerApprovalStatus,
-    redactionChanged: preparedEvidence.redactionReport.changed,
-    redactionMatchCount: preparedEvidence.redactionReport.occurrences.length,
-    assessment: sanitizeAssessmentForActionSummary(assessment)
+    approvalStatus: prepared.assessment.maintainerApprovalStatus,
+    redactionChanged: prepared.redactionChanged,
+    redactionMatchCount: prepared.redactionMatchCount,
+    assessment: sanitizeAssessmentForActionSummary(prepared.assessment)
   };
+}
+
+export async function runActionPropose(input: ActionProposeInput): Promise<ActionProposeSummary> {
+  const prepared = await prepareActionAssessment(input);
+  if (prepared.kind === "skipped") {
+    throw new ActionUsageError("Propose mode requires a merged pull request input.");
+  }
+
+  const staging = await stageProposalRecognitionOutputs({
+    outputDir: input.stagingDir,
+    assessments: [prepared.assessment],
+    redactionMatchCount: prepared.redactionMatchCount
+  });
+  const branch = await writeProposalBranch({
+    repositoryDir: input.repositoryDir,
+    stagedOutputDir: input.stagingDir,
+    manifest: staging.manifest,
+    baseBranch: input.baseBranch
+  });
+  const publishInput: Parameters<typeof publishProposalBranch>[0] = {
+    repositoryDir: input.repositoryDir,
+    branch
+  };
+  assignOptional(publishInput, "remoteName", input.remoteName);
+  await publishProposalBranch(publishInput);
+  const pullRequest = await createOrUpdateProposalPullRequest({
+    client: input.pullRequestClient,
+    manifest: staging.manifest,
+    branch
+  });
+
+  return {
+    ok: true,
+    mode: "propose",
+    inputSource: prepared.inputSource,
+    draftCount: 1,
+    proposedEntryCount: 1,
+    skippedEntryCount: 0,
+    publicOutputsRendered: true,
+    approvalStatus: prepared.assessment.maintainerApprovalStatus as "approved" | "auto_approved",
+    redactionChanged: prepared.redactionChanged,
+    redactionMatchCount: prepared.redactionMatchCount,
+    stagedFileCount: staging.manifest.files.length,
+    proposalBranch: branch.branchName,
+    proposalCommitSha: branch.commitSha,
+    proposalPullRequestNumber: pullRequest.pullRequest.number,
+    proposalPullRequestUrl: pullRequest.pullRequest.url,
+    proposalPullRequestAction: pullRequest.action
+  };
+}
+
+export interface ActionEnvironmentRuntime {
+  readonly pullRequestClient?: ProposalPullRequestClient;
 }
 
 export async function runActionFromEnvironment(
   env: NodeJS.ProcessEnv,
-  io: ActionProcessIo
+  io: ActionProcessIo,
+  runtime: ActionEnvironmentRuntime = {}
 ): Promise<number> {
   try {
     const explicitEventPath = readEnvInput(env.INPUT_EVENT_PATH);
@@ -93,7 +146,9 @@ export async function runActionFromEnvironment(
     assignOptional(input, "eventPath", explicitEventPath ?? fallbackEventPath);
     assignOptional(input, "githubFixturePath", githubFixturePath);
 
-    const summary = await runActionDryRun(input);
+    const summary = input.mode === "propose"
+      ? await runActionPropose(buildActionProposeInput(input, env, runtime))
+      : await runActionDryRun(input);
     await writeGitHubOutputs(env.GITHUB_OUTPUT, summary);
     await writeGitHubStepSummary(env.GITHUB_STEP_SUMMARY, summary);
     io.stdout(`${JSON.stringify(summary, null, 2)}\n`);
@@ -103,6 +158,79 @@ export async function runActionFromEnvironment(
     io.stderr(`${message}\n`);
     return error instanceof ActionUsageError ? 1 : 4;
   }
+}
+
+function buildActionProposeInput(
+  input: ActionDryRunInput,
+  env: NodeJS.ProcessEnv,
+  runtime: ActionEnvironmentRuntime
+): ActionProposeInput {
+  const clientOptions: Parameters<typeof createGitHubPullRequestClient>[0] = {
+    token: requireEnvInput(env.GITHUB_TOKEN, "GITHUB_TOKEN")
+  };
+  assignOptional(clientOptions, "apiUrl", readEnvInput(env.GITHUB_API_URL));
+
+  const proposeInput: ActionProposeInput = {
+    ...input,
+    mode: "propose" as const,
+    repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
+    stagingDir: readEnvInput(env.INPUT_STAGING_DIR)
+      ?? join(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-propose"),
+    baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
+    pullRequestClient: runtime.pullRequestClient ?? createGitHubPullRequestClient(clientOptions)
+  };
+  assignOptional(proposeInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
+
+  return proposeInput;
+}
+
+type PreparedActionAssessment =
+  | {
+      readonly kind: "skipped";
+      readonly inputSource: ActionInputSource;
+      readonly reason: string;
+    }
+  | {
+      readonly kind: "assessment";
+      readonly inputSource: ActionInputSource;
+      readonly assessment: ContributionAssessment;
+      readonly redactionChanged: boolean;
+      readonly redactionMatchCount: number;
+    };
+
+async function prepareActionAssessment(input: ActionDryRunInput): Promise<PreparedActionAssessment> {
+  const source = selectInputSource(input);
+  const eventPayload = JSON.parse(await readFile(source.path, "utf8")) as unknown;
+  const resolution = source.kind === "github_fixture"
+    ? {
+        kind: "merged_pull_request" as const,
+        fixture: parseGitHubMergedPullRequestFixture(eventPayload)
+      }
+    : resolveGitHubEventPayload(eventPayload);
+
+  if (resolution.kind === "skipped") {
+    return {
+      kind: "skipped",
+      inputSource: source.kind,
+      reason: resolution.reason
+    };
+  }
+
+  const collected = collectMergedPullRequestEvidence(resolution.fixture);
+  const preparedEvidence = prepareEvidenceForProvider(collected.evidence);
+  const provider = createFakeContributionDraftProvider();
+  const draft = await provider.createAssessment({
+    contributor: collected.contributor,
+    preparedEvidence
+  });
+
+  return {
+    kind: "assessment",
+    inputSource: source.kind,
+    assessment: applyFixtureApproval(draft, parseFixtureApprovalStatus(eventPayload)),
+    redactionChanged: preparedEvidence.redactionReport.changed,
+    redactionMatchCount: preparedEvidence.redactionReport.occurrences.length
+  };
 }
 
 function selectInputSource(input: ActionDryRunInput): {
@@ -132,6 +260,32 @@ function selectInputSource(input: ActionDryRunInput): {
   throw new ActionUsageError("The action skeleton requires GITHUB_EVENT_PATH or INPUT_GITHUB_FIXTURE.");
 }
 
+function parseFixtureApprovalStatus(value: unknown): ApprovalStatus | undefined {
+  if (!isRecord(value) || value.maintainerApprovalStatus === undefined) {
+    return undefined;
+  }
+
+  if (typeof value.maintainerApprovalStatus !== "string" || !isApprovalStatus(value.maintainerApprovalStatus)) {
+    throw new ActionUsageError("maintainerApprovalStatus must be a known approval status.");
+  }
+
+  return value.maintainerApprovalStatus;
+}
+
+function applyFixtureApproval(
+  draft: ContributionAssessment,
+  status: ApprovalStatus | undefined
+): ContributionAssessment {
+  if (status === undefined || status === "draft") {
+    return draft;
+  }
+
+  return {
+    ...draft,
+    maintainerApprovalStatus: status
+  };
+}
+
 function readEnvInput(value: string | undefined): string | undefined {
   if (value === undefined || value.trim().length === 0) {
     return undefined;
@@ -140,9 +294,18 @@ function readEnvInput(value: string | undefined): string | undefined {
   return value;
 }
 
+function requireEnvInput(value: string | undefined, name: string): string {
+  const normalized = readEnvInput(value);
+  if (normalized === undefined) {
+    throw new ActionUsageError(`${name} is required for propose mode.`);
+  }
+
+  return normalized;
+}
+
 async function writeGitHubOutputs(
   outputPath: string | undefined,
-  summary: ActionDryRunSummary
+  summary: ActionDryRunSummary | ActionProposeSummary
 ): Promise<void> {
   if (outputPath === undefined || outputPath.trim().length === 0) {
     return;
@@ -158,12 +321,23 @@ async function writeGitHubOutputs(
     `redaction-match-count=${summary.redactionMatchCount}`
   ];
 
+  if (summary.mode === "propose") {
+    lines.push(
+      `staged-file-count=${summary.stagedFileCount}`,
+      `proposal-branch=${summary.proposalBranch}`,
+      `proposal-commit-sha=${summary.proposalCommitSha}`,
+      `proposal-pull-request-number=${summary.proposalPullRequestNumber}`,
+      `proposal-pull-request-url=${summary.proposalPullRequestUrl}`,
+      `proposal-pull-request-action=${summary.proposalPullRequestAction}`
+    );
+  }
+
   await appendFile(outputPath, `${lines.join("\n")}\n`, "utf8");
 }
 
 async function writeGitHubStepSummary(
   summaryPath: string | undefined,
-  summary: ActionDryRunSummary
+  summary: ActionDryRunSummary | ActionProposeSummary
 ): Promise<void> {
   if (summaryPath === undefined || summaryPath.trim().length === 0) {
     return;
@@ -179,12 +353,21 @@ async function writeGitHubStepSummary(
     ["Redaction matches", String(summary.redactionMatchCount)]
   ];
 
-  if (summary.skippedReason !== undefined) {
+  if (summary.mode === "propose") {
+    rows.push(
+      ["Staged files", String(summary.stagedFileCount)],
+      ["Proposal branch", summary.proposalBranch],
+      ["Proposal pull request", summary.proposalPullRequestUrl],
+      ["Proposal PR action", summary.proposalPullRequestAction]
+    );
+  }
+
+  if (summary.mode === "dry-run" && summary.skippedReason !== undefined) {
     rows.push(["Skipped reason", summary.skippedReason]);
   }
 
   const markdown = [
-    "## Clarissimi dry-run summary",
+    `## Clarissimi ${summary.mode} summary`,
     "",
     "| Field | Value |",
     "| --- | --- |",
@@ -200,6 +383,10 @@ async function writeGitHubStepSummary(
 
 function escapeMarkdownTableCell(value: string): string {
   return value.replaceAll("|", "\\|").replaceAll("\n", " ");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function assignOptional<T extends object, K extends keyof T>(

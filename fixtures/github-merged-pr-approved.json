@@ -1,0 +1,43 @@
+{
+  "maintainerApprovalStatus": "approved",
+  "repository": {
+    "fullName": "sample/project"
+  },
+  "pullRequest": {
+    "number": 42,
+    "title": "Add parser regression coverage",
+    "body": "Adds a failing parser case and keeps it covered.",
+    "htmlUrl": "https://github.com/sample/project/pull/42",
+    "mergedAt": "2026-07-08T00:00:00.000Z",
+    "user": {
+      "id": 123456,
+      "login": "octocat",
+      "htmlUrl": "https://github.com/octocat"
+    },
+    "labels": [
+      {
+        "name": "tests"
+      },
+      {
+        "name": "maintenance"
+      }
+    ],
+    "changedFiles": [
+      {
+        "filename": "src/parser.ts",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 2,
+        "patchExcerpt": "export function parseNestedInput()"
+      },
+      {
+        "filename": "tests/parser.spec.ts",
+        "status": "added",
+        "additions": 32,
+        "deletions": 0,
+        "patchExcerpt": "test(\"parses nested input\", () => {})"
+      }
+    ],
+    "mergeCommitSha": "abc123def4567890"
+  }
+}

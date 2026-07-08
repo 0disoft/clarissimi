@@ -33,15 +33,16 @@ committing to the default branch.
 Avoid default `pull_request_target` behavior. Do not checkout or execute untrusted fork PR head
 code.
 
-## Dry-Run Usage
+## Action Usage
 
-The current `action.yml` is a dry-run-only composite action. It builds the local Action package from
-source at runtime and emits a bounded summary. It does not read provider credentials, use GitHub
-write tokens, create branches, open pull requests, or update repository files.
+The current `action.yml` supports read-only `dry-run` mode and fixture-first `propose` mode. It
+builds the local Action package from source at runtime. Dry-run mode emits a bounded summary and
+does not read provider credentials, use GitHub write tokens, create branches, open pull requests, or
+update repository files. Propose mode stages approved fixture-first recognition output, publishes a
+proposal branch, and opens or updates a pull request.
 
-Detailed dry-run outputs and failure behavior are defined in `docs/github-action/action-contract.md`.
-The write-mode implementation sequence is tracked in
-`docs/github-action/propose-implementation-plan.md`.
+Detailed outputs and failure behavior are defined in `docs/github-action/action-contract.md`. The
+remaining implementation sequence is tracked in `docs/github-action/propose-implementation-plan.md`.
 
 Example read-only workflow:
 
@@ -88,6 +89,25 @@ For local or CI checks against a GitHub event payload file, pass `event-path`:
 
 This repository dogfoods the root Action with both `github-fixture` and `event-path` inputs in
 `.github/workflows/clarissimi-dry-run.yml`.
+
+Fixture-first propose mode requires an approved or auto-approved fixture and write permissions:
+
+```yaml
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+steps:
+  - uses: actions/checkout@v7
+    with:
+      fetch-depth: 0
+  - uses: 0disoft/clarissimi@main
+    with:
+      mode: propose
+      github-fixture: fixtures/github-merged-pr-approved.json
+      base-branch: main
+```
 
 ## Review Blockers
 

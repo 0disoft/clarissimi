@@ -2,7 +2,7 @@
 
 [![Clarissimi dry run](https://github.com/0disoft/clarissimi/actions/workflows/clarissimi-dry-run.yml/badge.svg?branch=main)](https://github.com/0disoft/clarissimi/actions/workflows/clarissimi-dry-run.yml)
 
-- Status: Fixture-first MVP skeleton
+- Status: Fixture-first MVP with dry-run and proposal boundaries
 - Scope: public open-source repositories
 - Repository Type: monorepo
 - Addons: cli-tool, github-action
@@ -79,8 +79,8 @@ Implemented fixture-first slices:
   rendering
 - `packages/cli`: fixture-first local command orchestration for validation, recognition dry runs,
   and rebuild previews
-- `packages/action`: dry-run-only GitHub Action entrypoint skeleton for event-file and fixture
-  summaries
+- `packages/action`: GitHub Action entrypoint for dry-run summaries and fixture-first proposal
+  branch/pull-request flows
 
 Not implemented yet:
 
@@ -103,9 +103,9 @@ The command creates a deterministic fake-provider assessment from either a Clari
 fixture or a GitHub-shaped merged pull request fixture. Public output previews are rendered only
 when the fixture explicitly carries maintainer approval.
 
-## Dry-Run Action Skeleton
+## GitHub Action
 
-The first Action package slice runs without GitHub API writes, live provider credentials, or
+The Action package runs dry-run summaries without GitHub API writes, live provider credentials, or
 repository file changes:
 
 ```powershell
@@ -114,11 +114,15 @@ $env:INPUT_GITHUB_FIXTURE = "fixtures/github-merged-pr-basic.json"
 node packages/action/dist/bin/clarissimi-action.js
 ```
 
-The skeleton also accepts `GITHUB_EVENT_PATH` for a merged pull request event payload. It emits a
-bounded dry-run summary and does not render public outputs or propose repository changes.
+The Action also accepts `GITHUB_EVENT_PATH` for a merged pull request event payload. It emits a
+bounded dry-run summary and does not render public outputs or propose repository changes in
+`dry-run` mode.
 
-The root `action.yml` exposes this as a dry-run-only composite action. It intentionally does not
-ship `propose` or `commit` mode yet.
+The root `action.yml` also supports fixture-first `propose` mode. Propose mode requires explicit
+write permissions, an approved or auto-approved fixture, and a checked-out repository. It stages
+public output, publishes `clarissimi/recognition/<source-kind>-<source-id>`, and opens or updates a
+pull request for maintainer review. Live provider calls and live GitHub evidence collection are
+still future work.
 
 ## Design Sources
 

@@ -30,10 +30,8 @@ The repository currently has a fixture-first MVP skeleton:
 - `packages/providers`: provider adapter interface and deterministic fake provider
 - `packages/renderers`: JSONL, contributor JSON, Markdown, and static-data renderers
 - `packages/cli`: fixture-first validation, recognition dry-run, and rebuild commands
-- `packages/action`: dry-run-only Action runner for event payloads and GitHub fixtures, plus
-  internal proposal output staging, proposal branch writing, proposal branch publishing, and
-  fake-client-tested pull request creation/update boundaries for future `propose` mode
-- root `action.yml`: dry-run-only composite Action
+- `packages/action`: Action runner for dry-run summaries and fixture-first proposal pull requests
+- root `action.yml`: composite Action exposing `dry-run` and fixture-first `propose` modes
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
   `event-path` inputs
 
@@ -136,10 +134,12 @@ Validation:
 
 Source: `docs/github-action/action-contract.md`
 
+Status: Completed for fixture-first propose mode in `packages/action/src/run.ts`.
+
 Goal: wire `mode=propose` only after staging, branch writing, branch publishing, and pull request
 creation have separate tests.
 
-Expected deliverables:
+Completed deliverables:
 
 - `dry-run` remains a no-write path
 - unsupported modes still fail as usage errors
@@ -152,7 +152,8 @@ Validation:
 
 - end-to-end fixture tests
 - read-only dry-run dogfood remains unchanged
-- maintainer-triggered propose dogfood only after fake-client and temporary-repository tests pass
+- maintainer-triggered propose dogfood remains future work after repository workflow settings are
+  confirmed
 
 ### 6. Live GitHub Collection
 

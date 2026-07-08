@@ -35,6 +35,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
   provider.
 - `packages/renderers`: Deterministic JSONL, contributor JSON, Markdown, and static-data output
   rendering.
+- `packages/cli`: Fixture-first local command orchestration for config validation, ledger
+  validation, recognition dry runs, and rebuild previews.
 
 ## Review Blockers
 

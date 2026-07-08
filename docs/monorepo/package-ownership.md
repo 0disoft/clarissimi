@@ -13,7 +13,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
 - Technical owner: Repository maintainers
 - Related ADRs: docs/adr/0009-start-schema-package-implementation.md,
   docs/adr/0012-add-fake-provider-package.md,
-  docs/adr/0013-add-renderers-package.md
+  docs/adr/0013-add-renderers-package.md,
+  docs/adr/0014-add-fixture-first-cli-package.md
 
 ## Required Decisions
 
@@ -36,7 +37,7 @@ This repository type owns workspace boundaries, package ownership, dependency po
 | `packages/github` | Planned | GitHub event and evidence collection | Domain policy or provider calls |
 | `packages/providers` | Implemented | Provider adapter interface and deterministic fake contribution draft provider | Schema vocabulary ownership, redaction policy, maintainer approval policy, live LLM SDK clients |
 | `packages/renderers` | Implemented | JSONL, derived contributor JSON, Markdown, static-data rendering, output path constants | Evidence collection, provider calls, approval policy, filesystem writes, CLI orchestration, Action orchestration |
-| `packages/cli` | Planned | Local command orchestration | Domain policy |
+| `packages/cli` | Implemented | Local command parsing, fixture-first orchestration, config and ledger validation, rebuild command I/O | Domain policy, schema vocabulary, provider behavior, GitHub API collection, Action runtime |
 | `packages/action` | Planned | GitHub Action entrypoint | Domain policy |
 
 ## Review Blockers

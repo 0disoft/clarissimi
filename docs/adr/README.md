@@ -24,6 +24,7 @@ engine.
 - `0011-add-core-policy-package.md`: add pure policy glue for prepared evidence and approval gates
 - `0012-add-fake-provider-package.md`: add deterministic fake provider adapter package
 - `0013-add-renderers-package.md`: add deterministic repository output renderers
+- `0014-add-fixture-first-cli-package.md`: add local fixture-first CLI orchestration
 
 ## Review Blockers
 

@@ -21,6 +21,9 @@ redaction, providers, or renderers.
 Fixture-first behavior is acceptable for the first implementation. Live GitHub collection can be
 added after schemas, redaction, fake provider, and renderers are stable.
 
+The fixture-first CLI implements these commands locally without GitHub API access or live provider
+credentials.
+
 ## Output Contract
 
 - Human output should be concise and reviewable.
@@ -35,6 +38,9 @@ The CLI should support:
 - `.clarissimi/config.json`
 
 Config precedence, defaults, and schema versioning are owned by `packages/schemas`.
+
+The first CLI package validates `.clarissimi/config.json`. TypeScript config loading is deferred
+until a safe loader decision exists.
 
 ## Review Blockers
 

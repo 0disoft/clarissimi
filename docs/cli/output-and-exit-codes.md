@@ -25,20 +25,16 @@ JSON output should be stable enough for CI and must not include:
 - secrets or redacted source text
 - private environment values
 
-## Exit-Code Direction
+## Exit Codes
 
-The first implementation should map failures into stable categories:
-
-- success
-- invalid configuration
-- invalid ledger
-- unsafe or redacted input failure
-- provider failure
-- provider schema validation failure
-- policy rejection
-- write failure
-
-The exact numeric values should be documented before release.
+- `0`: success
+- `1`: usage error
+- `2`: invalid configuration
+- `3`: invalid ledger
+- `4`: provider or fixture recognition failure
+- `5`: provider schema validation failure
+- `6`: policy rejection
+- `7`: write failure
 
 ## Review Blockers
 

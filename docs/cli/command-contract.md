@@ -17,6 +17,9 @@
 
 Validates Clarissimi configuration without collecting GitHub evidence or calling a provider.
 
+The fixture-first implementation validates `.clarissimi/config.json`. TypeScript config loading is
+deferred until a safe loader decision exists.
+
 ### `clarissimi validate-ledger`
 
 Validates `.clarissimi/contributions.jsonl` schema versions, required fields, and parseability.
@@ -26,9 +29,15 @@ Validates `.clarissimi/contributions.jsonl` schema versions, required fields, an
 Runs a fixture-based recognition flow. The first implementation may use only fixtures and fake
 provider output.
 
+The fixture-first implementation does not write files in this command. If a fixture explicitly
+contains approved maintainer status, the command may render public output previews.
+
 ### `clarissimi rebuild`
 
 Rebuilds derived outputs from `.clarissimi/contributions.jsonl`.
+
+The fixture-first implementation previews rebuilds by default and writes files only when `--out-dir`
+is explicit.
 
 ## Modes
 
@@ -47,6 +56,8 @@ The exact numeric taxonomy is not implemented yet. The first implementation shou
 - schema validation failure
 - unsafe or redacted input failure
 - write failure
+
+Initial numeric values are recorded in `docs/adr/0014-add-fixture-first-cli-package.md`.
 
 ## Review Blockers
 

@@ -74,6 +74,20 @@ Implemented packages:
   provider for tests and fixture-first workflows
 - `packages/renderers`: deterministic JSONL, contributor JSON, Markdown, and static-data output
   rendering
+- `packages/cli`: fixture-first local command orchestration for validation, recognition dry runs,
+  and rebuild previews
+
+## Fixture-First CLI
+
+The first CLI slice runs without GitHub API access or live LLM credentials:
+
+```powershell
+pnpm --filter @clarissimi/cli build
+node packages/cli/dist/bin/clarissimi.js recognize --fixture fixtures/merged-pr-basic.json --mode dry-run --json
+```
+
+The command creates a deterministic fake-provider assessment from the fixture. Public output
+previews are rendered only when the fixture explicitly carries maintainer approval.
 
 ## Design Sources
 

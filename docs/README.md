@@ -25,3 +25,4 @@
 - Schema package source: packages/schemas
 - Core package source: packages/core
 - Redaction package source: packages/redaction
+- Provider package source: packages/providers

@@ -70,6 +70,8 @@ Implemented packages:
 - `packages/core`: pure policy glue for prepared evidence and approval gates
 - `packages/redaction`: deterministic redaction for evidence text and JSON-like values before
   provider calls
+- `packages/providers`: provider adapter interface and deterministic fake contribution draft
+  provider for tests and fixture-first workflows
 
 ## Design Sources
 

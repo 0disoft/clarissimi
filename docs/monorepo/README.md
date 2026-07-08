@@ -31,6 +31,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
 - `packages/core`: Pure policy glue for prepared provider evidence and public approval gates.
 - `packages/redaction`: Deterministic redaction for text and JSON-like evidence values before
   provider boundaries.
+- `packages/providers`: Provider adapter interface and deterministic fake contribution draft
+  provider.
 
 ## Review Blockers
 

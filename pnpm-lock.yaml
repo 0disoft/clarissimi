@@ -21,6 +21,15 @@ importers:
         specifier: workspace:*
         version: link:../schemas
 
+  packages/providers:
+    dependencies:
+      '@clarissimi/core':
+        specifier: workspace:*
+        version: link:../core
+      '@clarissimi/schemas':
+        specifier: workspace:*
+        version: link:../schemas
+
   packages/redaction: {}
 
   packages/schemas: {}

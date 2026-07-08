@@ -8,6 +8,9 @@
 Build the trust surface before building automation volume. Clarissimi must be credible as a
 recognition record engine before it expands into dashboards, graphs, or hosted services.
 
+Current implementation progress and the active work queue are tracked in
+`docs/product/04-implementation-tracker.md`.
+
 ## Milestone 1: Product and Architecture Skeleton
 
 Goal: make the repository understandable as a recognition engine, not a scoring tool.

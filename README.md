@@ -124,6 +124,7 @@ ship `propose` or `commit` mode yet.
 
 - Product contract: `docs/product/02-spec.md`
 - Roadmap: `docs/product/01-roadmap.md`
+- Implementation tracker: `docs/product/04-implementation-tracker.md`
 - Risk register: `docs/product/03-risk-register.md`
 - System boundary: `docs/architecture/00-system-boundary.md`
 - Domain model: `docs/architecture/01-domain-model.md`

@@ -1,7 +1,7 @@
 {
   "tool": "ssealed",
-  "version": "0.6.4",
-  "generatedAt": "2026-07-08T08:34:19.605Z",
+  "version": "0.6.6",
+  "generatedAt": "2026-07-08T10:28:06.445Z",
   "scope": "general",
   "profile": "monorepo",
   "addons": [
@@ -1036,13 +1036,13 @@
     },
     {
       "path": "package.json",
-      "checksum": "sha256:44087c2e1c46f097ef3938a430169b92bf73ebc6dffa11c0ce0b4717e710d6b5",
+      "checksum": "sha256:7b0a56158f257f625401c19611507f7a253763b46cd2ba9a653e87e481bf12f0",
       "kind": "runner",
-      "ownership": "block-managed",
-      "presence": "required",
+      "ownership": "project-owned",
+      "presence": "optional",
       "status": "active",
       "initialChecksum": "sha256:44087c2e1c46f097ef3938a430169b92bf73ebc6dffa11c0ce0b4717e710d6b5",
-      "acceptedChecksum": "sha256:44087c2e1c46f097ef3938a430169b92bf73ebc6dffa11c0ce0b4717e710d6b5",
+      "acceptedChecksum": "sha256:7b0a56158f257f625401c19611507f7a253763b46cd2ba9a653e87e481bf12f0",
       "generatedChecksum": "sha256:44087c2e1c46f097ef3938a430169b92bf73ebc6dffa11c0ce0b4717e710d6b5"
     },
     {

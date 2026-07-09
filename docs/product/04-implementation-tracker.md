@@ -347,7 +347,10 @@ Completed deliverables:
 - docs validation treats the agent-assisted draft guide as a required documentation target
 - docs validation treats the ledger format guide as a required documentation target
 - docs validation parses fenced `json` examples so copyable draft templates cannot silently drift
+- docs validation verifies `docs/adr/README.md` lists accepted ADR files so architecture decisions
+  cannot silently miss the index
 - script tests cover docs validation success, invalid fenced JSON, and missing local Markdown links
+- script tests cover ADR index drift when an accepted ADR file is missing from `docs/adr/README.md`
 - script tests validate the agent-assisted draft guide's JSON examples against
   `clarissimi.assessment/v1`
 - script tests validate the ledger format guide's JSON example against `clarissimi.assessment/v1`

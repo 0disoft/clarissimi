@@ -69,6 +69,8 @@ export async function validateDocs(options = {}) {
     }
   }
 
+  await validateAdrIndex(repoRoot, issues);
+
   return {
     ok: issues.length === 0,
     issues,
@@ -114,6 +116,36 @@ async function listMarkdownFiles(dir, recursive) {
   }
 
   return files;
+}
+
+async function validateAdrIndex(repoRoot, issues) {
+  const adrDir = join(repoRoot, "docs", "adr");
+  const indexPath = join(adrDir, "README.md");
+  if (!existsSync(adrDir)) {
+    return;
+  }
+
+  const adrFiles = (await readdir(adrDir, { withFileTypes: true }))
+    .filter((entry) => entry.isFile())
+    .map((entry) => entry.name)
+    .filter((name) => /^\d{4}-.+\.md$/.test(name) && name !== "0000-template.md")
+    .sort();
+
+  if (adrFiles.length === 0) {
+    return;
+  }
+
+  if (!existsSync(indexPath)) {
+    issues.push("docs/adr/README.md is required when ADR documents exist.");
+    return;
+  }
+
+  const indexText = await readFile(indexPath, "utf8");
+  for (const adrFile of adrFiles) {
+    if (!indexText.includes(adrFile)) {
+      issues.push(`docs/adr/README.md missing ADR index entry for docs/adr/${adrFile}`);
+    }
+  }
 }
 
 function extractMarkdownLinks(text) {

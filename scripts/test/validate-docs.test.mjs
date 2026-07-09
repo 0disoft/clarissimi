@@ -99,6 +99,35 @@ test("validateDocs rejects missing required documentation targets", async (t) =>
   );
 });
 
+test("validateDocs rejects ADR documents missing from the ADR index", async (t) => {
+  const repoRoot = await createDocsFixture({
+    readme: "# Fixture\n",
+    adrIndex: [
+      "# Architecture Decisions",
+      "",
+      "## Accepted ADRs",
+      "",
+      "- `0001-recorded-decision.md`: recorded decision",
+      ""
+    ].join("\n"),
+    adrFiles: {
+      "0001-recorded-decision.md": "# Recorded Decision\n",
+      "0002-missing-decision.md": "# Missing Decision\n"
+    }
+  });
+  t.after(async () => {
+    await rm(repoRoot, { recursive: true, force: true });
+  });
+
+  const result = await validateDocs({ repoRoot });
+
+  assert.equal(result.ok, false);
+  assert.equal(
+    result.issues.includes("docs/adr/README.md missing ADR index entry for docs/adr/0002-missing-decision.md"),
+    true
+  );
+});
+
 test("agent-assisted draft guide JSON examples match the assessment schema", async () => {
   const guideText = await readFile(join(process.cwd(), "docs", "cli", "agent-assisted-drafts.md"), "utf8");
   const examples = extractJsonCodeBlocks(guideText).map((block) => JSON.parse(block));
@@ -146,6 +175,20 @@ async function createDocsFixture(options) {
 
   if (options.guide !== undefined) {
     await writeFile(join(repoRoot, "docs", "guide.md"), options.guide, "utf8");
+  }
+
+  if (options.adrIndex !== undefined || options.adrFiles !== undefined) {
+    await mkdir(join(repoRoot, "docs", "adr"), { recursive: true });
+  }
+
+  if (options.adrIndex !== undefined) {
+    await writeFile(join(repoRoot, "docs", "adr", "README.md"), options.adrIndex, "utf8");
+  }
+
+  if (options.adrFiles !== undefined) {
+    for (const [fileName, content] of Object.entries(options.adrFiles)) {
+      await writeFile(join(repoRoot, "docs", "adr", fileName), content, "utf8");
+    }
   }
 
   return repoRoot;

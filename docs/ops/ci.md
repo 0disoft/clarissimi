@@ -8,7 +8,8 @@ Cover required checks, branch protection, pipeline stages, artifacts, failure po
 
 The current local CI parity commands are:
 
-- `pnpm run docs`: verifies required documentation targets and local Markdown links.
+- `pnpm run docs`: verifies required documentation targets, local Markdown links, fenced JSON
+  examples, and ADR index coverage for accepted ADR files.
 - `pnpm run smoke`: builds the workspace, runs the CLI through real subprocesses, runs the Action
   dry-run fixture path, verifies default `propose` mode fails closed without `GITHUB_TOKEN`, and
   verifies the live-provider smoke preflight stops before provider calls when credentials are

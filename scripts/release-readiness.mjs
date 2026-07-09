@@ -157,6 +157,8 @@ export const readmeValidationContract = {
     "- `pnpm run live-provider-smoke`",
     "- `pnpm run hosted-live-provider-smoke -- --model <provider-model>`",
     "`format` intentionally fails closed",
+    "`oxlint` is",
+    "the current lint gate; `oxfmt` is not wired into the repository formatter surface yet",
     "`migration-check` intentionally fails until configured"
   ]
 };

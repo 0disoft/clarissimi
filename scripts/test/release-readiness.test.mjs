@@ -242,13 +242,20 @@ test("release readiness rejects README validation drift", () => {
     .replace("Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,", "Source-only merges require `pnpm run docs`,")
     .replace("- `pnpm run release-readiness`", "")
     .replace("- `pnpm run live-provider-smoke`", "")
-    .replace("`format` intentionally fails closed", "`format` is optional");
+    .replace("`format` intentionally fails closed", "`format` is optional")
+    .replace("`oxlint` is", "`eslint` is")
+    .replace(
+      "the current lint gate; `oxfmt` is not wired into the repository formatter surface yet",
+      "the current lint gate; `oxfmt` formats the repository"
+    );
 
   assert.deepEqual(validateReadmeValidationContract(text), [
     "README.md must include Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,.",
     "README.md must include - `pnpm run release-readiness`.",
     "README.md must include - `pnpm run live-provider-smoke`.",
-    "README.md must include `format` intentionally fails closed."
+    "README.md must include `format` intentionally fails closed.",
+    "README.md must include `oxlint` is.",
+    "README.md must include the current lint gate; `oxfmt` is not wired into the repository formatter surface yet."
   ]);
 });
 
@@ -1354,7 +1361,8 @@ function createReadmeValidationText() {
     "- `pnpm run live-provider-smoke`",
     "- `pnpm run hosted-live-provider-smoke -- --model <provider-model>`",
     "",
-    "`format` intentionally fails closed until maintainers accept a formatter baseline ADR.",
+    "`format` intentionally fails closed until maintainers accept a formatter baseline ADR. `oxlint` is",
+    "the current lint gate; `oxfmt` is not wired into the repository formatter surface yet.",
     "`migration-check` intentionally fails until configured.",
     ""
   ].join("\n");

@@ -18,10 +18,14 @@ Current implementation status:
 - CLI and Action provider selection default to the fake provider and support explicit
   `openai-compatible` selection when a model and `CLARISSIMI_PROVIDER_TOKEN` are provided.
 - `pnpm run live-provider-smoke` uses `CLARISSIMI_PROVIDER_TOKEN`,
-  `CLARISSIMI_PROVIDER_MODEL`, and optional `CLARISSIMI_PROVIDER_ENDPOINT`.
+  `CLARISSIMI_PROVIDER_MODEL`, optional `CLARISSIMI_PROVIDER_ENDPOINT`, and optional
+  `CLARISSIMI_PROVIDER_THINKING`.
 - Local credentialed live-provider smoke passed on `2026-07-09` with
   `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini` and a maintainer-owned provider token supplied only
   through the process environment.
+- Local OpenCode Go live-provider smoke passed on `2026-07-09` with
+  `CLARISSIMI_PROVIDER_MODEL=minimax-m3`, the OpenCode Go chat completions endpoint, and
+  `CLARISSIMI_PROVIDER_THINKING=disabled`.
 
 ## Owners
 

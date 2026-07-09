@@ -46,6 +46,8 @@ Provider selection flags:
 - `--provider openai-compatible`: explicit live provider path
 - `--provider-model <model>`: required for `openai-compatible`
 - `--provider-endpoint <url>`: optional OpenAI-compatible chat completions endpoint
+- `--provider-thinking disabled`: optional compatibility setting for providers that emit hidden
+  reasoning in message content unless thinking is disabled
 
 `openai-compatible` requires `CLARISSIMI_PROVIDER_TOKEN` in the process environment. Provider
 tokens must not be stored in config files or passed as command-line arguments.

@@ -419,6 +419,8 @@ test("recognize can use the OpenAI-compatible provider when explicitly selected"
         "openai-compatible",
         "--provider-model",
         "clarissimi-test-model",
+        "--provider-thinking",
+        "disabled",
         "--json"
       ],
       dir,
@@ -458,7 +460,40 @@ test("recognize can use the OpenAI-compatible provider when explicitly selected"
     assert.equal(output.approvalStatus, "draft");
     assert.equal(output.assessment.publicRecognitionText, "Added regression coverage for the parser.");
     assert.equal(requests.length, 1);
+    assert.deepEqual(requests[0].body.thinking, { type: "disabled" });
     assert.equal(JSON.stringify(requests[0].body).includes("person@example.com"), false);
+  });
+});
+
+test("recognize rejects unsupported provider thinking values", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "fixture.json");
+    await writeFile(fixturePath, JSON.stringify(fixture()), "utf8");
+
+    const result = await run(
+      [
+        "recognize",
+        "--fixture",
+        fixturePath,
+        "--mode",
+        "dry-run",
+        "--provider",
+        "openai-compatible",
+        "--provider-model",
+        "clarissimi-test-model",
+        "--provider-thinking",
+        "enabled"
+      ],
+      dir,
+      {
+        env: {
+          CLARISSIMI_PROVIDER_TOKEN: "unit-token"
+        }
+      }
+    );
+
+    assert.equal(result.exitCode, 1);
+    assert.equal(result.stderr.includes("provider thinking"), true);
   });
 });
 

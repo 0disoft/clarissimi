@@ -104,9 +104,50 @@ test("creates a draft assessment from an OpenAI-compatible response", async () =
   assert.equal(requests[0].headers.Authorization, "Bearer unit-token");
   assert.equal(requests[0].body.model, "clarissimi-test-model");
   assert.equal(requests[0].body.response_format.type, "json_object");
+  assert.equal(requests[0].body.thinking, undefined);
   const requestText = JSON.stringify(requests[0].body);
   assert.equal(requestText.includes("person@example.com"), false);
   assert.equal(requestText.includes("[REDACTED]"), true);
+});
+
+test("can disable provider thinking for OpenAI-compatible providers that support it", async () => {
+  const requests = [];
+  const provider = createOpenAiCompatibleContributionDraftProvider({
+    model: "minimax-m3",
+    token: "unit-token",
+    thinking: "disabled",
+    fetch: async (url, init) => {
+      requests.push({
+        url: String(url),
+        body: JSON.parse(init.body)
+      });
+      return jsonResponse({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                contributionType: "test",
+                affectedArea: "parser regression coverage",
+                impactLevel: "medium",
+                evidenceSummary: "Added regression coverage based on test evidence.",
+                suggestedBadge: "Regression Shield",
+                publicRecognitionText: "Added regression coverage for the parser.",
+                confidence: 0.76
+              })
+            }
+          }
+        ]
+      });
+    }
+  });
+
+  const assessment = await provider.createAssessment({
+    contributor,
+    preparedEvidence: preparedEvidence()
+  });
+
+  assert.equal(assessment.confidence, 0.76);
+  assert.deepEqual(requests[0].body.thinking, { type: "disabled" });
 });
 
 test("supports text-array message content", async () => {
@@ -144,6 +185,42 @@ test("supports text-array message content", async () => {
   });
 
   assert.equal(assessment.confidence, 0.74);
+});
+
+test("accepts markdown-fenced JSON message content from compatible providers", async () => {
+  const provider = createOpenAiCompatibleContributionDraftProvider({
+    model: "clarissimi-test-model",
+    token: "unit-token",
+    fetch: async () =>
+      jsonResponse({
+        choices: [
+          {
+            message: {
+              content: [
+                "```json",
+                JSON.stringify({
+                  contributionType: "test",
+                  affectedArea: "parser regression coverage",
+                  impactLevel: "medium",
+                  evidenceSummary: "Added regression coverage based on test evidence.",
+                  suggestedBadge: "Regression Shield",
+                  publicRecognitionText: "Added regression coverage for the parser.",
+                  confidence: 0.71
+                }),
+                "```"
+              ].join("\n")
+            }
+          }
+        ]
+      })
+  });
+
+  const assessment = await provider.createAssessment({
+    contributor,
+    preparedEvidence: preparedEvidence()
+  });
+
+  assert.equal(assessment.confidence, 0.71);
 });
 
 test("does not expose raw provider error bodies", async () => {
@@ -223,6 +300,21 @@ test("rejects missing credentials without reading environment variables", () => 
       error instanceof OpenAiCompatibleProviderError
       && error.code === "invalid_options"
       && error.message.includes("token")
+  );
+});
+
+test("rejects unsupported thinking modes without reading environment variables", () => {
+  assert.throws(
+    () =>
+      createOpenAiCompatibleContributionDraftProvider({
+        model: "clarissimi-test-model",
+        token: "unit-token",
+        thinking: "enabled"
+      }),
+    (error) =>
+      error instanceof OpenAiCompatibleProviderError
+      && error.code === "invalid_options"
+      && error.message.includes("thinking")
   );
 });
 

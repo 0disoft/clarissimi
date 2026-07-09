@@ -34,6 +34,9 @@ inputs:
   provider-endpoint:
     description: Optional OpenAI-compatible chat completions endpoint.
     required: false
+  provider-thinking:
+    description: Optional OpenAI-compatible thinking mode. Use disabled for providers that emit hidden reasoning in message content.
+    required: false
 
 outputs:
   draft-count:
@@ -93,6 +96,7 @@ runs:
         INPUT_PROVIDER: ${{ inputs.provider }}
         INPUT_PROVIDER_MODEL: ${{ inputs.provider-model }}
         INPUT_PROVIDER_ENDPOINT: ${{ inputs.provider-endpoint }}
+        INPUT_PROVIDER_THINKING: ${{ inputs.provider-thinking }}
         CLARISSIMI_PROVIDER_TOKEN: ${{ env.CLARISSIMI_PROVIDER_TOKEN }}
       run: |
         set -euo pipefail

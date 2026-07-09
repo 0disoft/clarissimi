@@ -27,8 +27,9 @@ execution secrets. The current shared token name is `CLARISSIMI_PROVIDER_TOKEN`.
 action inputs may name a provider, endpoint, and model, but must not store token values.
 
 The release-only live provider smoke uses `CLARISSIMI_PROVIDER_TOKEN`,
-`CLARISSIMI_PROVIDER_MODEL`, and optional `CLARISSIMI_PROVIDER_ENDPOINT`. It must run only in a
-maintainer-controlled environment that owns those values.
+`CLARISSIMI_PROVIDER_MODEL`, optional `CLARISSIMI_PROVIDER_ENDPOINT`, and optional
+`CLARISSIMI_PROVIDER_THINKING`. It must run only in a maintainer-controlled environment that owns
+the token value.
 
 Local credentialed live-provider smoke passed on `2026-07-09` with maintainer-owned credentials
 mapped in-process to `CLARISSIMI_PROVIDER_TOKEN` and `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`. The
@@ -36,7 +37,8 @@ run did not require writing a token value to a repository file.
 
 The manual GitHub workflow `.github/workflows/clarissimi-live-provider-smoke.yml` reads
 `CLARISSIMI_PROVIDER_TOKEN` from repository secrets. The provider model is a required workflow
-dispatch input, and the optional provider endpoint may also be supplied as a dispatch input.
+dispatch input, and the optional provider endpoint and thinking mode may also be supplied as
+dispatch inputs.
 
 ## Leak Response
 

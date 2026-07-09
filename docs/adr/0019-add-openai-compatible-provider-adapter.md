@@ -23,6 +23,9 @@ The adapter must:
 - implement the existing `ContributionDraftProvider` interface
 - accept only `PreparedProviderEvidence`, never raw evidence
 - use injected `fetch`, endpoint, model, and token options
+- allow explicit non-default request compatibility options such as provider thinking disablement
+- accept provider message content wrapped in Markdown JSON code fences while still rejecting
+  non-JSON content
 - avoid SDK dependencies and environment-variable loading
 - send only redacted prepared evidence and bounded schema instructions to the provider
 - validate model output with `packages/schemas` before returning an assessment
@@ -32,6 +35,8 @@ The adapter must:
 
 Credential loading remains outside `packages/providers`. CLI, GitHub Action, and local runtime
 integration must pass credentials explicitly from their own trusted boundaries in a later slice.
+Compatibility options are non-secret request-shaping values and must remain opt-in so the default
+OpenAI-compatible path sends only the standard chat completions request fields.
 
 ## Consequences
 

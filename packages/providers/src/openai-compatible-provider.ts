@@ -16,6 +16,9 @@ const DEFAULT_PROVIDER_ID = "openai-compatible";
 const DEFAULT_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 const DEFAULT_TEMPERATURE = 0.2;
 const DEFAULT_MAX_TOKENS = 1200;
+const THINKING_TYPES = ["disabled"] as const;
+
+export type OpenAiCompatibleThinkingType = typeof THINKING_TYPES[number];
 
 export type OpenAiCompatibleProviderErrorCode =
   | "invalid_options"
@@ -32,6 +35,7 @@ export interface OpenAiCompatibleProviderOptions {
   readonly fetch?: typeof fetch;
   readonly temperature?: number;
   readonly maxTokens?: number;
+  readonly thinking?: OpenAiCompatibleThinkingType;
 }
 
 export class OpenAiCompatibleProviderError extends Error {
@@ -61,19 +65,23 @@ export function createOpenAiCompatibleContributionDraftProvider(
   const fetchImpl = options.fetch ?? fetch;
   const temperature = finiteNumberOption(options.temperature ?? DEFAULT_TEMPERATURE, "temperature");
   const maxTokens = positiveIntegerOption(options.maxTokens ?? DEFAULT_MAX_TOKENS, "maxTokens");
+  const thinking = optionalEnumOption(options.thinking, THINKING_TYPES, "thinking");
 
   return {
     id: options.id ?? DEFAULT_PROVIDER_ID,
     async createAssessment(input: ProviderAssessmentInput): Promise<ContributionAssessment> {
-      const content = await requestAssessmentDraft({
+      const requestInput = {
         endpoint,
         model,
         token,
         fetchImpl,
         temperature,
         maxTokens,
-        input
-      });
+        input,
+        ...(thinking === undefined ? {} : { thinking })
+      } satisfies RequestAssessmentDraftInput;
+
+      const content = await requestAssessmentDraft(requestInput);
       return parseAssessmentDraft(content, input);
     }
   };
@@ -86,10 +94,36 @@ interface RequestAssessmentDraftInput {
   readonly fetchImpl: typeof fetch;
   readonly temperature: number;
   readonly maxTokens: number;
+  readonly thinking?: OpenAiCompatibleThinkingType;
   readonly input: ProviderAssessmentInput;
 }
 
 async function requestAssessmentDraft(options: RequestAssessmentDraftInput): Promise<string> {
+  const requestBody: Record<string, unknown> = {
+    model: options.model,
+    temperature: options.temperature,
+    max_tokens: options.maxTokens,
+    response_format: {
+      type: "json_object"
+    },
+    messages: [
+      {
+        role: "system",
+        content: buildSystemPrompt()
+      },
+      {
+        role: "user",
+        content: JSON.stringify(buildProviderPayload(options.input))
+      }
+    ]
+  };
+
+  if (options.thinking !== undefined) {
+    requestBody.thinking = {
+      type: options.thinking
+    };
+  }
+
   const response = await options.fetchImpl(options.endpoint, {
     method: "POST",
     headers: {
@@ -97,24 +131,7 @@ async function requestAssessmentDraft(options: RequestAssessmentDraftInput): Pro
       Authorization: `Bearer ${options.token}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({
-      model: options.model,
-      temperature: options.temperature,
-      max_tokens: options.maxTokens,
-      response_format: {
-        type: "json_object"
-      },
-      messages: [
-        {
-          role: "system",
-          content: buildSystemPrompt()
-        },
-        {
-          role: "user",
-          content: JSON.stringify(buildProviderPayload(options.input))
-        }
-      ]
-    })
+    body: JSON.stringify(requestBody)
   });
 
   const text = await response.text();
@@ -125,9 +142,9 @@ async function requestAssessmentDraft(options: RequestAssessmentDraftInput): Pro
     );
   }
 
-  let body: unknown;
+  let responseBody: unknown;
   try {
-    body = JSON.parse(text) as unknown;
+    responseBody = JSON.parse(text) as unknown;
   } catch {
     throw new OpenAiCompatibleProviderError(
       "invalid_response",
@@ -135,7 +152,7 @@ async function requestAssessmentDraft(options: RequestAssessmentDraftInput): Pro
     );
   }
 
-  return extractMessageContent(body);
+  return extractMessageContent(responseBody);
 }
 
 function buildSystemPrompt(): string {
@@ -148,7 +165,8 @@ function buildSystemPrompt(): string {
     `impactLevel must be one of: ${IMPACT_LEVELS.join(", ")}.`,
     "confidence must be a number between 0 and 1.",
     "Base every claim on the provided redacted evidence. Do not invent evidence.",
-    "Do not include raw provider output, raw diffs, secrets, leaderboard language, rankings, or numeric contributor scores."
+    "Do not include raw provider output, raw diffs, secrets, leaderboard language, rankings, or numeric contributor scores.",
+    "Do not wrap the JSON object in Markdown code fences."
   ].join("\n");
 }
 
@@ -180,7 +198,7 @@ function parseAssessmentDraft(
 ): ContributionAssessment {
   let draft: unknown;
   try {
-    draft = JSON.parse(content) as unknown;
+    draft = JSON.parse(normalizeJsonObjectContent(content)) as unknown;
   } catch {
     throw new OpenAiCompatibleProviderError(
       "invalid_json",
@@ -220,6 +238,12 @@ function parseAssessmentDraft(
   }
 
   return result.value;
+}
+
+function normalizeJsonObjectContent(content: string): string {
+  const trimmed = content.trim();
+  const fencedJsonMatch = /^```(?:json)?\s*\r?\n(?<json>[\s\S]*?)\r?\n```$/i.exec(trimmed);
+  return fencedJsonMatch?.groups?.json?.trim() ?? trimmed;
 }
 
 function extractMessageContent(value: unknown): string {
@@ -314,6 +338,25 @@ function positiveIntegerOption(value: number, name: string): number {
   }
 
   return value;
+}
+
+function optionalEnumOption<T extends string>(
+  value: string | undefined,
+  allowed: readonly T[],
+  name: string
+): T | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!(allowed as readonly string[]).includes(value)) {
+    throw new OpenAiCompatibleProviderError(
+      "invalid_options",
+      `OpenAI-compatible provider ${name} has an unsupported value.`
+    );
+  }
+
+  return value as T;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

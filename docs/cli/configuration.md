@@ -25,6 +25,7 @@ The current JSON config supports:
 - `provider`: `fake` or `openai-compatible`
 - `providerModel`: model name for `openai-compatible`
 - `providerEndpoint`: optional OpenAI-compatible chat completions endpoint
+- `providerThinking`: optional OpenAI-compatible thinking mode; currently only `disabled`
 - `mode`: `dry-run`, `propose`, or `commit`
 
 Explicit CLI flags override config file values for provider selection.
@@ -48,6 +49,8 @@ Provider API keys and GitHub tokens must not be stored in config files. They bel
 variables, local secret stores, or GitHub Actions secrets.
 
 The CLI reads `CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.
+Provider thinking settings are non-secret request compatibility options and must not be used to
+store provider tokens or prompt content.
 
 ## Review Blockers
 

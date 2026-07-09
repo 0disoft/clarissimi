@@ -63,5 +63,8 @@ Public package publication and versioned Action tags require:
   `https://github.com/0disoft/clarissimi/pull/1`.
 - Current live-provider evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09`
   using maintainer-owned provider credentials and `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.
+- Current OpenCode Go evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09`
+  using maintainer-owned provider credentials, `CLARISSIMI_PROVIDER_MODEL=minimax-m3`, the OpenCode
+  Go chat completions endpoint, and `CLARISSIMI_PROVIDER_THINKING=disabled`.
 - Remaining operational risk: hosted manual live-provider smoke workflow evidence with repository
   secret configuration is not complete.

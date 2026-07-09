@@ -262,6 +262,7 @@ test("environment runner can use the OpenAI-compatible provider when explicitly 
         INPUT_MODE: "dry-run",
         INPUT_PROVIDER: "openai-compatible",
         INPUT_PROVIDER_MODEL: "clarissimi-test-model",
+        INPUT_PROVIDER_THINKING: "disabled",
         CLARISSIMI_PROVIDER_TOKEN: "unit-token"
       },
       {
@@ -304,7 +305,40 @@ test("environment runner can use the OpenAI-compatible provider when explicitly 
     assert.equal(stderr, "");
     assert.equal(parsed.assessment.publicRecognitionText, "Added regression coverage for the parser.");
     assert.equal(requests.length, 1);
+    assert.deepEqual(requests[0].body.thinking, { type: "disabled" });
     assert.equal(JSON.stringify(requests[0].body).includes("person@example.com"), false);
+  });
+});
+
+test("environment runner rejects unsupported provider thinking values", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "github-fixture.json");
+    await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        INPUT_GITHUB_FIXTURE: fixturePath,
+        INPUT_MODE: "dry-run",
+        INPUT_PROVIDER: "openai-compatible",
+        INPUT_PROVIDER_MODEL: "clarissimi-test-model",
+        INPUT_PROVIDER_THINKING: "enabled",
+        CLARISSIMI_PROVIDER_TOKEN: "unit-token"
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        }
+      }
+    );
+
+    assert.equal(exitCode, 1);
+    assert.equal(stdout, "");
+    assert.equal(stderr.includes("INPUT_PROVIDER_THINKING"), true);
   });
 });
 

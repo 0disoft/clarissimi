@@ -139,12 +139,15 @@ maintainer review. When `propose` receives `GITHUB_EVENT_PATH`, it routes the me
 through the live GitHub collector using `GITHUB_TOKEN`; fixture inputs remain the deterministic
 test and local path. Explicit OpenAI-compatible provider selection is available for CLI and Action
 runs, but it requires the caller to provide a model and `CLARISSIMI_PROVIDER_TOKEN`; correctness
-tests continue to use fake providers or injected fetch implementations.
+tests continue to use fake providers or injected fetch implementations. Providers that emit hidden
+reasoning in message content can opt into `provider-thinking: disabled` or
+`--provider-thinking disabled`.
 
 Release maintainers who want automated provider mode can run `pnpm run live-provider-smoke` with
 `CLARISSIMI_PROVIDER_TOKEN` and `CLARISSIMI_PROVIDER_MODEL` to perform an explicit credentialed
-provider smoke. This command is not part of normal correctness checks and is not required for the
-agent-assisted import workflow.
+provider smoke. Set `CLARISSIMI_PROVIDER_THINKING=disabled` only for compatible providers that need
+that request option to return strict JSON. This command is not part of normal correctness checks and
+is not required for the agent-assisted import workflow.
 
 Workflow examples and permission details live in `docs/github-action/README.md` and
 `docs/github-action/permissions.md`.

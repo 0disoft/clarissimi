@@ -28,6 +28,7 @@ The Action supports dry-run summaries and a fixture-first `propose` write path. 
 - `INPUT_PROVIDER`: `fake` or `openai-compatible`, default `fake`
 - `INPUT_PROVIDER_MODEL`: provider model name required for `openai-compatible`
 - `INPUT_PROVIDER_ENDPOINT`: optional OpenAI-compatible chat completions endpoint
+- `INPUT_PROVIDER_THINKING`: optional OpenAI-compatible thinking mode, currently only `disabled`
 - `CLARISSIMI_PROVIDER_TOKEN`: provider token required only for `openai-compatible`
 - `GITHUB_REPOSITORY`: target repository for proposal pull requests in `propose` mode
 - `GITHUB_TOKEN`: token used only by `propose` mode for live GitHub collection and proposal pull
@@ -44,6 +45,7 @@ The root `action.yml` exposes the same surface as a composite action:
 - `provider`: defaults to `fake`
 - `provider-model`: provider model required for `openai-compatible`
 - `provider-endpoint`: optional OpenAI-compatible endpoint
+- `provider-thinking`: optional OpenAI-compatible thinking mode, currently only `disabled`
 
 The future expanded action contract should include:
 

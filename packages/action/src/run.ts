@@ -356,11 +356,24 @@ function resolveActionProvider(
       token: requireProviderEnvInput(env.CLARISSIMI_PROVIDER_TOKEN, "CLARISSIMI_PROVIDER_TOKEN")
     };
     assignOptional(options, "endpoint", readEnvInput(env.INPUT_PROVIDER_ENDPOINT));
+    assignOptional(options, "thinking", parseProviderThinking(readEnvInput(env.INPUT_PROVIDER_THINKING)));
     assignOptional(options, "fetch", runtime.fetch);
     return createOpenAiCompatibleContributionDraftProvider(options);
   }
 
   throw new ActionUsageError(`Unsupported provider: ${providerId}.`);
+}
+
+function parseProviderThinking(value: string | undefined): "disabled" | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value !== "disabled") {
+    throw new ActionUsageError("INPUT_PROVIDER_THINKING supports only disabled.");
+  }
+
+  return value;
 }
 
 async function writeGitHubOutputs(

@@ -20,6 +20,7 @@
 - `provider`: `fake` or `openai-compatible`, default `fake`
 - `provider-model`: model name required when `provider` is `openai-compatible`
 - `provider-endpoint`: optional OpenAI-compatible chat completions endpoint
+- `provider-thinking`: optional OpenAI-compatible thinking mode; currently only `disabled`
 
 ## Future Inputs
 
@@ -35,10 +36,11 @@ GitHub collection and proposal pull request creation or update. It reads
 
 The current package supports `INPUT_EVENT_PATH`, `GITHUB_EVENT_PATH`, `INPUT_GITHUB_FIXTURE`,
 `INPUT_MODE`, `INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`, `INPUT_STAGING_DIR`, `INPUT_PROVIDER`,
-`INPUT_PROVIDER_MODEL`, and `INPUT_PROVIDER_ENDPOINT`.
+`INPUT_PROVIDER_MODEL`, `INPUT_PROVIDER_ENDPOINT`, and `INPUT_PROVIDER_THINKING`.
 
 The root `action.yml` currently exposes `event-path`, `github-fixture`, `mode`, `base-branch`,
-`remote-name`, `staging-dir`, `provider`, `provider-model`, and `provider-endpoint`.
+`remote-name`, `staging-dir`, `provider`, `provider-model`, `provider-endpoint`, and
+`provider-thinking`.
 An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`
 fallback. An explicit `event-path` and `github-fixture` must not be provided together.
 In `dry-run`, event payloads are mapped from the local event file without live GitHub API calls.

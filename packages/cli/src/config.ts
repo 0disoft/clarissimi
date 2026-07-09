@@ -4,6 +4,7 @@ export interface CliConfig {
   readonly provider?: "fake" | "openai-compatible";
   readonly providerEndpoint?: string;
   readonly providerModel?: string;
+  readonly providerThinking?: "disabled";
   readonly mode?: "dry-run" | "propose" | "commit";
 }
 
@@ -49,11 +50,13 @@ function parseConfig(value: Record<string, unknown>): CliConfig {
   const provider = parseOptionalEnum(value.provider, ["fake", "openai-compatible"], "provider");
   const providerEndpoint = parseOptionalString(value.providerEndpoint, "providerEndpoint");
   const providerModel = parseOptionalString(value.providerModel, "providerModel");
+  const providerThinking = parseOptionalEnum(value.providerThinking, ["disabled"], "providerThinking");
   const mode = parseOptionalEnum(value.mode, ["dry-run", "propose", "commit"], "mode");
   const config: {
     provider?: "fake" | "openai-compatible";
     providerEndpoint?: string;
     providerModel?: string;
+    providerThinking?: "disabled";
     mode?: "dry-run" | "propose" | "commit";
   } = {};
 
@@ -67,6 +70,10 @@ function parseConfig(value: Record<string, unknown>): CliConfig {
 
   if (providerModel !== undefined) {
     config.providerModel = providerModel;
+  }
+
+  if (providerThinking !== undefined) {
+    config.providerThinking = providerThinking;
   }
 
   if (mode !== undefined) {

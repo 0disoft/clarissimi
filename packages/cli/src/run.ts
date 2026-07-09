@@ -396,7 +396,7 @@ function renderHelp(): string {
     "Commands:",
     "  clarissimi validate-config [--config <path>] [--json]",
     "  clarissimi validate-ledger [--ledger <path>] [--json]",
-    "  clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run [--provider <id>] [--provider-model <model>] [--json]",
+    "  clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run [--provider <id>] [--provider-model <model>] [--provider-thinking disabled] [--json]",
     "  clarissimi import-draft --draft <path> [--ledger <path>] [--out-dir <path>] [--json]",
     "  clarissimi rebuild [--ledger <path>] [--out-dir <path>] [--json]",
     ""
@@ -445,6 +445,11 @@ async function resolveRecognitionProvider(
       fetch: io.fetch ?? fetch
     };
     assignOptional(options, "endpoint", getStringFlag(args, "provider-endpoint") ?? config.providerEndpoint);
+    assignOptional(
+      options,
+      "thinking",
+      parseProviderThinking(getStringFlag(args, "provider-thinking") ?? config.providerThinking)
+    );
     return createOpenAiCompatibleContributionDraftProvider(options);
   }
 
@@ -470,6 +475,18 @@ function requiredProviderToken(env: NodeJS.ProcessEnv): string {
   }
 
   return token;
+}
+
+function parseProviderThinking(value: string | undefined): "disabled" | undefined {
+  if (value === undefined || value.trim().length === 0) {
+    return undefined;
+  }
+
+  if (value !== "disabled") {
+    throw new CliUsageError("OpenAI-compatible provider thinking supports only disabled.");
+  }
+
+  return value;
 }
 
 function assignOptional<T extends object, K extends keyof T>(

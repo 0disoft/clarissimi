@@ -8,6 +8,7 @@ const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const providerToken = readEnv("CLARISSIMI_PROVIDER_TOKEN");
 const providerModel = readEnv("CLARISSIMI_PROVIDER_MODEL");
 const providerEndpoint = readEnv("CLARISSIMI_PROVIDER_ENDPOINT");
+const providerThinking = readEnv("CLARISSIMI_PROVIDER_THINKING");
 const smokeEmail = "clarissimi-live-smoke@example.com";
 
 if (providerToken === undefined || providerModel === undefined) {
@@ -37,6 +38,10 @@ const args = [
 
 if (providerEndpoint !== undefined) {
   args.push("--provider-endpoint", providerEndpoint);
+}
+
+if (providerThinking !== undefined) {
+  args.push("--provider-thinking", providerThinking);
 }
 
 const result = await runCommand({

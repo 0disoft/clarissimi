@@ -9,6 +9,9 @@ on:
       provider-endpoint:
         description: Optional OpenAI-compatible chat completions endpoint override.
         required: false
+      provider-thinking:
+        description: Optional OpenAI-compatible thinking mode. Use disabled for providers such as minimax-m3.
+        required: false
 
 permissions:
   contents: read
@@ -42,4 +45,5 @@ jobs:
           CLARISSIMI_PROVIDER_TOKEN: ${{ secrets.CLARISSIMI_PROVIDER_TOKEN }}
           CLARISSIMI_PROVIDER_MODEL: ${{ inputs.provider-model }}
           CLARISSIMI_PROVIDER_ENDPOINT: ${{ inputs.provider-endpoint }}
+          CLARISSIMI_PROVIDER_THINKING: ${{ inputs.provider-thinking }}
         run: pnpm run live-provider-smoke

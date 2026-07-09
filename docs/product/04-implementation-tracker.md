@@ -38,7 +38,8 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   JSON rendering, and maintainer-only recent-share analytics
 - `packages/cli`: fixture-first validation, recognition dry-run, agent-assisted draft staging,
   approval, import, rebuild, maintainer-only analytics commands, help output, and explicit fake or
-  OpenAI-compatible provider selection
+  OpenAI-compatible provider selection; flag-only commands reject unexpected positional arguments
+  before reading configs, ledgers, providers, or draft files
 - `packages/action`: Action runner for dry-run summaries, fixture-first public recognition
   proposals, fixture-first draft review proposals, and event-path live GitHub collection in write
   modes with explicit fake or OpenAI-compatible provider selection

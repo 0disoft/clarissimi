@@ -139,6 +139,12 @@ derived outputs still use the canonical Clarissimi output paths when `--out-dir`
 - `commit`: reserved future direct-write mode; current CLI commands do not write recognition files
   directly to the current branch
 
+## Argument Handling
+
+Current CLI commands are flag-only except for the `analytics recent-share` subcommand selector.
+Unexpected positional arguments must fail as usage errors before config loading, ledger reads,
+provider resolution, draft writes, or rebuild work begins.
+
 ## Exit Codes
 
 The implemented CLI exit-code taxonomy is:

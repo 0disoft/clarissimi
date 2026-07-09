@@ -171,6 +171,28 @@ test("validate-config accepts missing config defaults", async () => {
   });
 });
 
+test("flag-only commands reject unexpected positional arguments", async () => {
+  await withTempDir(async (dir) => {
+    const commands = [
+      ["validate-config", "unexpected"],
+      ["validate-ledger", "unexpected"],
+      ["recognize", "unexpected", "--fixture", "missing.json", "--mode", "dry-run"],
+      ["stage-draft", "unexpected", "--draft", "missing.json"],
+      ["approve-draft", "unexpected", "--draft", "missing.json"],
+      ["import-draft", "unexpected", "--draft", "missing.json"],
+      ["rebuild", "unexpected"]
+    ];
+
+    for (const argv of commands) {
+      const result = await run(argv, dir);
+
+      assert.equal(result.exitCode, 1, argv.join(" "));
+      assert.equal(result.stdout, "", argv.join(" "));
+      assert.match(result.stderr, /does not accept positional arguments: unexpected/, argv.join(" "));
+    }
+  });
+});
+
 test("validate-config rejects unsupported provider values", async () => {
   await withTempDir(async (dir) => {
     const configDir = join(dir, ".clarissimi");

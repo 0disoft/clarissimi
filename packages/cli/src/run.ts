@@ -87,6 +87,12 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExi
 }
 
 async function runValidateConfig(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
+  const positionalError = rejectUnexpectedPositionals(args, "validate-config");
+  if (positionalError !== undefined) {
+    io.stderr(positionalError);
+    return CLI_EXIT_CODES.usage;
+  }
+
   try {
     const configPath = getStringFlag(args, "config");
     const result = await validateConfigFile(io.cwd, configPath);
@@ -104,6 +110,12 @@ async function runValidateConfig(args: ParsedArgs, io: CliIo): Promise<CliExitCo
 }
 
 async function runValidateLedger(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
+  const positionalError = rejectUnexpectedPositionals(args, "validate-ledger");
+  if (positionalError !== undefined) {
+    io.stderr(positionalError);
+    return CLI_EXIT_CODES.usage;
+  }
+
   try {
     const ledgerPath = resolveFromCwd(
       io.cwd,
@@ -128,6 +140,12 @@ async function runValidateLedger(args: ParsedArgs, io: CliIo): Promise<CliExitCo
 }
 
 async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
+  const positionalError = rejectUnexpectedPositionals(args, "recognize");
+  if (positionalError !== undefined) {
+    io.stderr(positionalError);
+    return CLI_EXIT_CODES.usage;
+  }
+
   const fixturePath = getStringFlag(args, "fixture");
   const githubFixturePath = getStringFlag(args, "github-fixture");
   if (fixturePath === undefined && githubFixturePath === undefined) {
@@ -203,6 +221,12 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
 }
 
 async function runStageDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
+  const positionalError = rejectUnexpectedPositionals(args, "stage-draft");
+  if (positionalError !== undefined) {
+    io.stderr(positionalError);
+    return CLI_EXIT_CODES.usage;
+  }
+
   const draftPath = getStringFlag(args, "draft");
   if (draftPath === undefined) {
     io.stderr("stage-draft requires --draft <path>.\n");
@@ -254,6 +278,12 @@ async function runStageDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> 
 }
 
 async function runApproveDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
+  const positionalError = rejectUnexpectedPositionals(args, "approve-draft");
+  if (positionalError !== undefined) {
+    io.stderr(positionalError);
+    return CLI_EXIT_CODES.usage;
+  }
+
   const draftPath = getStringFlag(args, "draft");
   if (draftPath === undefined) {
     io.stderr("approve-draft requires --draft <path>.\n");
@@ -295,6 +325,12 @@ async function runApproveDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode
 }
 
 async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
+  const positionalError = rejectUnexpectedPositionals(args, "import-draft");
+  if (positionalError !== undefined) {
+    io.stderr(positionalError);
+    return CLI_EXIT_CODES.usage;
+  }
+
   const draftPath = getStringFlag(args, "draft");
   if (draftPath === undefined) {
     io.stderr("import-draft requires --draft <path>.\n");
@@ -497,6 +533,12 @@ function contributionIdentityKey(
 }
 
 async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
+  const positionalError = rejectUnexpectedPositionals(args, "rebuild");
+  if (positionalError !== undefined) {
+    io.stderr(positionalError);
+    return CLI_EXIT_CODES.usage;
+  }
+
   const ledgerPath = resolveFromCwd(
     io.cwd,
     getStringFlag(args, "ledger", CONTRIBUTIONS_JSONL_PATH) ?? CONTRIBUTIONS_JSONL_PATH
@@ -619,6 +661,14 @@ function renderHelp(): string {
     "  clarissimi analytics recent-share [--ledger <path>] [--window-days <days>] [--as-of <iso-date>] [--json]",
     ""
   ].join("\n");
+}
+
+function rejectUnexpectedPositionals(args: ParsedArgs, command: string): string | undefined {
+  if (args.positionals.length === 0) {
+    return undefined;
+  }
+
+  return `${command} does not accept positional arguments: ${args.positionals.join(" ")}\n`;
 }
 
 function renderRecentShareMessage(value: ReturnType<typeof buildMaintainerRecentRecognitionShareDocument>): string {

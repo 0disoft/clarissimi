@@ -37,6 +37,9 @@ This repository type owns workspace boundaries, package ownership, dependency po
   and `check`; release-readiness verifies that implemented package directories stay listed in the
   Package Table, that Package Table entries point at existing package directories, and that
   workspace package names stay aligned with their `packages/<name>` directories.
+- Monorepo internal dependency policy: internal package dependencies must use `workspace:*` in
+  `dependencies`, not dev, peer, or optional dependency sections, and must follow the dependency
+  graph below.
 - Monorepo release or rollout policy: source-only merges may continue after local and hosted
   validation, but public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`; release-readiness keeps root and workspace package manifests private at
@@ -56,6 +59,19 @@ This repository type owns workspace boundaries, package ownership, dependency po
 | `packages/renderers` | Implemented | JSONL, derived contributor JSON, Markdown, static-data rendering, draft review JSON rendering, maintainer-only analytics documents, output path constants | Evidence collection, provider calls, approval policy, filesystem writes, CLI orchestration, Action orchestration |
 | `packages/cli` | Implemented | Local command parsing, fixture-first orchestration, agent-assisted draft staging, approval, and import, config file loading, ledger validation, rebuild command I/O | Domain policy, schema vocabulary, shared config value validation, provider behavior, GitHub API collection, Action runtime |
 | `packages/action` | Implemented | GitHub Action entrypoint, environment input resolution, event file reading, live collector routing and token injection, bounded dry-run/propose/stage-draft summaries, internal proposal output staging into temporary directories, proposal branch writing and publishing behind narrow local git boundaries, proposal pull request creation/update boundary | Live GitHub evidence normalization, provider token handling, default-branch writes, domain policy, provider behavior |
+
+## Internal Dependency Graph
+
+| Package | Allowed internal dependencies |
+| --- | --- |
+| `packages/schemas` | none |
+| `packages/redaction` | none |
+| `packages/core` | `@clarissimi/redaction`, `@clarissimi/schemas` |
+| `packages/github` | `@clarissimi/core`, `@clarissimi/schemas` |
+| `packages/providers` | `@clarissimi/core`, `@clarissimi/schemas` |
+| `packages/renderers` | `@clarissimi/core`, `@clarissimi/schemas` |
+| `packages/cli` | `@clarissimi/core`, `@clarissimi/github`, `@clarissimi/providers`, `@clarissimi/renderers`, `@clarissimi/schemas` |
+| `packages/action` | `@clarissimi/core`, `@clarissimi/github`, `@clarissimi/providers`, `@clarissimi/renderers`, `@clarissimi/schemas` |
 
 ## Review Blockers
 

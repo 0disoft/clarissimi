@@ -17,6 +17,7 @@ import {
   validatePackageReleasePolicy,
   validatePackageScriptRegistration,
   validateWorkspaceContract,
+  validateWorkspaceInternalDependencies,
   validateWorkspacePackageManifest
 } from "../release-readiness.mjs";
 
@@ -123,6 +124,58 @@ test("release readiness rejects workspace and package manifest identity drift", 
     [
       "packages/cli/package.json name must be @clarissimi/cli.",
       "packages/cli/package.json type must remain module."
+    ]
+  );
+});
+
+test("release readiness accepts the internal workspace dependency graph", () => {
+  assert.deepEqual(
+    validateWorkspaceInternalDependencies(
+      {
+        dependencies: {
+          "@clarissimi/core": "workspace:*",
+          "@clarissimi/github": "workspace:*",
+          "@clarissimi/providers": "workspace:*",
+          "@clarissimi/renderers": "workspace:*",
+          "@clarissimi/schemas": "workspace:*"
+        }
+      },
+      "cli",
+      "packages/cli/package.json"
+    ),
+    []
+  );
+
+  assert.deepEqual(
+    validateWorkspaceInternalDependencies(
+      {},
+      "schemas",
+      "packages/schemas/package.json"
+    ),
+    []
+  );
+});
+
+test("release readiness rejects internal workspace dependency drift", () => {
+  assert.deepEqual(
+    validateWorkspaceInternalDependencies(
+      {
+        dependencies: {
+          "@clarissimi/core": "workspace:^",
+          "@clarissimi/renderers": "workspace:*"
+        },
+        devDependencies: {
+          "@clarissimi/schemas": "workspace:*"
+        }
+      },
+      "providers",
+      "packages/providers/package.json"
+    ),
+    [
+      "packages/providers/package.json dependencies must include @clarissimi/schemas: workspace:*.",
+      "packages/providers/package.json dependency @clarissimi/core must use workspace:*.",
+      "packages/providers/package.json dependencies must not include undeclared internal dependency @clarissimi/renderers.",
+      "packages/providers/package.json devDependencies must not declare internal dependency @clarissimi/schemas; use dependencies."
     ]
   );
 });
@@ -417,6 +470,13 @@ function createPackageOwnershipText() {
     "| --- | --- | --- | --- |",
     "| `packages/cli` | Implemented | CLI orchestration | Domain policy |",
     "| `packages/schemas` | Implemented | Shared schema vocabulary | CLI orchestration |",
+    "",
+    "## Internal Dependency Graph",
+    "",
+    "| Package | Allowed internal dependencies |",
+    "| --- | --- |",
+    "| `packages/cli` | `@clarissimi/schemas` |",
+    "| `packages/schemas` | none |",
     ""
   ].join("\n");
 }

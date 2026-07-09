@@ -334,6 +334,8 @@ Completed deliverables:
   while public package publication and versioned Action tags are blocked
 - release-readiness verifies that implemented workspace packages and the Package Table in
   `docs/monorepo/package-ownership.md` stay in sync
+- release-readiness verifies that internal workspace dependencies follow the documented package
+  dependency graph and use `workspace:*`
 - release-readiness verifies hosted CI Node.js runtime, release-tool versions, and release-tool
   checksum verification snippets before reporting static release gates as passed
 - release-readiness verifies that `ssealed`, `actionlint`, and `yq` are available before running

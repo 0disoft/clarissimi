@@ -68,6 +68,21 @@ export const workspaceContract = {
   packageNameScope: "@clarissimi"
 };
 
+export const workspaceInternalDependencyContract = {
+  internalScope: "@clarissimi/",
+  workspaceRange: "workspace:*",
+  dependenciesByPackageDir: {
+    action: ["core", "github", "providers", "renderers", "schemas"],
+    cli: ["core", "github", "providers", "renderers", "schemas"],
+    core: ["redaction", "schemas"],
+    github: ["core", "schemas"],
+    providers: ["core", "schemas"],
+    redaction: [],
+    renderers: ["core", "schemas"],
+    schemas: []
+  }
+};
+
 export const credentialedReleaseEvidenceContract = {
   path: "docs/ops/release.md",
   requiredSnippets: [
@@ -772,6 +787,7 @@ async function runWorkspacePackageReleasePolicyCheck(repoRoot) {
 
     issues.push(...validatePackageReleasePolicy(packageJson, packageReleasePolicy, repoPath));
     issues.push(...validateWorkspacePackageManifest(packageJson, workspaceDirFromManifestPath(repoRoot, packageJsonPath), repoPath));
+    issues.push(...validateWorkspaceInternalDependencies(packageJson, workspaceDirFromManifestPath(repoRoot, packageJsonPath), repoPath));
   }
 
   if (issues.length > 0) {
@@ -917,6 +933,53 @@ export function validateWorkspacePackageManifest(
   return issues;
 }
 
+export function validateWorkspaceInternalDependencies(
+  packageJson,
+  packageDir,
+  manifestPath,
+  contract = workspaceInternalDependencyContract
+) {
+  const issues = [];
+  const allowedDirs = contract.dependenciesByPackageDir[packageDir];
+  if (allowedDirs === undefined) {
+    issues.push(`${manifestPath} has no internal dependency contract for packages/${packageDir}.`);
+    return issues;
+  }
+
+  const expectedNames = allowedDirs.map((dir) => `${workspaceContract.packageNameScope}/${dir}`);
+  const expectedSet = new Set(expectedNames);
+  const runtimeDependencies = dependencyEntries(packageJson?.dependencies);
+  const declaredRuntimeInternal = runtimeDependencies.filter(([name]) => name.startsWith(contract.internalScope));
+  const declaredRuntimeNames = new Set(declaredRuntimeInternal.map(([name]) => name));
+
+  for (const name of expectedNames) {
+    if (!declaredRuntimeNames.has(name)) {
+      issues.push(`${manifestPath} dependencies must include ${name}: ${contract.workspaceRange}.`);
+    }
+  }
+
+  for (const [name, version] of declaredRuntimeInternal) {
+    if (!expectedSet.has(name)) {
+      issues.push(`${manifestPath} dependencies must not include undeclared internal dependency ${name}.`);
+      continue;
+    }
+
+    if (version !== contract.workspaceRange) {
+      issues.push(`${manifestPath} dependency ${name} must use ${contract.workspaceRange}.`);
+    }
+  }
+
+  for (const sectionName of ["devDependencies", "peerDependencies", "optionalDependencies"]) {
+    for (const [name] of dependencyEntries(packageJson?.[sectionName])) {
+      if (name.startsWith(contract.internalScope)) {
+        issues.push(`${manifestPath} ${sectionName} must not declare internal dependency ${name}; use dependencies.`);
+      }
+    }
+  }
+
+  return issues;
+}
+
 export function validatePackageOwnershipContract(
   text,
   packageDirs,
@@ -970,7 +1033,7 @@ function escapeRegExp(value) {
 
 function extractPackageOwnershipEntries(text) {
   const entries = [];
-  const lines = text.split(/\r?\n/);
+  const lines = extractMarkdownSection(text, "Package Table").split(/\r?\n/);
   const pattern = /^\| `(?<packagePath>packages\/[^`]+)` \| (?<status>[^|]+) \|/;
 
   for (const line of lines) {
@@ -986,6 +1049,42 @@ function extractPackageOwnershipEntries(text) {
   }
 
   return entries;
+}
+
+function extractMarkdownSection(text, heading) {
+  const lines = text.split(/\r?\n/);
+  const headingPattern = new RegExp(`^##\\s+${escapeRegExp(heading)}\\s*$`);
+  let start = -1;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    if (headingPattern.test(lines[index])) {
+      start = index + 1;
+      break;
+    }
+  }
+
+  if (start === -1) {
+    return "";
+  }
+
+  const sectionLines = [];
+  for (let index = start; index < lines.length; index += 1) {
+    if (/^##\s+/.test(lines[index])) {
+      break;
+    }
+
+    sectionLines.push(lines[index]);
+  }
+
+  return sectionLines.join("\n");
+}
+
+function dependencyEntries(value) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return [];
+  }
+
+  return Object.entries(value);
 }
 
 function findRequiredYamlMappingBlock(text, path, key, issues) {

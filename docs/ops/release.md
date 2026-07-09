@@ -48,6 +48,27 @@ Public package publication and versioned Action tags require:
 - secret scan shows no committed provider tokens, GitHub tokens, private keys, or environment files
 - rollback instructions cover closing proposal pull requests and deleting proposal branches
 
+## Hosted Live Provider Smoke
+
+After `CLARISSIMI_PROVIDER_TOKEN` is configured as a repository secret, run the manual hosted smoke
+from a maintainer shell without printing the token value:
+
+```powershell
+gh workflow run clarissimi-live-provider-smoke.yml --repo 0disoft/clarissimi --ref main -f provider-model=gpt-4.1-mini
+gh run list --repo 0disoft/clarissimi --workflow clarissimi-live-provider-smoke.yml --limit 1
+gh run watch <run-id> --repo 0disoft/clarissimi --exit-status
+```
+
+For OpenAI-compatible gateway providers that need an endpoint or thinking-mode override, pass those
+as dispatch inputs instead of editing repository files:
+
+```powershell
+gh workflow run clarissimi-live-provider-smoke.yml --repo 0disoft/clarissimi --ref main -f provider-model=minimax-m3 -f provider-endpoint=<chat-completions-url> -f provider-thinking=disabled
+```
+
+Record the passed workflow run id and provider model in this document before public package
+publication or a versioned Action tag.
+
 ## Owners
 
 - Primary owner: Repository maintainers

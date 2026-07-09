@@ -13,6 +13,7 @@
 - Monorepo source: docs/monorepo/README.md
 - Package ownership source: docs/monorepo/package-ownership.md
 - CLI command contract source: docs/cli/command-contract.md
+- CLI agent-assisted draft guide: docs/cli/agent-assisted-drafts.md
 - CLI output and exit-code source: docs/cli/output-and-exit-codes.md
 - CLI config source: docs/cli/configuration.md
 - GitHub Action source: docs/github-action/README.md

@@ -39,6 +39,15 @@ for (const requiredPath of requiredPaths) {
 
 for (const filePath of markdownFiles) {
   const text = await readFile(filePath, "utf8");
+  for (const block of extractJsonCodeBlocks(text)) {
+    try {
+      JSON.parse(block.value);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      issues.push(`${toRepoPath(filePath)} has invalid json code block ${block.index}: ${message}`);
+    }
+  }
+
   for (const link of extractMarkdownLinks(text)) {
     if (isExternalOrAnchor(link)) {
       continue;
@@ -95,6 +104,20 @@ function extractMarkdownLinks(text) {
   }
 
   return links;
+}
+
+function extractJsonCodeBlocks(text) {
+  const blocks = [];
+  const pattern = /```json\r?\n([\s\S]*?)\r?\n```/g;
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    blocks.push({
+      index: blocks.length + 1,
+      value: match[1]
+    });
+  }
+
+  return blocks;
 }
 
 function isExternalOrAnchor(link) {

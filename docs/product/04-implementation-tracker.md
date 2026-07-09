@@ -298,6 +298,9 @@ Completed deliverables:
 - release-readiness verifies that package test globs still include package and script test suites
 - release-readiness verifies that `ssealed`, `actionlint`, and `yq` are available before running
   tool-backed release checks
+- agent-assisted draft guide documents a copyable assessment template, PR source fields, evidence
+  refs, impact/confidence semantics, and delegated model envelopes
+- docs validation parses fenced `json` examples so copyable draft templates cannot silently drift
 - rollback instructions cover staging cleanup, proposal pull request closure, proposal branch
   deletion, and post-merge recognition reverts
 - manual-only fixture stage-draft dogfood workflow is available and passed run `28992586329`,

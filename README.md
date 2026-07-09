@@ -117,6 +117,9 @@ node packages/cli/dist/bin/clarissimi.js import-draft --draft agent-draft.json -
 the ledger. It also accepts a `clarissimi.draft-envelope/v1` wrapper for delegated LLM workflows,
 but public outputs record only the validated assessment.
 
+See `docs/cli/agent-assisted-drafts.md` for a complete assessment template, PR source fields, and
+the rule that impact levels and confidence are not public contributor scores.
+
 To keep an unapproved draft in a reviewable repository inbox first:
 
 ```powershell

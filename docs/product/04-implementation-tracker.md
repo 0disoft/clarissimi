@@ -350,6 +350,8 @@ Completed deliverables:
 - release-readiness verifies that `docs/ops/release.md` keeps public package publication,
   marketplace release notes, versioned Action tags, version bumps, and release tags blocked until a
   maintainer release decision changes the policy
+- release-readiness verifies that `docs/ops/release.md` names public product-positioning guardrails
+  and intentionally fail-closed validation placeholders in its release gate coverage
 - release-readiness verifies that workspace package manifests keep their `dist` entrypoints,
   package files, build scripts, and CLI/Action bin boundaries aligned
 - release-readiness verifies that workspace package manifests carry package-level license,

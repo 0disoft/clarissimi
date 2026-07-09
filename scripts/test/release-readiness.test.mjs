@@ -169,13 +169,17 @@ test("release readiness rejects release policy document drift", () => {
     .replace("Clarissimi is not ready for public package publication.", "Clarissimi can publish packages.")
     .replace("- Public package publication: blocked.", "- Public package publication: allowed.")
     .replace("- Versioned GitHub Action tag: blocked.", "- Versioned GitHub Action tag: allowed.")
-    .replace("Do not bump versions, publish packages, or create", "Bump versions and publish packages.");
+    .replace("Do not bump versions, publish packages, or create", "Bump versions and publish packages.")
+    .replace("public product-positioning guardrails", "public docs")
+    .replace("intentionally fail-closed `format` and `migration-check`", "format and migration checks");
 
   assert.deepEqual(validateReleasePolicyDocumentContract(text), [
     "docs/ops/release.md must include Clarissimi is not ready for public package publication..",
     "docs/ops/release.md must include Do not bump versions, publish packages, or create.",
     "docs/ops/release.md must include - Public package publication: blocked..",
-    "docs/ops/release.md must include - Versioned GitHub Action tag: blocked.."
+    "docs/ops/release.md must include - Versioned GitHub Action tag: blocked..",
+    "docs/ops/release.md must include public product-positioning guardrails.",
+    "docs/ops/release.md must include intentionally fail-closed `format` and `migration-check`."
   ]);
 });
 
@@ -904,6 +908,8 @@ function createReleasePolicyText() {
     "- Versioned GitHub Action tag: blocked.",
     "",
     "Public package publication and versioned Action tags require:",
+    "public product-positioning guardrails",
+    "intentionally fail-closed `format` and `migration-check`",
     "",
     "- Release blocker status: public package publication and versioned Action tags are blocked",
     ""

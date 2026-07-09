@@ -649,6 +649,8 @@ Completed deliverables:
   values
 - CLI remains responsible for supported config-file discovery, explicit `--config <path>`, JSON and
   TypeScript config loading, and invalid-config exit behavior
+- release-readiness validates CLI output and exit-code documentation so raw-output exclusions,
+  draft-only wording, and exit-code mappings cannot drift silently
 
 Validation:
 

@@ -178,6 +178,7 @@ export const docsValidationScriptContract = {
     "\"docs/product/01-roadmap.md\"",
     "\"docs/product/02-spec.md\"",
     "\"docs/product/03-risk-register.md\"",
+    "\"docs/cli/output-and-exit-codes.md\"",
     "\"docs/product/04-implementation-tracker.md\""
   ]
 };
@@ -243,6 +244,32 @@ export const cliCommandContract = {
     "Unexpected positional arguments must fail as usage errors before config loading",
     "| `7` | write failure |",
     "A command writes public recognition without approval or configured policy."
+  ]
+};
+
+export const cliOutputExitCodesDocumentContract = {
+  path: "docs/cli/output-and-exit-codes.md",
+  requiredSnippets: [
+    "Clarissimi output must help maintainers review what happened without leaking raw evidence or",
+    "provider internals.",
+    "raw provider response",
+    "raw diff",
+    "raw issue or PR body",
+    "raw patch excerpt",
+    "secrets or redacted source text",
+    "private environment values",
+    "- `0`: success",
+    "- `1`: usage error",
+    "- `2`: invalid configuration",
+    "- `3`: invalid ledger",
+    "- `4`: provider or fixture recognition failure",
+    "- `5`: provider schema validation failure",
+    "- `6`: policy rejection",
+    "- `7`: write failure",
+    "Output implies a recognition entry was approved when it is only a draft.",
+    "Output calls a contributor high, medium, or low quality.",
+    "JSON output leaks raw evidence.",
+    "Exit behavior changes without CLI tests."
   ]
 };
 
@@ -895,6 +922,7 @@ export async function runReleaseReadiness(options = {}) {
   await runLintAndFormatDecisionDocumentContractCheck(repoRoot);
   await runLedgerFormatDocumentContractCheck(repoRoot);
   await runCliCommandContractCheck(repoRoot);
+  await runCliOutputExitCodesDocumentContractCheck(repoRoot);
   await runCiOperationalDocumentContractCheck(repoRoot);
   await runOperationalContractDocumentContractCheck(repoRoot);
   await runObservabilityDocumentContractCheck(repoRoot);
@@ -1232,6 +1260,21 @@ export function validateLedgerFormatDocumentContract(text, contract = ledgerForm
 }
 
 export function validateCliCommandContract(text, contract = cliCommandContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateCliOutputExitCodesDocumentContract(
+  text,
+  contract = cliOutputExitCodesDocumentContract
+) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1844,6 +1887,23 @@ async function runCliCommandContractCheck(repoRoot) {
   }
 
   console.log("CLI command contract passed");
+}
+
+async function runCliOutputExitCodesDocumentContractCheck(repoRoot) {
+  const outputExitCodesPath = join(repoRoot, cliOutputExitCodesDocumentContract.path);
+  let text;
+  try {
+    text = await readFile(outputExitCodesPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${cliOutputExitCodesDocumentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateCliOutputExitCodesDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`CLI output and exit codes document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("CLI output and exit codes document contract passed");
 }
 
 async function runCiOperationalDocumentContractCheck(repoRoot) {

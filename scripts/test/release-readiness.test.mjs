@@ -15,6 +15,7 @@ import {
   validateBackupRestoreDocumentContract,
   validateCiOperationalDocumentContract,
   validateCliCommandContract,
+  validateCliOutputExitCodesDocumentContract,
   validateCiWorkflowContract,
   validateCredentialedReleaseEvidence,
   validateDryRunDogfoodEvidence,
@@ -381,6 +382,34 @@ test("release readiness rejects CLI command contract drift", () => {
     "docs/cli/command-contract.md must include rejects non-public approval states, appends the sanitized public.",
     "docs/cli/command-contract.md must include Unexpected positional arguments must fail as usage errors before config loading.",
     "docs/cli/command-contract.md must include | `7` | write failure |."
+  ]);
+});
+
+test("release readiness accepts the CLI output and exit codes document contract", () => {
+  assert.deepEqual(validateCliOutputExitCodesDocumentContract(createCliOutputExitCodesDocumentText()), []);
+});
+
+test("release readiness rejects CLI output and exit codes drift", () => {
+  const text = createCliOutputExitCodesDocumentText()
+    .replace("raw provider response", "provider response")
+    .replace("raw diff", "diff")
+    .replace("private environment values", "environment values")
+    .replace("- `1`: usage error", "- `1`: error")
+    .replace("- `7`: write failure", "- `7`: failure")
+    .replace(
+      "Output implies a recognition entry was approved when it is only a draft.",
+      "Output says recognition is approved."
+    )
+    .replace("JSON output leaks raw evidence.", "JSON output includes evidence.");
+
+  assert.deepEqual(validateCliOutputExitCodesDocumentContract(text), [
+    "docs/cli/output-and-exit-codes.md must include raw provider response.",
+    "docs/cli/output-and-exit-codes.md must include raw diff.",
+    "docs/cli/output-and-exit-codes.md must include private environment values.",
+    "docs/cli/output-and-exit-codes.md must include - `1`: usage error.",
+    "docs/cli/output-and-exit-codes.md must include - `7`: write failure.",
+    "docs/cli/output-and-exit-codes.md must include Output implies a recognition entry was approved when it is only a draft..",
+    "docs/cli/output-and-exit-codes.md must include JSON output leaks raw evidence.."
   ]);
 });
 
@@ -1488,6 +1517,7 @@ function createDocsValidationScriptText() {
     "  \"docs/product/01-roadmap.md\",",
     "  \"docs/product/02-spec.md\",",
     "  \"docs/product/03-risk-register.md\",",
+    "  \"docs/cli/output-and-exit-codes.md\",",
     "  \"docs/product/04-implementation-tracker.md\",",
     "];",
     ""
@@ -1602,6 +1632,37 @@ function createCliCommandContractText() {
     "",
     "| `7` | write failure |",
     "A command writes public recognition without approval or configured policy.",
+    ""
+  ].join("\n");
+}
+
+function createCliOutputExitCodesDocumentText() {
+  return [
+    "Clarissimi output must help maintainers review what happened without leaking raw evidence or",
+    "provider internals.",
+    "",
+    "JSON output should be stable enough for CI and must not include:",
+    "",
+    "- raw provider response",
+    "- raw diff",
+    "- raw issue or PR body",
+    "- raw patch excerpt",
+    "- secrets or redacted source text",
+    "- private environment values",
+    "",
+    "- `0`: success",
+    "- `1`: usage error",
+    "- `2`: invalid configuration",
+    "- `3`: invalid ledger",
+    "- `4`: provider or fixture recognition failure",
+    "- `5`: provider schema validation failure",
+    "- `6`: policy rejection",
+    "- `7`: write failure",
+    "",
+    "- Output implies a recognition entry was approved when it is only a draft.",
+    "- Output calls a contributor high, medium, or low quality.",
+    "- JSON output leaks raw evidence.",
+    "- Exit behavior changes without CLI tests.",
     ""
   ].join("\n");
 }

@@ -43,7 +43,8 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   reading configs, ledgers, providers, or draft files
 - `packages/action`: Action runner for dry-run summaries, fixture-first public recognition
   proposals, fixture-first draft review proposals, and event-path live GitHub collection in write
-  modes with explicit config-path loading and explicit fake or OpenAI-compatible provider selection
+  modes with explicit config-path loading, optional sanitized JSON summary artifacts, and explicit
+  fake or OpenAI-compatible provider selection
 - root `action.yml`: composite Action defaulting to `propose` and exposing explicit `dry-run`
   and explicit config-path loading
 - root `package.json`: configured `docs`, `lint`, `smoke`, and release-only
@@ -607,6 +608,34 @@ Completed deliverables:
 - Action inputs and workflow environment values override config values
 - unsupported `INPUT_MODE` values fail before config-file loading
 - provider tokens remain outside config files and Action inputs
+
+Validation:
+
+- `pnpm run docs`
+- `pnpm run smoke`
+- `pnpm run check`
+- `pnpm run contract`
+
+### 18. Action Summary Artifact
+
+Source: `docs/adr/0030-add-action-summary-artifact.md`,
+`docs/github-action/action-contract.md`
+
+Status: Completed in `packages/action/src/run.ts` and root `action.yml`.
+
+Goal: let workflow authors upload or inspect a durable sanitized JSON Action summary without
+scraping stdout or step summary Markdown.
+
+Completed deliverables:
+
+- root `action.yml` exposes optional `summary-path`
+- Action runner writes a sanitized JSON summary only when `INPUT_SUMMARY_PATH` is explicitly set
+- summary paths must be relative and stay inside `GITHUB_WORKSPACE`
+- invalid summary paths fail before provider calls or write-mode mutation
+- Action output `summary-json-path` points to the resolved artifact path when a summary artifact is
+  written
+- the summary artifact follows the same raw-evidence and secret exclusion rules as stdout,
+  GitHub outputs, and step summaries
 
 Validation:
 

@@ -1,5 +1,5 @@
-import { appendFile, readFile } from "node:fs/promises";
-import { basename, isAbsolute, join } from "node:path";
+import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 
@@ -218,6 +218,7 @@ export async function runActionFromEnvironment(
     if (modeInput !== undefined) {
       normalizeActionMode(modeInput);
     }
+    const summaryJsonPath = resolveActionSummaryPath(env);
 
     const config = await loadActionConfigFromEnvironment(env);
     const mode = normalizeActionMode(modeInput ?? config.mode ?? "propose");
@@ -230,7 +231,8 @@ export async function runActionFromEnvironment(
     assignOptional(input, "provider", runtime.provider ?? resolveActionProvider(env, runtime, config));
 
     const summary = await runActionMode(input, env, runtime);
-    await writeGitHubOutputs(env.GITHUB_OUTPUT, summary);
+    await writeActionSummaryJson(summaryJsonPath, summary);
+    await writeGitHubOutputs(env.GITHUB_OUTPUT, summary, summaryJsonPath);
     await writeGitHubStepSummary(env.GITHUB_STEP_SUMMARY, summary);
     io.stdout(`${JSON.stringify(summary, null, 2)}\n`);
     return 0;
@@ -239,6 +241,31 @@ export async function runActionFromEnvironment(
     io.stderr(`${message}\n`);
     return error instanceof ActionUsageError ? 1 : 4;
   }
+}
+
+function resolveActionSummaryPath(env: NodeJS.ProcessEnv): string | undefined {
+  const inputPath = readEnvInput(env.INPUT_SUMMARY_PATH);
+  if (inputPath === undefined) {
+    return undefined;
+  }
+
+  if (isAbsolute(inputPath)) {
+    throw new ActionUsageError("INPUT_SUMMARY_PATH must be a relative path inside GITHUB_WORKSPACE.");
+  }
+
+  const workspace = resolve(readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd());
+  const resolvedPath = resolve(workspace, inputPath);
+  if (!isPathInside(workspace, resolvedPath)) {
+    throw new ActionUsageError("INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.");
+  }
+
+  return resolvedPath;
+}
+
+function isPathInside(basePath: string, targetPath: string): boolean {
+  const relativePath = relative(basePath, targetPath);
+  return relativePath.length === 0
+    || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
 }
 
 async function runActionMode(
@@ -581,7 +608,8 @@ function parseProviderThinking(value: string | undefined): ConfigProviderThinkin
 
 async function writeGitHubOutputs(
   outputPath: string | undefined,
-  summary: ActionDryRunSummary | ActionProposeSummary
+  summary: ActionDryRunSummary | ActionProposeSummary,
+  summaryJsonPath: string | undefined
 ): Promise<void> {
   if (outputPath === undefined || outputPath.trim().length === 0) {
     return;
@@ -596,6 +624,9 @@ async function writeGitHubOutputs(
     `approval-status=${summary.approvalStatus ?? ""}`,
     `redaction-match-count=${summary.redactionMatchCount}`
   ];
+  if (summaryJsonPath !== undefined) {
+    lines.push(`summary-json-path=${summaryJsonPath}`);
+  }
 
   if (summary.mode === "propose" || summary.mode === "stage-draft") {
     lines.push(
@@ -609,6 +640,18 @@ async function writeGitHubOutputs(
   }
 
   await appendFile(outputPath, `${lines.join("\n")}\n`, "utf8");
+}
+
+async function writeActionSummaryJson(
+  summaryJsonPath: string | undefined,
+  summary: ActionDryRunSummary | ActionProposeSummary
+): Promise<void> {
+  if (summaryJsonPath === undefined) {
+    return;
+  }
+
+  await mkdir(dirname(summaryJsonPath), { recursive: true });
+  await writeFile(summaryJsonPath, `${JSON.stringify(summary, null, 2)}\n`, "utf8");
 }
 
 async function writeGitHubStepSummary(

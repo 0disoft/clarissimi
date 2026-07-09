@@ -19,6 +19,7 @@
 - `base-branch`: base branch for proposal pull requests
 - `remote-name`: Git remote used to publish proposal branches
 - `staging-dir`: optional temporary staging directory for proposal outputs
+- `summary-path`: optional workspace-relative path for a sanitized JSON summary artifact
 - `provider`: `fake` or `openai-compatible`; omitted values fall back to config, then `fake`
 - `provider-model`: model name required when `provider` is `openai-compatible`
 - `provider-endpoint`: optional OpenAI-compatible chat completions endpoint
@@ -37,15 +38,17 @@ modes for live GitHub collection and proposal pull request creation or update. I
 
 The current package supports `INPUT_EVENT_PATH`, `GITHUB_EVENT_PATH`, `INPUT_GITHUB_FIXTURE`,
 `INPUT_CONFIG_PATH`, `INPUT_MODE`, `INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`, `INPUT_STAGING_DIR`,
-`INPUT_PROVIDER`, `INPUT_PROVIDER_MODEL`, `INPUT_PROVIDER_ENDPOINT`, and
+`INPUT_SUMMARY_PATH`, `INPUT_PROVIDER`, `INPUT_PROVIDER_MODEL`, `INPUT_PROVIDER_ENDPOINT`, and
 `INPUT_PROVIDER_THINKING`.
 
 The root `action.yml` currently exposes `event-path`, `github-fixture`, `mode`, `base-branch`,
-`remote-name`, `staging-dir`, `config-path`, `provider`, `provider-model`, `provider-endpoint`,
-and `provider-thinking`.
+`remote-name`, `staging-dir`, `summary-path`, `config-path`, `provider`, `provider-model`,
+`provider-endpoint`, and `provider-thinking`.
 `config-path` is explicit-only; the Action does not automatically discover repository config files.
 Action inputs and workflow environment values take precedence over config values. Omitted provider
 inputs fall back to config values, then `fake`.
+`summary-path` is explicit-only, must be relative, and must stay inside `GITHUB_WORKSPACE`. The
+summary artifact contains the same sanitized JSON summary as stdout.
 An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`
 fallback. An explicit `event-path` and `github-fixture` must not be provided together.
 In `dry-run`, event payloads are mapped from the local event file without live GitHub API calls.
@@ -67,10 +70,7 @@ fixture is provided.
 - `proposal-pull-request-number`
 - `proposal-pull-request-url`
 - `proposal-pull-request-action`
-
-## Future Outputs
-
-- `summary-path`
+- `summary-json-path` when `summary-path` is set
 
 Outputs must not include raw provider output, raw diff text, raw issue text, tokens, private keys,
 raw pull request bodies, raw patch excerpts, or sensitive security details.

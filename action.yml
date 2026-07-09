@@ -27,6 +27,9 @@ inputs:
   staging-dir:
     description: Optional temporary staging directory for propose or stage-draft generated files.
     required: false
+  summary-path:
+    description: Optional workspace-relative path for a sanitized JSON run summary artifact.
+    required: false
   provider:
     description: Draft provider id. Omit to use config-path provider or the runner fake default; use openai-compatible for an explicit live provider.
     required: false
@@ -80,6 +83,9 @@ outputs:
   proposal-pull-request-action:
     description: Whether propose or stage-draft mode created or updated the pull request.
     value: ${{ steps.clarissimi.outputs.proposal-pull-request-action }}
+  summary-json-path:
+    description: Absolute path to the sanitized JSON summary artifact when summary-path is set.
+    value: ${{ steps.clarissimi.outputs.summary-json-path }}
 
 runs:
   using: composite
@@ -96,6 +102,7 @@ runs:
         INPUT_BASE_BRANCH: ${{ inputs.base-branch }}
         INPUT_REMOTE_NAME: ${{ inputs.remote-name }}
         INPUT_STAGING_DIR: ${{ inputs.staging-dir }}
+        INPUT_SUMMARY_PATH: ${{ inputs.summary-path }}
         INPUT_PROVIDER: ${{ inputs.provider }}
         INPUT_PROVIDER_MODEL: ${{ inputs.provider-model }}
         INPUT_PROVIDER_ENDPOINT: ${{ inputs.provider-endpoint }}

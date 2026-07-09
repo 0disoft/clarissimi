@@ -15,6 +15,7 @@
 - Provider boundary: `docs/adr/0019-add-openai-compatible-provider-adapter.md`
 - Draft inbox Action boundary: `docs/adr/0023-add-action-draft-inbox-proposal-mode.md`
 - Explicit Action config path: `docs/adr/0029-add-explicit-action-config-path.md`
+- Action summary artifact: `docs/adr/0030-add-action-summary-artifact.md`
 
 ## Inputs
 
@@ -29,6 +30,7 @@ accepts:
 - `INPUT_BASE_BRANCH`: base branch for proposal pull requests, default `main`
 - `INPUT_REMOTE_NAME`: remote name used to publish proposal branches, default `origin`
 - `INPUT_STAGING_DIR`: optional temporary directory for generated proposal files
+- `INPUT_SUMMARY_PATH`: optional workspace-relative path for a sanitized JSON summary artifact
 - `INPUT_PROVIDER`: `fake` or `openai-compatible`, default `fake`
 - `INPUT_PROVIDER_MODEL`: provider model name required for `openai-compatible`
 - `INPUT_PROVIDER_ENDPOINT`: optional OpenAI-compatible chat completions endpoint
@@ -47,6 +49,7 @@ The root `action.yml` exposes the same surface as a composite action:
 - `base-branch`: defaults to `main`
 - `remote-name`: defaults to `origin`
 - `staging-dir`: optional temporary staging directory
+- `summary-path`: optional workspace-relative path for a sanitized JSON summary artifact
 - `provider`: optional provider override; omitted values fall back to config, then the runner fake
   default
 - `provider-model`: provider model required for `openai-compatible`
@@ -69,6 +72,11 @@ files. When set, the path is resolved relative to `GITHUB_WORKSPACE` unless it i
 and validated through `packages/schemas`. Action inputs and workflow environment values take
 precedence over config values. Omitted provider inputs fall back to config values, then the runner's
 fake provider default. Unsupported `INPUT_MODE` values fail before config-file loading.
+
+`summary-path` is explicit and optional. When set, it must be a relative path that stays inside
+`GITHUB_WORKSPACE`. The Action writes the same sanitized JSON summary that it prints to stdout and
+emits the resolved path through `summary-json-path`. Invalid summary paths fail before provider
+calls or write-mode mutation.
 
 Dry-run mode reads provider credentials only when `provider` is explicitly set to
 `openai-compatible`. The default provider is `fake`. The default Action mode is `propose`, which
@@ -114,12 +122,11 @@ In `propose` and `stage-draft` modes, the Action also emits:
 - `proposal-pull-request-number`
 - `proposal-pull-request-url`
 - `proposal-pull-request-action`
+- `summary-json-path` when `summary-path` is set
 
 When `GITHUB_STEP_SUMMARY` is available, the Action appends a bounded Markdown summary with the
 same count and status fields. The step summary must not include raw pull request bodies, raw patch
 excerpts, raw diffs, provider raw output, tokens, or secrets.
-
-The future full action contract should also expose a path to a summary artifact when available.
 
 Outputs must not include raw provider responses, raw diffs, secrets, or sensitive security details.
 The Action also omits raw pull request bodies and raw patch excerpts.

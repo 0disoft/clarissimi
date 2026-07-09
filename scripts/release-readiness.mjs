@@ -288,6 +288,7 @@ export const actionManifestContract = {
     { name: "base-branch", default: "main" },
     { name: "remote-name", default: "origin" },
     { name: "staging-dir" },
+    { name: "summary-path" },
     { name: "provider" },
     { name: "provider-model" },
     { name: "provider-endpoint" },
@@ -311,7 +312,8 @@ export const actionManifestContract = {
     "proposal-commit-sha",
     "proposal-pull-request-number",
     "proposal-pull-request-url",
-    "proposal-pull-request-action"
+    "proposal-pull-request-action",
+    "summary-json-path"
   ],
   requiredEnvMappings: [
     "GITHUB_TOKEN: ${{ (inputs.mode == 'propose' || inputs.mode == 'stage-draft') && github.token || '' }}",
@@ -322,6 +324,7 @@ export const actionManifestContract = {
     "INPUT_BASE_BRANCH: ${{ inputs.base-branch }}",
     "INPUT_REMOTE_NAME: ${{ inputs.remote-name }}",
     "INPUT_STAGING_DIR: ${{ inputs.staging-dir }}",
+    "INPUT_SUMMARY_PATH: ${{ inputs.summary-path }}",
     "INPUT_PROVIDER: ${{ inputs.provider }}",
     "INPUT_PROVIDER_MODEL: ${{ inputs.provider-model }}",
     "INPUT_PROVIDER_ENDPOINT: ${{ inputs.provider-endpoint }}",

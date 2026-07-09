@@ -620,6 +620,87 @@ test("environment runner ignores blank optional inputs and writes GitHub outputs
   });
 });
 
+test("environment runner writes a sanitized JSON summary artifact inside the workspace", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "github-fixture.json");
+    const outputPath = join(dir, "github-output.txt");
+    await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        GITHUB_OUTPUT: outputPath,
+        GITHUB_WORKSPACE: dir,
+        INPUT_GITHUB_FIXTURE: fixturePath,
+        INPUT_MODE: "dry-run",
+        INPUT_SUMMARY_PATH: "artifacts/clarissimi-summary.json"
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        }
+      }
+    );
+    const outputText = await readFile(outputPath, "utf8");
+    const summaryJsonPath = join(dir, "artifacts", "clarissimi-summary.json");
+    const summaryText = await readFile(summaryJsonPath, "utf8");
+    const summary = JSON.parse(summaryText);
+
+    assert.equal(exitCode, 0);
+    assert.equal(stderr, "");
+    assert.equal(JSON.parse(stdout).draftCount, 1);
+    assert.equal(summary.draftCount, 1);
+    assert.equal(outputText.includes(`summary-json-path=${summaryJsonPath}`), true);
+    assert.equal(summaryText.includes("Adds a failing parser case"), false);
+    assert.equal(summaryText.includes("parses nested input"), false);
+  });
+});
+
+test("environment runner rejects summary artifact paths outside the workspace before provider calls", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "github-fixture.json");
+    const requests = [];
+    await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        GITHUB_WORKSPACE: dir,
+        INPUT_GITHUB_FIXTURE: fixturePath,
+        INPUT_MODE: "dry-run",
+        INPUT_PROVIDER: "openai-compatible",
+        INPUT_PROVIDER_MODEL: "clarissimi-test-model",
+        INPUT_SUMMARY_PATH: "../clarissimi-summary.json",
+        CLARISSIMI_PROVIDER_TOKEN: "unit-token"
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        }
+      },
+      {
+        fetch: async () => {
+          requests.push("provider-call");
+          return jsonResponse({});
+        }
+      }
+    );
+
+    assert.equal(exitCode, 1);
+    assert.equal(stdout, "");
+    assert.equal(stderr, "INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.\n");
+    assert.deepEqual(requests, []);
+  });
+});
+
 function jsonResponse(body, status = 200) {
   return {
     ok: status >= 200 && status < 300,

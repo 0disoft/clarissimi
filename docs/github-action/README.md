@@ -55,6 +55,10 @@ Repository config-file loading is explicit through `config-path`; the Action doe
 discover config files. Action inputs and workflow environment values take precedence over config
 values.
 
+When a later workflow step needs a durable machine-readable summary, set `summary-path`. The path
+must be relative to `GITHUB_WORKSPACE`, and the written JSON follows the same raw-evidence and
+secret-exclusion rules as stdout, GitHub outputs, and the step summary.
+
 Detailed outputs and failure behavior are defined in `docs/github-action/action-contract.md`. The
 implemented propose-mode sequencing is recorded in
 `docs/github-action/propose-implementation-plan.md`.
@@ -129,6 +133,21 @@ steps:
     with:
       mode: dry-run
       config-path: .clarissimi/config.json
+```
+
+To upload the sanitized JSON summary as a workflow artifact:
+
+```yaml
+steps:
+  - id: clarissimi
+    uses: 0disoft/clarissimi@main
+    with:
+      mode: dry-run
+      summary-path: .clarissimi/run-summary.json
+  - uses: actions/upload-artifact@v6
+    with:
+      name: clarissimi-summary
+      path: ${{ steps.clarissimi.outputs.summary-json-path }}
 ```
 
 Propose mode against a merged pull request event requires checkout, explicit write permissions, and

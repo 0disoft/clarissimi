@@ -20,6 +20,15 @@ Clarissimi should support:
 The exact precedence order is not implemented yet. The first implementation should prefer explicit
 CLI flags over config file values and config file values over package defaults.
 
+The current JSON config supports:
+
+- `provider`: `fake` or `openai-compatible`
+- `providerModel`: model name for `openai-compatible`
+- `providerEndpoint`: optional OpenAI-compatible chat completions endpoint
+- `mode`: `dry-run`, `propose`, or `commit`
+
+Explicit CLI flags override config file values for provider selection.
+
 ## Expected Configuration Areas
 
 - provider selection
@@ -37,6 +46,8 @@ CLI flags over config file values and config file values over package defaults.
 
 Provider API keys and GitHub tokens must not be stored in config files. They belong in environment
 variables, local secret stores, or GitHub Actions secrets.
+
+The CLI reads `CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.
 
 ## Review Blockers
 

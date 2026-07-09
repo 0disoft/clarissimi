@@ -9,7 +9,11 @@ import {
   createGitHubApiClient,
   parseGitHubMergedPullRequestFixture
 } from "@clarissimi/github";
-import { createFakeContributionDraftProvider } from "@clarissimi/providers";
+import {
+  createFakeContributionDraftProvider,
+  createOpenAiCompatibleContributionDraftProvider,
+  type ContributionDraftProvider
+} from "@clarissimi/providers";
 import {
   isApprovalStatus,
   type ApprovalStatus,
@@ -132,6 +136,7 @@ export async function runActionPropose(input: ActionProposeInput): Promise<Actio
 export interface ActionEnvironmentRuntime {
   readonly pullRequestClient?: ProposalPullRequestClient;
   readonly liveGitHubClient?: ActionDryRunInput["liveGitHubClient"];
+  readonly provider?: ContributionDraftProvider;
   readonly fetch?: typeof fetch;
 }
 
@@ -152,6 +157,7 @@ export async function runActionFromEnvironment(
     assignOptional(input, "eventPath", explicitEventPath ?? fallbackEventPath);
     assignOptional(input, "githubFixturePath", githubFixturePath);
     assignOptional(input, "liveGitHubClient", runtime.liveGitHubClient);
+    assignOptional(input, "provider", runtime.provider ?? resolveActionProvider(env, runtime));
 
     const summary = input.mode === "propose"
       ? await runActionPropose(buildActionProposeInput(input, env, runtime))
@@ -240,7 +246,7 @@ async function prepareActionAssessment(input: ActionDryRunInput): Promise<Prepar
       })
     : collectMergedPullRequestEvidence(resolution.fixture);
   const preparedEvidence = prepareEvidenceForProvider(collected.evidence);
-  const provider = createFakeContributionDraftProvider();
+  const provider = input.provider ?? createFakeContributionDraftProvider();
   const draft = await provider.createAssessment({
     contributor: collected.contributor,
     preparedEvidence
@@ -323,6 +329,38 @@ function requireEnvInput(value: string | undefined, name: string): string {
   }
 
   return normalized;
+}
+
+function requireProviderEnvInput(value: string | undefined, name: string): string {
+  const normalized = readEnvInput(value);
+  if (normalized === undefined) {
+    throw new ActionUsageError(`${name} is required for the openai-compatible provider.`);
+  }
+
+  return normalized;
+}
+
+function resolveActionProvider(
+  env: NodeJS.ProcessEnv,
+  runtime: ActionEnvironmentRuntime
+): ContributionDraftProvider {
+  const providerId = readEnvInput(env.INPUT_PROVIDER) ?? "fake";
+
+  if (providerId === "fake") {
+    return createFakeContributionDraftProvider();
+  }
+
+  if (providerId === "openai-compatible") {
+    const options: Parameters<typeof createOpenAiCompatibleContributionDraftProvider>[0] = {
+      model: requireProviderEnvInput(env.INPUT_PROVIDER_MODEL, "INPUT_PROVIDER_MODEL"),
+      token: requireProviderEnvInput(env.CLARISSIMI_PROVIDER_TOKEN, "CLARISSIMI_PROVIDER_TOKEN")
+    };
+    assignOptional(options, "endpoint", readEnvInput(env.INPUT_PROVIDER_ENDPOINT));
+    assignOptional(options, "fetch", runtime.fetch);
+    return createOpenAiCompatibleContributionDraftProvider(options);
+  }
+
+  throw new ActionUsageError(`Unsupported provider: ${providerId}.`);
 }
 
 async function writeGitHubOutputs(

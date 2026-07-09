@@ -237,6 +237,107 @@ test("environment runner accepts GITHUB_EVENT_PATH", async () => {
   assert.equal(JSON.parse(stdout).inputSource, "github_event_path");
 });
 
+test("environment runner can use the OpenAI-compatible provider when explicitly selected", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "github-fixture.json");
+    const requests = [];
+    await writeFile(
+      fixturePath,
+      JSON.stringify(
+        githubFixture({
+          pullRequest: {
+            ...githubFixture().pullRequest,
+            body: "Maintainer person@example.com confirmed the regression."
+          }
+        })
+      ),
+      "utf8"
+    );
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        INPUT_GITHUB_FIXTURE: fixturePath,
+        INPUT_MODE: "dry-run",
+        INPUT_PROVIDER: "openai-compatible",
+        INPUT_PROVIDER_MODEL: "clarissimi-test-model",
+        CLARISSIMI_PROVIDER_TOKEN: "unit-token"
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        }
+      },
+      {
+        fetch: async (url, init) => {
+          requests.push({
+            url: String(url),
+            body: JSON.parse(init.body)
+          });
+          return jsonResponse({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    contributionType: "test",
+                    affectedArea: "parser regression coverage",
+                    impactLevel: "medium",
+                    evidenceSummary: "Added regression coverage based on test evidence.",
+                    suggestedBadge: "Regression Shield",
+                    publicRecognitionText: "Added regression coverage for the parser.",
+                    confidence: 0.8
+                  })
+                }
+              }
+            ]
+          });
+        }
+      }
+    );
+    const parsed = JSON.parse(stdout);
+
+    assert.equal(exitCode, 0);
+    assert.equal(stderr, "");
+    assert.equal(parsed.assessment.publicRecognitionText, "Added regression coverage for the parser.");
+    assert.equal(requests.length, 1);
+    assert.equal(JSON.stringify(requests[0].body).includes("person@example.com"), false);
+  });
+});
+
+test("environment runner requires a provider token for OpenAI-compatible provider", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "github-fixture.json");
+    await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        INPUT_GITHUB_FIXTURE: fixturePath,
+        INPUT_MODE: "dry-run",
+        INPUT_PROVIDER: "openai-compatible",
+        INPUT_PROVIDER_MODEL: "clarissimi-test-model"
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        }
+      }
+    );
+
+    assert.equal(exitCode, 1);
+    assert.equal(stdout, "");
+    assert.equal(stderr.includes("CLARISSIMI_PROVIDER_TOKEN"), true);
+  });
+});
+
 test("environment runner ignores blank optional inputs and writes GitHub outputs", async () => {
   await withTempDir(async (dir) => {
     const fixturePath = join(dir, "github-fixture.json");
@@ -270,6 +371,16 @@ test("environment runner ignores blank optional inputs and writes GitHub outputs
     assert.equal(outputText.includes("input-source=github_fixture"), true);
   });
 });
+
+function jsonResponse(body, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    async text() {
+      return JSON.stringify(body);
+    }
+  };
+}
 
 test("environment runner writes a bounded GitHub step summary", async () => {
   await withTempDir(async (dir) => {

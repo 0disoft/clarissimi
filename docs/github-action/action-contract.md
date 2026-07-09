@@ -12,6 +12,7 @@
 - Dry-run skeleton decision: `docs/adr/0016-add-dry-run-action-skeleton.md`
 - Propose write boundary: `docs/adr/0017-propose-mode-write-boundary.md`
 - Live GitHub collector boundary: `docs/adr/0018-add-live-github-collector-boundary.md`
+- Provider boundary: `docs/adr/0019-add-openai-compatible-provider-adapter.md`
 
 ## Inputs
 
@@ -24,6 +25,10 @@ The Action supports dry-run summaries and a fixture-first `propose` write path. 
 - `INPUT_BASE_BRANCH`: base branch for proposal pull requests, default `main`
 - `INPUT_REMOTE_NAME`: remote name used to publish proposal branches, default `origin`
 - `INPUT_STAGING_DIR`: optional temporary directory for generated proposal files
+- `INPUT_PROVIDER`: `fake` or `openai-compatible`, default `fake`
+- `INPUT_PROVIDER_MODEL`: provider model name required for `openai-compatible`
+- `INPUT_PROVIDER_ENDPOINT`: optional OpenAI-compatible chat completions endpoint
+- `CLARISSIMI_PROVIDER_TOKEN`: provider token required only for `openai-compatible`
 - `GITHUB_REPOSITORY`: target repository for proposal pull requests in `propose` mode
 - `GITHUB_TOKEN`: token used only by `propose` mode for live GitHub collection and proposal pull
   request creation or update
@@ -36,23 +41,25 @@ The root `action.yml` exposes the same surface as a composite action:
 - `base-branch`: defaults to `main`
 - `remote-name`: defaults to `origin`
 - `staging-dir`: optional temporary staging directory
+- `provider`: defaults to `fake`
+- `provider-model`: provider model required for `openai-compatible`
+- `provider-endpoint`: optional OpenAI-compatible endpoint
 
 The future expanded action contract should include:
 
 - config path
 - mode: `commit`
-- provider selection
-- provider model
 - pull request number or event-derived target
 - minimum confidence threshold
 
 Secret values must be read from GitHub Actions secrets or environment variables, not action inputs.
 
-Dry-run mode does not read provider API keys or GitHub tokens. The default Action mode is
-`propose`, which reads `GITHUB_TOKEN` for live GitHub collection and proposal pull request creation
-or update; provider credentials are still not read. Fixture-first `propose` succeeds only when the
-fixture explicitly carries an approved or auto-approved maintainer approval status. Normal provider
-drafts remain non-public and fail closed before branch mutation.
+Dry-run mode reads provider credentials only when `provider` is explicitly set to
+`openai-compatible`. The default provider is `fake`. The default Action mode is `propose`, which
+reads `GITHUB_TOKEN` for live GitHub collection and proposal pull request creation or update.
+Fixture-first `propose` succeeds only when the fixture explicitly carries an approved or
+auto-approved maintainer approval status. Normal provider drafts remain non-public and fail closed
+before branch mutation.
 
 Proposal branch commits use a Clarissimi-owned bot author instead of relying on runner-global git
 identity. This keeps maintainer workstations and GitHub-hosted runners from becoming part of the
@@ -108,6 +115,8 @@ The Action uses the following process outcomes:
 - Unmerged pull request event: exit `0`, JSON stdout with `skipped-entry-count=1`, and bounded step
   summary when `GITHUB_STEP_SUMMARY` is available.
 - Missing `GITHUB_TOKEN` in `propose` mode: exit `1`, empty stdout, usage message on stderr.
+- Missing `CLARISSIMI_PROVIDER_TOKEN` or `INPUT_PROVIDER_MODEL` for `openai-compatible`: exit `1`,
+  empty stdout, usage message on stderr.
 - Draft, rejected, or skipped assessment in `propose` mode: exit `4`, empty stdout, diagnostic on
   stderr before branch mutation.
 

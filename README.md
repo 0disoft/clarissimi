@@ -85,7 +85,7 @@ Implemented MVP slices:
 
 Not implemented yet:
 
-- CLI and Action live provider selection
+- credentialed live-provider smoke in release automation
 - repository write modes such as direct `commit`
 - comment updates or default-branch mutation
 
@@ -124,7 +124,9 @@ checked-out repository. It stages public output, publishes
 `clarissimi/recognition/<source-kind>-<source-id>`, and opens or updates a pull request for
 maintainer review. When `propose` receives `GITHUB_EVENT_PATH`, it routes the merged pull request
 through the live GitHub collector using `GITHUB_TOKEN`; fixture inputs remain the deterministic
-test and local path. Live provider calls are still future work.
+test and local path. Explicit OpenAI-compatible provider selection is available for CLI and Action
+runs, but it requires the caller to provide a model and `CLARISSIMI_PROVIDER_TOKEN`; correctness
+tests continue to use fake providers or injected fetch implementations.
 
 Workflow examples and permission details live in `docs/github-action/README.md` and
 `docs/github-action/permissions.md`.

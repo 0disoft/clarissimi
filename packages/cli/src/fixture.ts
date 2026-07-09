@@ -5,6 +5,7 @@ import {
 } from "@clarissimi/github";
 import {
   createFakeContributionDraftProvider,
+  type ContributionDraftProvider,
   type ProviderAssessmentHints
 } from "@clarissimi/providers";
 import {
@@ -36,12 +37,18 @@ export async function readRecognitionFixture(path: string): Promise<RecognitionF
   return parseRecognitionFixture(parsed);
 }
 
-export async function recognizeFixture(path: string): Promise<FixtureRecognitionResult> {
+export async function recognizeFixture(
+  path: string,
+  provider?: ContributionDraftProvider
+): Promise<FixtureRecognitionResult> {
   const fixture = await readRecognitionFixture(path);
-  return recognizeCollectedFixture(fixture, "evidence");
+  return recognizeCollectedFixture(fixture, "evidence", provider);
 }
 
-export async function recognizeGitHubFixture(path: string): Promise<FixtureRecognitionResult> {
+export async function recognizeGitHubFixture(
+  path: string,
+  provider?: ContributionDraftProvider
+): Promise<FixtureRecognitionResult> {
   const parsed = parseJsonText(await readTextFile(path), path);
   const collected = collectMergedPullRequestEvidence(parseGitHubMergedPullRequestFixture(parsed));
 
@@ -50,16 +57,18 @@ export async function recognizeGitHubFixture(path: string): Promise<FixtureRecog
       contributor: collected.contributor,
       evidence: collected.evidence
     },
-    "github"
+    "github",
+    provider
   );
 }
 
 async function recognizeCollectedFixture(
   fixture: RecognitionFixture,
-  fixtureKind: FixtureRecognitionResult["fixtureKind"]
+  fixtureKind: FixtureRecognitionResult["fixtureKind"],
+  selectedProvider?: ContributionDraftProvider
 ): Promise<FixtureRecognitionResult> {
   const preparedEvidence = prepareEvidenceForProvider(fixture.evidence);
-  const provider = createFakeContributionDraftProvider();
+  const provider = selectedProvider ?? createFakeContributionDraftProvider();
   const providerInput = {
     contributor: fixture.contributor,
     preparedEvidence

@@ -1,7 +1,9 @@
 import { fileExists, parseJsonText, readTextFile, resolveFromCwd } from "./io.js";
 
 export interface CliConfig {
-  readonly provider?: "fake";
+  readonly provider?: "fake" | "openai-compatible";
+  readonly providerEndpoint?: string;
+  readonly providerModel?: string;
   readonly mode?: "dry-run" | "propose" | "commit";
 }
 
@@ -44,10 +46,14 @@ export async function validateConfigFile(
 }
 
 function parseConfig(value: Record<string, unknown>): CliConfig {
-  const provider = parseOptionalEnum(value.provider, ["fake"], "provider");
+  const provider = parseOptionalEnum(value.provider, ["fake", "openai-compatible"], "provider");
+  const providerEndpoint = parseOptionalString(value.providerEndpoint, "providerEndpoint");
+  const providerModel = parseOptionalString(value.providerModel, "providerModel");
   const mode = parseOptionalEnum(value.mode, ["dry-run", "propose", "commit"], "mode");
   const config: {
-    provider?: "fake";
+    provider?: "fake" | "openai-compatible";
+    providerEndpoint?: string;
+    providerModel?: string;
     mode?: "dry-run" | "propose" | "commit";
   } = {};
 
@@ -55,11 +61,31 @@ function parseConfig(value: Record<string, unknown>): CliConfig {
     config.provider = provider;
   }
 
+  if (providerEndpoint !== undefined) {
+    config.providerEndpoint = providerEndpoint;
+  }
+
+  if (providerModel !== undefined) {
+    config.providerModel = providerModel;
+  }
+
   if (mode !== undefined) {
     config.mode = mode;
   }
 
   return config;
+}
+
+function parseOptionalString(value: unknown, field: string): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`Config field ${field} must be a non-empty string.`);
+  }
+
+  return value;
 }
 
 function parseOptionalEnum<T extends string>(

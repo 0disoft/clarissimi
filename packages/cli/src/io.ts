@@ -5,6 +5,8 @@ export interface CliIo {
   readonly cwd: string;
   readonly stdout: (value: string) => void;
   readonly stderr: (value: string) => void;
+  readonly env?: NodeJS.ProcessEnv;
+  readonly fetch?: typeof fetch;
 }
 
 export function resolveFromCwd(cwd: string, path: string): string {

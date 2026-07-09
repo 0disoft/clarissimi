@@ -30,9 +30,11 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
 - `packages/providers`: provider adapter interface, deterministic fake provider, and SDK-free
   OpenAI-compatible HTTP adapter
 - `packages/renderers`: JSONL, contributor JSON, Markdown, and static-data renderers
-- `packages/cli`: fixture-first validation, recognition dry-run, and rebuild commands
+- `packages/cli`: fixture-first validation, recognition dry-run, rebuild commands, and explicit
+  fake or OpenAI-compatible provider selection
 - `packages/action`: Action runner for dry-run summaries, fixture-first proposal pull requests, and
-  event-path live GitHub collection in propose mode
+  event-path live GitHub collection in propose mode with explicit fake or OpenAI-compatible
+  provider selection
 - root `action.yml`: composite Action defaulting to `propose` and exposing explicit `dry-run`
 - root `package.json`: configured `docs` and `smoke` validation scripts for documentation
   integrity, CLI subprocess smoke coverage, Action dry-run coverage, and default propose
@@ -233,10 +235,13 @@ Completed deliverables:
 - credential handling documented without fake secrets
 - no SDK dependency or environment-variable loading inside `packages/providers`
 - model output cannot approve contributions or alter contributor identity, evidence refs, or source
+- CLI and Action provider selection use fake by default and support explicit `openai-compatible`
+  selection with caller-owned token loading
 
 Validation:
 
 - OpenAI-compatible provider fake-fetch tests
+- CLI and Action provider-selection tests with injected fetch
 - fake-provider core tests continue to pass
 - live-provider smoke tests are explicit and optional
 
@@ -262,9 +267,8 @@ Completed deliverables:
 - rollback instructions cover staging cleanup, proposal pull request closure, proposal branch
   deletion, and post-merge recognition reverts
 
-Remaining work:
+Release follow-up:
 
-- CLI and Action provider selection still use the deterministic fake provider by default.
 - Credentialed live-provider smoke remains optional and is not part of correctness tests.
 
 Validation:

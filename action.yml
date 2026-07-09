@@ -24,6 +24,16 @@ inputs:
   staging-dir:
     description: Optional temporary staging directory for propose mode generated files.
     required: false
+  provider:
+    description: Draft provider id. Defaults to fake; use openai-compatible for an explicit live provider.
+    required: false
+    default: fake
+  provider-model:
+    description: Provider model name required when provider is openai-compatible.
+    required: false
+  provider-endpoint:
+    description: Optional OpenAI-compatible chat completions endpoint.
+    required: false
 
 outputs:
   draft-count:
@@ -80,6 +90,10 @@ runs:
         INPUT_BASE_BRANCH: ${{ inputs.base-branch }}
         INPUT_REMOTE_NAME: ${{ inputs.remote-name }}
         INPUT_STAGING_DIR: ${{ inputs.staging-dir }}
+        INPUT_PROVIDER: ${{ inputs.provider }}
+        INPUT_PROVIDER_MODEL: ${{ inputs.provider-model }}
+        INPUT_PROVIDER_ENDPOINT: ${{ inputs.provider-endpoint }}
+        CLARISSIMI_PROVIDER_TOKEN: ${{ env.CLARISSIMI_PROVIDER_TOKEN }}
       run: |
         set -euo pipefail
         corepack enable

@@ -10,6 +10,7 @@
 - Ledger decision: `docs/adr/0002-contract-source-of-truth.md`
 - AI boundary: `docs/adr/0003-ai-as-drafter-not-judge.md`
 - Redaction boundary: `docs/adr/0006-redaction-before-provider.md`
+- Provider boundary: `docs/adr/0019-add-openai-compatible-provider-adapter.md`
 
 ## MVP Commands
 
@@ -26,8 +27,7 @@ Validates `.clarissimi/contributions.jsonl` schema versions, required fields, an
 
 ### `clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run`
 
-Runs a fixture-based recognition flow. The first implementation may use only fixtures and fake
-provider output.
+Runs a fixture-based recognition flow. The default provider is the deterministic fake provider.
 
 `--fixture` accepts Clarissimi's internal evidence fixture shape: contributor identity, prepared
 evidence input, optional provider hints, and optional maintainer approval status.
@@ -38,6 +38,16 @@ read tokens, or infer linked issues and review comments.
 
 The fixture-first implementation does not write files in this command. If a fixture explicitly
 contains approved maintainer status, the command may render public output previews.
+
+Provider selection flags:
+
+- `--provider fake`: default deterministic provider for tests and local correctness checks
+- `--provider openai-compatible`: explicit live provider path
+- `--provider-model <model>`: required for `openai-compatible`
+- `--provider-endpoint <url>`: optional OpenAI-compatible chat completions endpoint
+
+`openai-compatible` requires `CLARISSIMI_PROVIDER_TOKEN` in the process environment. Provider
+tokens must not be stored in config files or passed as command-line arguments.
 
 ### `clarissimi rebuild`
 

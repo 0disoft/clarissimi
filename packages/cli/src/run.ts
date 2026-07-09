@@ -12,6 +12,11 @@ import {
   renderContributionsJsonl,
   renderStaticContributionsJson
 } from "@clarissimi/renderers";
+import {
+  createFakeContributionDraftProvider,
+  createOpenAiCompatibleContributionDraftProvider,
+  type ContributionDraftProvider
+} from "@clarissimi/providers";
 
 import { CliUsageError, getBooleanFlag, getStringFlag, parseArgs, type ParsedArgs } from "./args.js";
 import { validateConfigFile } from "./config.js";
@@ -124,9 +129,10 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
       return CLI_EXIT_CODES.usage;
     }
 
+    const provider = await resolveRecognitionProvider(args, io);
     const result = fixturePath !== undefined
-      ? await recognizeFixture(resolveFromCwd(io.cwd, selectedFixturePath))
-      : await recognizeGitHubFixture(resolveFromCwd(io.cwd, selectedFixturePath));
+      ? await recognizeFixture(resolveFromCwd(io.cwd, selectedFixturePath), provider)
+      : await recognizeGitHubFixture(resolveFromCwd(io.cwd, selectedFixturePath), provider);
     const canRenderPublicOutputs =
       result.assessment.maintainerApprovalStatus === "approved" ||
       result.assessment.maintainerApprovalStatus === "auto_approved";
@@ -143,6 +149,7 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
       ok: true,
       command: "recognize",
       mode,
+      provider: provider.id,
       fixtureKind: result.fixtureKind,
       fixturePath: selectedFixturePath,
       draftCreated: true,
@@ -158,6 +165,11 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
     });
     return CLI_EXIT_CODES.success;
   } catch (error) {
+    if (error instanceof CliUsageError) {
+      io.stderr(`${error.message}\n`);
+      return CLI_EXIT_CODES.usage;
+    }
+
     writeFailure(io, args, "recognize", error);
     return error instanceof RendererValidationError
       ? CLI_EXIT_CODES.policyRejection
@@ -239,10 +251,70 @@ function renderHelp(): string {
     "Commands:",
     "  clarissimi validate-config [--config <path>] [--json]",
     "  clarissimi validate-ledger [--ledger <path>] [--json]",
-    "  clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run [--json]",
+    "  clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run [--provider <id>] [--provider-model <model>] [--json]",
     "  clarissimi rebuild [--ledger <path>] [--out-dir <path>] [--json]",
     ""
   ].join("\n");
+}
+
+async function resolveRecognitionProvider(
+  args: ParsedArgs,
+  io: CliIo
+): Promise<ContributionDraftProvider> {
+  const configPath = getStringFlag(args, "config");
+  const config = (await validateConfigFile(io.cwd, configPath)).config;
+  const providerId = getStringFlag(args, "provider") ?? config.provider ?? "fake";
+
+  if (providerId === "fake") {
+    return createFakeContributionDraftProvider();
+  }
+
+  if (providerId === "openai-compatible") {
+    const options: Parameters<typeof createOpenAiCompatibleContributionDraftProvider>[0] = {
+      model: requiredProviderOption(
+        getStringFlag(args, "provider-model") ?? config.providerModel,
+        "provider model",
+        "--provider-model or config providerModel"
+      ),
+      token: requiredProviderToken(io.env ?? process.env),
+      fetch: io.fetch ?? fetch
+    };
+    assignOptional(options, "endpoint", getStringFlag(args, "provider-endpoint") ?? config.providerEndpoint);
+    return createOpenAiCompatibleContributionDraftProvider(options);
+  }
+
+  throw new CliUsageError(`Unsupported provider: ${providerId}`);
+}
+
+function requiredProviderOption(
+  value: string | undefined,
+  label: string,
+  source: string
+): string {
+  if (value === undefined || value.trim().length === 0) {
+    throw new CliUsageError(`OpenAI-compatible provider requires ${label} from ${source}.`);
+  }
+
+  return value;
+}
+
+function requiredProviderToken(env: NodeJS.ProcessEnv): string {
+  const token = env.CLARISSIMI_PROVIDER_TOKEN;
+  if (token === undefined || token.trim().length === 0) {
+    throw new CliUsageError("OpenAI-compatible provider requires CLARISSIMI_PROVIDER_TOKEN.");
+  }
+
+  return token;
+}
+
+function assignOptional<T extends object, K extends keyof T>(
+  target: T,
+  key: K,
+  value: T[K] | undefined
+): void {
+  if (value !== undefined) {
+    target[key] = value;
+  }
 }
 
 function sanitizeAssessmentForCliOutput<T extends { evidenceRefs: readonly object[] }>(

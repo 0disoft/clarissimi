@@ -17,25 +17,28 @@
 - `base-branch`: base branch for proposal pull requests
 - `remote-name`: Git remote used to publish proposal branches
 - `staging-dir`: optional temporary staging directory for proposal outputs
+- `provider`: `fake` or `openai-compatible`, default `fake`
+- `provider-model`: model name required when `provider` is `openai-compatible`
+- `provider-endpoint`: optional OpenAI-compatible chat completions endpoint
 
 ## Future Inputs
 
 - `config-path`: path to `clarissimi.config.ts` or `.clarissimi/config.json`
 - `mode`: `commit`
-- `provider`: provider adapter name
-- `model`: provider model name
 - `pull-request`: explicit pull request number when event resolution is not enough
 - `min-confidence`: minimum draft confidence for policy consideration
 
 Provider API keys and GitHub tokens are not plain inputs. They must come from secrets or the
 workflow environment. The current Action reads `GITHUB_TOKEN` only in `propose` mode for live
-GitHub collection and proposal pull request creation or update.
+GitHub collection and proposal pull request creation or update. It reads
+`CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.
 
 The current package supports `INPUT_EVENT_PATH`, `GITHUB_EVENT_PATH`, `INPUT_GITHUB_FIXTURE`,
-`INPUT_MODE`, `INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`, and `INPUT_STAGING_DIR`.
+`INPUT_MODE`, `INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`, `INPUT_STAGING_DIR`, `INPUT_PROVIDER`,
+`INPUT_PROVIDER_MODEL`, and `INPUT_PROVIDER_ENDPOINT`.
 
 The root `action.yml` currently exposes `event-path`, `github-fixture`, `mode`, `base-branch`,
-`remote-name`, and `staging-dir`.
+`remote-name`, `staging-dir`, `provider`, `provider-model`, and `provider-endpoint`.
 An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`
 fallback. An explicit `event-path` and `github-fixture` must not be provided together.
 In `dry-run`, event payloads are mapped from the local event file without live GitHub API calls.

@@ -118,11 +118,13 @@ async function withTempDir(callback) {
   }
 }
 
-async function run(argv, cwd) {
+async function run(argv, cwd, options = {}) {
   let stdout = "";
   let stderr = "";
   const exitCode = await runCli(argv, {
     cwd,
+    env: options.env,
+    fetch: options.fetch,
     stdout: (value) => {
       stdout += value;
     },
@@ -234,6 +236,112 @@ test("recognize collects GitHub merged PR fixture evidence", async () => {
   });
 });
 
+test("recognize can use the OpenAI-compatible provider when explicitly selected", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "fixture.json");
+    const requests = [];
+    await writeFile(
+      fixturePath,
+      JSON.stringify(
+        fixture({
+          evidence: {
+            ...fixture().evidence,
+            items: [
+              {
+                kind: "test",
+                id: "tests/parser.test.ts",
+                title: "parser regression coverage",
+                text: "Maintainer person@example.com confirmed the regression."
+              }
+            ]
+          }
+        })
+      ),
+      "utf8"
+    );
+
+    const result = await run(
+      [
+        "recognize",
+        "--fixture",
+        fixturePath,
+        "--mode",
+        "dry-run",
+        "--provider",
+        "openai-compatible",
+        "--provider-model",
+        "clarissimi-test-model",
+        "--json"
+      ],
+      dir,
+      {
+        env: {
+          CLARISSIMI_PROVIDER_TOKEN: "unit-token"
+        },
+        fetch: async (url, init) => {
+          requests.push({
+            url: String(url),
+            body: JSON.parse(init.body)
+          });
+          return jsonResponse({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    contributionType: "test",
+                    affectedArea: "parser regression coverage",
+                    impactLevel: "medium",
+                    evidenceSummary: "Added regression coverage based on test evidence.",
+                    suggestedBadge: "Regression Shield",
+                    publicRecognitionText: "Added regression coverage for the parser.",
+                    confidence: 0.8
+                  })
+                }
+              }
+            ]
+          });
+        }
+      }
+    );
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(output.provider, "openai-compatible");
+    assert.equal(output.approvalStatus, "draft");
+    assert.equal(output.assessment.publicRecognitionText, "Added regression coverage for the parser.");
+    assert.equal(requests.length, 1);
+    assert.equal(JSON.stringify(requests[0].body).includes("person@example.com"), false);
+  });
+});
+
+test("recognize requires a provider token when OpenAI-compatible provider is selected", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "fixture.json");
+    await writeFile(fixturePath, JSON.stringify(fixture()), "utf8");
+
+    const result = await run(
+      [
+        "recognize",
+        "--fixture",
+        fixturePath,
+        "--mode",
+        "dry-run",
+        "--provider",
+        "openai-compatible",
+        "--provider-model",
+        "clarissimi-test-model"
+      ],
+      dir,
+      {
+        env: {}
+      }
+    );
+
+    assert.equal(result.exitCode, 1);
+    assert.equal(result.stderr.includes("CLARISSIMI_PROVIDER_TOKEN"), true);
+  });
+});
+
 test("recognize rejects ambiguous fixture inputs", async () => {
   await withTempDir(async (dir) => {
     const fixturePath = join(dir, "fixture.json");
@@ -258,6 +366,16 @@ test("recognize rejects ambiguous fixture inputs", async () => {
     assert.equal(result.stderr.includes("only one fixture input"), true);
   });
 });
+
+function jsonResponse(body, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    async text() {
+      return JSON.stringify(body);
+    }
+  };
+}
 
 test("rebuild writes derived outputs only when out-dir is provided", async () => {
   await withTempDir(async (dir) => {

@@ -22,9 +22,9 @@ Clarissimi must not commit, log, or render these values:
 OpenAI-compatible adapter accepts an explicit token option from its caller, sends it only in the
 Authorization header, and keeps raw provider error bodies out of thrown error messages by default.
 
-Future CLI or GitHub Action live-provider wiring must load provider tokens only from the boundary
-that owns execution secrets, such as a local environment variable or GitHub Actions secret. Config
-files may name a provider, endpoint, and model, but must not store token values.
+CLI and GitHub Action live-provider wiring load provider tokens only from the boundary that owns
+execution secrets. The current shared token name is `CLARISSIMI_PROVIDER_TOKEN`. Config files and
+action inputs may name a provider, endpoint, and model, but must not store token values.
 
 ## Leak Response
 
@@ -48,4 +48,4 @@ output, Action summary, CLI JSON, pull request body, or repository file:
 - Required validation names: `docs`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
-- Remaining operational risk: CLI and Action live-provider token loading are not implemented.
+- Remaining operational risk: credentialed live-provider smoke is not complete.

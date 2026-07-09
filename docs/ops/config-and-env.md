@@ -15,8 +15,8 @@ Current implementation status:
 
 - `packages/providers` includes a fake deterministic provider and an SDK-free OpenAI-compatible
   HTTP adapter.
-- CLI and Action provider selection still default to the fake provider; live-provider runtime
-  wiring is a future integration slice.
+- CLI and Action provider selection default to the fake provider and support explicit
+  `openai-compatible` selection when a model and `CLARISSIMI_PROVIDER_TOKEN` are provided.
 
 ## Owners
 
@@ -29,4 +29,4 @@ Current implementation status:
 - Required validation names: `docs`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
-- Remaining operational risk: live-provider runtime wiring and credentialed smoke are not complete.
+- Remaining operational risk: credentialed live-provider smoke is not complete.

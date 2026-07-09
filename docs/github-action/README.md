@@ -43,6 +43,10 @@ proposal branch, and opens or updates a pull request. When `propose` receives `G
 it routes the merged pull request through the live GitHub collector using `GITHUB_TOKEN`; fixture
 inputs remain the deterministic local and test path.
 
+The Action defaults to the fake provider. To use an OpenAI-compatible provider, pass
+`provider: openai-compatible`, pass `provider-model`, and expose `CLARISSIMI_PROVIDER_TOKEN` from
+the workflow secret boundary. Do not pass provider tokens as action inputs.
+
 Detailed outputs and failure behavior are defined in `docs/github-action/action-contract.md`. The
 remaining implementation sequence is tracked in `docs/github-action/propose-implementation-plan.md`.
 
@@ -69,6 +73,19 @@ jobs:
       - uses: 0disoft/clarissimi@main
         with:
           mode: dry-run
+```
+
+Example explicit OpenAI-compatible provider dry run:
+
+```yaml
+steps:
+  - uses: 0disoft/clarissimi@main
+    env:
+      CLARISSIMI_PROVIDER_TOKEN: ${{ secrets.CLARISSIMI_PROVIDER_TOKEN }}
+    with:
+      mode: dry-run
+      provider: openai-compatible
+      provider-model: ${{ vars.CLARISSIMI_PROVIDER_MODEL }}
 ```
 
 For local fixture checks, pass `github-fixture`:

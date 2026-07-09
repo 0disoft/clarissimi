@@ -57,5 +57,4 @@ Public package publication and versioned Action tags require:
 - Current dogfood evidence: `Clarissimi propose fixture` workflow run
   `28984721611` passed on `2026-07-09T00:14:30Z` and created proposal pull request
   `https://github.com/0disoft/clarissimi/pull/1`.
-- Remaining operational risk: CLI and Action live-provider selection and credentialed live-provider
-  smoke are not complete
+- Remaining operational risk: credentialed live-provider smoke is not complete

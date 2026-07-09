@@ -1198,15 +1198,25 @@ test("release readiness rejects missing rollback procedure coverage", () => {
 
 test("release readiness rejects missing hosted credentialed release evidence", () => {
   const text = createReleaseEvidenceText()
-    .replace("Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow run", "")
-    .replace("`29018826925` passed on `2026-07-09T12:39:17Z`", "passed")
-    .replace("https://github.com/0disoft/clarissimi/actions/runs/29018826925", "");
+    .replace("Recent hosted live-provider evidence: `Clarissimi live provider smoke` workflow run", "")
+    .replace("`29051720338` passed on `2026-07-09T21:32:35Z`", "passed")
+    .replace("validated source commit", "source")
+    .replace("`b338b8f7cc06ae81a518e79b1eaf0a941145d768`", "`not-a-sha`")
+    .replace("https://github.com/0disoft/clarissimi/actions/runs/29051720338", "")
+    .replace("Refresh this evidence with", "")
+    .replace(
+      "`pnpm run hosted-live-provider-smoke -- --model <provider-model>` for the exact release-candidate commit",
+      ""
+    );
 
   assert.deepEqual(validateCredentialedReleaseEvidence(text), [
-    "docs/ops/release.md must include Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow run.",
-    "docs/ops/release.md must include https://github.com/0disoft/clarissimi/actions/runs/29018826925.",
+    "docs/ops/release.md must include Recent hosted live-provider evidence: `Clarissimi live provider smoke` workflow run.",
+    "docs/ops/release.md must include `pnpm run hosted-live-provider-smoke -- --model <provider-model>`.",
     "docs/ops/release.md must include a numeric hosted live-provider workflow run id.",
-    "docs/ops/release.md must include a hosted live-provider workflow timestamp."
+    "docs/ops/release.md must include a hosted live-provider workflow timestamp.",
+    "docs/ops/release.md must include a hosted live-provider validated source commit SHA.",
+    "docs/ops/release.md must include a hosted live-provider workflow run URL.",
+    "docs/ops/release.md must include a hosted live-provider release-candidate refresh command."
   ]);
 });
 
@@ -1264,8 +1274,6 @@ test("release readiness rejects missing hosted CI evidence", () => {
 
   assert.deepEqual(validateHostedCiEvidence(text), [
     "docs/ops/release.md must include Recent hosted CI validation evidence: `CI` workflow run.",
-    "docs/ops/release.md must include validated source commit.",
-    "docs/ops/release.md must include Refresh this evidence with.",
     "docs/ops/release.md must include `pnpm run hosted-ci-validation` for the exact release-candidate commit.",
     "docs/ops/release.md must include a numeric hosted CI workflow run id.",
     "docs/ops/release.md must include a hosted CI workflow timestamp.",
@@ -2399,10 +2407,13 @@ function createReleaseEvidenceText() {
     "using maintainer-owned provider credentials, `CLARISSIMI_PROVIDER_MODEL=minimax-m3`.",
     "Current UMANS evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09`",
     "using maintainer-owned provider credentials, `CLARISSIMI_PROVIDER_MODEL=umans-glm-5.2`.",
-    "Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow run",
-    "`29018826925` passed on `2026-07-09T12:39:17Z` using repository secret `CLARISSIMI_PROVIDER_TOKEN`",
-    "and dispatch input `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.",
-    "Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29018826925`."
+    "Recent hosted live-provider evidence: `Clarissimi live provider smoke` workflow run",
+    "`29051720338` passed on `2026-07-09T21:32:35Z` for validated source commit",
+    "`b338b8f7cc06ae81a518e79b1eaf0a941145d768` on `main` using repository secret",
+    "`CLARISSIMI_PROVIDER_TOKEN` and dispatch input `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.",
+    "Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29051720338`.",
+    "Refresh this evidence with",
+    "`pnpm run hosted-live-provider-smoke -- --model <provider-model>` for the exact release-candidate commit."
   ].join("\n");
 }
 

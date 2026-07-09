@@ -128,14 +128,17 @@ provider token value. If a maintainer needs to run the underlying commands manua
 `gh workflow run` followed by `gh run list` and `gh run watch` with the same workflow, model,
 endpoint, and thinking inputs.
 
-Record the passed workflow run id and provider model in this document before public package
-publication or a versioned Action tag.
+Record the passed workflow run id, source commit, provider model, and refresh command in this
+document before public package publication or a versioned Action tag.
 
-Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow run
-`29018826925` passed on `2026-07-09T12:39:17Z` from `main` at
-`799119fd146bb6e62bf0413caf0773559aee63ee` using repository secret
+Recent hosted live-provider evidence: `Clarissimi live provider smoke` workflow run
+`29051720338` passed on `2026-07-09T21:32:35Z` for validated source commit
+`b338b8f7cc06ae81a518e79b1eaf0a941145d768` on `main` using repository secret
 `CLARISSIMI_PROVIDER_TOKEN` and dispatch input `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.
-Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29018826925`.
+Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29051720338`.
+Refresh this evidence with
+`pnpm run hosted-live-provider-smoke -- --model <provider-model>` for the exact
+release-candidate commit before public package publication or a versioned Action tag.
 
 ## Owners
 
@@ -180,7 +183,10 @@ Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29018826925`.
 - Current UMANS evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09` using
   maintainer-owned provider credentials, `CLARISSIMI_PROVIDER_MODEL=umans-glm-5.2`, and the UMANS
   OpenAI-compatible chat completions endpoint.
-- Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow run
-  `29018826925` passed on `2026-07-09T12:39:17Z` using repository secret
+- Recent hosted live-provider evidence: `Clarissimi live provider smoke` workflow run
+  `29051720338` passed on `2026-07-09T21:32:35Z` for validated source commit
+  `b338b8f7cc06ae81a518e79b1eaf0a941145d768` on `main` using repository secret
   `CLARISSIMI_PROVIDER_TOKEN` and dispatch input `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.
-  Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29018826925`.
+  Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29051720338`. Refresh this evidence
+  with `pnpm run hosted-live-provider-smoke -- --model <provider-model>` for the exact
+  release-candidate commit before public package publication or a versioned Action tag.

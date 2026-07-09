@@ -43,11 +43,10 @@ dispatch input, and the optional provider endpoint and thinking mode may also be
 dispatch inputs. If the dispatch inputs are invalid or the repository secret is missing, the
 workflow fails before checkout, dependency installation, build work, or provider calls begin.
 
-Repository secret metadata showed `CLARISSIMI_PROVIDER_TOKEN` configured on
-`2026-07-09T12:38:16Z`. Hosted live-provider smoke workflow run `29018826925` passed on
-`2026-07-09T12:39:17Z` using that repository secret name and dispatch input
-`CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`. No token value was printed or written to repository
-files.
+Repository secret metadata exposes only the secret name and update timestamp through GitHub, not
+the token value. Recent hosted live-provider smoke evidence is recorded in
+`docs/ops/release.md` with the workflow run URL, timestamp, validated source commit, repository
+secret name, and provider model. No token value should be printed or written to repository files.
 
 `pnpm run hosted-live-provider-smoke -- --model <provider-model>` is the preferred maintainer
 wrapper for the hosted smoke. It checks only that the repository secret name is present, dispatches
@@ -91,5 +90,6 @@ output, Action summary, CLI JSON, pull request body, or repository file:
 - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
-- Current hosted live-provider evidence: workflow run `29018826925` passed on
-  `2026-07-09T12:39:17Z` using repository secret `CLARISSIMI_PROVIDER_TOKEN`.
+- Recent hosted live-provider evidence is recorded in `docs/ops/release.md`; refresh it with
+  `pnpm run hosted-live-provider-smoke -- --model <provider-model>` for the exact
+  release-candidate commit before publication or versioned Action tags.

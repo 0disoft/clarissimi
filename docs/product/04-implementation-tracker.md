@@ -367,9 +367,10 @@ Completed deliverables:
 - hosted live-provider smoke wrapper validates repository and ref arguments before calling `gh`
 - hosted live-provider smoke wrapper rejects malformed dispatched run metadata before invoking
   `gh run watch`
-- hosted manual live-provider smoke passed run `29018826925` on `2026-07-09T12:39:17Z` using
-  repository secret `CLARISSIMI_PROVIDER_TOKEN` and dispatch input
-  `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`
+- hosted manual live-provider smoke evidence records a workflow run URL, timestamp, validated
+  source commit, repository secret name, provider model, and refresh command in
+  `docs/ops/release.md`; maintainers must refresh it for the exact release candidate before
+  publication or versioned Action tags
 - release-readiness validates the hosted live-provider workflow manual trigger, read-only
   permission, input and secret preflight ordering, Node.js runtime setup, and run-command contract
   before reporting static release gates as passed

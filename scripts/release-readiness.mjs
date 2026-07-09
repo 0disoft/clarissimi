@@ -750,19 +750,31 @@ export const credentialedReleaseEvidenceContract = {
     "CLARISSIMI_PROVIDER_MODEL=minimax-m3",
     "Current UMANS evidence: local `pnpm run live-provider-smoke` passed",
     "CLARISSIMI_PROVIDER_MODEL=umans-glm-5.2",
-    "Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow run",
+    "Recent hosted live-provider evidence: `Clarissimi live provider smoke` workflow run",
     "CLARISSIMI_PROVIDER_TOKEN",
     "CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini",
-    "https://github.com/0disoft/clarissimi/actions/runs/29018826925"
+    "`pnpm run hosted-live-provider-smoke -- --model <provider-model>`"
   ],
   requiredPatterns: [
     {
       description: "a numeric hosted live-provider workflow run id",
-      pattern: /Current hosted live-provider evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/
+      pattern: /Recent hosted live-provider evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/
     },
     {
       description: "a hosted live-provider workflow timestamp",
-      pattern: /Current hosted live-provider evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/
+      pattern: /Recent hosted live-provider evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/
+    },
+    {
+      description: "a hosted live-provider validated source commit SHA",
+      pattern: /Recent hosted live-provider evidence:[\s\S]*validated source commit[\s\S]*`[0-9a-f]{40}`/
+    },
+    {
+      description: "a hosted live-provider workflow run URL",
+      pattern: /Recent hosted live-provider evidence:[\s\S]*Run URL:\s*`https:\/\/github\.com\/0disoft\/clarissimi\/actions\/runs\/[0-9]{8,}`\.[\s\S]*Refresh this evidence/
+    },
+    {
+      description: "a hosted live-provider release-candidate refresh command",
+      pattern: /Recent hosted live-provider evidence:[\s\S]*Refresh this evidence[\s\S]*`pnpm run hosted-live-provider-smoke -- --model <provider-model>`[\s\S]*for the exact[\s\S]*release-candidate commit/
     }
   ]
 };
@@ -828,9 +840,7 @@ export const hostedCiEvidenceContract = {
   path: "docs/ops/release.md",
   requiredSnippets: [
     "Recent hosted CI validation evidence: `CI` workflow run",
-    "validated source commit",
     "`release-readiness`, `lint`, `smoke`, `check`, and `contract`",
-    "Refresh this evidence with",
     "`pnpm run hosted-ci-validation` for the exact release-candidate commit"
   ],
   requiredPatterns: [

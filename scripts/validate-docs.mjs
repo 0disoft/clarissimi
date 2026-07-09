@@ -22,6 +22,8 @@ export const requiredDocumentationPaths = [
   "docs/github-action/action-contract.md",
   "docs/github-action/permissions.md",
   "docs/ops/ci.md",
+  "docs/ops/disaster-recovery.md",
+  "docs/ops/incident-response.md",
   "docs/ops/release.md",
   "docs/ops/rollback.md",
   "packages/action/README.md",

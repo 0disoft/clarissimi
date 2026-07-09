@@ -20,11 +20,13 @@ import {
   validateCliOutputExitCodesDocumentContract,
   validateCiWorkflowContract,
   validateCredentialedReleaseEvidence,
+  validateDisasterRecoveryDocumentContract,
   validateDryRunDogfoodEvidence,
   validateDogfoodWorkflowContract,
   validateDocsValidationScriptContract,
   validateEngineeringValidationDocumentContract,
   validateHostedLiveProviderWorkflowContract,
+  validateIncidentResponseDocumentContract,
   validateLedgerFormatDocumentContract,
   validateLintAndFormatDecisionDocumentContract,
   validateMonorepoValidationDocumentContract,
@@ -298,13 +300,15 @@ test("release readiness rejects docs validation script drift", () => {
     .replace("\"docs/product/00-product-brief.md\"", "\"docs/product/00-product-brief-renamed.md\"")
     .replace("\"docs/product/02-spec.md\"", "\"docs/product/spec.md\"")
     .replace("\"docs/product/03-risk-register.md\"", "\"docs/product/risk.md\"")
-    .replace("\"docs/cli/configuration.md\"", "\"docs/cli/config.md\"");
+    .replace("\"docs/cli/configuration.md\"", "\"docs/cli/config.md\"")
+    .replace("\"docs/ops/incident-response.md\"", "\"docs/ops/incidents.md\"");
 
   assert.deepEqual(validateDocsValidationScriptContract(text), [
     "scripts/validate-docs.mjs must include \"docs/product/00-product-brief.md\".",
     "scripts/validate-docs.mjs must include \"docs/product/02-spec.md\".",
     "scripts/validate-docs.mjs must include \"docs/product/03-risk-register.md\".",
-    "scripts/validate-docs.mjs must include \"docs/cli/configuration.md\"."
+    "scripts/validate-docs.mjs must include \"docs/cli/configuration.md\".",
+    "scripts/validate-docs.mjs must include \"docs/ops/incident-response.md\"."
   ]);
 });
 
@@ -616,6 +620,50 @@ test("release readiness rejects backup and restore document drift", () => {
     "docs/ops/backup-and-restore.md must include - `pnpm run lint`.",
     "docs/ops/backup-and-restore.md must include secret scan for committed provider tokens, GitHub tokens, private keys, and environment files.",
     "docs/ops/backup-and-restore.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
+  ]);
+});
+
+test("release readiness accepts the incident response document contract", () => {
+  assert.deepEqual(validateIncidentResponseDocumentContract(createIncidentResponseDocumentText()), []);
+});
+
+test("release readiness rejects incident response document drift", () => {
+  const text = createIncidentResponseDocumentText()
+    .replace("Incident response is repository-local for the MVP.", "Incident response is external.")
+    .replace("| SEV-1 | Token, private key, raw provider output, raw diff, or sensitive evidence is public.", "| SEV-1 | Service outage.")
+    .replace("Capture commit SHA, workflow run URL, PR URL, and local command output.", "Capture a summary.")
+    .replace("Use `docs/ops/secrets.md` for credential exposure.", "Handle credentials manually.")
+    .replace("Do not publish release notes or versioned Action tags until release blockers are cleared.", "Publish after maintainer approval.");
+
+  assert.deepEqual(validateIncidentResponseDocumentContract(text), [
+    "docs/ops/incident-response.md must include Incident response is repository-local for the MVP..",
+    "docs/ops/incident-response.md must include | SEV-1 | Token, private key, raw provider output, raw diff, or sensitive evidence is public..",
+    "docs/ops/incident-response.md must include Capture commit SHA, workflow run URL, PR URL, and local command output..",
+    "docs/ops/incident-response.md must include Use `docs/ops/secrets.md` for credential exposure..",
+    "docs/ops/incident-response.md must include Do not publish release notes or versioned Action tags until release blockers are cleared.."
+  ]);
+});
+
+test("release readiness accepts the disaster recovery document contract", () => {
+  assert.deepEqual(validateDisasterRecoveryDocumentContract(createDisasterRecoveryDocumentText()), []);
+});
+
+test("release readiness rejects disaster recovery document drift", () => {
+  const text = createDisasterRecoveryDocumentText()
+    .replace("Clarissimi disaster recovery covers repository-state corruption, unsafe recognition publication,", "Clarissimi disaster recovery covers hosted outages,")
+    .replace("branch protection no longer requires the hosted `Validation` check", "branch protection changes")
+    .replace("Stop release, publication, and dogfood workflow runs.", "Keep workflows running.")
+    .replace("Revoke or rotate any exposed credential.", "Review exposed credential.")
+    .replace("Preserve the failing commit SHA, workflow run URL, pull request URL, and changed file list.", "Preserve a summary.")
+    .replace("Choose rollback or forward-fix using `docs/ops/rollback.md`.", "Choose a fix.");
+
+  assert.deepEqual(validateDisasterRecoveryDocumentContract(text), [
+    "docs/ops/disaster-recovery.md must include Clarissimi disaster recovery covers repository-state corruption, unsafe recognition publication,.",
+    "docs/ops/disaster-recovery.md must include branch protection no longer requires the hosted `Validation` check.",
+    "docs/ops/disaster-recovery.md must include Stop release, publication, and dogfood workflow runs..",
+    "docs/ops/disaster-recovery.md must include Revoke or rotate any exposed credential..",
+    "docs/ops/disaster-recovery.md must include Preserve the failing commit SHA, workflow run URL, pull request URL, and changed file list..",
+    "docs/ops/disaster-recovery.md must include Choose rollback or forward-fix using `docs/ops/rollback.md`.."
   ]);
 });
 
@@ -1575,6 +1623,8 @@ function createDocsValidationScriptText() {
     "  \"docs/cli/agent-assisted-drafts.md\",",
     "  \"docs/cli/configuration.md\",",
     "  \"docs/cli/output-and-exit-codes.md\",",
+    "  \"docs/ops/disaster-recovery.md\",",
+    "  \"docs/ops/incident-response.md\",",
     "  \"docs/product/04-implementation-tracker.md\",",
     "];",
     ""
@@ -1891,6 +1941,57 @@ function createBackupRestoreDocumentText() {
     "## Validation",
     "",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
+    ""
+  ].join("\n");
+}
+
+function createIncidentResponseDocumentText() {
+  return [
+    "Incident response is repository-local for the MVP. Maintainers should treat unsafe recognition",
+    "publication, token exposure, branch mutation, and release-gate failures as incidents even when no",
+    "hosted service is down.",
+    "",
+    "| SEV-1 | Token, private key, raw provider output, raw diff, or sensitive evidence is public. |",
+    "| SEV-2 | Default branch or canonical ledger is mutated incorrectly. |",
+    "| SEV-3 | Proposal pull request, Action output, or docs contain incorrect but non-sensitive recognition text. |",
+    "| SEV-4 | Local validation, hosted CI, or dogfood workflow is flaky without unsafe output. |",
+    "",
+    "1. Capture commit SHA, workflow run URL, PR URL, and local command output.",
+    "2. Stop affected release or dogfood activity.",
+    "3. Use `docs/ops/secrets.md` for credential exposure.",
+    "4. Use `docs/ops/rollback.md` for proposal branch, pull request, or ledger cleanup.",
+    "5. Rerun required validation before resuming.",
+    "",
+    "- Add or update tests when the incident was preventable by validation.",
+    "- Do not publish release notes or versioned Action tags until release blockers are cleared.",
+    "- Primary owner: Repository maintainers",
+    ""
+  ].join("\n");
+}
+
+function createDisasterRecoveryDocumentText() {
+  return [
+    "Clarissimi disaster recovery covers repository-state corruption, unsafe recognition publication,",
+    "secret leakage, and broken release gates. It does not cover hosted runtime failover because no",
+    "hosted service exists in the MVP.",
+    "",
+    "- public recognition output contains raw evidence, provider raw output, secrets, raw diffs, or",
+    "  patch excerpts",
+    "- write-mode automation mutates the default branch directly",
+    "- branch protection no longer requires the hosted `Validation` check",
+    "- provider credentials are committed, logged, or copied into public artifacts",
+    "- `.clarissimi/contributions.jsonl` cannot be parsed or rebuilt into derived outputs",
+    "",
+    "1. Stop release, publication, and dogfood workflow runs.",
+    "2. Close or pause unsafe proposal pull requests.",
+    "3. Revoke or rotate any exposed credential.",
+    "4. Preserve the failing commit SHA, workflow run URL, pull request URL, and changed file list.",
+    "5. Choose rollback or forward-fix using `docs/ops/rollback.md`.",
+    "",
+    "- exact commit SHA and branch",
+    "- workflow run URL and job logs",
+    "- redacted summary of any exposed secret or sensitive evidence",
+    "- Primary owner: Repository maintainers",
     ""
   ].join("\n");
 }

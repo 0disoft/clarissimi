@@ -182,6 +182,8 @@ export const docsValidationScriptContract = {
     "\"docs/cli/agent-assisted-drafts.md\"",
     "\"docs/cli/configuration.md\"",
     "\"docs/cli/output-and-exit-codes.md\"",
+    "\"docs/ops/disaster-recovery.md\"",
+    "\"docs/ops/incident-response.md\"",
     "\"docs/product/04-implementation-tracker.md\""
   ]
 };
@@ -389,6 +391,50 @@ export const backupRestoreDocumentContract = {
     "- `pnpm run contract`",
     "secret scan for committed provider tokens, GitHub tokens, private keys, and environment files",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"
+  ]
+};
+
+export const incidentResponseDocumentContract = {
+  path: "docs/ops/incident-response.md",
+  requiredSnippets: [
+    "Incident response is repository-local for the MVP.",
+    "unsafe recognition",
+    "publication, token exposure, branch mutation, and release-gate failures",
+    "| SEV-1 | Token, private key, raw provider output, raw diff, or sensitive evidence is public.",
+    "| SEV-2 | Default branch or canonical ledger is mutated incorrectly.",
+    "| SEV-3 | Proposal pull request, Action output, or docs contain incorrect but non-sensitive recognition text.",
+    "| SEV-4 | Local validation, hosted CI, or dogfood workflow is flaky without unsafe output.",
+    "Capture commit SHA, workflow run URL, PR URL, and local command output.",
+    "Stop affected release or dogfood activity.",
+    "Use `docs/ops/secrets.md` for credential exposure.",
+    "Use `docs/ops/rollback.md` for proposal branch, pull request, or ledger cleanup.",
+    "Rerun required validation before resuming.",
+    "Add or update tests when the incident was preventable by validation.",
+    "Do not publish release notes or versioned Action tags until release blockers are cleared.",
+    "Primary owner: Repository maintainers"
+  ]
+};
+
+export const disasterRecoveryDocumentContract = {
+  path: "docs/ops/disaster-recovery.md",
+  requiredSnippets: [
+    "Clarissimi disaster recovery covers repository-state corruption, unsafe recognition publication,",
+    "secret leakage, and broken release gates.",
+    "hosted service exists in the MVP.",
+    "public recognition output contains raw evidence, provider raw output, secrets, raw diffs, or",
+    "write-mode automation mutates the default branch directly",
+    "branch protection no longer requires the hosted `Validation` check",
+    "provider credentials are committed, logged, or copied into public artifacts",
+    "`.clarissimi/contributions.jsonl` cannot be parsed or rebuilt into derived outputs",
+    "Stop release, publication, and dogfood workflow runs.",
+    "Close or pause unsafe proposal pull requests.",
+    "Revoke or rotate any exposed credential.",
+    "Preserve the failing commit SHA, workflow run URL, pull request URL, and changed file list.",
+    "Choose rollback or forward-fix using `docs/ops/rollback.md`.",
+    "exact commit SHA and branch",
+    "workflow run URL and job logs",
+    "redacted summary of any exposed secret or sensitive evidence",
+    "Primary owner: Repository maintainers"
   ]
 };
 
@@ -986,6 +1032,8 @@ export async function runReleaseReadiness(options = {}) {
   await runServiceLevelsDocumentContractCheck(repoRoot);
   await runSecretsDocumentContractCheck(repoRoot);
   await runBackupRestoreDocumentContractCheck(repoRoot);
+  await runIncidentResponseDocumentContractCheck(repoRoot);
+  await runDisasterRecoveryDocumentContractCheck(repoRoot);
   await runActionInputsOutputsDocumentContractCheck(repoRoot);
   await runActionContractDocumentContractCheck(repoRoot);
   await runActionPermissionsDocumentContractCheck(repoRoot);
@@ -1410,6 +1458,36 @@ export function validateObservabilityDocumentContract(text, contract = observabi
 }
 
 export function validateServiceLevelsDocumentContract(text, contract = serviceLevelsDocumentContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateIncidentResponseDocumentContract(
+  text,
+  contract = incidentResponseDocumentContract
+) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateDisasterRecoveryDocumentContract(
+  text,
+  contract = disasterRecoveryDocumentContract
+) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -2127,6 +2205,40 @@ async function runBackupRestoreDocumentContractCheck(repoRoot) {
   }
 
   console.log("backup and restore document contract passed");
+}
+
+async function runIncidentResponseDocumentContractCheck(repoRoot) {
+  const incidentResponsePath = join(repoRoot, incidentResponseDocumentContract.path);
+  let text;
+  try {
+    text = await readFile(incidentResponsePath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${incidentResponseDocumentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateIncidentResponseDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`incident response document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("incident response document contract passed");
+}
+
+async function runDisasterRecoveryDocumentContractCheck(repoRoot) {
+  const disasterRecoveryPath = join(repoRoot, disasterRecoveryDocumentContract.path);
+  let text;
+  try {
+    text = await readFile(disasterRecoveryPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${disasterRecoveryDocumentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateDisasterRecoveryDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`disaster recovery document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("disaster recovery document contract passed");
 }
 
 async function runActionInputsOutputsDocumentContractCheck(repoRoot) {

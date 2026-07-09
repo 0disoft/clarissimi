@@ -315,6 +315,9 @@ Completed deliverables:
   aligned with the non-credentialed local validation gate
 - release-readiness validates that secrets and backup/restore docs keep leak-response and restore
   integrity checks aligned with `release-readiness`, `lint`, `smoke`, `check`, and `contract`
+- release-readiness validates that incident-response and disaster-recovery docs keep unsafe-output,
+  credential-exposure, branch-mutation, validation-gate, evidence-preservation, and rollback
+  response guidance aligned
 - release-readiness validates that remaining ops document validation footers stay aligned with
   `release-readiness`, `lint`, `smoke`, `check`, and `contract`
 - release-readiness validates that engineering standard documents keep merge-blocking validation

@@ -186,6 +186,19 @@ test("release readiness rejects CI workflow trigger and permission drift", () =>
   ]);
 });
 
+test("release readiness rejects CI runtime and tool pin drift", () => {
+  const text = createCiWorkflowText()
+    .replace("node-version: 24", "node-version: 26")
+    .replace("SSEALED_VERSION: 0.6.8", "SSEALED_VERSION: latest")
+    .replace("sha256sum --check -", "true");
+
+  assert.deepEqual(validateCiWorkflowContract(text), [
+    ".github/workflows/ci.yml must include SSEALED_VERSION: 0.6.8.",
+    ".github/workflows/ci.yml must include node-version: 24.",
+    ".github/workflows/ci.yml must include sha256sum --check -."
+  ]);
+});
+
 test("release readiness accepts dogfood workflow contracts", () => {
   assert.deepEqual(validateDogfoodWorkflowContract(createDryRunWorkflowText(), dogfoodWorkflowContracts[0]), []);
   assert.deepEqual(validateDogfoodWorkflowContract(createProposeWorkflowText(), dogfoodWorkflowContracts[1]), []);
@@ -352,6 +365,13 @@ function createCiWorkflowText() {
   return [
     "name: CI",
     "",
+    "env:",
+    "  ACTIONLINT_LINUX_AMD64_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8",
+    "  ACTIONLINT_VERSION: 1.7.12",
+    "  SSEALED_VERSION: 0.6.8",
+    "  YQ_LINUX_AMD64_SHA256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4",
+    "  YQ_VERSION: 4.53.3",
+    "",
     "on:",
     "  push:",
     "    branches:",
@@ -366,6 +386,13 @@ function createCiWorkflowText() {
     "  validation:",
     "    steps:",
     "      - run: pnpm install --frozen-lockfile",
+    "      - uses: actions/setup-node@v6",
+    "        with:",
+    "          node-version: 24",
+    "      - run: corepack enable",
+    "      - run: |",
+    "          npm install --global \"ssealed@${SSEALED_VERSION}\"",
+    "          sha256sum --check -",
     "      - run: pnpm run docs",
     "      - run: pnpm run release-readiness",
     "      - run: pnpm run smoke",

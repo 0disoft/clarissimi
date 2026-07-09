@@ -324,6 +324,8 @@ Completed deliverables:
 - release-readiness verifies that package test globs still include package and script test suites
 - release-readiness verifies that the root package remains private at `0.0.0` while public package
   publication and versioned Action tags are blocked
+- release-readiness verifies hosted CI Node.js runtime, release-tool versions, and release-tool
+  checksum verification snippets before reporting static release gates as passed
 - release-readiness verifies that `ssealed`, `actionlint`, and `yq` are available before running
   tool-backed release checks
 - release-readiness secret scan covers committed provider gateway token assignments including

@@ -90,6 +90,18 @@ export const ciWorkflowContract = {
   requiredPermissions: [
     "contents: read"
   ],
+  requiredSnippets: [
+    "ACTIONLINT_LINUX_AMD64_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8",
+    "ACTIONLINT_VERSION: 1.7.12",
+    "SSEALED_VERSION: 0.6.8",
+    "YQ_LINUX_AMD64_SHA256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4",
+    "YQ_VERSION: 4.53.3",
+    "uses: actions/setup-node@v6",
+    "node-version: 24",
+    "corepack enable",
+    "npm install --global \"ssealed@${SSEALED_VERSION}\"",
+    "sha256sum --check -"
+  ],
   requiredCommands: [
     "pnpm install --frozen-lockfile",
     "pnpm run docs",
@@ -423,6 +435,12 @@ export function validateCiWorkflowContract(text, contract = ciWorkflowContract) 
   for (const command of contract.requiredCommands) {
     if (!text.includes(command)) {
       issues.push(`${contract.path} must run ${command}.`);
+    }
+  }
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
     }
   }
 

@@ -59,11 +59,11 @@ pnpm run release-readiness
 ```
 
 This command checks documentation links, release-critical package script registration, package and
-script test-glob registration, the blocked package release policy, release tool availability,
-`ssealed doctor`, workflow `actionlint`, YAML parsing with `yq`, Action manifest contract drift,
-hosted CI workflow contract drift, dogfood workflow contract drift, `git diff --check`, and a
-high-risk secret pattern scan. It does not call live providers and does not replace the
-credentialed smoke gates below.
+script test-glob registration, the blocked package release policy, release tool availability, CI
+runtime and release-tool pin drift, `ssealed doctor`, workflow `actionlint`, YAML parsing with
+`yq`, Action manifest contract drift, hosted CI workflow contract drift, dogfood workflow contract
+drift, `git diff --check`, and a high-risk secret pattern scan. It does not call live providers and
+does not replace the credentialed smoke gates below.
 
 After `CLARISSIMI_PROVIDER_TOKEN` is configured as a repository secret, run the manual hosted smoke
 from a maintainer shell without printing the token value:

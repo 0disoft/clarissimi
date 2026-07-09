@@ -62,6 +62,12 @@ export const packageOwnershipContract = {
   path: "docs/monorepo/package-ownership.md"
 };
 
+export const workspaceContract = {
+  path: "pnpm-workspace.yaml",
+  requiredPackageGlob: '"packages/*"',
+  packageNameScope: "@clarissimi"
+};
+
 export const credentialedReleaseEvidenceContract = {
   path: "docs/ops/release.md",
   requiredSnippets: [
@@ -301,6 +307,7 @@ export async function runReleaseReadiness(options = {}) {
   });
 
   await runPackageScriptRegistrationCheck(repoRoot);
+  await runWorkspaceContractCheck(repoRoot);
   await runPackageReleasePolicyCheck(repoRoot);
   await runWorkspacePackageReleasePolicyCheck(repoRoot);
   await runPackageOwnershipContractCheck(repoRoot);
@@ -764,6 +771,7 @@ async function runWorkspacePackageReleasePolicyCheck(repoRoot) {
     }
 
     issues.push(...validatePackageReleasePolicy(packageJson, packageReleasePolicy, repoPath));
+    issues.push(...validateWorkspacePackageManifest(packageJson, workspaceDirFromManifestPath(repoRoot, packageJsonPath), repoPath));
   }
 
   if (issues.length > 0) {
@@ -771,6 +779,23 @@ async function runWorkspacePackageReleasePolicyCheck(repoRoot) {
   }
 
   console.log("workspace package release policy passed");
+}
+
+async function runWorkspaceContractCheck(repoRoot) {
+  const workspacePath = join(repoRoot, workspaceContract.path);
+  let text;
+  try {
+    text = await readFile(workspacePath, "utf8");
+  } catch (error) {
+    throw new Error(`${workspaceContract.path} is not readable: ${error.message}`);
+  }
+
+  const issues = validateWorkspaceContract(text);
+  if (issues.length > 0) {
+    throw new Error(`workspace contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("workspace contract passed");
 }
 
 async function runPackageOwnershipContractCheck(repoRoot) {
@@ -857,6 +882,36 @@ export function validatePackageReleasePolicy(
 
   if (packageJson?.version !== policy.version) {
     issues.push(`${manifestPath} version must remain ${policy.version} until release blockers are cleared.`);
+  }
+
+  return issues;
+}
+
+export function validateWorkspaceContract(text, contract = workspaceContract) {
+  const issues = [];
+
+  if (!text.includes(contract.requiredPackageGlob)) {
+    issues.push(`${contract.path} must include workspace package glob ${contract.requiredPackageGlob}.`);
+  }
+
+  return issues;
+}
+
+export function validateWorkspacePackageManifest(
+  packageJson,
+  packageDir,
+  manifestPath,
+  contract = workspaceContract
+) {
+  const issues = [];
+  const expectedName = `${contract.packageNameScope}/${packageDir}`;
+
+  if (packageJson?.name !== expectedName) {
+    issues.push(`${manifestPath} name must be ${expectedName}.`);
+  }
+
+  if (packageJson?.type !== "module") {
+    issues.push(`${manifestPath} type must remain module.`);
   }
 
   return issues;
@@ -1053,8 +1108,12 @@ async function listWorkspacePackageManifests(repoRoot) {
 async function listWorkspacePackageDirs(repoRoot) {
   const manifests = await listWorkspacePackageManifests(repoRoot);
   return manifests
-    .map((manifestPath) => relative(join(repoRoot, "packages"), dirname(manifestPath)).replaceAll(sep, "/"))
+    .map((manifestPath) => workspaceDirFromManifestPath(repoRoot, manifestPath))
     .sort();
+}
+
+function workspaceDirFromManifestPath(repoRoot, manifestPath) {
+  return relative(join(repoRoot, "packages"), dirname(manifestPath)).replaceAll(sep, "/");
 }
 
 function shouldSkipTraversalPath(repoRoot, path) {

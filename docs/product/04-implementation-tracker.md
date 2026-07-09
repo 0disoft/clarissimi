@@ -328,6 +328,8 @@ Completed deliverables:
 - release-readiness verifies that release-critical package scripts remain registered
 - release-readiness verifies that `pnpm run lint` remains backed by `oxlint . --deny-warnings`
 - release-readiness verifies that package test globs still include package and script test suites
+- release-readiness verifies that `pnpm-workspace.yaml` keeps the `packages/*` workspace glob and
+  that workspace package names stay aligned with their `packages/<name>` directories
 - release-readiness verifies that root and workspace package manifests remain private at `0.0.0`
   while public package publication and versioned Action tags are blocked
 - release-readiness verifies that implemented workspace packages and the Package Table in

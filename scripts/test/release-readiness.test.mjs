@@ -15,7 +15,9 @@ import {
   validateHostedLiveProviderWorkflowContract,
   validatePackageOwnershipContract,
   validatePackageReleasePolicy,
-  validatePackageScriptRegistration
+  validatePackageScriptRegistration,
+  validateWorkspaceContract,
+  validateWorkspacePackageManifest
 } from "../release-readiness.mjs";
 
 test("release readiness accepts the current package script registration", () => {
@@ -87,6 +89,42 @@ test("release readiness reports workspace package release policy drift with mani
     "packages/cli/package.json private must remain true until release blockers are cleared.",
     "packages/cli/package.json version must remain 0.0.0 until release blockers are cleared."
   ]);
+});
+
+test("release readiness accepts workspace contract and package manifest identity", () => {
+  assert.deepEqual(validateWorkspaceContract('packages:\n  - "packages/*"\n'), []);
+  assert.deepEqual(
+    validateWorkspacePackageManifest(
+      {
+        name: "@clarissimi/cli",
+        type: "module"
+      },
+      "cli",
+      "packages/cli/package.json"
+    ),
+    []
+  );
+});
+
+test("release readiness rejects workspace and package manifest identity drift", () => {
+  assert.deepEqual(validateWorkspaceContract("packages:\n  - apps/*\n"), [
+    'pnpm-workspace.yaml must include workspace package glob "packages/*".'
+  ]);
+
+  assert.deepEqual(
+    validateWorkspacePackageManifest(
+      {
+        name: "@clarissimi/renamed-cli",
+        type: "commonjs"
+      },
+      "cli",
+      "packages/cli/package.json"
+    ),
+    [
+      "packages/cli/package.json name must be @clarissimi/cli.",
+      "packages/cli/package.json type must remain module."
+    ]
+  );
 });
 
 test("release readiness accepts package ownership table coverage", () => {

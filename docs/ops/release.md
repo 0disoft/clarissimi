@@ -61,8 +61,9 @@ pnpm run release-readiness
 ```
 
 This command checks documentation links, release-critical package script registration, package and
-script test-glob registration, the blocked root and workspace package release policy, release tool
-availability, package ownership table coverage, CI runtime and release-tool pin drift,
+script test-glob registration, the workspace package glob, workspace package manifest identity,
+the blocked root and workspace package release policy, release tool availability, package ownership
+table coverage, CI runtime and release-tool pin drift,
 `ssealed doctor`, workflow `actionlint`, YAML parsing with `yq`, Action manifest contract drift,
 hosted CI workflow contract drift, dogfood workflow contract drift, hosted live-provider workflow
 trigger, permission, preflight, runtime, and command drift, `git diff --check`, and a high-risk

@@ -10,6 +10,7 @@ export interface ProposalPullRequestCreatorInput {
   readonly client: ProposalPullRequestClient;
   readonly manifest: ProposalOutputStagingManifest;
   readonly branch: ProposalBranchWriteResult;
+  readonly targetRepository?: string;
   readonly maintainerApprovalNote?: string;
 }
 
@@ -85,8 +86,9 @@ export async function createOrUpdateProposalPullRequest(
 
   const title = buildProposalPullRequestTitle(input.manifest);
   const body = buildProposalPullRequestBody(input);
+  const targetRepository = input.targetRepository ?? input.manifest.source.repository;
   const lookup = {
-    repository: input.manifest.source.repository,
+    repository: targetRepository,
     headBranch: input.branch.branchName,
     baseBranch: input.branch.baseBranch
   };
@@ -109,7 +111,7 @@ export async function createOrUpdateProposalPullRequest(
     }
 
     const pullRequest = await input.client.updatePullRequest({
-      repository: input.manifest.source.repository,
+      repository: targetRepository,
       number: existing.number,
       title,
       body
@@ -192,6 +194,13 @@ function validatePullRequestCreatorInput(input: ProposalPullRequestCreatorInput)
     );
   }
 
+  if (input.targetRepository !== undefined && input.targetRepository.trim().length === 0) {
+    throw new ProposalPullRequestCreatorError(
+      "missing_target_repository",
+      "Proposal pull request creation requires a non-empty target repository when provided."
+    );
+  }
+
   if (input.branch.branchName.trim().length === 0) {
     throw new ProposalPullRequestCreatorError(
       "missing_branch",
@@ -231,6 +240,13 @@ function translatePullRequestClientError(error: unknown): Error {
       return new ProposalPullRequestCreatorError(
         "pull_request_repository_setting_blocked",
         "Clarissimi could not create the proposal pull request because repository or organization settings block workflow-created pull requests. Enable workflow pull request creation or create the pull request manually from the proposal branch."
+      );
+    }
+
+    if (error.code === "not_found") {
+      return new ProposalPullRequestCreatorError(
+        "pull_request_target_not_found",
+        "Clarissimi could not find the target repository for the proposal pull request. Check GITHUB_REPOSITORY, the repository URL, and token access before rerunning propose mode."
       );
     }
 

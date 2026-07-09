@@ -153,6 +153,8 @@ Completed deliverables:
 - Action outputs and step summaries stay bounded
 - provider, schema, policy, renderer, redaction, branch publishing, or pull request failures fail
   closed before mutation
+- proposal pull requests target the current GitHub Actions repository while preserving collected
+  source repository context in the recognition body
 
 Validation:
 

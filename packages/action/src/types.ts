@@ -19,6 +19,7 @@ export interface ActionProposeInput extends ActionDryRunInput {
   readonly stagingDir: string;
   readonly baseBranch: string;
   readonly remoteName?: string;
+  readonly targetRepository?: string;
   readonly pullRequestClient: ProposalPullRequestClient;
 }
 

@@ -101,11 +101,13 @@ export async function runActionPropose(input: ActionProposeInput): Promise<Actio
   };
   assignOptional(publishInput, "remoteName", input.remoteName);
   await publishProposalBranch(publishInput);
-  const pullRequest = await createOrUpdateProposalPullRequest({
+  const pullRequestInput: Parameters<typeof createOrUpdateProposalPullRequest>[0] = {
     client: input.pullRequestClient,
     manifest: staging.manifest,
     branch
-  });
+  };
+  assignOptional(pullRequestInput, "targetRepository", input.targetRepository);
+  const pullRequest = await createOrUpdateProposalPullRequest(pullRequestInput);
 
   return {
     ok: true,
@@ -193,6 +195,7 @@ function buildActionProposeInput(
     liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(liveGitHubClientOptions)
   };
   assignOptional(proposeInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
+  assignOptional(proposeInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
 
   return proposeInput;
 }

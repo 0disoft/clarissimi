@@ -138,6 +138,7 @@ test("environment runner writes bounded propose outputs and step summary", async
         GITHUB_OUTPUT: outputPath,
         GITHUB_STEP_SUMMARY: summaryPath,
         GITHUB_WORKSPACE: repositoryDir,
+        GITHUB_REPOSITORY: "0disoft/clarissimi",
         INPUT_BASE_BRANCH: "main",
         INPUT_GITHUB_FIXTURE: fixturePath,
         INPUT_MODE: "propose",
@@ -167,6 +168,7 @@ test("environment runner writes bounded propose outputs and step summary", async
     assert.equal(outputText.includes("PATCH_EXCERPT_SENTINEL"), false);
     assert.equal(summaryText.includes("## Clarissimi propose summary"), true);
     assert.equal(summaryText.includes("PATCH_EXCERPT_SENTINEL"), false);
+    assert.equal(client.created[0].repository, "0disoft/clarissimi");
   });
 });
 

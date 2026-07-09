@@ -113,6 +113,28 @@ test("updates an existing proposal pull request instead of creating a duplicate"
   assert.equal(result.body.includes("Maintainer review is still required before merge."), true);
 });
 
+test("can target the runner repository while preserving source repository text", async () => {
+  const client = new FakePullRequestClient();
+
+  const result = await createOrUpdateProposalPullRequest({
+    client,
+    manifest,
+    branch,
+    targetRepository: "0disoft/clarissimi"
+  });
+
+  assert.equal(result.action, "created");
+  assert.deepEqual(client.created[0], {
+    repository: "0disoft/clarissimi",
+    headBranch: "clarissimi/recognition/merged_pull_request-42",
+    baseBranch: "main",
+    title: result.title,
+    body: result.body
+  });
+  assert.equal(result.title, "Clarissimi recognition: sample/project#42");
+  assert.equal(result.body.includes("- Repository: sample/project"), true);
+});
+
 test("keeps raw evidence and provider output out of the proposal title and body", () => {
   const rawStrings = [
     "RAW_EVIDENCE_SENTINEL",
@@ -210,6 +232,29 @@ test("returns actionable diagnostics for repository setting blocks", async () =>
       error instanceof ProposalPullRequestCreatorError
       && error.code === "pull_request_repository_setting_blocked"
       && error.message.includes("workflow pull request creation")
+  );
+});
+
+test("returns actionable diagnostics when the target repository is not found", async () => {
+  const client = new FakePullRequestClient({
+    createError: new ProposalPullRequestClientError(
+      "not_found",
+      "Not Found"
+    )
+  });
+
+  await assert.rejects(
+    () =>
+      createOrUpdateProposalPullRequest({
+        client,
+        manifest,
+        branch,
+        targetRepository: "0disoft/clarissimi"
+      }),
+    (error) =>
+      error instanceof ProposalPullRequestCreatorError
+      && error.code === "pull_request_target_not_found"
+      && error.message.includes("GITHUB_REPOSITORY")
   );
 });
 

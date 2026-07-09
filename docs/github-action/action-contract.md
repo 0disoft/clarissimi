@@ -24,6 +24,7 @@ The Action supports dry-run summaries and a fixture-first `propose` write path. 
 - `INPUT_BASE_BRANCH`: base branch for proposal pull requests, default `main`
 - `INPUT_REMOTE_NAME`: remote name used to publish proposal branches, default `origin`
 - `INPUT_STAGING_DIR`: optional temporary directory for generated proposal files
+- `GITHUB_REPOSITORY`: target repository for proposal pull requests in `propose` mode
 - `GITHUB_TOKEN`: token used only by `propose` mode for live GitHub collection and proposal pull
   request creation or update
 
@@ -56,6 +57,10 @@ drafts remain non-public and fail closed before branch mutation.
 Proposal branch commits use a Clarissimi-owned bot author instead of relying on runner-global git
 identity. This keeps maintainer workstations and GitHub-hosted runners from becoming part of the
 public recognition commit identity.
+
+The source repository in collected evidence remains part of the public recognition context. The
+pull request target repository comes from `GITHUB_REPOSITORY` when the Action runs in GitHub Actions,
+so fixture dogfood can use sample evidence while opening the proposal in the current repository.
 
 ## Outputs
 

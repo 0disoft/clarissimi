@@ -671,6 +671,171 @@ test("recognize can use the OpenAI-compatible provider when explicitly selected"
   });
 });
 
+test("recognize uses JSON config provider values when flags are omitted", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "fixture.json");
+    const configDir = join(dir, ".clarissimi");
+    const requests = [];
+    await mkdir(configDir, { recursive: true });
+    await writeFile(fixturePath, JSON.stringify(fixture()), "utf8");
+    await writeFile(
+      join(configDir, "config.json"),
+      JSON.stringify({
+        provider: "openai-compatible",
+        providerModel: "config-model",
+        providerThinking: "disabled",
+        mode: "dry-run"
+      }),
+      "utf8"
+    );
+
+    const result = await run(
+      ["recognize", "--fixture", fixturePath, "--json"],
+      dir,
+      {
+        env: {
+          CLARISSIMI_PROVIDER_TOKEN: "unit-token"
+        },
+        fetch: async (url, init) => {
+          requests.push({
+            url: String(url),
+            body: JSON.parse(init.body)
+          });
+          return jsonResponse({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    contributionType: "test",
+                    affectedArea: "parser regression coverage",
+                    impactLevel: "medium",
+                    evidenceSummary: "Added regression coverage based on test evidence.",
+                    suggestedBadge: "Regression Shield",
+                    publicRecognitionText: "Added regression coverage for the parser.",
+                    confidence: 0.8
+                  })
+                }
+              }
+            ]
+          });
+        }
+      }
+    );
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(output.provider, "openai-compatible");
+    assert.equal(output.mode, "dry-run");
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].body.model, "config-model");
+    assert.deepEqual(requests[0].body.thinking, { type: "disabled" });
+  });
+});
+
+test("recognize lets explicit provider flags override JSON config values", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "fixture.json");
+    const configDir = join(dir, ".clarissimi");
+    const requests = [];
+    await mkdir(configDir, { recursive: true });
+    await writeFile(fixturePath, JSON.stringify(fixture()), "utf8");
+    await writeFile(
+      join(configDir, "config.json"),
+      JSON.stringify({
+        provider: "fake",
+        providerModel: "config-model",
+        providerThinking: "disabled"
+      }),
+      "utf8"
+    );
+
+    const result = await run(
+      [
+        "recognize",
+        "--fixture",
+        fixturePath,
+        "--provider",
+        "openai-compatible",
+        "--provider-model",
+        "flag-model",
+        "--json"
+      ],
+      dir,
+      {
+        env: {
+          CLARISSIMI_PROVIDER_TOKEN: "unit-token"
+        },
+        fetch: async (url, init) => {
+          requests.push({
+            url: String(url),
+            body: JSON.parse(init.body)
+          });
+          return jsonResponse({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    contributionType: "test",
+                    affectedArea: "parser regression coverage",
+                    impactLevel: "medium",
+                    evidenceSummary: "Added regression coverage based on test evidence.",
+                    suggestedBadge: "Regression Shield",
+                    publicRecognitionText: "Added regression coverage for the parser.",
+                    confidence: 0.8
+                  })
+                }
+              }
+            ]
+          });
+        }
+      }
+    );
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(output.provider, "openai-compatible");
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].body.model, "flag-model");
+  });
+});
+
+test("recognize rejects unsupported config mode before provider calls", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "fixture.json");
+    const configDir = join(dir, ".clarissimi");
+    let calls = 0;
+    await mkdir(configDir, { recursive: true });
+    await writeFile(fixturePath, JSON.stringify(fixture()), "utf8");
+    await writeFile(
+      join(configDir, "config.json"),
+      JSON.stringify({
+        provider: "openai-compatible",
+        providerModel: "config-model",
+        mode: "propose"
+      }),
+      "utf8"
+    );
+
+    const result = await run(
+      ["recognize", "--fixture", fixturePath],
+      dir,
+      {
+        env: {
+          CLARISSIMI_PROVIDER_TOKEN: "unit-token"
+        },
+        fetch: async () => {
+          calls += 1;
+          return jsonResponse({});
+        }
+      }
+    );
+
+    assert.equal(result.exitCode, 1);
+    assert.equal(result.stderr.includes("--mode dry-run"), true);
+    assert.equal(calls, 0);
+  });
+});
+
 test("recognize rejects unsupported provider thinking values", async () => {
   await withTempDir(async (dir) => {
     const fixturePath = join(dir, "fixture.json");

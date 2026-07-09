@@ -26,7 +26,7 @@ import {
 import { validateContributionAssessment, type ValidationIssue } from "@clarissimi/schemas";
 
 import { CliUsageError, getBooleanFlag, getStringFlag, parseArgs, type ParsedArgs } from "./args.js";
-import { validateConfigFile } from "./config.js";
+import { validateConfigFile, type CliConfig } from "./config.js";
 import { CLI_EXIT_CODES, type CliExitCode } from "./exit-codes.js";
 import { recognizeFixture, recognizeGitHubFixture } from "./fixture.js";
 import {
@@ -118,12 +118,6 @@ async function runValidateLedger(args: ParsedArgs, io: CliIo): Promise<CliExitCo
 }
 
 async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
-  const mode = getStringFlag(args, "mode", "dry-run");
-  if (mode !== "dry-run") {
-    io.stderr("The fixture-first recognize command currently supports only --mode dry-run.\n");
-    return CLI_EXIT_CODES.usage;
-  }
-
   const fixturePath = getStringFlag(args, "fixture");
   const githubFixturePath = getStringFlag(args, "github-fixture");
   if (fixturePath === undefined && githubFixturePath === undefined) {
@@ -137,13 +131,20 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   }
 
   try {
+    const config = (await validateConfigFile(io.cwd, getStringFlag(args, "config"))).config;
+    const mode = getStringFlag(args, "mode") ?? config.mode ?? "dry-run";
+    if (mode !== "dry-run") {
+      io.stderr("The fixture-first recognize command currently supports only --mode dry-run.\n");
+      return CLI_EXIT_CODES.usage;
+    }
+
     const selectedFixturePath = fixturePath ?? githubFixturePath;
     if (selectedFixturePath === undefined) {
       io.stderr("recognize requires a fixture path.\n");
       return CLI_EXIT_CODES.usage;
     }
 
-    const provider = await resolveRecognitionProvider(args, io);
+    const provider = await resolveRecognitionProvider(args, io, config);
     const result = fixturePath !== undefined
       ? await recognizeFixture(resolveFromCwd(io.cwd, selectedFixturePath), provider)
       : await recognizeGitHubFixture(resolveFromCwd(io.cwd, selectedFixturePath), provider);
@@ -529,10 +530,11 @@ async function writeRenderedOutputs(
 
 async function resolveRecognitionProvider(
   args: ParsedArgs,
-  io: CliIo
+  io: CliIo,
+  existingConfig?: CliConfig
 ): Promise<ContributionDraftProvider> {
   const configPath = getStringFlag(args, "config");
-  const config = (await validateConfigFile(io.cwd, configPath)).config;
+  const config = existingConfig ?? (await validateConfigFile(io.cwd, configPath)).config;
   const providerId = getStringFlag(args, "provider") ?? config.provider ?? "fake";
 
   if (providerId === "fake") {

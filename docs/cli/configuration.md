@@ -17,8 +17,14 @@ Clarissimi should support:
 - `clarissimi.config.ts`
 - `.clarissimi/config.json`
 
-The exact precedence order is not implemented yet. The first implementation should prefer explicit
-CLI flags over config file values and config file values over package defaults.
+The current implementation loads `.clarissimi/config.json`. TypeScript config loading remains
+deferred until a safe loader decision exists.
+
+Current precedence is:
+
+1. explicit CLI flags
+2. `.clarissimi/config.json`
+3. package defaults
 
 The current JSON config supports:
 
@@ -28,7 +34,8 @@ The current JSON config supports:
 - `providerThinking`: optional OpenAI-compatible thinking mode; currently only `disabled`
 - `mode`: `dry-run`, `propose`, or `commit`
 
-Explicit CLI flags override config file values for provider selection.
+`recognize` currently supports only `dry-run`; a config value such as `mode: "propose"` is parsed
+but rejected by that command before provider calls. Write modes are owned by the GitHub Action path.
 
 ## Expected Configuration Areas
 

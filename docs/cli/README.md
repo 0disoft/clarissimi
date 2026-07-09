@@ -14,6 +14,8 @@ redaction, providers, or renderers.
 
 ## MVP Commands
 
+- `clarissimi help`
+- `clarissimi --help`
 - `clarissimi validate-config`
 - `clarissimi validate-ledger`
 - `clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run`

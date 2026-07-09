@@ -12,12 +12,15 @@ export class CliUsageError extends Error {
 }
 
 export function parseArgs(argv: readonly string[]): ParsedArgs {
-  const [command, ...rest] = argv;
+  const [first, ...remaining] = argv;
+  const hasCommand = first !== undefined && !first.startsWith("--");
+  const command = hasCommand ? first : undefined;
+  const tokens = hasCommand ? remaining : argv;
   const flags = new Map<string, string | true>();
   const positionals: string[] = [];
 
-  for (let index = 0; index < rest.length; index += 1) {
-    const token = rest[index];
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
     if (token === undefined) {
       continue;
     }
@@ -38,7 +41,7 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
       continue;
     }
 
-    const next = rest[index + 1];
+    const next = tokens[index + 1];
     if (next !== undefined && !next.startsWith("--")) {
       flags.set(flag, next);
       index += 1;
@@ -49,7 +52,7 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
   }
 
   return {
-    command,
+    ...(command === undefined ? {} : { command }),
     flags,
     positionals
   };

@@ -17,6 +17,11 @@
 
 ## MVP Commands
 
+### `clarissimi help` and `clarissimi --help`
+
+Prints the current command list and common flags. Help output is informational and must not read
+configuration files, ledger files, provider credentials, GitHub tokens, or repository evidence.
+
 ### `clarissimi validate-config`
 
 Validates Clarissimi configuration without collecting GitHub evidence or calling a provider.

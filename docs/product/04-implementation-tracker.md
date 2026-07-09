@@ -32,7 +32,8 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
 - `packages/renderers`: JSONL, contributor JSON, Markdown, static-data renderers, and draft review
   JSON rendering
 - `packages/cli`: fixture-first validation, recognition dry-run, agent-assisted draft staging,
-  approval, import, rebuild commands, and explicit fake or OpenAI-compatible provider selection
+  approval, import, rebuild commands, help output, and explicit fake or OpenAI-compatible provider
+  selection
 - `packages/action`: Action runner for dry-run summaries, fixture-first public recognition
   proposals, fixture-first draft review proposals, and event-path live GitHub collection in write
   modes with explicit fake or OpenAI-compatible provider selection

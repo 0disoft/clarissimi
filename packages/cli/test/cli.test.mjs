@@ -136,6 +136,29 @@ async function run(argv, cwd, options = {}) {
   return { exitCode, stdout, stderr };
 }
 
+test("global help flag prints usage successfully", async () => {
+  await withTempDir(async (dir) => {
+    const result = await run(["--help"], dir);
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(result.stderr, "");
+    assert.match(result.stdout, /Clarissimi CLI/);
+    assert.match(result.stdout, /clarissimi --help/);
+    assert.match(result.stdout, /--provider-endpoint <url>/);
+  });
+});
+
+test("command help flag prints usage successfully", async () => {
+  await withTempDir(async (dir) => {
+    const result = await run(["recognize", "--help"], dir);
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(result.stderr, "");
+    assert.match(result.stdout, /clarissimi recognize/);
+    assert.match(result.stdout, /--provider-thinking disabled/);
+  });
+});
+
 test("validate-config accepts missing config defaults", async () => {
   await withTempDir(async (dir) => {
     const result = await run(["validate-config", "--json"], dir);

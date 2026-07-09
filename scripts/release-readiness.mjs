@@ -178,6 +178,31 @@ export const ledgerFormatDocumentContract = {
   ]
 };
 
+export const cliCommandContract = {
+  path: "docs/cli/command-contract.md",
+  requiredSnippets: [
+    "Help output is informational and must not read",
+    "If both",
+    "default config files exist, the command fails closed",
+    "It also rejects duplicate public records with the same contributor platform, contributor id,",
+    "`--provider openai-compatible`: explicit live provider path",
+    "`openai-compatible` requires `CLARISSIMI_PROVIDER_TOKEN` in the process environment.",
+    "writes files only when `--out-dir`",
+    "Calculates maintainer-only recent recognition share from approved ledger records.",
+    "must not write `.clarissimi/contributors.json`, `CONTRIBUTORS.md`, static public JSON",
+    "accepts only `maintainerApprovalStatus: \"draft\"`",
+    "refuses to overwrite an existing staged draft by default",
+    "with `maintainerApprovalStatus: \"approved\"`",
+    "Use `import-draft` after this command to publish the approved",
+    "rejects non-public approval states, appends the sanitized public",
+    "does not call providers, read provider tokens, fetch GitHub evidence",
+    "it is not an MVP monthly or yearly partition mode",
+    "Unexpected positional arguments must fail as usage errors before config loading",
+    "| `7` | write failure |",
+    "A command writes public recognition without approval or configured policy."
+  ]
+};
+
 export const ciOperationalDocumentContract = {
   path: "docs/ops/ci.md",
   requiredSnippets: [
@@ -723,6 +748,7 @@ export async function runReleaseReadiness(options = {}) {
   await runProductPositioningContractCheck(repoRoot);
   await runReadmeValidationContractCheck(repoRoot);
   await runLedgerFormatDocumentContractCheck(repoRoot);
+  await runCliCommandContractCheck(repoRoot);
   await runCiOperationalDocumentContractCheck(repoRoot);
   await runOperationalContractDocumentContractCheck(repoRoot);
   await runObservabilityDocumentContractCheck(repoRoot);
@@ -1018,6 +1044,18 @@ export function validateReadmeValidationContract(text, contract = readmeValidati
 }
 
 export function validateLedgerFormatDocumentContract(text, contract = ledgerFormatDocumentContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateCliCommandContract(text, contract = cliCommandContract) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1526,6 +1564,23 @@ async function runLedgerFormatDocumentContractCheck(repoRoot) {
   }
 
   console.log("ledger format document contract passed");
+}
+
+async function runCliCommandContractCheck(repoRoot) {
+  const commandContractPath = join(repoRoot, cliCommandContract.path);
+  let text;
+  try {
+    text = await readFile(commandContractPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${cliCommandContract.path}: ${error.message}`);
+  }
+
+  const issues = validateCliCommandContract(text);
+  if (issues.length > 0) {
+    throw new Error(`CLI command contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("CLI command contract passed");
 }
 
 async function runCiOperationalDocumentContractCheck(repoRoot) {

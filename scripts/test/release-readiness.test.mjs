@@ -11,6 +11,7 @@ import {
   validateActionManifestContract,
   validateBackupRestoreDocumentContract,
   validateCiOperationalDocumentContract,
+  validateCliCommandContract,
   validateCiWorkflowContract,
   validateCredentialedReleaseEvidence,
   validateDryRunDogfoodEvidence,
@@ -268,6 +269,33 @@ test("release readiness rejects ledger format document drift", () => {
     "docs/cli/ledger-format.md must include Ledger records must not contain public contributor scores, average scores, ranks, leaderboard.",
     "docs/cli/ledger-format.md must include Maintainer-only analytics may calculate recent recognition share from the same ledger.",
     "docs/cli/ledger-format.md must include The MVP keeps one canonical ledger file."
+  ]);
+});
+
+test("release readiness accepts the CLI command contract", () => {
+  assert.deepEqual(validateCliCommandContract(createCliCommandContractText()), []);
+});
+
+test("release readiness rejects CLI command contract drift", () => {
+  const text = createCliCommandContractText()
+    .replace("Help output is informational and must not read", "Help output is informational.")
+    .replace("default config files exist, the command fails closed", "default config files exist, the command picks one")
+    .replace("`--provider openai-compatible`: explicit live provider path", "`--provider openai-compatible`: live provider path")
+    .replace("writes files only when `--out-dir`", "writes files by default")
+    .replace("accepts only `maintainerApprovalStatus: \"draft\"`", "accepts draft assessments")
+    .replace("rejects non-public approval states, appends the sanitized public", "imports assessments")
+    .replace("Unexpected positional arguments must fail as usage errors before config loading", "Unexpected positional arguments are ignored")
+    .replace("| `7` | write failure |", "| `7` | failure |");
+
+  assert.deepEqual(validateCliCommandContract(text), [
+    "docs/cli/command-contract.md must include Help output is informational and must not read.",
+    "docs/cli/command-contract.md must include default config files exist, the command fails closed.",
+    "docs/cli/command-contract.md must include `--provider openai-compatible`: explicit live provider path.",
+    "docs/cli/command-contract.md must include writes files only when `--out-dir`.",
+    "docs/cli/command-contract.md must include accepts only `maintainerApprovalStatus: \"draft\"`.",
+    "docs/cli/command-contract.md must include rejects non-public approval states, appends the sanitized public.",
+    "docs/cli/command-contract.md must include Unexpected positional arguments must fail as usage errors before config loading.",
+    "docs/cli/command-contract.md must include | `7` | write failure |."
   ]);
 });
 
@@ -1256,6 +1284,52 @@ function createLedgerFormatDocumentText() {
     "yearly partitions plus an index, as described in",
     "[`ADR 0022`](../adr/0022-keep-ledger-single-file-with-partition-path.md). Monthly partitions remain",
     "deferred until repository volume justifies the extra lookup and migration complexity.",
+    ""
+  ].join("\n");
+}
+
+function createCliCommandContractText() {
+  return [
+    "Help output is informational and must not read",
+    "configuration files, ledger files, provider credentials, GitHub tokens, or repository evidence.",
+    "",
+    "If both default config files exist, the command fails closed and requires `--config <path>` to choose one.",
+    "It also rejects duplicate public records with the same contributor platform, contributor id,",
+    "repository, event, and pull request number.",
+    "",
+    "- `--provider openai-compatible`: explicit live provider path",
+    "`openai-compatible` requires `CLARISSIMI_PROVIDER_TOKEN` in the process environment.",
+    "",
+    "The fixture-first implementation previews rebuilds by default and writes files only when `--out-dir`",
+    "is explicit.",
+    "",
+    "Calculates maintainer-only recent recognition share from approved ledger records.",
+    "The command may report internal recognition weight and recognition share for maintainer review. It",
+    "must not write `.clarissimi/contributors.json`, `CONTRIBUTORS.md`, static public JSON, or any public",
+    "scoreboard artifact.",
+    "",
+    "The command validates the contained assessment, accepts only `maintainerApprovalStatus: \"draft\"`, strips",
+    "raw evidence excerpts, and writes a deterministic review file based on repository, event, and pull",
+    "request number. It refuses to overwrite an existing staged draft by default.",
+    "",
+    "Approves a staged draft after maintainer review by rewriting the selected file as a sanitized",
+    "`clarissimi.assessment/v1` document with `maintainerApprovalStatus: \"approved\"`.",
+    "Use `import-draft` after this command to publish the approved",
+    "record into the ledger.",
+    "",
+    "The command validates the draft, rejects non-public approval states, appends the sanitized public",
+    "record to the selected ledger, refuses duplicate contributor/source pull request records, and",
+    "rebuilds derived outputs. It does not call providers, read provider tokens, fetch GitHub evidence,",
+    "decide approval, mutate branches, create pull requests, or store AI/provider provenance in public",
+    "recognition records.",
+    "By default, `--ledger` is `.clarissimi/contributions.jsonl`. The override is for local validation,",
+    "test fixtures, and recovery workflows; it is not an MVP monthly or yearly partition mode.",
+    "",
+    "Unexpected positional arguments must fail as usage errors before config loading, ledger reads,",
+    "provider resolution, draft writes, or rebuild work begins.",
+    "",
+    "| `7` | write failure |",
+    "A command writes public recognition without approval or configured policy.",
     ""
   ].join("\n");
 }

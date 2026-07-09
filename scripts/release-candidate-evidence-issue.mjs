@@ -11,11 +11,11 @@ const defaults = {
 
 const usageText = [
   "Usage:",
-  "  pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --provider-model <model> [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch-name>] [--title <issue-title>] [--print]",
+  "  pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --provider-model <model> [--provider-endpoint <chat-completions-url>] [--provider-thinking <mode>] [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch-name>] [--title <issue-title>] [--print]",
   "",
   "Examples:",
   "  pnpm run release-candidate-evidence-issue -- --ci-run 12345 --live-run 67890 --provider-model gpt-4.1-mini",
-  "  pnpm run release-candidate-evidence-issue -- --sha 0123456789abcdef0123456789abcdef01234567 --ci-run 12345 --live-run 67890 --provider-model gpt-4.1-mini --print",
+  "  pnpm run release-candidate-evidence-issue -- --sha 0123456789abcdef0123456789abcdef01234567 --ci-run 12345 --live-run 67890 --provider-model minimax-m3 --provider-endpoint https://example.com/v1/chat/completions --provider-thinking disabled --print",
   "",
   "The script validates hosted CI and hosted live-provider run metadata before creating the release evidence issue.",
   "It records secret names only and never reads or prints provider token values."
@@ -65,6 +65,14 @@ async function run(argv, runtime) {
     return usageFailure(runtime, "--provider-model requires a non-empty value.");
   }
 
+  if (args.providerEndpoint !== undefined && !isHttpsUrl(args.providerEndpoint)) {
+    return usageFailure(runtime, "--provider-endpoint must be an https URL.");
+  }
+
+  if (args.providerThinking !== undefined && args.providerThinking !== "disabled") {
+    return usageFailure(runtime, "--provider-thinking supports only disabled.");
+  }
+
   if (args.title !== undefined && args.title.trim().length === 0) {
     return usageFailure(runtime, "--title requires a non-empty value.");
   }
@@ -101,7 +109,9 @@ async function run(argv, runtime) {
     sha,
     ciRun,
     liveRun,
-    providerModel: args.providerModel
+    providerModel: args.providerModel,
+    providerEndpoint: args.providerEndpoint,
+    providerThinking: args.providerThinking
   });
 
   if (args.print) {
@@ -153,7 +163,17 @@ function parseArgs(argv, runtime) {
       return usageFailure(runtime, `Unexpected positional argument: ${arg}`);
     }
 
-    if (!["repo", "branch", "sha", "ci-run", "live-run", "provider-model", "title"].includes(key)) {
+    if (![
+      "repo",
+      "branch",
+      "sha",
+      "ci-run",
+      "live-run",
+      "provider-model",
+      "provider-endpoint",
+      "provider-thinking",
+      "title"
+    ].includes(key)) {
       return usageFailure(runtime, `Unsupported option: ${arg}`);
     }
 
@@ -181,6 +201,14 @@ function usageFailure(runtime, message) {
 
 function isGitHubRepositoryName(value) {
   return /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value);
+}
+
+function isHttpsUrl(value) {
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function isCommitSha(value) {
@@ -274,6 +302,14 @@ function validateRun(run, options) {
 }
 
 function renderIssueBody(options) {
+  const liveProviderCommand = [
+    "pnpm run hosted-live-provider-smoke --",
+    `--model ${options.providerModel}`,
+    `--ref ${options.branch}`,
+    options.providerEndpoint === undefined ? undefined : `--endpoint ${options.providerEndpoint}`,
+    options.providerThinking === undefined ? undefined : `--thinking ${options.providerThinking}`
+  ].filter(Boolean).join(" ");
+
   return [
     `Release candidate evidence for \`${options.sha}\` on \`${options.branch}\`.`,
     "",
@@ -296,7 +332,7 @@ function renderIssueBody(options) {
     "",
     "## Hosted Live Provider Evidence",
     "",
-    `- Command: \`pnpm run hosted-live-provider-smoke -- --model ${options.providerModel} --ref ${options.branch}\``,
+    `- Command: \`${liveProviderCommand}\``,
     "- Result: passed",
     `- Workflow: \`${defaults.liveWorkflowName}\``,
     `- Run: ${options.liveRun.url}`,
@@ -305,6 +341,8 @@ function renderIssueBody(options) {
     `- Validated SHA: \`${options.liveRun.headSha}\``,
     `- Repository secret used by workflow: \`${defaults.secretName}\``,
     `- Dispatch model input: \`${options.providerModel}\``,
+    `- Provider endpoint override: ${options.providerEndpoint === undefined ? "not used" : `\`${options.providerEndpoint}\``}`,
+    `- Provider thinking mode: ${options.providerThinking === undefined ? "not used" : `\`${options.providerThinking}\``}`,
     "",
     "## Decision Needed Before Publication",
     "",

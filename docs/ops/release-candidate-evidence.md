@@ -86,6 +86,12 @@ Use `--print` to preview the issue body without creating a public GitHub issue. 
 that both run IDs completed successfully, match the selected branch, and validate the same candidate
 SHA. It records only the secret name `CLARISSIMI_PROVIDER_TOKEN`, never the secret value.
 
+For gateway providers, pass the same non-secret provider options used by hosted live-provider smoke:
+
+```powershell
+pnpm run release-candidate-evidence-issue -- --sha <candidate-sha> --ci-run <ci-run-id> --live-run <live-run-id> --provider-model minimax-m3 --provider-endpoint <chat-completions-url> --provider-thinking disabled
+```
+
 ## Publication Decision
 
 Before publication or a versioned Action tag, confirm:

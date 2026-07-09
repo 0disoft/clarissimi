@@ -36,7 +36,11 @@ test("release candidate evidence issue prints a validated evidence body", async 
     "--live-run",
     "67890",
     "--provider-model",
-    "gpt-4.1-mini",
+    "minimax-m3",
+    "--provider-endpoint",
+    "https://gateway.example/v1/chat/completions",
+    "--provider-thinking",
+    "disabled",
     "--print"
   ], harness.runtime);
 
@@ -49,7 +53,10 @@ test("release candidate evidence issue prints a validated evidence body", async 
   assert.equal(harness.logs.join("\n").includes("Release candidate evidence for `0123456789abcdef0123456789abcdef01234567`"), true);
   assert.equal(harness.logs.join("\n").includes("https://github.com/owner/repo/actions/runs/12345"), true);
   assert.equal(harness.logs.join("\n").includes("Repository secret used by workflow: `CLARISSIMI_PROVIDER_TOKEN`"), true);
-  assert.equal(harness.logs.join("\n").includes("gpt-4.1-mini"), true);
+  assert.equal(harness.logs.join("\n").includes("minimax-m3"), true);
+  assert.equal(harness.logs.join("\n").includes("--endpoint https://gateway.example/v1/chat/completions"), true);
+  assert.equal(harness.logs.join("\n").includes("Provider endpoint override: `https://gateway.example/v1/chat/completions`"), true);
+  assert.equal(harness.logs.join("\n").includes("Provider thinking mode: `disabled`"), true);
   assert.equal(harness.logs.join("\n").includes("provider-token-value"), false);
 });
 
@@ -153,6 +160,38 @@ test("release candidate evidence issue rejects invalid inputs before calling git
   assert.equal(emptyModelExitCode, 2);
   assert.equal(emptyModel.errors.includes("--provider-model requires a non-empty value."), true);
   assert.equal(emptyModel.commands.length, 0);
+
+  const invalidEndpoint = createHarness({ headSha: exampleSha });
+  const invalidEndpointExitCode = await runReleaseCandidateEvidenceIssue([
+    "--ci-run",
+    "12345",
+    "--live-run",
+    "67890",
+    "--provider-model",
+    "minimax-m3",
+    "--provider-endpoint",
+    "http://gateway.example/v1/chat/completions"
+  ], invalidEndpoint.runtime);
+
+  assert.equal(invalidEndpointExitCode, 2);
+  assert.equal(invalidEndpoint.errors.includes("--provider-endpoint must be an https URL."), true);
+  assert.equal(invalidEndpoint.commands.length, 0);
+
+  const unsupportedThinking = createHarness({ headSha: exampleSha });
+  const unsupportedThinkingExitCode = await runReleaseCandidateEvidenceIssue([
+    "--ci-run",
+    "12345",
+    "--live-run",
+    "67890",
+    "--provider-model",
+    "minimax-m3",
+    "--provider-thinking",
+    "enabled"
+  ], unsupportedThinking.runtime);
+
+  assert.equal(unsupportedThinkingExitCode, 2);
+  assert.equal(unsupportedThinking.errors.includes("--provider-thinking supports only disabled."), true);
+  assert.equal(unsupportedThinking.commands.length, 0);
 });
 
 test("release candidate evidence issue rejects workflow run mismatch before issue creation", async () => {

@@ -106,6 +106,8 @@ export const releasePolicyDocumentContract = {
     "- Versioned GitHub Action tag: blocked.",
     "Public package publication and versioned Action tags require:",
     "`pnpm run hosted-ci-validation`",
+    "release PR, release issue, or GitHub release notes",
+    "Do not make an evidence-only commit after final candidate validation",
     "public product-positioning guardrails",
     "intentionally fail-closed `format` and `migration-check`",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
@@ -753,7 +755,8 @@ export const credentialedReleaseEvidenceContract = {
     "Recent hosted live-provider evidence: `Clarissimi live provider smoke` workflow run",
     "CLARISSIMI_PROVIDER_TOKEN",
     "CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini",
-    "`pnpm run hosted-live-provider-smoke -- --model <provider-model>`"
+    "`pnpm run hosted-live-provider-smoke -- --model <provider-model>`",
+    "attach the final run URL outside the repository commit"
   ],
   requiredPatterns: [
     {
@@ -774,7 +777,7 @@ export const credentialedReleaseEvidenceContract = {
     },
     {
       description: "a hosted live-provider release-candidate refresh command",
-      pattern: /Recent hosted live-provider evidence:[\s\S]*Refresh this evidence[\s\S]*`pnpm run hosted-live-provider-smoke -- --model <provider-model>`[\s\S]*for the exact[\s\S]*release-candidate commit/
+      pattern: /Recent hosted live-provider evidence:[\s\S]*Refresh this evidence[\s\S]*`pnpm run hosted-live-provider-smoke -- --model <provider-model>`[\s\S]*for the exact[\s\S]*release-candidate commit[\s\S]*attach[\s\S]*outside the repository commit/
     }
   ]
 };
@@ -841,7 +844,8 @@ export const hostedCiEvidenceContract = {
   requiredSnippets: [
     "Recent hosted CI validation evidence: `CI` workflow run",
     "`release-readiness`, `lint`, `smoke`, `check`, and `contract`",
-    "`pnpm run hosted-ci-validation` for the exact release-candidate commit"
+    "`pnpm run hosted-ci-validation` for the exact release-candidate commit",
+    "attach the final run URL outside the repository commit"
   ],
   requiredPatterns: [
     {
@@ -858,7 +862,7 @@ export const hostedCiEvidenceContract = {
     },
     {
       description: "a direct hosted CI workflow run URL",
-      pattern: /Recent hosted CI validation evidence:[\s\S]*Run URL:\s*`https:\/\/github\.com\/0disoft\/clarissimi\/actions\/runs\/[0-9]{8,}`\.[\s\S]*Refresh this evidence/
+      pattern: /Recent hosted CI validation evidence:[\s\S]*Run URL:\s*`https:\/\/github\.com\/0disoft\/clarissimi\/actions\/runs\/[0-9]{8,}`\.[\s\S]*Refresh this evidence[\s\S]*attach[\s\S]*outside the repository commit/
     }
   ]
 };

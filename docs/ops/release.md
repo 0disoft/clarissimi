@@ -128,8 +128,11 @@ provider token value. If a maintainer needs to run the underlying commands manua
 `gh workflow run` followed by `gh run list` and `gh run watch` with the same workflow, model,
 endpoint, and thinking inputs.
 
-Record the passed workflow run id, source commit, provider model, and refresh command in this
-document before public package publication or a versioned Action tag.
+Keep recent passed workflow evidence in this document so release readiness does not silently drift.
+For the final release candidate, capture the exact hosted CI and hosted live-provider run URLs in
+the release PR, release issue, or GitHub release notes after the final candidate commit is pushed.
+Do not make an evidence-only commit after final candidate validation just to chase the candidate
+SHA; that commit would create a new candidate and stale the evidence again.
 
 Recent hosted live-provider evidence: `Clarissimi live provider smoke` workflow run
 `29052452214` passed on `2026-07-09T21:45:58Z` for validated source commit
@@ -138,7 +141,9 @@ Recent hosted live-provider evidence: `Clarissimi live provider smoke` workflow 
 Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29052452214`.
 Refresh this evidence with
 `pnpm run hosted-live-provider-smoke -- --model <provider-model>` for the exact
-release-candidate commit before public package publication or a versioned Action tag.
+release-candidate commit before public package publication or a versioned Action tag, then attach
+the final run URL outside the repository commit if updating this document would change the
+candidate SHA.
 
 ## Owners
 
@@ -156,7 +161,8 @@ release-candidate commit before public package publication or a versioned Action
   `release-readiness`, `lint`, `smoke`, `check`, and `contract`. Run URL:
   `https://github.com/0disoft/clarissimi/actions/runs/29052254866`. Refresh this evidence with
   `pnpm run hosted-ci-validation` for the exact release-candidate commit before public package
-  publication or a versioned Action tag.
+  publication or a versioned Action tag; attach the final run URL outside the repository commit if
+  updating this document would change the candidate SHA.
 - Current dry-run dogfood evidence: `Clarissimi dry run` workflow run `29031384775` passed on
   `2026-07-09T15:54:58Z` at `77f3fcbbeb25e3338ee2a4bba3c8efbfc46e5cfb` and exercised the
   summary artifact validation path. Run URL:
@@ -189,4 +195,6 @@ release-candidate commit before public package publication or a versioned Action
   `CLARISSIMI_PROVIDER_TOKEN` and dispatch input `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.
   Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29052452214`. Refresh this evidence
   with `pnpm run hosted-live-provider-smoke -- --model <provider-model>` for the exact
-  release-candidate commit before public package publication or a versioned Action tag.
+  release-candidate commit before public package publication or a versioned Action tag; attach the
+  final run URL outside the repository commit if updating this document would change the candidate
+  SHA.

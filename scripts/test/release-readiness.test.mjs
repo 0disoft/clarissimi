@@ -215,6 +215,11 @@ test("release readiness rejects release policy document drift", () => {
     .replace("Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,", "Source-only merge: allowed after `pnpm run lint`,")
     .replace("`pnpm run lint`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and repository hygiene", "`pnpm run check`, `pnpm run contract`, and repository hygiene")
     .replace("`pnpm run hosted-ci-validation`", "`pnpm run hosted-live-provider-smoke`")
+    .replace("release PR, release issue, or GitHub release notes", "local notes")
+    .replace(
+      "Do not make an evidence-only commit after final candidate validation",
+      "Commit evidence after every validation run"
+    )
     .replace("public product-positioning guardrails", "public docs")
     .replace("intentionally fail-closed `format` and `migration-check`", "format and migration checks")
     .replace(
@@ -230,6 +235,8 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include - Public package publication: blocked..",
     "docs/ops/release.md must include - Versioned GitHub Action tag: blocked..",
     "docs/ops/release.md must include `pnpm run hosted-ci-validation`.",
+    "docs/ops/release.md must include release PR, release issue, or GitHub release notes.",
+    "docs/ops/release.md must include Do not make an evidence-only commit after final candidate validation.",
     "docs/ops/release.md must include public product-positioning guardrails.",
     "docs/ops/release.md must include intentionally fail-closed `format` and `migration-check`.",
     "docs/ops/release.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
@@ -1629,6 +1636,8 @@ function createReleasePolicyText() {
     "",
     "Public package publication and versioned Action tags require:",
     "`pnpm run hosted-ci-validation`",
+    "release PR, release issue, or GitHub release notes",
+    "Do not make an evidence-only commit after final candidate validation",
     "public product-positioning guardrails",
     "intentionally fail-closed `format` and `migration-check`",
     "",
@@ -2382,7 +2391,8 @@ function createReleaseEvidenceText() {
     "`eaf22e44f5ef87391a16cf5a6597395826f05b7d` on `main` and validated `docs`,",
     "`release-readiness`, `lint`, `smoke`, `check`, and `contract`.",
     "Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29052254866`.",
-    "Refresh this evidence with `pnpm run hosted-ci-validation` for the exact release-candidate commit.",
+    "Refresh this evidence with `pnpm run hosted-ci-validation` for the exact release-candidate commit;",
+    "attach the final run URL outside the repository commit if updating this document would change the candidate SHA.",
     "Current dry-run dogfood evidence: `Clarissimi dry run` workflow run",
     "`29031384775` passed on `2026-07-09T15:54:58Z` at",
     "`77f3fcbbeb25e3338ee2a4bba3c8efbfc46e5cfb` and exercised summary artifact validation.",
@@ -2413,7 +2423,8 @@ function createReleaseEvidenceText() {
     "`CLARISSIMI_PROVIDER_TOKEN` and dispatch input `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.",
     "Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29052452214`.",
     "Refresh this evidence with",
-    "`pnpm run hosted-live-provider-smoke -- --model <provider-model>` for the exact release-candidate commit."
+    "`pnpm run hosted-live-provider-smoke -- --model <provider-model>` for the exact release-candidate commit;",
+    "attach the final run URL outside the repository commit if updating this document would change the candidate SHA."
   ].join("\n");
 }
 

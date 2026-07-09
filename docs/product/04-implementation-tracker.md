@@ -265,6 +265,7 @@ Completed deliverables:
 - manual-only fixture propose dogfood workflow is available and passed run `28984721611`, creating
   `https://github.com/0disoft/clarissimi/pull/1`
 - hosted CI workflow exists for push, pull request, and manual validation
+- `main` branch protection requires the hosted `Validation` check with strict status checks
 - docs validation checks required documentation targets and local Markdown links
 - smoke validation exercises the built CLI and Action bins without live provider credentials
 - live-provider smoke command is available as a release-only credentialed check

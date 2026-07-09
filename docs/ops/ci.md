@@ -27,6 +27,10 @@ manual dispatch. It uses read-only repository permissions and runs `docs`, `smok
 Repository Actions settings keep default workflow permissions at read-only, with workflow-created
 pull requests enabled so explicit `propose` jobs can open recognition proposal pull requests.
 
+The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`
+to pass with strict up-to-date status checks. Administrator enforcement is disabled so repository
+owners can recover from CI or protection misconfiguration without changing the branch rule first.
+
 ## Owners
 
 - Primary owner: UNASSIGNED
@@ -38,5 +42,4 @@ pull requests enabled so explicit `propose` jobs can open recognition proposal p
 - Required validation names: `docs`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
-- Remaining operational risk: branch protection rules and credentialed live-provider smoke run
-  evidence are not complete.
+- Remaining operational risk: credentialed live-provider smoke run evidence is not complete.

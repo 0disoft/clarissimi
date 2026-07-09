@@ -341,6 +341,30 @@ test("analytics recent-share reports maintainer-only recognition share without w
   });
 });
 
+test("analytics recent-share rejects invalid as-of values as usage errors", async () => {
+  await withTempDir(async (dir) => {
+    const ledger = join(dir, "ledger.jsonl");
+    await writeFile(ledger, `${JSON.stringify(assessment())}\n`, "utf8");
+
+    const result = await run(
+      [
+        "analytics",
+        "recent-share",
+        "--ledger",
+        ledger,
+        "--as-of",
+        "not-a-date",
+        "--json"
+      ],
+      dir
+    );
+
+    assert.equal(result.exitCode, 1);
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, /--as-of must be an ISO-compatible date time/);
+  });
+});
+
 test("rebuild rejects duplicate ledger records before writing derived outputs", async () => {
   await withTempDir(async (dir) => {
     const ledgerDir = join(dir, ".clarissimi");

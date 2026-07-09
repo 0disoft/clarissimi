@@ -556,7 +556,7 @@ async function runAnalytics(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
     const records = parseContributionsJsonl(ledgerText);
     assertUniqueContributionRecords(records);
     const analyticsOptions: Parameters<typeof buildMaintainerRecentRecognitionShareDocument>[1] = {};
-    assignOptional(analyticsOptions, "asOf", getStringFlag(args, "as-of"));
+    assignOptional(analyticsOptions, "asOf", parseIsoDateTimeFlag(args, "as-of"));
     assignOptional(analyticsOptions, "windowDays", parsePositiveIntegerFlag(args, "window-days"));
     const analytics = buildMaintainerRecentRecognitionShareDocument(records, analyticsOptions);
 
@@ -745,6 +745,20 @@ function parsePositiveIntegerFlag(args: ParsedArgs, name: string): number | unde
   }
 
   return parsed;
+}
+
+function parseIsoDateTimeFlag(args: ParsedArgs, name: string): string | undefined {
+  const value = getStringFlag(args, name);
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) {
+    throw new CliUsageError(`--${name} must be an ISO-compatible date time.`);
+  }
+
+  return new Date(parsed).toISOString();
 }
 
 function assignOptional<T extends object, K extends keyof T>(

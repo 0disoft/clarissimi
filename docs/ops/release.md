@@ -57,9 +57,10 @@ Run non-credentialed release gates before any provider token is used:
 pnpm run release-readiness
 ```
 
-This command checks documentation links, test registration, `ssealed doctor`, workflow
-`actionlint`, YAML parsing with `yq`, `git diff --check`, and a high-risk secret pattern scan. It
-does not call live providers and does not replace the credentialed smoke gates below.
+This command checks documentation links, test registration, release tool availability,
+`ssealed doctor`, workflow `actionlint`, YAML parsing with `yq`, `git diff --check`, and a
+high-risk secret pattern scan. It does not call live providers and does not replace the credentialed
+smoke gates below.
 
 After `CLARISSIMI_PROVIDER_TOKEN` is configured as a repository secret, run the manual hosted smoke
 from a maintainer shell without printing the token value:

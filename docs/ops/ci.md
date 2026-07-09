@@ -18,8 +18,9 @@ The current local CI parity commands are:
   `CLARISSIMI_PROVIDER_MODEL`. It also accepts optional `CLARISSIMI_PROVIDER_ENDPOINT` and
   `CLARISSIMI_PROVIDER_THINKING`. This command is a release smoke, not a correctness check.
 - `pnpm run release-readiness`: runs non-credentialed release checks for documentation,
-  test registration, `ssealed doctor`, workflow `actionlint`, YAML parsing, `git diff --check`,
-  and high-risk secret patterns. It is a maintainer release gate, not a live-provider check.
+  test registration, release tool availability, `ssealed doctor`, workflow `actionlint`, YAML
+  parsing, `git diff --check`, and high-risk secret patterns. It is a maintainer release gate, not
+  a live-provider check.
 - `pnpm run check`: runs typecheck and the package test suite.
 - `pnpm run contract`: runs typecheck and tests as the current contract gate.
 

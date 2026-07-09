@@ -16,6 +16,7 @@ await runCheck({
 });
 
 await runTestRegistrationCheck();
+await runToolAvailabilityCheck();
 
 await runCheck({
   name: "ssealed doctor",
@@ -146,6 +147,47 @@ async function runSecretScan() {
   }
 
   console.log("secret scan passed");
+}
+
+async function runToolAvailabilityCheck() {
+  const tools = [
+    {
+      name: "ssealed",
+      command: "ssealed",
+      args: ["--version"],
+      installHint: "Install ssealed before running release readiness."
+    },
+    {
+      name: "actionlint",
+      command: "actionlint",
+      args: ["-version"],
+      installHint: "Install actionlint before running release readiness."
+    },
+    {
+      name: "yq",
+      command: "yq",
+      args: ["--version"],
+      installHint: "Install mikefarah/yq before running release readiness."
+    }
+  ];
+
+  for (const tool of tools) {
+    let result;
+    try {
+      result = await runCommand(tool.command, tool.args);
+    } catch (error) {
+      throw new Error(`${tool.name} is required but could not be started. ${tool.installHint} ${error.message}`);
+    }
+
+    if (result.exitCode !== 0) {
+      throw new Error(
+        `${tool.name} availability check failed with exit code ${result.exitCode}. ${tool.installHint}\n` +
+        `STDERR:\n${result.stderr.trim()}`
+      );
+    }
+  }
+
+  console.log("release readiness tool availability passed");
 }
 
 async function runTestRegistrationCheck() {

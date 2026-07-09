@@ -64,7 +64,8 @@ pnpm run release-readiness
 This command checks documentation links, release-critical package script registration, package and
 script test-glob registration, the workspace package glob, workspace package manifest identity,
 the blocked root and workspace package release policy, workspace package publish surface, release
-tool availability, package ownership table coverage, internal workspace dependency graph,
+policy document blocked-status coverage, release tool availability, package ownership table
+coverage, internal workspace dependency graph,
 package publication metadata, TypeScript project-reference build graph, recorded dry-run and
 write-mode dogfood evidence, the intentionally fail-closed `format` placeholder, CI runtime and
 release-tool pin drift,

@@ -74,6 +74,22 @@ export const packageReleasePolicy = {
   version: "0.0.0"
 };
 
+export const releasePolicyDocumentContract = {
+  path: "docs/ops/release.md",
+  requiredSnippets: [
+    "Clarissimi is not ready for public package publication.",
+    "versioned Action tag remain blocked",
+    "until maintainers accept a release ADR or update this",
+    "The current root package stays private at `0.0.0`.",
+    "Do not bump versions, publish packages, or create",
+    "release tags as part of ordinary implementation work",
+    "- Public package publication: blocked.",
+    "- Versioned GitHub Action tag: blocked.",
+    "Public package publication and versioned Action tags require:",
+    "Release blocker status: public package publication and versioned Action tags are blocked"
+  ]
+};
+
 export const packageOwnershipContract = {
   path: "docs/monorepo/package-ownership.md"
 };
@@ -503,6 +519,7 @@ export async function runReleaseReadiness(options = {}) {
   await runWorkspaceContractCheck(repoRoot);
   await runPackageReleasePolicyCheck(repoRoot);
   await runWorkspacePackageReleasePolicyCheck(repoRoot);
+  await runReleasePolicyDocumentContractCheck(repoRoot);
   await runTsconfigBuildGraphCheck(repoRoot);
   await runPackageOwnershipContractCheck(repoRoot);
   await runDryRunDogfoodEvidenceCheck(repoRoot);
@@ -727,6 +744,18 @@ export function validateWorkflowTrustBoundaryContract(
 }
 
 export function validateRollbackProcedureContract(text, contract = rollbackProcedureContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateReleasePolicyDocumentContract(text, contract = releasePolicyDocumentContract) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1026,6 +1055,23 @@ async function runPackageReleasePolicyCheck(repoRoot) {
   }
 
   console.log("package release policy passed");
+}
+
+async function runReleasePolicyDocumentContractCheck(repoRoot) {
+  const releasePath = join(repoRoot, releasePolicyDocumentContract.path);
+  let text;
+  try {
+    text = await readFile(releasePath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${releasePolicyDocumentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateReleasePolicyDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`release policy document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("release policy document contract passed");
 }
 
 async function runSmokePackCandidateContractCheck(repoRoot) {

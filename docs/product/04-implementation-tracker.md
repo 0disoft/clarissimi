@@ -345,6 +345,9 @@ Completed deliverables:
   that workspace package names stay aligned with their `packages/<name>` directories
 - release-readiness verifies that root and workspace package manifests remain private at `0.0.0`
   while public package publication and versioned Action tags are blocked
+- release-readiness verifies that `docs/ops/release.md` keeps public package publication,
+  marketplace release notes, versioned Action tags, version bumps, and release tags blocked until a
+  maintainer release decision changes the policy
 - release-readiness verifies that workspace package manifests keep their `dist` entrypoints,
   package files, build scripts, and CLI/Action bin boundaries aligned
 - release-readiness verifies that workspace package manifests carry package-level license,

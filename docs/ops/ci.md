@@ -24,10 +24,10 @@ The current local CI parity commands are:
 - `pnpm run release-readiness`: runs non-credentialed release checks for documentation,
   release-critical package script registration, package and script test-glob registration, the
   workspace package glob, workspace package manifest identity, the blocked root and workspace
-  package release policy, workspace package publish surface, package ownership table coverage,
-  package publication metadata, internal workspace dependency graph, TypeScript project-reference
-  build graph, recorded dry-run and write-mode dogfood evidence, the intentionally fail-closed
-  `format` placeholder, release tool
+  package release policy, blocked release policy document status, workspace package publish
+  surface, package ownership table coverage, package publication metadata, internal workspace
+  dependency graph, TypeScript project-reference build graph, recorded dry-run and write-mode
+  dogfood evidence, the intentionally fail-closed `format` placeholder, release tool
   availability, CI runtime and release-tool pin drift, `ssealed doctor`, workflow `actionlint`,
   YAML parsing, `git diff --check`, tracked generated-output drift, and high-risk secret patterns.
   It also verifies that rollback instructions still cover staging cleanup, proposal pull request

@@ -17,6 +17,7 @@ import {
   validatePackageOwnershipContract,
   validatePackageReleasePolicy,
   validatePackageScriptRegistration,
+  validateReleasePolicyDocumentContract,
   validateRootTsconfigReferences,
   validateRollbackProcedureContract,
   validateSmokePackCandidateContract,
@@ -145,6 +146,25 @@ test("release readiness reports workspace package release policy drift with mani
   assert.deepEqual(validatePackageReleasePolicy(packageJson, packageReleasePolicy, "packages/cli/package.json"), [
     "packages/cli/package.json private must remain true until release blockers are cleared.",
     "packages/cli/package.json version must remain 0.0.0 until release blockers are cleared."
+  ]);
+});
+
+test("release readiness accepts the blocked release policy document contract", () => {
+  assert.deepEqual(validateReleasePolicyDocumentContract(createReleasePolicyText()), []);
+});
+
+test("release readiness rejects release policy document drift", () => {
+  const text = createReleasePolicyText()
+    .replace("Clarissimi is not ready for public package publication.", "Clarissimi can publish packages.")
+    .replace("- Public package publication: blocked.", "- Public package publication: allowed.")
+    .replace("- Versioned GitHub Action tag: blocked.", "- Versioned GitHub Action tag: allowed.")
+    .replace("Do not bump versions, publish packages, or create", "Bump versions and publish packages.");
+
+  assert.deepEqual(validateReleasePolicyDocumentContract(text), [
+    "docs/ops/release.md must include Clarissimi is not ready for public package publication..",
+    "docs/ops/release.md must include Do not bump versions, publish packages, or create.",
+    "docs/ops/release.md must include - Public package publication: blocked..",
+    "docs/ops/release.md must include - Versioned GitHub Action tag: blocked.."
   ]);
 });
 
@@ -832,6 +852,24 @@ function createBlockedReleasePackageJson() {
     private: packageReleasePolicy.private,
     version: packageReleasePolicy.version
   };
+}
+
+function createReleasePolicyText() {
+  return [
+    "Clarissimi is not ready for public package publication.",
+    "A versioned Action tag remain blocked until maintainers accept a release ADR or update this operational contract.",
+    "The current root package stays private at `0.0.0`.",
+    "Do not bump versions, publish packages, or create",
+    "release tags as part of ordinary implementation work.",
+    "",
+    "- Public package publication: blocked.",
+    "- Versioned GitHub Action tag: blocked.",
+    "",
+    "Public package publication and versioned Action tags require:",
+    "",
+    "- Release blocker status: public package publication and versioned Action tags are blocked",
+    ""
+  ].join("\n");
 }
 
 function createWorkspacePackageManifest(packageDir = "schemas") {

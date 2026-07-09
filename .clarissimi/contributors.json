@@ -1,0 +1,70 @@
+{
+  "contributors": [
+    {
+      "affectedAreas": [
+        "Add parser regression coverage"
+      ],
+      "badges": [
+        "Regression Shield"
+      ],
+      "contributionCount": 1,
+      "contributionTypes": [
+        "test"
+      ],
+      "contributor": {
+        "id": "123456",
+        "login": "octocat",
+        "platform": "github",
+        "profileUrl": "https://github.com/octocat"
+      },
+      "recognitions": [
+        {
+          "affectedArea": "Add parser regression coverage",
+          "contributionType": "test",
+          "evidenceRefs": [
+            {
+              "id": "PR-42",
+              "kind": "pull_request",
+              "title": "Add parser regression coverage",
+              "url": "https://github.com/sample/project/pull/42"
+            },
+            {
+              "id": "label:tests",
+              "kind": "label",
+              "title": "tests"
+            },
+            {
+              "id": "label:maintenance",
+              "kind": "label",
+              "title": "maintenance"
+            },
+            {
+              "id": "src/parser.ts",
+              "kind": "file",
+              "title": "src/parser.ts"
+            },
+            {
+              "id": "tests/parser.spec.ts",
+              "kind": "test",
+              "title": "tests/parser.spec.ts"
+            },
+            {
+              "id": "abc123def4567890",
+              "kind": "commit",
+              "title": "Merge commit abc123def456"
+            }
+          ],
+          "publicRecognitionText": "Added regression coverage for Add parser regression coverage.",
+          "source": {
+            "event": "merged_pull_request",
+            "mergedAt": "2026-07-08T00:00:00.000Z",
+            "pullRequestNumber": 42,
+            "repository": "sample/project"
+          },
+          "suggestedBadge": "Regression Shield"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": "clarissimi.contributors/v1"
+}

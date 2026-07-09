@@ -62,9 +62,9 @@ owners can recover from CI or protection misconfiguration without changing the b
 
 ## Owners
 
-- Primary owner: UNASSIGNED
+- Primary owner: Repository maintainers
 - Backup owner: UNASSIGNED
-- Escalation path: UNDECIDED
+- Escalation path: GitHub issues or maintainer-owned repository discussion
 
 ## Validation
 

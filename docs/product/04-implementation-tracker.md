@@ -168,8 +168,8 @@ Validation:
 
 - end-to-end fixture tests
 - read-only dry-run dogfood remains unchanged
-- maintainer-triggered propose dogfood remains future work after repository workflow settings are
-  confirmed
+- maintainer-triggered propose dogfood passed run `28984721611`, creating
+  `https://github.com/0disoft/clarissimi/pull/1`
 
 ### 6. Live GitHub Collection
 

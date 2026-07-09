@@ -32,9 +32,9 @@ Current implementation status:
 
 ## Owners
 
-- Primary owner: UNASSIGNED
+- Primary owner: Repository maintainers
 - Backup owner: UNASSIGNED
-- Escalation path: UNDECIDED
+- Escalation path: GitHub issues or maintainer-owned repository discussion
 
 ## Validation
 

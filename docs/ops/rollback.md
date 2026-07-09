@@ -84,14 +84,14 @@ Resume the release or dogfood run only after:
 
 ## Owners
 
-- Primary owner: UNASSIGNED
+- Primary owner: Repository maintainers
 - Backup owner: UNASSIGNED
-- Escalation path: UNDECIDED
+- Escalation path: GitHub issues or maintainer-owned repository discussion
 
 ## Validation
 
 - Required validation names: `docs`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
-- Remaining operational risk: credentialed live-provider smoke plus hosted branch-protection
-  enforcement are not complete.
+- Remaining operational risk: hosted manual live-provider smoke workflow evidence with repository
+  secret configuration is not complete.

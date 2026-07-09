@@ -6,14 +6,34 @@
 
 Define severity, roles, first 10 minutes, communication, timeline, postmortem, follow-up policy, and evidence preservation.
 
+Clarissimi MVP service levels describe maintainer response for source releases, dogfood workflows,
+proposal pull requests, and repository-state incidents. There is no hosted uptime target because no
+hosted Clarissimi service exists yet.
+
+Service levels:
+
+| Area | Target |
+| --- | --- |
+| Source-only merge readiness | Local `docs`, `smoke`, `check`, `contract`, and hygiene checks pass before push. |
+| Hosted validation | `Validation` check passes on `main` after push. |
+| Write-mode dogfood | Manual propose and stage-draft workflows pass before release evidence claims support. |
+| Live provider release gate | Local live-provider smoke plus hosted manual live-provider smoke pass with maintainer-owned credentials. |
+| Unsafe output response | Stop release or dogfood immediately and follow rollback or incident-response docs. |
+| Ledger recovery | Restore or revert the canonical ledger before rebuilding derived outputs. |
+
+Severity and response are owned by `docs/ops/incident-response.md`. Rollback procedure is owned by
+`docs/ops/rollback.md`. Secrets response is owned by `docs/ops/secrets.md`.
+
 ## Owners
 
-- Primary owner: UNASSIGNED
+- Primary owner: Repository maintainers
 - Backup owner: UNASSIGNED
-- Escalation path: UNDECIDED
+- Escalation path: GitHub issues or maintainer-owned repository discussion
 
 ## Validation
 
-- Required validation names: VALIDATION.md
-- Release blocker status: UNDECIDED
-- Remaining operational risk: UNDECIDED
+- Required validation names: `docs`, `smoke`, `check`, `contract`
+- Release blocker status: public package publication and versioned Action tags remain blocked by
+  `docs/ops/release.md`.
+- Remaining operational risk: hosted manual live-provider smoke workflow evidence with repository
+  secret configuration is not complete.

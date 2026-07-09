@@ -463,6 +463,9 @@ Completed deliverables:
   artifact validation
 - release-readiness requires direct GitHub Actions run URLs for dry-run, propose, stage-draft, and
   hosted live-provider release evidence
+- hosted CI validation evidence records run `29050441506` on `2026-07-09T21:09:52Z` for
+  `2329da472e7c1e17074ae975ea7e2a2cd3116cbb`, and release-readiness requires direct hosted CI run
+  evidence for the source-only validation commands
 
 Release follow-up:
 

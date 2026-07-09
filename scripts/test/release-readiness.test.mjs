@@ -26,6 +26,7 @@ import {
   validateDocsValidationScriptContract,
   validateEngineeringValidationDocumentContract,
   validateHostedLiveProviderWorkflowContract,
+  validateHostedCiEvidence,
   validateIncidentResponseDocumentContract,
   validateLedgerFormatDocumentContract,
   validateLintAndFormatDecisionDocumentContract,
@@ -1168,6 +1169,10 @@ test("release readiness accepts recorded dry-run dogfood evidence", () => {
   assert.deepEqual(validateDryRunDogfoodEvidence(createReleaseEvidenceText()), []);
 });
 
+test("release readiness accepts recorded hosted CI evidence", () => {
+  assert.deepEqual(validateHostedCiEvidence(createReleaseEvidenceText()), []);
+});
+
 test("release readiness accepts rollback procedure coverage", () => {
   assert.deepEqual(validateRollbackProcedureContract(createRollbackProcedureText()), []);
 });
@@ -1236,6 +1241,25 @@ test("release readiness rejects missing dry-run dogfood evidence", () => {
     "docs/ops/release.md must include https://github.com/0disoft/clarissimi/actions/runs/29031384775.",
     "docs/ops/release.md must include a numeric dry-run dogfood workflow run id.",
     "docs/ops/release.md must include a dry-run dogfood workflow timestamp."
+  ]);
+});
+
+test("release readiness rejects missing hosted CI evidence", () => {
+  const text = createReleaseEvidenceText()
+    .replace("Current hosted CI validation evidence: `CI` workflow run", "")
+    .replace("`29050441506` passed on `2026-07-09T21:09:52Z`", "passed")
+    .replace("validated source commit", "candidate")
+    .replace("`2329da472e7c1e17074ae975ea7e2a2cd3116cbb`", "`not-a-sha`")
+    .replace("https://github.com/0disoft/clarissimi/actions/runs/29050441506", "");
+
+  assert.deepEqual(validateHostedCiEvidence(text), [
+    "docs/ops/release.md must include Current hosted CI validation evidence: `CI` workflow run.",
+    "docs/ops/release.md must include validated source commit.",
+    "docs/ops/release.md must include 2329da472e7c1e17074ae975ea7e2a2cd3116cbb.",
+    "docs/ops/release.md must include https://github.com/0disoft/clarissimi/actions/runs/29050441506.",
+    "docs/ops/release.md must include a numeric hosted CI workflow run id.",
+    "docs/ops/release.md must include a hosted CI workflow timestamp.",
+    "docs/ops/release.md must include a hosted CI validated source commit sha."
   ]);
 });
 
@@ -2334,6 +2358,11 @@ function createPackageOwnershipText() {
 
 function createReleaseEvidenceText() {
   return [
+    "Current hosted CI validation evidence: `CI` workflow run",
+    "`29050441506` passed on `2026-07-09T21:09:52Z` for validated source commit",
+    "`2329da472e7c1e17074ae975ea7e2a2cd3116cbb` on `main` and validated `docs`,",
+    "`release-readiness`, `lint`, `smoke`, `check`, and `contract`.",
+    "Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29050441506`.",
     "Current dry-run dogfood evidence: `Clarissimi dry run` workflow run",
     "`29031384775` passed on `2026-07-09T15:54:58Z` at",
     "`77f3fcbbeb25e3338ee2a4bba3c8efbfc46e5cfb` and exercised summary artifact validation.",

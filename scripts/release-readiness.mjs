@@ -817,6 +817,31 @@ export const dryRunDogfoodEvidenceContract = {
   ]
 };
 
+export const hostedCiEvidenceContract = {
+  path: "docs/ops/release.md",
+  requiredSnippets: [
+    "Current hosted CI validation evidence: `CI` workflow run",
+    "validated source commit",
+    "2329da472e7c1e17074ae975ea7e2a2cd3116cbb",
+    "`release-readiness`, `lint`, `smoke`, `check`, and `contract`",
+    "https://github.com/0disoft/clarissimi/actions/runs/29050441506"
+  ],
+  requiredPatterns: [
+    {
+      description: "a numeric hosted CI workflow run id",
+      pattern: /Current hosted CI validation evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/
+    },
+    {
+      description: "a hosted CI workflow timestamp",
+      pattern: /Current hosted CI validation evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/
+    },
+    {
+      description: "a hosted CI validated source commit sha",
+      pattern: /Current hosted CI validation evidence:[\s\S]*validated source commit[\s\S]*`[0-9a-f]{40}`/
+    }
+  ]
+};
+
 export const rollbackProcedureContract = {
   path: "docs/ops/rollback.md",
   requiredSnippets: [
@@ -1098,6 +1123,7 @@ export async function runReleaseReadiness(options = {}) {
   await runMonorepoValidationDocumentContractCheck(repoRoot);
   await runTsconfigBuildGraphCheck(repoRoot);
   await runPackageOwnershipContractCheck(repoRoot);
+  await runHostedCiEvidenceCheck(repoRoot);
   await runDryRunDogfoodEvidenceCheck(repoRoot);
   await runWriteModeDogfoodEvidenceCheck(repoRoot);
   await runCredentialedReleaseEvidenceCheck(repoRoot);
@@ -1157,7 +1183,7 @@ export async function runReleaseReadiness(options = {}) {
   await runSecretScan(repoRoot);
 
   console.log("release readiness static gates passed");
-  console.log("dry-run, write-mode, and credentialed release evidence recorded in docs/ops/release.md");
+  console.log("hosted CI, dry-run, write-mode, and credentialed release evidence recorded in docs/ops/release.md");
   console.log("public package publication and versioned Action tags remain blocked by release policy");
 }
 
@@ -2586,6 +2612,23 @@ async function runDryRunDogfoodEvidenceCheck(repoRoot) {
   console.log("dry-run dogfood evidence record passed");
 }
 
+async function runHostedCiEvidenceCheck(repoRoot) {
+  const evidencePath = join(repoRoot, hostedCiEvidenceContract.path);
+  let text;
+  try {
+    text = await readFile(evidencePath, "utf8");
+  } catch (error) {
+    throw new Error(`${hostedCiEvidenceContract.path} is not readable: ${error.message}`);
+  }
+
+  const issues = validateHostedCiEvidence(text);
+  if (issues.length > 0) {
+    throw new Error(`hosted CI evidence record failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("hosted CI evidence record passed");
+}
+
 export function validatePackageScriptRegistration(packageJson) {
   const issues = [];
   const scripts = packageJson?.scripts;
@@ -2967,6 +3010,10 @@ export function validateWriteModeDogfoodEvidence(text, contract = writeModeDogfo
 }
 
 export function validateDryRunDogfoodEvidence(text, contract = dryRunDogfoodEvidenceContract) {
+  return validateReleaseEvidenceText(text, contract);
+}
+
+export function validateHostedCiEvidence(text, contract = hostedCiEvidenceContract) {
   return validateReleaseEvidenceText(text, contract);
 }
 

@@ -147,6 +147,11 @@ Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29018826925`.
 
 - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags are blocked
+- Current hosted CI validation evidence: `CI` workflow run `29050441506` passed on
+  `2026-07-09T21:09:52Z` for validated source commit
+  `2329da472e7c1e17074ae975ea7e2a2cd3116cbb` on `main` and validated `docs`,
+  `release-readiness`, `lint`, `smoke`, `check`, and `contract`. Run URL:
+  `https://github.com/0disoft/clarissimi/actions/runs/29050441506`.
 - Current dry-run dogfood evidence: `Clarissimi dry run` workflow run `29031384775` passed on
   `2026-07-09T15:54:58Z` at `77f3fcbbeb25e3338ee2a4bba3c8efbfc46e5cfb` and exercised the
   summary artifact validation path. Run URL:

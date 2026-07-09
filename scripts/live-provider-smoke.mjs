@@ -10,6 +10,18 @@ const providerModel = readEnv("CLARISSIMI_PROVIDER_MODEL");
 const providerEndpoint = readEnv("CLARISSIMI_PROVIDER_ENDPOINT");
 const providerThinking = readEnv("CLARISSIMI_PROVIDER_THINKING");
 const smokeEmail = "clarissimi-live-smoke@example.com";
+const deniedChildEnvNames = new Set([
+  "NODE_AUTH_TOKEN",
+  "OPENAI_API_" + "KEY",
+  "ANTHROPIC_API_" + "KEY",
+  "GEMINI_API_" + "KEY",
+  "DEEPSEEK_API_" + "KEY",
+  "OPENCODE_GO_API_" + "KEY",
+  "UMANS_API_" + "KEY",
+  "GITHUB_TOKEN",
+  "GITHUB_PAT",
+  "GITHUB_PAT_ODISOFT"
+]);
 
 if (providerToken === undefined || providerModel === undefined) {
   const missing = [
@@ -128,10 +140,7 @@ function runCommand(options) {
   return new Promise((resolve, reject) => {
     const child = spawn(options.command, options.args, {
       cwd: repoRoot,
-      env: {
-        ...process.env,
-        ...options.env
-      },
+      env: buildChildEnv(options.env),
       stdio: ["ignore", "pipe", "pipe"]
     });
     let stdout = "";
@@ -150,6 +159,23 @@ function runCommand(options) {
       resolve({ exitCode, stdout, stderr });
     });
   });
+}
+
+function buildChildEnv(extraEnv) {
+  const env = {};
+
+  for (const [name, value] of Object.entries(process.env)) {
+    if (deniedChildEnvNames.has(name.toUpperCase())) {
+      continue;
+    }
+
+    env[name] = value;
+  }
+
+  return {
+    ...env,
+    ...extraEnv
+  };
 }
 
 function writeBoundedProcessOutput(result) {

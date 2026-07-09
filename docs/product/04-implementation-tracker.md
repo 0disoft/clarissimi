@@ -311,6 +311,8 @@ Completed deliverables:
   aligned with `release-readiness`, `lint`, `smoke`, `check`, and `contract`
 - release-readiness validates that monorepo documents keep validation evidence aligned with
   `release-readiness`, `lint`, `smoke`, `check`, and `contract`
+- release-readiness validates that README validation guidance names the source-only merge gate,
+  release-only live provider smoke commands, and fail-closed `format` and `migration-check`
 - release-readiness validates the fixture dogfood workflow permission, mode, fixture, and output
   assertion contracts before reporting static release gates as passed
 - release-readiness validates that current write-mode dogfood evidence remains recorded in

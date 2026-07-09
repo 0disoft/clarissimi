@@ -220,6 +220,9 @@ before code is generated.
 
 ## Validation
 
+Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,
+`pnpm run smoke`, `pnpm run check`, and `pnpm run contract`, plus repository hygiene checks.
+
 The current executable checks are:
 
 - `pnpm run typecheck`

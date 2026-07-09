@@ -25,6 +25,7 @@ import {
   validatePackageReleasePolicy,
   validatePackageScriptRegistration,
   validateProductPositioningContract,
+  validateReadmeValidationContract,
   validateReleasePolicyDocumentContract,
   validateRootTsconfigReferences,
   validateRollbackProcedureContract,
@@ -224,6 +225,25 @@ test("release readiness rejects product positioning drift", () => {
     "docs/product/02-spec.md must include Clarissimi must be described as a contribution recognition engine..",
     "docs/product/02-spec.md must include maintainer-only analytics view unless a future ADR accepts a safer public framing..",
     "docs/product/02-spec.md must not include Public output should show contributor scores.."
+  ]);
+});
+
+test("release readiness accepts the README validation contract", () => {
+  assert.deepEqual(validateReadmeValidationContract(createReadmeValidationText()), []);
+});
+
+test("release readiness rejects README validation drift", () => {
+  const text = createReadmeValidationText()
+    .replace("Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,", "Source-only merges require `pnpm run docs`,")
+    .replace("- `pnpm run release-readiness`", "")
+    .replace("- `pnpm run live-provider-smoke`", "")
+    .replace("`format` intentionally fails closed", "`format` is optional");
+
+  assert.deepEqual(validateReadmeValidationContract(text), [
+    "README.md must include Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,.",
+    "README.md must include - `pnpm run release-readiness`.",
+    "README.md must include - `pnpm run live-provider-smoke`.",
+    "README.md must include `format` intentionally fails closed."
   ]);
 });
 
@@ -1166,6 +1186,26 @@ function createProductPositioningTexts() {
       ""
     ].join("\n")
   };
+}
+
+function createReadmeValidationText() {
+  return [
+    "Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
+    "`pnpm run smoke`, `pnpm run check`, and `pnpm run contract`, plus repository hygiene checks.",
+    "",
+    "- `pnpm run docs`",
+    "- `pnpm run release-readiness`",
+    "- `pnpm run lint`",
+    "- `pnpm run smoke`",
+    "- `pnpm run check`",
+    "- `pnpm run contract`",
+    "- `pnpm run live-provider-smoke`",
+    "- `pnpm run hosted-live-provider-smoke -- --model <provider-model>`",
+    "",
+    "`format` intentionally fails closed until maintainers accept a formatter baseline ADR.",
+    "`migration-check` intentionally fails until configured.",
+    ""
+  ].join("\n");
 }
 
 function createCiOperationalDocumentText() {

@@ -143,6 +143,24 @@ export const productPositioningContract = {
   ]
 };
 
+export const readmeValidationContract = {
+  path: "README.md",
+  requiredSnippets: [
+    "Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
+    "`pnpm run smoke`, `pnpm run check`, and `pnpm run contract`, plus repository hygiene checks.",
+    "- `pnpm run docs`",
+    "- `pnpm run release-readiness`",
+    "- `pnpm run lint`",
+    "- `pnpm run smoke`",
+    "- `pnpm run check`",
+    "- `pnpm run contract`",
+    "- `pnpm run live-provider-smoke`",
+    "- `pnpm run hosted-live-provider-smoke -- --model <provider-model>`",
+    "`format` intentionally fails closed",
+    "`migration-check` intentionally fails until configured"
+  ]
+};
+
 export const ciOperationalDocumentContract = {
   path: "docs/ops/ci.md",
   requiredSnippets: [
@@ -686,6 +704,7 @@ export async function runReleaseReadiness(options = {}) {
   await runWorkspacePackageReleasePolicyCheck(repoRoot);
   await runReleasePolicyDocumentContractCheck(repoRoot);
   await runProductPositioningContractCheck(repoRoot);
+  await runReadmeValidationContractCheck(repoRoot);
   await runCiOperationalDocumentContractCheck(repoRoot);
   await runOperationalContractDocumentContractCheck(repoRoot);
   await runObservabilityDocumentContractCheck(repoRoot);
@@ -962,6 +981,18 @@ export function validateProductPositioningContract(textsByPath, contract = produ
       if (text.includes(snippet)) {
         issues.push(`${document.path} must not include ${snippet}.`);
       }
+    }
+  }
+
+  return issues;
+}
+
+export function validateReadmeValidationContract(text, contract = readmeValidationContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
     }
   }
 
@@ -1431,6 +1462,23 @@ async function runProductPositioningContractCheck(repoRoot) {
   }
 
   console.log("product positioning contract passed");
+}
+
+async function runReadmeValidationContractCheck(repoRoot) {
+  const readmePath = join(repoRoot, readmeValidationContract.path);
+  let text;
+  try {
+    text = await readFile(readmePath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${readmeValidationContract.path}: ${error.message}`);
+  }
+
+  const issues = validateReadmeValidationContract(text);
+  if (issues.length > 0) {
+    throw new Error(`README validation contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("README validation contract passed");
 }
 
 async function runCiOperationalDocumentContractCheck(repoRoot) {

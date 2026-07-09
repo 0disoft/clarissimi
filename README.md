@@ -79,7 +79,7 @@ Implemented MVP slices:
 - `packages/renderers`: deterministic JSONL, contributor JSON, Markdown, static-data output, and
   draft review rendering
 - `packages/cli`: fixture-first local command orchestration for validation, recognition dry runs,
-  agent-assisted draft staging/import, and rebuild previews
+  agent-assisted draft staging, approval, import, and rebuild previews
 - `packages/action`: GitHub Action entrypoint for dry-run summaries, fixture-first proposal
   branch/pull-request flows, draft review proposals, and event-path live GitHub collection in write
   modes
@@ -121,11 +121,13 @@ To keep an unapproved draft in a reviewable repository inbox first:
 
 ```powershell
 node packages/cli/dist/bin/clarissimi.js stage-draft --draft agent-draft.json --json
+node packages/cli/dist/bin/clarissimi.js approve-draft --draft .clarissimi/drafts/example-project-merged_pull_request-42.json --json
+node packages/cli/dist/bin/clarissimi.js import-draft --draft .clarissimi/drafts/example-project-merged_pull_request-42.json --out-dir . --json
 ```
 
 `stage-draft` writes a sanitized copy to `.clarissimi/drafts/` and leaves
-`.clarissimi/contributions.jsonl` untouched. A maintainer can review the staged file, change
-`maintainerApprovalStatus` to `approved`, and then import that reviewed file.
+`.clarissimi/contributions.jsonl` untouched. A maintainer can review the staged file, run
+`approve-draft` to mark it approved, and then import that reviewed file.
 
 ## GitHub Action
 

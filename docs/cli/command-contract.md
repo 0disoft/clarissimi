@@ -13,6 +13,7 @@
 - Provider boundary: `docs/adr/0019-add-openai-compatible-provider-adapter.md`
 - Agent-assisted import boundary: `docs/adr/0020-add-agent-assisted-draft-import.md`
 - Draft inbox boundary: `docs/adr/0021-add-draft-inbox-staging.md`
+- Draft approval helper: `docs/adr/0024-add-draft-approval-helper.md`
 
 ## MVP Commands
 
@@ -74,6 +75,20 @@ The command does not import records into `.clarissimi/contributions.jsonl`, deci
 providers, fetch GitHub evidence, create pull requests, or store AI/provider provenance.
 
 By default, `--drafts-dir` is `.clarissimi/drafts`.
+
+### `clarissimi approve-draft --draft <path>`
+
+Approves a staged draft after maintainer review by rewriting the selected file as a sanitized
+`clarissimi.assessment/v1` document with `maintainerApprovalStatus: "approved"`.
+
+The draft file may also be a `clarissimi.draft-envelope/v1` object with an `assessment` field. The
+command validates the contained assessment, accepts only current `draft` approval status, strips raw
+evidence excerpts, omits AI/provider provenance, and writes only the approved assessment document.
+
+The command does not import records into `.clarissimi/contributions.jsonl`, rebuild derived public
+outputs, decide approval without maintainer intent, call providers, fetch GitHub evidence, mutate
+branches, or create pull requests. Use `import-draft` after this command to publish the approved
+record into the ledger.
 
 ### `clarissimi import-draft --draft <path>`
 

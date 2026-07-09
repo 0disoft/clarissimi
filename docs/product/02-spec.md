@@ -194,6 +194,7 @@ The MVP CLI should expose:
 - `clarissimi validate-ledger`
 - `clarissimi recognize --fixture <path> --mode dry-run`
 - `clarissimi stage-draft --draft <path>`
+- `clarissimi approve-draft --draft <path>`
 - `clarissimi import-draft --draft <path>`
 - `clarissimi rebuild`
 

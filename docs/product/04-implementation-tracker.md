@@ -31,8 +31,8 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   OpenAI-compatible HTTP adapter
 - `packages/renderers`: JSONL, contributor JSON, Markdown, static-data renderers, and draft review
   JSON rendering
-- `packages/cli`: fixture-first validation, recognition dry-run, agent-assisted draft staging/import,
-  rebuild commands, and explicit fake or OpenAI-compatible provider selection
+- `packages/cli`: fixture-first validation, recognition dry-run, agent-assisted draft staging,
+  approval, import, rebuild commands, and explicit fake or OpenAI-compatible provider selection
 - `packages/action`: Action runner for dry-run summaries, fixture-first public recognition
   proposals, fixture-first draft review proposals, and event-path live GitHub collection in write
   modes with explicit fake or OpenAI-compatible provider selection
@@ -401,6 +401,31 @@ Validation:
 
 - renderer draft review tests
 - Action staging, branch writer, pull request, environment, and runner tests
+- `pnpm run docs`
+- `pnpm run smoke`
+- `pnpm run check`
+- `pnpm run contract`
+
+### 14. Draft Approval Helper
+
+Source: `docs/adr/0024-add-draft-approval-helper.md`, `docs/cli/command-contract.md`
+
+Status: Completed in `packages/cli/src/run.ts`.
+
+Goal: give maintainers a command-level approval step between draft inbox review and public ledger
+import.
+
+Completed deliverables:
+
+- `clarissimi approve-draft --draft <path>` validates draft assessment documents
+- only current `maintainerApprovalStatus: "draft"` files can be approved
+- approved files are rewritten as sanitized assessment JSON, not draft envelopes
+- raw evidence excerpts and AI/provider provenance remain omitted
+- `.clarissimi/contributions.jsonl` remains untouched until `import-draft`
+
+Validation:
+
+- CLI approve-draft tests
 - `pnpm run docs`
 - `pnpm run smoke`
 - `pnpm run check`

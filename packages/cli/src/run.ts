@@ -13,6 +13,7 @@ import {
   renderContributorsMarkdown,
   renderContributionsJsonl,
   renderDraftReviewJson,
+  renderPrettyJson,
   renderRecognitionOutputs,
   renderStaticContributionsJson,
   toDraftReviewRecord
@@ -55,6 +56,8 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExi
         return await runRecognize(args, io);
       case "stage-draft":
         return await runStageDraft(args, io);
+      case "approve-draft":
+        return await runApproveDraft(args, io);
       case "import-draft":
         return await runImportDraft(args, io);
       case "rebuild":
@@ -233,6 +236,47 @@ async function runStageDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> 
     return CLI_EXIT_CODES.success;
   } catch (error) {
     writeFailure(io, args, "stage-draft", error);
+    return error instanceof RendererValidationError
+      ? CLI_EXIT_CODES.policyRejection
+      : CLI_EXIT_CODES.writeFailure;
+  }
+}
+
+async function runApproveDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
+  const draftPath = getStringFlag(args, "draft");
+  if (draftPath === undefined) {
+    io.stderr("approve-draft requires --draft <path>.\n");
+    return CLI_EXIT_CODES.usage;
+  }
+
+  const resolvedDraftPath = resolveFromCwd(io.cwd, draftPath);
+
+  try {
+    const parsedDraftInput = parseJsonText(
+      await readTextFile(resolvedDraftPath),
+      draftPath
+    );
+    const draftInput = parseDraftImportInput(parsedDraftInput);
+    const draftReview = toDraftReviewRecord(draftInput.assessment);
+    const approvedDraft = {
+      ...draftReview,
+      maintainerApprovalStatus: "approved"
+    };
+
+    await writeTextFile(resolvedDraftPath, renderPrettyJson(approvedDraft));
+
+    writeOutput(io, args, {
+      ok: true,
+      command: "approve-draft",
+      draftFormat: draftInput.format,
+      draftPath,
+      approvedDraftPath: resolvedDraftPath,
+      approvalStatus: approvedDraft.maintainerApprovalStatus,
+      message: "Draft approved; import it to publish the recognition record."
+    });
+    return CLI_EXIT_CODES.success;
+  } catch (error) {
+    writeFailure(io, args, "approve-draft", error);
     return error instanceof RendererValidationError
       ? CLI_EXIT_CODES.policyRejection
       : CLI_EXIT_CODES.writeFailure;
@@ -457,6 +501,7 @@ function renderHelp(): string {
     "  clarissimi validate-ledger [--ledger <path>] [--json]",
     "  clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run [--provider <id>] [--provider-model <model>] [--provider-thinking disabled] [--json]",
     "  clarissimi stage-draft --draft <path> [--drafts-dir <path>] [--json]",
+    "  clarissimi approve-draft --draft <path> [--json]",
     "  clarissimi import-draft --draft <path> [--ledger <path>] [--out-dir <path>] [--json]",
     "  clarissimi rebuild [--ledger <path>] [--out-dir <path>] [--json]",
     ""

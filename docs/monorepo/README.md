@@ -39,7 +39,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
 - `packages/renderers`: Deterministic JSONL, contributor JSON, Markdown, static-data output, and
   draft review rendering.
 - `packages/cli`: Fixture-first local command orchestration for config validation, ledger
-  validation, recognition dry runs, agent-assisted draft staging/import, and rebuild previews.
+  validation, recognition dry runs, agent-assisted draft staging/approval/import, and rebuild
+  previews.
 - `packages/action`: GitHub Action entrypoint for dry-run summaries, fixture-first proposal pull
   requests, draft review proposals, and event-path live GitHub collection in write modes.
 

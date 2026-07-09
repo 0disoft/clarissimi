@@ -280,6 +280,108 @@ test("stage-draft rejects duplicate staged draft paths", async () => {
   });
 });
 
+test("approve-draft marks a staged draft approved without touching the ledger", async () => {
+  await withTempDir(async (dir) => {
+    const draftPath = join(dir, "agent-draft.json");
+    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+    await writeFile(
+      draftPath,
+      JSON.stringify(
+        assessment({
+          maintainerApprovalStatus: "draft",
+          evidenceRefs: [
+            {
+              kind: "pull_request",
+              id: "PR-42",
+              url: "https://github.com/example/project/pull/42",
+              title: "Add parser regression coverage",
+              excerpt: "Raw PR body should not survive approval."
+            }
+          ]
+        })
+      ),
+      "utf8"
+    );
+
+    const result = await run(["approve-draft", "--draft", draftPath, "--json"], dir);
+    const output = JSON.parse(result.stdout);
+    const approvedText = await readFile(draftPath, "utf8");
+    const approvedDraft = JSON.parse(approvedText);
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(output.command, "approve-draft");
+    assert.equal(output.approvalStatus, "approved");
+    assert.equal(approvedDraft.maintainerApprovalStatus, "approved");
+    assert.equal(approvedText.includes("Raw PR body should not survive approval"), false);
+    await assert.rejects(readFile(ledger, "utf8"));
+  });
+});
+
+test("approve-draft accepts delegated envelopes without storing provenance", async () => {
+  await withTempDir(async (dir) => {
+    const draftPath = join(dir, "delegated-draft.json");
+    await writeFile(
+      draftPath,
+      JSON.stringify({
+        schemaVersion: "clarissimi.draft-envelope/v1",
+        draftProvenance: {
+          drafter: "codex",
+          delegatedTo: "external-llm",
+          model: "example-model"
+        },
+        assessment: assessment({ maintainerApprovalStatus: "draft" })
+      }),
+      "utf8"
+    );
+
+    const result = await run(["approve-draft", "--draft", draftPath, "--json"], dir);
+    const approvedText = await readFile(draftPath, "utf8");
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(JSON.parse(result.stdout).draftFormat, "draft-envelope");
+    assert.equal(JSON.parse(approvedText).maintainerApprovalStatus, "approved");
+    assert.equal(approvedText.includes("draftProvenance"), false);
+    assert.equal(approvedText.includes("external-llm"), false);
+  });
+});
+
+test("approve-draft rejects non-draft approval states", async () => {
+  await withTempDir(async (dir) => {
+    const draftPath = join(dir, "approved-draft.json");
+    await writeFile(draftPath, JSON.stringify(assessment()), "utf8");
+
+    const result = await run(["approve-draft", "--draft", draftPath, "--json"], dir);
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(result.exitCode, 6);
+    assert.equal(output.message, "Only draft assessments can be staged for maintainer review.");
+  });
+});
+
+test("approve-draft output can be imported into the public ledger", async () => {
+  await withTempDir(async (dir) => {
+    const draftPath = join(dir, "agent-draft.json");
+    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+    await writeFile(
+      draftPath,
+      JSON.stringify(assessment({ maintainerApprovalStatus: "draft" })),
+      "utf8"
+    );
+
+    const approvalResult = await run(["approve-draft", "--draft", draftPath, "--json"], dir);
+    const importResult = await run(
+      ["import-draft", "--draft", draftPath, "--ledger", ledger, "--json"],
+      dir
+    );
+    const ledgerText = await readFile(ledger, "utf8");
+
+    assert.equal(approvalResult.exitCode, 0);
+    assert.equal(importResult.exitCode, 0);
+    assert.equal(JSON.parse(importResult.stdout).records, 1);
+    assert.equal(ledgerText.includes("\"maintainerApprovalStatus\":\"approved\""), true);
+  });
+});
+
 test("import-draft appends an approved agent draft and writes derived outputs", async () => {
   await withTempDir(async (dir) => {
     const draftPath = join(dir, "agent-draft.json");

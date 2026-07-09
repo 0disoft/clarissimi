@@ -18,6 +18,7 @@ redaction, providers, or renderers.
 - `clarissimi validate-ledger`
 - `clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run`
 - `clarissimi stage-draft --draft <path>`
+- `clarissimi approve-draft --draft <path>`
 - `clarissimi import-draft --draft <path>`
 - `clarissimi rebuild`
 
@@ -36,7 +37,11 @@ or auto-approved maintainer status.
 `stage-draft` is the review-inbox path: the same agent-authored JSON can be validated and copied to
 `.clarissimi/drafts/` while it still has `maintainerApprovalStatus: "draft"`. The staged copy strips
 raw evidence excerpts and does not preserve AI/provider provenance. Maintainers can review and edit
-that file, change the approval status to `approved`, and then pass it to `import-draft`.
+that file, run `approve-draft` to mark it approved, and then pass it to `import-draft`.
+
+`approve-draft` is the maintainer approval helper. It rewrites a selected draft file as a sanitized
+approved assessment, but it does not import the record, rebuild public outputs, call providers, or
+create GitHub pull requests.
 
 If the current agent delegates drafting to another LLM, it may wrap the assessment in
 `clarissimi.draft-envelope/v1`. Clarissimi accepts the wrapper but records only the validated

@@ -36,6 +36,7 @@ engine.
   partition migration path
 - `0023-add-action-draft-inbox-proposal-mode.md`: add an Action mode that proposes draft inbox
   review files
+- `0024-add-draft-approval-helper.md`: add a CLI helper for maintainer approval of staged drafts
 
 ## Review Blockers
 

@@ -11,6 +11,7 @@
 - AI boundary: `docs/adr/0003-ai-as-drafter-not-judge.md`
 - Redaction boundary: `docs/adr/0006-redaction-before-provider.md`
 - Provider boundary: `docs/adr/0019-add-openai-compatible-provider-adapter.md`
+- Agent-assisted import boundary: `docs/adr/0020-add-agent-assisted-draft-import.md`
 
 ## MVP Commands
 
@@ -55,6 +56,20 @@ Rebuilds derived outputs from `.clarissimi/contributions.jsonl`.
 
 The fixture-first implementation previews rebuilds by default and writes files only when `--out-dir`
 is explicit.
+
+### `clarissimi import-draft --draft <path>`
+
+Imports an agent-authored `clarissimi.assessment/v1` JSON draft. This command is for workflows
+where a maintainer gives a PR or issue URL to an already-running AI coding agent, and the agent
+returns a Clarissimi-compatible assessment document.
+
+The command validates the draft, rejects non-public approval states, appends the sanitized public
+record to the selected ledger, refuses duplicate contributor/source pull request records, and
+rebuilds derived outputs. It does not call providers, read provider tokens, fetch GitHub evidence,
+decide approval, mutate branches, or create pull requests.
+
+By default, `--ledger` is `.clarissimi/contributions.jsonl`. The command writes output files only
+when `--out-dir` is explicit.
 
 ## Modes
 

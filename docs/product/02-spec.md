@@ -28,8 +28,9 @@ rules. Public output must prioritize the contribution story over numeric values.
 
 The MVP primary event is a merged GitHub pull request.
 
-Clarissimi may later support closed issues, linked issue authors, reviewers, release validators, and
-manual recognition commands, but the first implementation should avoid broad attribution complexity.
+Clarissimi may support agent-assisted manual draft import for merged pull request assessments.
+Closed issues, linked issue authors, reviewers, release validators, and broader manual attribution
+remain later capabilities; the first implementation should avoid broad attribution complexity.
 
 ## Evidence Inputs
 
@@ -172,6 +173,7 @@ The MVP CLI should expose:
 - `clarissimi validate-config`
 - `clarissimi validate-ledger`
 - `clarissimi recognize --fixture <path> --mode dry-run`
+- `clarissimi import-draft --draft <path>`
 - `clarissimi rebuild`
 
 Fixture-first implementation is acceptable before live GitHub collection.

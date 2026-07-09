@@ -79,13 +79,13 @@ Implemented MVP slices:
 - `packages/renderers`: deterministic JSONL, contributor JSON, Markdown, and static-data output
   rendering
 - `packages/cli`: fixture-first local command orchestration for validation, recognition dry runs,
-  and rebuild previews
+  agent-assisted draft import, and rebuild previews
 - `packages/action`: GitHub Action entrypoint for dry-run summaries, fixture-first proposal
   branch/pull-request flows, and event-path live GitHub collection in propose mode
 
 Not implemented yet:
 
-- credentialed live-provider smoke evidence for public release
+- credentialed live-provider smoke evidence for automated provider-mode public release
 - repository write modes such as direct `commit`
 - comment updates or default-branch mutation
 
@@ -102,6 +102,17 @@ node packages/cli/dist/bin/clarissimi.js recognize --github-fixture fixtures/git
 The command creates a deterministic fake-provider assessment from either a Clarissimi evidence
 fixture or a GitHub-shaped merged pull request fixture. Public output previews are rendered only
 when the fixture explicitly carries maintainer approval.
+
+For the agent-assisted path, use an already-running AI coding agent to inspect a PR or issue and
+produce a `clarissimi.assessment/v1` JSON draft. Clarissimi can then validate and record the
+maintainer-approved draft without owning the agent's API key:
+
+```powershell
+node packages/cli/dist/bin/clarissimi.js import-draft --draft agent-draft.json --out-dir . --json
+```
+
+`import-draft` rejects unapproved drafts and duplicate contributor/source records before writing
+the ledger.
 
 ## GitHub Action
 
@@ -128,9 +139,10 @@ test and local path. Explicit OpenAI-compatible provider selection is available 
 runs, but it requires the caller to provide a model and `CLARISSIMI_PROVIDER_TOKEN`; correctness
 tests continue to use fake providers or injected fetch implementations.
 
-Release maintainers can run `pnpm run live-provider-smoke` with `CLARISSIMI_PROVIDER_TOKEN` and
-`CLARISSIMI_PROVIDER_MODEL` to perform an explicit credentialed provider smoke. This command is not
-part of normal correctness checks.
+Release maintainers who want automated provider mode can run `pnpm run live-provider-smoke` with
+`CLARISSIMI_PROVIDER_TOKEN` and `CLARISSIMI_PROVIDER_MODEL` to perform an explicit credentialed
+provider smoke. This command is not part of normal correctness checks and is not required for the
+agent-assisted import workflow.
 
 Workflow examples and permission details live in `docs/github-action/README.md` and
 `docs/github-action/permissions.md`.

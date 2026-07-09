@@ -30,8 +30,8 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
 - `packages/providers`: provider adapter interface, deterministic fake provider, and SDK-free
   OpenAI-compatible HTTP adapter
 - `packages/renderers`: JSONL, contributor JSON, Markdown, and static-data renderers
-- `packages/cli`: fixture-first validation, recognition dry-run, rebuild commands, and explicit
-  fake or OpenAI-compatible provider selection
+- `packages/cli`: fixture-first validation, recognition dry-run, agent-assisted draft import,
+  rebuild commands, and explicit fake or OpenAI-compatible provider selection
 - `packages/action`: Action runner for dry-run summaries, fixture-first proposal pull requests, and
   event-path live GitHub collection in propose mode with explicit fake or OpenAI-compatible
   provider selection
@@ -278,7 +278,34 @@ Completed deliverables:
 
 Release follow-up:
 
-- Credentialed live-provider smoke run evidence remains required before public release.
+- Credentialed live-provider smoke run evidence remains required only before automated
+  provider-mode public release.
+
+### 10. Agent-Assisted Draft Import
+
+Source: `docs/adr/0020-add-agent-assisted-draft-import.md`,
+`docs/cli/command-contract.md`
+
+Status: Completed for local CLI import.
+
+Goal: let maintainers use an already-running AI coding agent as the drafter without requiring
+Clarissimi to own or configure that agent's provider API key.
+
+Completed deliverables:
+
+- `clarissimi import-draft --draft <path>` validates complete assessment JSON documents
+- approved and auto-approved drafts can be imported into the JSONL ledger
+- draft, rejected, skipped, invalid, and duplicate contributor/source records are rejected
+- derived contributors JSON, Markdown, and static JSON can be rebuilt through `--out-dir`
+- public ledger records continue to omit raw evidence excerpts
+
+Validation:
+
+- CLI import-draft tests
+- `pnpm run docs`
+- `pnpm run smoke`
+- `pnpm run check`
+- `pnpm run contract`
 
 Validation:
 

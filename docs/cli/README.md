@@ -6,7 +6,8 @@
 ## Purpose
 
 The Clarissimi CLI gives maintainers a local, reviewable way to validate configuration, validate the
-recognition ledger, run fixture-based recognition, and rebuild derived outputs.
+recognition ledger, run fixture-based recognition, import agent-authored recognition drafts, and
+rebuild derived outputs.
 
 The CLI is an orchestration shell. It must not own domain policy that belongs in schemas, core,
 redaction, providers, or renderers.
@@ -16,6 +17,7 @@ redaction, providers, or renderers.
 - `clarissimi validate-config`
 - `clarissimi validate-ledger`
 - `clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run`
+- `clarissimi import-draft --draft <path>`
 - `clarissimi rebuild`
 
 Fixture-first behavior is acceptable for the first implementation. `--fixture` accepts Clarissimi's
@@ -24,6 +26,11 @@ fixture and routes it through `packages/github` without live GitHub API access.
 
 The fixture-first CLI implements these commands locally without GitHub API access or live provider
 credentials.
+
+`import-draft` is the agent-assisted path: a maintainer can ask Codex, Claude Code, Grok, OpenCode,
+or another already-running AI coding agent to inspect a PR and produce a Clarissimi assessment JSON
+document. The CLI validates that document and records it only when it already carries an approved
+or auto-approved maintainer status.
 
 ## Output Contract
 

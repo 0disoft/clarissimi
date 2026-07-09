@@ -10,6 +10,7 @@ import {
   renderContributorsJson,
   renderContributorsMarkdown,
   renderContributionsJsonl,
+  renderRecognitionOutputs,
   renderStaticContributionsJson
 } from "@clarissimi/renderers";
 import {
@@ -17,6 +18,7 @@ import {
   createOpenAiCompatibleContributionDraftProvider,
   type ContributionDraftProvider
 } from "@clarissimi/providers";
+import { validateContributionAssessment } from "@clarissimi/schemas";
 
 import { CliUsageError, getBooleanFlag, getStringFlag, parseArgs, type ParsedArgs } from "./args.js";
 import { validateConfigFile } from "./config.js";
@@ -24,6 +26,7 @@ import { CLI_EXIT_CODES, type CliExitCode } from "./exit-codes.js";
 import { recognizeFixture, recognizeGitHubFixture } from "./fixture.js";
 import {
   fileExists,
+  parseJsonText,
   readTextFile,
   resolveFromCwd,
   writeTextFile,
@@ -46,6 +49,8 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExi
         return await runValidateLedger(args, io);
       case "recognize":
         return await runRecognize(args, io);
+      case "import-draft":
+        return await runImportDraft(args, io);
       case "rebuild":
         return await runRebuild(args, io);
       default:
@@ -177,6 +182,107 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   }
 }
 
+async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
+  const draftPath = getStringFlag(args, "draft");
+  if (draftPath === undefined) {
+    io.stderr("import-draft requires --draft <path>.\n");
+    return CLI_EXIT_CODES.usage;
+  }
+
+  const ledgerPath = resolveFromCwd(
+    io.cwd,
+    getStringFlag(args, "ledger", CONTRIBUTIONS_JSONL_PATH) ?? CONTRIBUTIONS_JSONL_PATH
+  );
+  const outDir = getStringFlag(args, "out-dir");
+
+  try {
+    const parsedDraft = parseJsonText(
+      await readTextFile(resolveFromCwd(io.cwd, draftPath)),
+      draftPath
+    );
+    const validation = validateContributionAssessment(parsedDraft);
+    if (!validation.ok) {
+      throw new RendererValidationError("Draft is not a valid contribution assessment.", validation.issues);
+    }
+
+    const existingLedgerText = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
+    const existingRecords = parseContributionsJsonl(existingLedgerText);
+    const duplicate = existingRecords.find((record) => hasSameContributionIdentity(record, validation.value));
+    if (duplicate !== undefined) {
+      throw new RendererValidationError("Draft already exists in the selected ledger.", [
+        {
+          path: "$.source",
+          code: "duplicate_source",
+          message: "A contribution from this contributor and merged pull request is already recorded."
+        }
+      ]);
+    }
+
+    const nextRecords = [...existingRecords, validation.value];
+    const outputs = renderRecognitionOutputs(nextRecords);
+
+    await writeTextFile(ledgerPath, outputs.contributionsJsonl);
+
+    if (outDir !== undefined) {
+      await writeRenderedOutputs(resolveFromCwd(io.cwd, outDir), outputs);
+    }
+
+    writeOutput(io, args, {
+      ok: true,
+      command: "import-draft",
+      draftPath,
+      ledgerPath,
+      records: nextRecords.length,
+      imported: 1,
+      approvalStatus: validation.value.maintainerApprovalStatus,
+      wroteDerivedFiles: outDir !== undefined,
+      outputDirectory: outDir ?? null,
+      files: outDir === undefined
+        ? [CONTRIBUTIONS_JSONL_PATH]
+        : [
+            CONTRIBUTIONS_JSONL_PATH,
+            CONTRIBUTORS_JSON_PATH,
+            CONTRIBUTORS_MARKDOWN_PATH,
+            STATIC_DATA_JSON_PATH
+          ],
+      message: outDir === undefined
+        ? "Approved draft imported into the ledger; pass --out-dir to write derived files."
+        : "Approved draft imported and derived files rebuilt."
+    });
+    return CLI_EXIT_CODES.success;
+  } catch (error) {
+    writeFailure(io, args, "import-draft", error);
+    return error instanceof RendererValidationError
+      ? CLI_EXIT_CODES.policyRejection
+      : CLI_EXIT_CODES.writeFailure;
+  }
+}
+
+function hasSameContributionIdentity(
+  left: {
+    readonly contributor: { readonly platform: string; readonly id: string };
+    readonly source: {
+      readonly repository: string;
+      readonly event: string;
+      readonly pullRequestNumber: number;
+    };
+  },
+  right: {
+    readonly contributor: { readonly platform: string; readonly id: string };
+    readonly source: {
+      readonly repository: string;
+      readonly event: string;
+      readonly pullRequestNumber: number;
+    };
+  }
+): boolean {
+  return left.contributor.platform === right.contributor.platform &&
+    left.contributor.id === right.contributor.id &&
+    left.source.repository === right.source.repository &&
+    left.source.event === right.source.event &&
+    left.source.pullRequestNumber === right.source.pullRequestNumber;
+}
+
 async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const ledgerPath = resolveFromCwd(
     io.cwd,
@@ -187,20 +293,10 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   try {
     const ledgerText = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
     const records = parseContributionsJsonl(ledgerText);
-    const outputs = {
-      [CONTRIBUTIONS_JSONL_PATH]: renderContributionsJsonl(records),
-      [CONTRIBUTORS_JSON_PATH]: renderContributorsJson(records),
-      [CONTRIBUTORS_MARKDOWN_PATH]: renderContributorsMarkdown(records),
-      [STATIC_DATA_JSON_PATH]: renderStaticContributionsJson(records)
-    };
+    const outputs = renderRecognitionOutputs(records);
 
     if (outDir !== undefined) {
-      const resolvedOutDir = resolveFromCwd(io.cwd, outDir);
-      await Promise.all(
-        Object.entries(outputs).map(([path, value]) =>
-          writeTextFile(join(resolvedOutDir, path), value)
-        )
-      );
+      await writeRenderedOutputs(resolveFromCwd(io.cwd, outDir), outputs);
     }
 
     writeOutput(io, args, {
@@ -210,7 +306,12 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
       records: records.length,
       wroteFiles: outDir !== undefined,
       outputDirectory: outDir ?? null,
-      files: Object.keys(outputs),
+      files: [
+        CONTRIBUTIONS_JSONL_PATH,
+        CONTRIBUTORS_JSON_PATH,
+        CONTRIBUTORS_MARKDOWN_PATH,
+        STATIC_DATA_JSON_PATH
+      ],
       message: outDir === undefined
         ? "Rebuild preview completed; pass --out-dir to write derived files."
         : "Rebuild completed."
@@ -252,9 +353,29 @@ function renderHelp(): string {
     "  clarissimi validate-config [--config <path>] [--json]",
     "  clarissimi validate-ledger [--ledger <path>] [--json]",
     "  clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run [--provider <id>] [--provider-model <model>] [--json]",
+    "  clarissimi import-draft --draft <path> [--ledger <path>] [--out-dir <path>] [--json]",
     "  clarissimi rebuild [--ledger <path>] [--out-dir <path>] [--json]",
     ""
   ].join("\n");
+}
+
+async function writeRenderedOutputs(
+  outDir: string,
+  outputs: {
+    readonly contributionsJsonl: string;
+    readonly contributorsJson: string;
+    readonly contributorsMarkdown: string;
+    readonly staticDataJson: string;
+  }
+): Promise<void> {
+  await Promise.all(
+    [
+      [CONTRIBUTIONS_JSONL_PATH, outputs.contributionsJsonl],
+      [CONTRIBUTORS_JSON_PATH, outputs.contributorsJson],
+      [CONTRIBUTORS_MARKDOWN_PATH, outputs.contributorsMarkdown],
+      [STATIC_DATA_JSON_PATH, outputs.staticDataJson]
+    ].map(([path, value]) => writeTextFile(join(outDir, path), value))
+  );
 }
 
 async function resolveRecognitionProvider(

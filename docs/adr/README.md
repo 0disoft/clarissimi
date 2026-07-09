@@ -30,6 +30,7 @@ engine.
 - `0017-propose-mode-write-boundary.md`: define propose-mode branch, pull request, and permission boundaries
 - `0018-add-live-github-collector-boundary.md`: add live GitHub collector boundary
 - `0019-add-openai-compatible-provider-adapter.md`: add SDK-free OpenAI-compatible provider adapter
+- `0020-add-agent-assisted-draft-import.md`: add agent-assisted draft import
 
 ## Review Blockers
 

@@ -176,6 +176,96 @@ test("validate-ledger rejects draft records", async () => {
   });
 });
 
+test("import-draft appends an approved agent draft and writes derived outputs", async () => {
+  await withTempDir(async (dir) => {
+    const draftPath = join(dir, "agent-draft.json");
+    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+    const outDir = join(dir, "out");
+    await writeFile(
+      draftPath,
+      JSON.stringify(
+        assessment({
+          evidenceRefs: [
+            {
+              kind: "pull_request",
+              id: "PR-42",
+              url: "https://github.com/example/project/pull/42",
+              title: "Add parser regression coverage",
+              excerpt: "Raw PR body should not be written to public output."
+            }
+          ]
+        })
+      ),
+      "utf8"
+    );
+
+    const result = await run(
+      [
+        "import-draft",
+        "--draft",
+        draftPath,
+        "--ledger",
+        ledger,
+        "--out-dir",
+        outDir,
+        "--json"
+      ],
+      dir
+    );
+    const output = JSON.parse(result.stdout);
+    const ledgerText = await readFile(ledger, "utf8");
+    const contributorsMarkdown = await readFile(join(outDir, "CONTRIBUTORS.md"), "utf8");
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(output.command, "import-draft");
+    assert.equal(output.records, 1);
+    assert.equal(output.wroteDerivedFiles, true);
+    assert.equal(ledgerText.includes("Added regression coverage"), true);
+    assert.equal(ledgerText.includes("Raw PR body should not be written"), false);
+    assert.equal(contributorsMarkdown.includes("## octocat"), true);
+  });
+});
+
+test("import-draft rejects draft approval status before writing ledger output", async () => {
+  await withTempDir(async (dir) => {
+    const draftPath = join(dir, "agent-draft.json");
+    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+    await writeFile(
+      draftPath,
+      JSON.stringify(assessment({ maintainerApprovalStatus: "draft" })),
+      "utf8"
+    );
+
+    const result = await run(
+      ["import-draft", "--draft", draftPath, "--ledger", ledger, "--json"],
+      dir
+    );
+
+    assert.equal(result.exitCode, 6);
+    assert.equal(JSON.parse(result.stdout).ok, false);
+    await assert.rejects(readFile(ledger, "utf8"));
+  });
+});
+
+test("import-draft rejects duplicate contributor and source records", async () => {
+  await withTempDir(async (dir) => {
+    const draftPath = join(dir, "agent-draft.json");
+    const ledgerDir = join(dir, ".clarissimi");
+    const ledger = join(ledgerDir, "contributions.jsonl");
+    await mkdir(ledgerDir, { recursive: true });
+    await writeFile(draftPath, JSON.stringify(assessment()), "utf8");
+    await writeFile(ledger, `${JSON.stringify(assessment())}\n`, "utf8");
+
+    const result = await run(
+      ["import-draft", "--draft", draftPath, "--ledger", ledger, "--json"],
+      dir
+    );
+
+    assert.equal(result.exitCode, 6);
+    assert.equal(JSON.parse(result.stdout).message.includes("already exists"), true);
+  });
+});
+
 test("recognize creates a dry-run draft without public outputs by default", async () => {
   await withTempDir(async (dir) => {
     const fixturePath = join(dir, "fixture.json");

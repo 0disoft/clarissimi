@@ -111,6 +111,31 @@ test("keeps ranking language out of generated public narrative fields", () => {
   assert.equal(validateContributionAssessment(assessment).ok, true);
 });
 
+test("keeps contribution share language out of generated public narrative fields", () => {
+  const evidence = preparedEvidence([
+    {
+      kind: "file",
+      id: "src/maintenance.ts",
+      title: "repository maintenance"
+    }
+  ]);
+
+  const assessment = createFakeAssessment({
+    contributor,
+    preparedEvidence: evidence,
+    hints: {
+      affectedArea: "37% of recent contribution weight",
+      suggestedBadge: "Score Share Leader"
+    }
+  });
+
+  assert.equal(assessment.affectedArea, "repository maintenance");
+  assert.equal(assessment.suggestedBadge, "Maintenance Steward");
+  assert.equal(assessment.evidenceSummary.includes("37%"), false);
+  assert.equal(assessment.publicRecognitionText.includes("37%"), false);
+  assert.equal(validateContributionAssessment(assessment).ok, true);
+});
+
 test("throws when prepared evidence cannot satisfy the schema", () => {
   const evidence = prepareEvidenceForProvider({
     source,

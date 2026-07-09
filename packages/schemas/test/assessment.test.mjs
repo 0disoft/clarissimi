@@ -80,6 +80,19 @@ test("rejects public ranking language in recognition text", () => {
   assert.equal(result.issues.some((issue) => issue.code === "public_ranking_language"), true);
 });
 
+test("rejects public contribution share language in recognition text", () => {
+  const result = validateContributionAssessment({
+    ...validAssessment,
+    evidenceSummary: "This person contributed 37% of the last 90 days contribution score.",
+    publicRecognitionText: "Held a 22 percent share of recent contribution weight."
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.issues.some((issue) => issue.path === "$.evidenceSummary"), true);
+  assert.equal(result.issues.some((issue) => issue.path === "$.publicRecognitionText"), true);
+  assert.equal(result.issues.every((issue) => issue.code === "public_ranking_language"), true);
+});
+
 test("rejects public ranking language in generated public narrative fields", () => {
   const result = validateContributionAssessment({
     ...validAssessment,
@@ -154,6 +167,26 @@ test("rejects public score fields across common field-name variants", () => {
   assert.equal(result.issues.every((issue) => issue.code === "public_score_field"), true);
 });
 
+test("rejects public contribution share fields across common field-name variants", () => {
+  const result = validateContributionAssessment({
+    ...validAssessment,
+    scoreShare: 0.37,
+    "impact-weight-share": 0.22,
+    recentContributionWeightShare: 0.18,
+    contributor: {
+      ...validAssessment.contributor,
+      point_share: 0.4
+    }
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.issues.some((issue) => issue.path === "$.scoreShare"), true);
+  assert.equal(result.issues.some((issue) => issue.path === "$.impact-weight-share"), true);
+  assert.equal(result.issues.some((issue) => issue.path === "$.recentContributionWeightShare"), true);
+  assert.equal(result.issues.some((issue) => issue.path === "$.contributor.point_share"), true);
+  assert.equal(result.issues.every((issue) => issue.code === "public_score_field"), true);
+});
+
 test("exports the product contribution type vocabulary", () => {
   assert.equal(CONTRIBUTION_TYPES.includes("release_validation"), true);
   assert.equal(CONTRIBUTION_TYPES.includes("leaderboard_points"), false);
@@ -162,6 +195,9 @@ test("exports the product contribution type vocabulary", () => {
 test("detects ranking language independently", () => {
   assert.equal(hasPublicRankingLanguage("Top 3 contributor on the leaderboard"), true);
   assert.equal(hasPublicRankingLanguage("Average score improved to 92."), true);
+  assert.equal(hasPublicRankingLanguage("This person contributed 37% of the last 90 days contribution score."), true);
+  assert.equal(hasPublicRankingLanguage("Held a 22 percent share of recent contribution weight."), true);
+  assert.equal(hasPublicRankingLanguage("Show score share for this contributor."), true);
   assert.equal(hasPublicRankingLanguage("Earned leaderboard points for this contribution."), true);
   assert.equal(hasPublicRankingLanguage("Promoted to gold contributor tier."), true);
   assert.equal(hasPublicRankingLanguage("AI judged this contributor as medium quality."), true);

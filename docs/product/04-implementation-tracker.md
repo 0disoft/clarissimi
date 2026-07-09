@@ -25,7 +25,8 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
 
 - `packages/schemas`: config and contribution assessment vocabulary plus runtime validation,
   including rejection of public score, rank, leaderboard, point, and contributor-tier fields and
-  generated public narrative text in assessment drafts
+  generated public narrative text in assessment drafts, including public recent score-share and
+  contribution-weight-share variants
 - `packages/core`: prepared-evidence policy glue and approval gates
 - `packages/redaction`: deterministic string and JSON-like redaction
 - `packages/github`: fixture-first and injected-client live merged pull request evidence collection

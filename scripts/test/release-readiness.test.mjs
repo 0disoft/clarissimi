@@ -220,6 +220,7 @@ test("release readiness rejects release policy document drift", () => {
       "Do not make an evidence-only commit after final candidate validation",
       "Commit evidence after every validation run"
     )
+    .replace("docs/ops/release-candidate-evidence.md", "docs/ops/release.md")
     .replace("public product-positioning guardrails", "public docs")
     .replace("intentionally fail-closed `format` and `migration-check`", "format and migration checks")
     .replace(
@@ -237,6 +238,7 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include `pnpm run hosted-ci-validation`.",
     "docs/ops/release.md must include release PR, release issue, or GitHub release notes.",
     "docs/ops/release.md must include Do not make an evidence-only commit after final candidate validation.",
+    "docs/ops/release.md must include docs/ops/release-candidate-evidence.md.",
     "docs/ops/release.md must include public product-positioning guardrails.",
     "docs/ops/release.md must include intentionally fail-closed `format` and `migration-check`.",
     "docs/ops/release.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
@@ -321,6 +323,7 @@ test("release readiness rejects docs validation script drift", () => {
     .replace("\"docs/cli/ledger-format.md\"", "\"docs/cli/ledger.md\"")
     .replace("\"docs/github-action/README.md\"", "\"docs/github-action/GUIDE.md\"")
     .replace("\"docs/ops/incident-response.md\"", "\"docs/ops/incidents.md\"")
+    .replace("\"docs/ops/release-candidate-evidence.md\"", "\"docs/ops/release-candidate.md\"")
     .replace("\"docs/ops/release.md\"", "\"docs/ops/publication.md\"")
     .replace("\"packages/renderers/README.md\"", "\"packages/renderers/README-renamed.md\"")
     .replace("\".github/workflows/clarissimi-live-provider-smoke.yml\"", "\".github/workflows/live-provider.yml\"")
@@ -335,6 +338,7 @@ test("release readiness rejects docs validation script drift", () => {
     "scripts/validate-docs.mjs must include \"docs/cli/ledger-format.md\".",
     "scripts/validate-docs.mjs must include \"docs/github-action/README.md\".",
     "scripts/validate-docs.mjs must include \"docs/ops/incident-response.md\".",
+    "scripts/validate-docs.mjs must include \"docs/ops/release-candidate-evidence.md\".",
     "scripts/validate-docs.mjs must include \"docs/ops/release.md\".",
     "scripts/validate-docs.mjs must include \"packages/renderers/README.md\".",
     "scripts/validate-docs.mjs must include \".github/workflows/clarissimi-live-provider-smoke.yml\".",
@@ -1638,6 +1642,7 @@ function createReleasePolicyText() {
     "`pnpm run hosted-ci-validation`",
     "release PR, release issue, or GitHub release notes",
     "Do not make an evidence-only commit after final candidate validation",
+    "docs/ops/release-candidate-evidence.md",
     "public product-positioning guardrails",
     "intentionally fail-closed `format` and `migration-check`",
     "",
@@ -1726,6 +1731,7 @@ function createDocsValidationScriptText() {
     "  \"docs/ops/ci.md\",",
     "  \"docs/ops/disaster-recovery.md\",",
     "  \"docs/ops/incident-response.md\",",
+    "  \"docs/ops/release-candidate-evidence.md\",",
     "  \"docs/ops/release.md\",",
     "  \"docs/ops/rollback.md\",",
     "  \"packages/action/README.md\",",

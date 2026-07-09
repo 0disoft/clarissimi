@@ -133,6 +133,8 @@ For the final release candidate, capture the exact hosted CI and hosted live-pro
 the release PR, release issue, or GitHub release notes after the final candidate commit is pushed.
 Do not make an evidence-only commit after final candidate validation just to chase the candidate
 SHA; that commit would create a new candidate and stale the evidence again.
+Use `docs/ops/release-candidate-evidence.md` as the copyable evidence checklist for that external
+release record.
 
 Recent hosted live-provider evidence: `Clarissimi live provider smoke` workflow run
 `29052452214` passed on `2026-07-09T21:45:58Z` for validated source commit

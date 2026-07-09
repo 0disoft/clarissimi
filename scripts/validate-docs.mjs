@@ -24,6 +24,7 @@ export const requiredDocumentationPaths = [
   "docs/ops/ci.md",
   "docs/ops/disaster-recovery.md",
   "docs/ops/incident-response.md",
+  "docs/ops/release-candidate-evidence.md",
   "docs/ops/release.md",
   "docs/ops/rollback.md",
   "packages/action/README.md",

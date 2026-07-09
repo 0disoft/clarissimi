@@ -471,6 +471,10 @@ Completed deliverables:
   source-only validation commands without pinning `release-readiness` to one stale run id; release
   maintainers must refresh this evidence with `pnpm run hosted-ci-validation` for the exact
   release-candidate commit before publication or versioned Action tags
+- `docs/ops/release-candidate-evidence.md` provides a copyable final-candidate evidence checklist
+  so maintainers can attach exact hosted CI and hosted live-provider run URLs to a release PR,
+  release issue, or GitHub release notes without creating an evidence-only commit that changes the
+  candidate SHA
 
 Release follow-up:
 

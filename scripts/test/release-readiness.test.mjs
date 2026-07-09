@@ -21,6 +21,7 @@ import {
   validateEngineeringValidationDocumentContract,
   validateHostedLiveProviderWorkflowContract,
   validateLedgerFormatDocumentContract,
+  validateLintAndFormatDecisionDocumentContract,
   validateMonorepoValidationDocumentContract,
   validateObservabilityDocumentContract,
   validateOpsValidationFooterContract,
@@ -248,6 +249,31 @@ test("release readiness rejects README validation drift", () => {
     "README.md must include - `pnpm run release-readiness`.",
     "README.md must include - `pnpm run live-provider-smoke`.",
     "README.md must include `format` intentionally fails closed."
+  ]);
+});
+
+test("release readiness accepts the lint and format decision contract", () => {
+  assert.deepEqual(validateLintAndFormatDecisionDocumentContract(createLintAndFormatDecisionText()), []);
+});
+
+test("release readiness rejects lint and format decision drift", () => {
+  const text = createLintAndFormatDecisionText()
+    .replace("Use `oxlint` as the first real lint gate.", "Use linting when convenient.")
+    .replace("run `oxlint . --deny-warnings`", "run oxlint")
+    .replace("Keep `format` intentionally unconfigured for now.", "Enable format now.")
+    .replace("The placeholder must continue to fail instead of", "The placeholder may pass instead of")
+    .replace("`oxfmt` is not selected as the repository formatter", "`oxfmt` is selected as the repository formatter")
+    .replace("run the formatter across the selected baseline once", "run the formatter later")
+    .replace("`format` remains a known gap, not a fake success.", "`format` is a fake success.");
+
+  assert.deepEqual(validateLintAndFormatDecisionDocumentContract(text), [
+    "docs/adr/0027-add-lint-gate-and-defer-format-baseline.md must include Use `oxlint` as the first real lint gate..",
+    "docs/adr/0027-add-lint-gate-and-defer-format-baseline.md must include run `oxlint . --deny-warnings`.",
+    "docs/adr/0027-add-lint-gate-and-defer-format-baseline.md must include Keep `format` intentionally unconfigured for now..",
+    "docs/adr/0027-add-lint-gate-and-defer-format-baseline.md must include The placeholder must continue to fail instead of.",
+    "docs/adr/0027-add-lint-gate-and-defer-format-baseline.md must include `oxfmt` is not selected as the repository formatter.",
+    "docs/adr/0027-add-lint-gate-and-defer-format-baseline.md must include run the formatter across the selected baseline once.",
+    "docs/adr/0027-add-lint-gate-and-defer-format-baseline.md must include `format` remains a known gap, not a fake success.."
   ]);
 });
 
@@ -1330,6 +1356,38 @@ function createReadmeValidationText() {
     "",
     "`format` intentionally fails closed until maintainers accept a formatter baseline ADR.",
     "`migration-check` intentionally fails until configured.",
+    ""
+  ].join("\n");
+}
+
+function createLintAndFormatDecisionText() {
+  return [
+    "Use `oxlint` as the first real lint gate.",
+    "",
+    "The `lint` command must:",
+    "",
+    "- run `oxlint . --deny-warnings`",
+    "- fail on warnings",
+    "- run in hosted CI as its own validation step",
+    "- be covered by `release-readiness` contract checks so the package script and CI workflow cannot",
+    "  silently drift back to placeholders",
+    "",
+    "Keep `format` intentionally unconfigured for now. The placeholder must continue to fail instead of",
+    "pretending formatting is enforced.",
+    "",
+    "`oxfmt` is not selected as the repository formatter because it is still a 0.x package and is focused",
+    "on JavaScript-family formatting rather than the full Markdown, YAML, JSON, and TypeScript surface",
+    "owned by this repository.",
+    "",
+    "A future formatter-baseline change may enable `format`, but it must be isolated from feature work",
+    "and should:",
+    "",
+    "- choose a formatter that covers the repository file types it claims to own",
+    "- include the formatter config, ignore rules, and lockfile change in the same commit",
+    "- run the formatter across the selected baseline once",
+    "- avoid mixing baseline style rewrites with product, schema, provider, or Action behavior changes",
+    "",
+    "`format` remains a known gap, not a fake success.",
     ""
   ].join("\n");
 }

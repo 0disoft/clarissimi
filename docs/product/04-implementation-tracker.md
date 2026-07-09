@@ -365,6 +365,8 @@ Completed deliverables:
 - release-readiness verifies that `pnpm run lint` remains backed by `oxlint . --deny-warnings`
 - release-readiness verifies that `pnpm run format` remains intentionally fail-closed until a
   formatter baseline ADR accepts the rewrite
+- release-readiness validates that ADR 0027 keeps `oxlint` as the current lint gate and keeps
+  `format` fail-closed until a separate formatter baseline rewrite is accepted
 - release-readiness verifies that `pnpm run migration-check` remains intentionally fail-closed
   until a real migration validation owner and command are accepted
 - release-readiness verifies that package test globs still include package and script test suites

@@ -161,6 +161,25 @@ export const readmeValidationContract = {
   ]
 };
 
+export const lintAndFormatDecisionDocumentContract = {
+  path: "docs/adr/0027-add-lint-gate-and-defer-format-baseline.md",
+  requiredSnippets: [
+    "Use `oxlint` as the first real lint gate.",
+    "run `oxlint . --deny-warnings`",
+    "fail on warnings",
+    "run in hosted CI as its own validation step",
+    "be covered by `release-readiness` contract checks",
+    "Keep `format` intentionally unconfigured for now.",
+    "The placeholder must continue to fail instead of",
+    "`oxfmt` is not selected as the repository formatter",
+    "choose a formatter that covers the repository file types it claims to own",
+    "include the formatter config, ignore rules, and lockfile change in the same commit",
+    "run the formatter across the selected baseline once",
+    "avoid mixing baseline style rewrites with product, schema, provider, or Action behavior changes",
+    "`format` remains a known gap, not a fake success."
+  ]
+};
+
 export const ledgerFormatDocumentContract = {
   path: "docs/cli/ledger-format.md",
   requiredSnippets: [
@@ -811,6 +830,7 @@ export async function runReleaseReadiness(options = {}) {
   await runReleasePolicyDocumentContractCheck(repoRoot);
   await runProductPositioningContractCheck(repoRoot);
   await runReadmeValidationContractCheck(repoRoot);
+  await runLintAndFormatDecisionDocumentContractCheck(repoRoot);
   await runLedgerFormatDocumentContractCheck(repoRoot);
   await runCliCommandContractCheck(repoRoot);
   await runCiOperationalDocumentContractCheck(repoRoot);
@@ -1098,6 +1118,21 @@ export function validateProductPositioningContract(textsByPath, contract = produ
 }
 
 export function validateReadmeValidationContract(text, contract = readmeValidationContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateLintAndFormatDecisionDocumentContract(
+  text,
+  contract = lintAndFormatDecisionDocumentContract
+) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1637,6 +1672,23 @@ async function runReadmeValidationContractCheck(repoRoot) {
   }
 
   console.log("README validation contract passed");
+}
+
+async function runLintAndFormatDecisionDocumentContractCheck(repoRoot) {
+  const lintAndFormatPath = join(repoRoot, lintAndFormatDecisionDocumentContract.path);
+  let text;
+  try {
+    text = await readFile(lintAndFormatPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${lintAndFormatDecisionDocumentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateLintAndFormatDecisionDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`lint and format decision document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("lint and format decision document contract passed");
 }
 
 async function runLedgerFormatDocumentContractCheck(repoRoot) {

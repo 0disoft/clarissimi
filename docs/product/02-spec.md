@@ -24,6 +24,11 @@ Do not describe it as:
 Internal policy may use `impactLevel` or `internalImpactWeight` to sort drafts and tune approval
 rules. Public output must prioritize the contribution story over numeric values.
 
+Public output must not show a contributor's percentage share of recent total impact weight, score,
+points, or contribution weight. A time-windowed share can read like a softer leaderboard even when
+no explicit rank is displayed. If Clarissimi later adds this kind of metric, it must be an opt-in
+maintainer-only analytics view unless a future ADR accepts a safer public framing.
+
 ## Primary Event
 
 The MVP primary event is a merged GitHub pull request.
@@ -242,10 +247,13 @@ Bad:
 - "Rank 3 contributor."
 - "AI judged this contributor as medium quality."
 - "Earned leaderboard points and gold contributor tier."
+- "This person contributed 37% of the last 90 days' contribution score."
 
 ## Review Blockers
 
 - Public scoreboards or rankings are introduced.
+- Public recent-share, score-share, point-share, or impact-weight-share contributor metrics are
+  introduced.
 - Claims lack evidence refs.
 - Provider input bypasses redaction.
 - Provider output bypasses schema validation.

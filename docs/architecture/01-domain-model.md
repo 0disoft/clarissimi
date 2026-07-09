@@ -43,6 +43,10 @@ history.
 A derived summary of a contributor's recognized project fingerprints. It may group by contribution
 type and area, but it must not expose a public total score.
 
+It also must not expose a public percentage of recent total score, points, impact weight, or
+contribution weight. Time-windowed share metrics belong only in future opt-in maintainer analytics
+unless a later ADR accepts a public design that avoids ranking pressure.
+
 ### Approval
 
 The gate between draft and public record. Valid states are `draft`, `auto_approved`, `approved`,

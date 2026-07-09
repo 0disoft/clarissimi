@@ -6,11 +6,14 @@
 ## R1: Scoring Backlash
 
 - Severity: High
-- Trigger: public numeric scores, rankings, contributor tiers, or leaderboard language
+- Trigger: public numeric scores, rankings, contributor tiers, score-share ratios, impact-weight
+  share ratios, or leaderboard language
 - Impact: community distrust and contributor pushback
 - Mitigation: public output is narrative-first; numeric weight stays internal; ADR records no public
   leaderboard; schema validation rejects explicit public score, rank, leaderboard, point, and
-  contributor-tier field names and common field-name variants in assessment drafts
+  contributor-tier field names and common field-name variants in assessment drafts; time-windowed
+  contribution share metrics stay maintainer-only unless a future ADR accepts a safer public
+  presentation
 
 ## R2: Hallucinated Recognition
 

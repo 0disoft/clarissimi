@@ -17,6 +17,8 @@ Before accepting a new Clarissimi feature, answer:
 - Can the behavior be tested with fixtures, fake clients, fake fetches, or temporary repositories?
 - What is the rollback path if the feature writes unsafe output?
 - Does the feature add public score, ranking, leaderboard, or tier language?
+- Does the feature expose a contributor's recent share of total score, points, impact weight, or
+  contribution weight in a public view?
 - Does it change CLI flags, Action inputs or outputs, config fields, exit codes, or generated
   repository files?
 - Does it require a release gate, dogfood workflow, or maintainer-owned credential?

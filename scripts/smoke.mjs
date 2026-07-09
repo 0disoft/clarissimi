@@ -231,6 +231,52 @@ await runCommand({
   }
 });
 
+await runCommand({
+  name: "Live provider smoke rejects invalid endpoint before provider calls",
+  command: process.execPath,
+  args: ["scripts/live-provider-smoke.mjs"],
+  env: {
+    CLARISSIMI_PROVIDER_TOKEN: "synthetic-provider-token",
+    CLARISSIMI_PROVIDER_MODEL: "synthetic-model",
+    CLARISSIMI_PROVIDER_ENDPOINT: "http://gateway.example/v1/chat/completions",
+    CLARISSIMI_PROVIDER_THINKING: ""
+  },
+  expectExitCode: 2,
+  validate({ stdout, stderr }) {
+    assertEqual(stdout, "", "live provider invalid endpoint preflight should not write stdout.");
+    if (!stderr.includes("live provider smoke requires CLARISSIMI_PROVIDER_ENDPOINT to be an https URL when provided.")) {
+      throw new Error("live provider invalid endpoint preflight should explain the invalid endpoint.");
+    }
+
+    if (!stderr.includes("No provider call was made.")) {
+      throw new Error("live provider invalid endpoint preflight should confirm no provider call was made.");
+    }
+  }
+});
+
+await runCommand({
+  name: "Live provider smoke rejects unsupported thinking before provider calls",
+  command: process.execPath,
+  args: ["scripts/live-provider-smoke.mjs"],
+  env: {
+    CLARISSIMI_PROVIDER_TOKEN: "synthetic-provider-token",
+    CLARISSIMI_PROVIDER_MODEL: "synthetic-model",
+    CLARISSIMI_PROVIDER_ENDPOINT: "",
+    CLARISSIMI_PROVIDER_THINKING: "enabled"
+  },
+  expectExitCode: 2,
+  validate({ stdout, stderr }) {
+    assertEqual(stdout, "", "live provider unsupported thinking preflight should not write stdout.");
+    if (!stderr.includes("live provider smoke supports only CLARISSIMI_PROVIDER_THINKING=disabled.")) {
+      throw new Error("live provider unsupported thinking preflight should explain the supported value.");
+    }
+
+    if (!stderr.includes("No provider call was made.")) {
+      throw new Error("live provider unsupported thinking preflight should confirm no provider call was made.");
+    }
+  }
+});
+
 console.log("smoke validation passed");
 
 async function runJsonCommand(options) {

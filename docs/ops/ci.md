@@ -16,7 +16,8 @@ The current local CI parity commands are:
 - `pnpm run live-provider-smoke`: builds the workspace and runs the CLI against the explicit
   OpenAI-compatible provider using maintainer-provided `CLARISSIMI_PROVIDER_TOKEN` and
   `CLARISSIMI_PROVIDER_MODEL`. It also accepts optional `CLARISSIMI_PROVIDER_ENDPOINT` and
-  `CLARISSIMI_PROVIDER_THINKING`. This command is a release smoke, not a correctness check.
+  `CLARISSIMI_PROVIDER_THINKING`, and validates those optional inputs before provider calls. This
+  command is a release smoke, not a correctness check.
 - `pnpm run release-readiness`: runs non-credentialed release checks for documentation,
   release-critical package script registration, package and script test-glob registration, release
   tool availability, `ssealed doctor`, workflow `actionlint`, YAML parsing, `git diff --check`, and

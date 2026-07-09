@@ -28,8 +28,8 @@ action inputs may name a provider, endpoint, and model, but must not store token
 
 The release-only live provider smoke uses `CLARISSIMI_PROVIDER_TOKEN`,
 `CLARISSIMI_PROVIDER_MODEL`, optional `CLARISSIMI_PROVIDER_ENDPOINT`, and optional
-`CLARISSIMI_PROVIDER_THINKING`. It must run only in a maintainer-controlled environment that owns
-the token value.
+`CLARISSIMI_PROVIDER_THINKING`. It validates optional endpoint and thinking-mode inputs before
+provider calls and must run only in a maintainer-controlled environment that owns the token value.
 
 Local credentialed live-provider smoke passed on `2026-07-09` with maintainer-owned credentials
 mapped in-process to `CLARISSIMI_PROVIDER_TOKEN` and `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`. The

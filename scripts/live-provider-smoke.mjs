@@ -21,6 +21,18 @@ if (providerToken === undefined || providerModel === undefined) {
   process.exit(2);
 }
 
+if (providerEndpoint !== undefined && !isHttpsUrl(providerEndpoint)) {
+  console.error("live provider smoke requires CLARISSIMI_PROVIDER_ENDPOINT to be an https URL when provided.");
+  console.error("No provider call was made.");
+  process.exit(2);
+}
+
+if (providerThinking !== undefined && providerThinking !== "disabled") {
+  console.error("live provider smoke supports only CLARISSIMI_PROVIDER_THINKING=disabled.");
+  console.error("No provider call was made.");
+  process.exit(2);
+}
+
 const fixturePath = await createSmokeFixture();
 const args = [
   "packages/cli/dist/bin/clarissimi.js",
@@ -102,6 +114,14 @@ function readEnv(name) {
   }
 
   return value;
+}
+
+function isHttpsUrl(value) {
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function runCommand(options) {

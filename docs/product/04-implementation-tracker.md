@@ -288,6 +288,7 @@ Completed deliverables:
 - live-provider smoke command is available as a release-only credentialed check and passed locally
   on `2026-07-09` with maintainer-owned credentials and
   `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`
+- live-provider smoke validates optional endpoint and thinking-mode inputs before provider calls
 - OpenCode Go live-provider smoke passed locally on `2026-07-09` with maintainer-owned
   credentials, `CLARISSIMI_PROVIDER_MODEL=minimax-m3`, the OpenCode Go chat completions endpoint,
   and `CLARISSIMI_PROVIDER_THINKING=disabled`

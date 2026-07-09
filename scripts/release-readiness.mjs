@@ -88,6 +88,18 @@ export const workspacePackageManifestSurfaceContract = {
   main: "./dist/index.js",
   types: "./dist/index.d.ts",
   files: ["dist"],
+  license: "Apache-2.0",
+  repository: {
+    type: "git",
+    url: "git+https://github.com/0disoft/clarissimi.git"
+  },
+  homepage: "https://github.com/0disoft/clarissimi#readme",
+  bugs: {
+    url: "https://github.com/0disoft/clarissimi/issues"
+  },
+  engines: {
+    node: ">=24"
+  },
   scripts: {
     build: "tsc -b",
     typecheck: "tsc -b --pretty false"
@@ -1186,6 +1198,26 @@ export function validateWorkspacePackageManifestSurface(
     issues.push(`${manifestPath} files must remain ${JSON.stringify(contract.files)}.`);
   }
 
+  if (packageJson?.license !== contract.license) {
+    issues.push(`${manifestPath} license must remain ${contract.license}.`);
+  }
+
+  if (!objectsEqual(packageJson?.repository, expectedPackageRepository(packageDir, contract))) {
+    issues.push(`${manifestPath} repository metadata must point at packages/${packageDir}.`);
+  }
+
+  if (packageJson?.homepage !== contract.homepage) {
+    issues.push(`${manifestPath} homepage must remain ${contract.homepage}.`);
+  }
+
+  if (!objectsEqual(packageJson?.bugs, contract.bugs)) {
+    issues.push(`${manifestPath} bugs metadata must remain ${JSON.stringify(contract.bugs)}.`);
+  }
+
+  if (!objectsEqual(packageJson?.engines, contract.engines)) {
+    issues.push(`${manifestPath} engines must remain ${JSON.stringify(contract.engines)}.`);
+  }
+
   for (const [scriptName, expectedValue] of Object.entries(contract.scripts)) {
     if (packageJson?.scripts?.[scriptName] !== expectedValue) {
       issues.push(`${manifestPath} scripts.${scriptName} must remain ${expectedValue}.`);
@@ -1202,6 +1234,13 @@ export function validateWorkspacePackageManifestSurface(
   }
 
   return issues;
+}
+
+function expectedPackageRepository(packageDir, contract) {
+  return {
+    ...contract.repository,
+    directory: `packages/${packageDir}`
+  };
 }
 
 export function validateWorkspaceInternalDependencies(

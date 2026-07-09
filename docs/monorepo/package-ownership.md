@@ -39,7 +39,9 @@ This repository type owns workspace boundaries, package ownership, dependency po
   workspace package names stay aligned with their `packages/<name>` directories.
 - Monorepo package manifest policy: implemented package manifests must keep the common
   `./dist/index.js` and `./dist/index.d.ts` entrypoints, expose only `dist` in `files`, keep
-  `tsc -b` build scripts, and expose bin entries only from `packages/cli` and `packages/action`.
+  `tsc -b` build scripts, expose bin entries only from `packages/cli` and `packages/action`, and
+  carry package-level publication metadata for license, repository directory, homepage, issue
+  tracker, and Node.js runtime support even while publication remains blocked.
 - Monorepo internal dependency policy: internal package dependencies must use `workspace:*` in
   `dependencies`, not dev, peer, or optional dependency sections. TypeScript project references
   must also follow the dependency graph below so package manifests and `tsconfig` build order do

@@ -168,7 +168,7 @@ test("release readiness accepts workspace package manifest publish surfaces", ()
   assert.deepEqual(
     validateWorkspacePackageManifestSurface(
       {
-        ...createWorkspacePackageManifest(),
+        ...createWorkspacePackageManifest("cli"),
         bin: {
           clarissimi: "./dist/bin/clarissimi.js"
         }
@@ -192,6 +192,18 @@ test("release readiness rejects workspace package manifest publish surface drift
       }
     },
     files: ["dist", "src"],
+    license: "UNLICENSED",
+    repository: {
+      type: "git",
+      url: "https://example.invalid/clarissimi.git"
+    },
+    homepage: "https://example.invalid/clarissimi",
+    bugs: {
+      url: "https://example.invalid/bugs"
+    },
+    engines: {
+      node: ">=20"
+    },
     scripts: {
       build: "tsc",
       typecheck: "tsc --noEmit"
@@ -209,6 +221,11 @@ test("release readiness rejects workspace package manifest publish surface drift
       "packages/schemas/package.json exports[\".\"].types must remain ./dist/index.d.ts.",
       "packages/schemas/package.json exports[\".\"].default must remain ./dist/index.js.",
       "packages/schemas/package.json files must remain [\"dist\"].",
+      "packages/schemas/package.json license must remain Apache-2.0.",
+      "packages/schemas/package.json repository metadata must point at packages/schemas.",
+      "packages/schemas/package.json homepage must remain https://github.com/0disoft/clarissimi#readme.",
+      "packages/schemas/package.json bugs metadata must remain {\"url\":\"https://github.com/0disoft/clarissimi/issues\"}.",
+      "packages/schemas/package.json engines must remain {\"node\":\">=24\"}.",
       "packages/schemas/package.json scripts.build must remain tsc -b.",
       "packages/schemas/package.json scripts.typecheck must remain tsc -b --pretty false.",
       "packages/schemas/package.json must not expose package bin entries."
@@ -216,7 +233,7 @@ test("release readiness rejects workspace package manifest publish surface drift
   );
 
   assert.deepEqual(
-    validateWorkspacePackageManifestSurface(createWorkspacePackageManifest(), "cli", "packages/cli/package.json"),
+    validateWorkspacePackageManifestSurface(createWorkspacePackageManifest("cli"), "cli", "packages/cli/package.json"),
     [
       "packages/cli/package.json bin must remain {\"clarissimi\":\"./dist/bin/clarissimi.js\"}."
     ]
@@ -695,7 +712,7 @@ function createBlockedReleasePackageJson() {
   };
 }
 
-function createWorkspacePackageManifest() {
+function createWorkspacePackageManifest(packageDir = "schemas") {
   return {
     main: "./dist/index.js",
     types: "./dist/index.d.ts",
@@ -706,6 +723,19 @@ function createWorkspacePackageManifest() {
       }
     },
     files: ["dist"],
+    license: "Apache-2.0",
+    repository: {
+      type: "git",
+      url: "git+https://github.com/0disoft/clarissimi.git",
+      directory: `packages/${packageDir}`
+    },
+    homepage: "https://github.com/0disoft/clarissimi#readme",
+    bugs: {
+      url: "https://github.com/0disoft/clarissimi/issues"
+    },
+    engines: {
+      node: ">=24"
+    },
     scripts: {
       build: "tsc -b",
       typecheck: "tsc -b --pretty false"

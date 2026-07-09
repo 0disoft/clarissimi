@@ -342,6 +342,9 @@ Completed deliverables:
   while public package publication and versioned Action tags are blocked
 - release-readiness verifies that workspace package manifests keep their `dist` entrypoints,
   package files, build scripts, and CLI/Action bin boundaries aligned
+- release-readiness verifies that workspace package manifests carry package-level license,
+  repository directory, homepage, issue tracker, and Node.js runtime metadata before publication is
+  unblocked
 - release-readiness verifies that implemented workspace packages and the Package Table in
   `docs/monorepo/package-ownership.md` stay in sync
 - release-readiness verifies that internal workspace dependencies follow the documented package

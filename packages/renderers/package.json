@@ -2,7 +2,18 @@
   "name": "@clarissimi/renderers",
   "version": "0.0.0",
   "private": true,
+  "description": "Deterministic Clarissimi ledger, contributor, Markdown, and static-data renderers.",
+  "license": "Apache-2.0",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0disoft/clarissimi.git",
+    "directory": "packages/renderers"
+  },
+  "homepage": "https://github.com/0disoft/clarissimi#readme",
+  "bugs": {
+    "url": "https://github.com/0disoft/clarissimi/issues"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -17,6 +28,9 @@
   "scripts": {
     "build": "tsc -b",
     "typecheck": "tsc -b --pretty false"
+  },
+  "engines": {
+    "node": ">=24"
   },
   "dependencies": {
     "@clarissimi/core": "workspace:*",

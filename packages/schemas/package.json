@@ -2,7 +2,18 @@
   "name": "@clarissimi/schemas",
   "version": "0.0.0",
   "private": true,
+  "description": "Shared Clarissimi config, assessment, ledger, and contributor schemas.",
+  "license": "Apache-2.0",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0disoft/clarissimi.git",
+    "directory": "packages/schemas"
+  },
+  "homepage": "https://github.com/0disoft/clarissimi#readme",
+  "bugs": {
+    "url": "https://github.com/0disoft/clarissimi/issues"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -17,5 +28,8 @@
   "scripts": {
     "build": "tsc -b",
     "typecheck": "tsc -b --pretty false"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

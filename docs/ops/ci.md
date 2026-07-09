@@ -23,8 +23,9 @@ The current local CI parity commands are:
   release-critical package script registration, package and script test-glob registration, the
   workspace package glob, workspace package manifest identity, the blocked root and workspace
   package release policy, workspace package publish surface, package ownership table coverage,
-  internal workspace dependency graph, TypeScript project-reference build graph, recorded dry-run
-  and write-mode dogfood evidence, the intentionally fail-closed `format` placeholder, release tool
+  package publication metadata, internal workspace dependency graph, TypeScript project-reference
+  build graph, recorded dry-run and write-mode dogfood evidence, the intentionally fail-closed
+  `format` placeholder, release tool
   availability, CI runtime and release-tool pin drift, `ssealed doctor`, workflow `actionlint`,
   YAML parsing, `git diff --check`, tracked generated-output drift, and high-risk secret patterns.
   It also verifies

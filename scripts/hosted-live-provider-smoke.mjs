@@ -59,6 +59,14 @@ async function run(argv, runtime) {
   const repo = args.repo ?? defaults.repo;
   const ref = args.ref ?? defaults.ref;
 
+  if (!isGitHubRepositoryName(repo)) {
+    return usageFailure(runtime, "--repo must use owner/name format.");
+  }
+
+  if (ref.trim().length === 0) {
+    return usageFailure(runtime, "--ref requires a non-empty value.");
+  }
+
   await requireGh(runtime);
   await requireRepositorySecret(runtime, repo, requiredSecretName);
 
@@ -129,6 +137,10 @@ function isHttpsUrl(value) {
   } catch {
     return false;
   }
+}
+
+function isGitHubRepositoryName(value) {
+  return /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value);
 }
 
 class UsageError extends Error {

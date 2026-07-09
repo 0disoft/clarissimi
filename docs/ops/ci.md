@@ -43,8 +43,8 @@ manual-only. It reads `CLARISSIMI_PROVIDER_TOKEN` from repository secrets,
 a required dispatch-time `provider-model` input, and an optional dispatch-time `provider-endpoint`
 input before running `pnpm run live-provider-smoke`. The optional dispatch-time
 `provider-thinking` input maps to `CLARISSIMI_PROVIDER_THINKING` for providers that need thinking
-disabled to return parseable JSON. The workflow checks that the repository secret is configured
-before checkout, dependency installation, or build work begins.
+disabled to return parseable JSON. The workflow checks dispatch inputs and repository secret
+configuration before checkout, dependency installation, or build work begins.
 
 Local credentialed live-provider smoke passed on `2026-07-09` using maintainer-owned OpenAI
 credentials mapped in-process to `CLARISSIMI_PROVIDER_TOKEN` and `CLARISSIMI_PROVIDER_MODEL` set to

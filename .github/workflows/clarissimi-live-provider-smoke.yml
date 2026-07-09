@@ -26,6 +26,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Verify provider inputs
+        shell: bash
+        env:
+          CLARISSIMI_PROVIDER_MODEL: ${{ inputs.provider-model }}
+          CLARISSIMI_PROVIDER_ENDPOINT: ${{ inputs.provider-endpoint }}
+          CLARISSIMI_PROVIDER_THINKING: ${{ inputs.provider-thinking }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CLARISSIMI_PROVIDER_MODEL//[[:space:]]/}" ]; then
+            echo "::error title=Missing provider model::Set provider-model before running Clarissimi live provider smoke."
+            exit 2
+          fi
+
+          if [ -n "${CLARISSIMI_PROVIDER_ENDPOINT}" ] && [[ "${CLARISSIMI_PROVIDER_ENDPOINT}" != https://* ]]; then
+            echo "::error title=Invalid provider endpoint::provider-endpoint must be an https URL."
+            exit 2
+          fi
+
+          if [ -n "${CLARISSIMI_PROVIDER_THINKING}" ] && [ "${CLARISSIMI_PROVIDER_THINKING}" != "disabled" ]; then
+            echo "::error title=Unsupported provider thinking mode::provider-thinking currently supports only disabled."
+            exit 2
+          fi
+
       - name: Verify provider secret
         shell: bash
         env:

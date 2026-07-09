@@ -140,6 +140,34 @@ test("hosted live provider smoke validates dispatch inputs before reading secret
   assert.equal(emptyModelExitCode, 2);
   assert.equal(emptyModel.errors.includes("--model requires a non-empty value."), true);
   assert.equal(emptyModel.commands.length, 0);
+
+  const invalidRepo = createHarness({
+    secrets: [{ name: "CLARISSIMI_PROVIDER_TOKEN" }]
+  });
+  const invalidRepoExitCode = await runHostedLiveProviderSmoke([
+    "--model",
+    "gpt-4.1-mini",
+    "--repo",
+    "owner-only"
+  ], invalidRepo.runtime);
+
+  assert.equal(invalidRepoExitCode, 2);
+  assert.equal(invalidRepo.errors.includes("--repo must use owner/name format."), true);
+  assert.equal(invalidRepo.commands.length, 0);
+
+  const emptyRef = createHarness({
+    secrets: [{ name: "CLARISSIMI_PROVIDER_TOKEN" }]
+  });
+  const emptyRefExitCode = await runHostedLiveProviderSmoke([
+    "--model",
+    "gpt-4.1-mini",
+    "--ref",
+    ""
+  ], emptyRef.runtime);
+
+  assert.equal(emptyRefExitCode, 2);
+  assert.equal(emptyRef.errors.includes("--ref requires a non-empty value."), true);
+  assert.equal(emptyRef.commands.length, 0);
 });
 
 function createHarness(options) {

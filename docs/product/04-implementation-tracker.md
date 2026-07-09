@@ -302,6 +302,9 @@ Completed deliverables:
   dispatch/list/watch argument construction with a fake `gh` command runner
 - hosted live-provider smoke wrapper validates non-empty model, HTTPS endpoint override, and
   supported thinking mode before reading secret metadata or dispatching a workflow
+- hosted live-provider smoke workflow validates model, endpoint, and thinking inputs before
+  checkout, dependency installation, build work, or provider calls
+- hosted live-provider smoke wrapper validates repository and ref arguments before calling `gh`
 - release-readiness verifies that release-critical package scripts remain registered
 - release-readiness verifies that package test globs still include package and script test suites
 - release-readiness verifies that `ssealed`, `actionlint`, and `yq` are available before running

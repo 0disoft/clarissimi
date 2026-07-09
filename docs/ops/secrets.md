@@ -38,8 +38,8 @@ run did not require writing a token value to a repository file.
 The manual GitHub workflow `.github/workflows/clarissimi-live-provider-smoke.yml` reads
 `CLARISSIMI_PROVIDER_TOKEN` from repository secrets. The provider model is a required workflow
 dispatch input, and the optional provider endpoint and thinking mode may also be supplied as
-dispatch inputs. If the repository secret is missing, the workflow fails before checkout,
-dependency installation, build work, or provider calls begin.
+dispatch inputs. If the dispatch inputs are invalid or the repository secret is missing, the
+workflow fails before checkout, dependency installation, build work, or provider calls begin.
 
 `pnpm run hosted-live-provider-smoke -- --model <provider-model>` is the preferred maintainer
 wrapper for the hosted smoke. It checks only that the repository secret name is present, dispatches

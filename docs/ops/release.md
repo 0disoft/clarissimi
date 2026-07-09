@@ -94,10 +94,12 @@ pnpm run hosted-live-provider-smoke -- --model minimax-m3 --endpoint <chat-compl
 The script verifies that the repository secret name exists, dispatches
 `.github/workflows/clarissimi-live-provider-smoke.yml`, finds the matching run for the selected
 ref, and watches it to completion. It validates a non-empty model, an HTTPS endpoint when provided,
-and the supported thinking-mode value before reading repository secret metadata or dispatching the
-workflow. It never reads or prints the provider token value. If a maintainer needs to run the
-underlying commands manually, use `gh workflow run` followed by `gh run list` and `gh run watch`
-with the same workflow, model, endpoint, and thinking inputs.
+the supported thinking-mode value, repository name, and ref before reading repository secret
+metadata or dispatching the workflow. The workflow repeats provider input validation before
+checkout, dependency installation, build work, or provider calls. It never reads or prints the
+provider token value. If a maintainer needs to run the underlying commands manually, use
+`gh workflow run` followed by `gh run list` and `gh run watch` with the same workflow, model,
+endpoint, and thinking inputs.
 
 Record the passed workflow run id and provider model in this document before public package
 publication or a versioned Action tag.

@@ -9,7 +9,7 @@
     "format": "node -e \"console.error('format is not configured. Configure this validation before relying on pnpm run format.'); process.exit(1)\"",
     "lint": "node -e \"console.error('lint is not configured. Configure this validation before relying on pnpm run lint.'); process.exit(1)\"",
     "typecheck": "tsc -b --pretty false",
-    "test": "pnpm run build && node --test packages/schemas/test/*.test.mjs packages/redaction/test/*.test.mjs packages/core/test/*.test.mjs packages/github/test/*.test.mjs packages/providers/test/*.test.mjs packages/renderers/test/*.test.mjs packages/cli/test/*.test.mjs packages/action/test/*.test.mjs",
+    "test": "pnpm run build && node --test packages/schemas/test/*.test.mjs packages/redaction/test/*.test.mjs packages/core/test/*.test.mjs packages/github/test/*.test.mjs packages/providers/test/*.test.mjs packages/renderers/test/*.test.mjs packages/cli/test/*.test.mjs packages/action/test/*.test.mjs scripts/test/*.test.mjs",
     "contract": "pnpm run typecheck && pnpm run test",
     "migration-check": "node -e \"console.error('migration-check is not configured. Configure this validation before relying on pnpm run migration-check.'); process.exit(1)\"",
     "smoke": "pnpm run build && node scripts/smoke.mjs",

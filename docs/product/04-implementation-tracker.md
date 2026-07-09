@@ -290,6 +290,8 @@ Completed deliverables:
   dispatch-time provider model input
 - hosted live-provider smoke wrapper verifies the repository secret name, dispatches the manual
   workflow, and watches the matching run without reading or printing the token value
+- hosted live-provider smoke wrapper tests cover missing-secret fail-closed behavior and
+  dispatch/list/watch argument construction with a fake `gh` command runner
 - rollback instructions cover staging cleanup, proposal pull request closure, proposal branch
   deletion, and post-merge recognition reverts
 - manual-only fixture stage-draft dogfood workflow is available and passed run `28992586329`,

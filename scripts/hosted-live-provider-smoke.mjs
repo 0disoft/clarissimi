@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 const workflowFile = "clarissimi-live-provider-smoke.yml";
 const requiredSecretName = "CLARISSIMI_PROVIDER_TOKEN";
@@ -6,36 +7,52 @@ const defaults = {
   repo: "0disoft/clarissimi",
   ref: "main"
 };
+const usageText = [
+  "Usage:",
+  "  pnpm run hosted-live-provider-smoke -- --model <provider-model> [--endpoint <chat-completions-url>] [--thinking <mode>] [--repo <owner/name>] [--ref <git-ref>]",
+  "",
+  "Examples:",
+  "  pnpm run hosted-live-provider-smoke -- --model gpt-4.1-mini",
+  "  pnpm run hosted-live-provider-smoke -- --model minimax-m3 --endpoint https://example.com/v1/chat/completions --thinking disabled",
+  "",
+  "The script checks only that the repository secret name exists. It never reads or prints the secret value."
+].join("\n");
 
-try {
-  await main();
-} catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
+export async function runHostedLiveProviderSmoke(argv, runtime = defaultRuntime()) {
+  try {
+    return await run(argv, runtime);
+  } catch (error) {
+    if (error instanceof UsageError) {
+      return error.exitCode;
+    }
+
+    runtime.error(error instanceof Error ? error.message : String(error));
+    return 1;
+  }
 }
 
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
+async function run(argv, runtime) {
+  const args = parseArgs(argv, runtime);
 
   if (args.help) {
-    writeUsage();
-    return;
+    runtime.log(usageText);
+    return 0;
   }
 
   if (args.model === undefined) {
-    console.error("hosted live provider smoke requires --model <provider-model>.");
-    writeUsage();
-    process.exit(2);
+    runtime.error("hosted live provider smoke requires --model <provider-model>.");
+    runtime.log(usageText);
+    return 2;
   }
 
   const repo = args.repo ?? defaults.repo;
   const ref = args.ref ?? defaults.ref;
 
-  await requireGh();
-  await requireRepositorySecret(repo, requiredSecretName);
+  await requireGh(runtime);
+  await requireRepositorySecret(runtime, repo, requiredSecretName);
 
-  const dispatchedAfter = new Date(Date.now() - 30_000);
-  await dispatchWorkflow({
+  const dispatchedAfter = new Date(runtime.now() - 30_000);
+  await dispatchWorkflow(runtime, {
     repo,
     ref,
     model: args.model,
@@ -43,18 +60,19 @@ async function main() {
     thinking: args.thinking
   });
 
-  const runId = await findDispatchedRun({
+  const runId = await findDispatchedRun(runtime, {
     repo,
     ref,
     dispatchedAfter
   });
 
-  console.log(`watching hosted live provider smoke run ${runId}`);
-  await watchRun(repo, runId);
-  console.log(`hosted live provider smoke passed: https://github.com/${repo}/actions/runs/${runId}`);
+  runtime.log(`watching hosted live provider smoke run ${runId}`);
+  await watchRun(runtime, repo, runId);
+  runtime.log(`hosted live provider smoke passed: https://github.com/${repo}/actions/runs/${runId}`);
+  return 0;
 }
 
-function parseArgs(argv) {
+function parseArgs(argv, runtime) {
   const parsed = {};
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -69,16 +87,16 @@ function parseArgs(argv) {
 
     const key = arg.startsWith("--") ? arg.slice(2) : undefined;
     if (key === undefined) {
-      throwUsage(`Unexpected positional argument: ${arg}`);
+      return usageFailure(runtime, `Unexpected positional argument: ${arg}`);
     }
 
     if (!["repo", "ref", "model", "endpoint", "thinking"].includes(key)) {
-      throwUsage(`Unsupported option: ${arg}`);
+      return usageFailure(runtime, `Unsupported option: ${arg}`);
     }
 
     const value = argv[index + 1];
     if (value === undefined || value.startsWith("--")) {
-      throwUsage(`${arg} requires a value.`);
+      return usageFailure(runtime, `${arg} requires a value.`);
     }
 
     parsed[key] = value;
@@ -88,34 +106,28 @@ function parseArgs(argv) {
   return parsed;
 }
 
-function throwUsage(message) {
-  console.error(message);
-  writeUsage();
-  process.exit(2);
+function usageFailure(runtime, message) {
+  runtime.error(message);
+  runtime.log(usageText);
+  throw new UsageError();
 }
 
-function writeUsage() {
-  console.log([
-    "Usage:",
-    "  pnpm run hosted-live-provider-smoke -- --model <provider-model> [--endpoint <chat-completions-url>] [--thinking <mode>] [--repo <owner/name>] [--ref <git-ref>]",
-    "",
-    "Examples:",
-    "  pnpm run hosted-live-provider-smoke -- --model gpt-4.1-mini",
-    "  pnpm run hosted-live-provider-smoke -- --model minimax-m3 --endpoint https://example.com/v1/chat/completions --thinking disabled",
-    "",
-    "The script checks only that the repository secret name exists. It never reads or prints the secret value."
-  ].join("\n"));
+class UsageError extends Error {
+  constructor() {
+    super("Invalid hosted live provider smoke arguments.");
+    this.exitCode = 2;
+  }
 }
 
-async function requireGh() {
-  const result = await runCommand("gh", ["--version"]);
+async function requireGh(runtime) {
+  const result = await runtime.runCommand("gh", ["--version"]);
   if (result.exitCode !== 0) {
     throw new Error("GitHub CLI is required to run hosted live provider smoke.");
   }
 }
 
-async function requireRepositorySecret(repo, secretName) {
-  const result = await runCommand("gh", [
+async function requireRepositorySecret(runtime, repo, secretName) {
+  const result = await runtime.runCommand("gh", [
     "secret",
     "list",
     "--repo",
@@ -143,10 +155,10 @@ async function requireRepositorySecret(repo, secretName) {
     );
   }
 
-  console.log(`repository secret ${secretName} is configured for ${repo}`);
+  runtime.log(`repository secret ${secretName} is configured for ${repo}`);
 }
 
-async function dispatchWorkflow(options) {
+async function dispatchWorkflow(runtime, options) {
   const args = [
     "workflow",
     "run",
@@ -167,21 +179,21 @@ async function dispatchWorkflow(options) {
     args.push("-f", `provider-thinking=${options.thinking}`);
   }
 
-  const result = await runCommand("gh", args);
+  const result = await runtime.runCommand("gh", args);
   if (result.exitCode !== 0) {
     throw new Error(`Unable to dispatch ${workflowFile}.\n${boundedOutput(result.stderr)}`);
   }
 
-  console.log(`dispatched ${workflowFile} on ${options.repo}@${options.ref}`);
+  runtime.log(`dispatched ${workflowFile} on ${options.repo}@${options.ref}`);
 }
 
-async function findDispatchedRun(options) {
-  const startedAt = Date.now();
+async function findDispatchedRun(runtime, options) {
+  const startedAt = runtime.now();
   const timeoutMs = 120_000;
   const pollIntervalMs = 5_000;
 
-  while (Date.now() - startedAt < timeoutMs) {
-    const result = await runCommand("gh", [
+  while (runtime.now() - startedAt < timeoutMs) {
+    const result = await runtime.runCommand("gh", [
       "run",
       "list",
       "--repo",
@@ -216,14 +228,14 @@ async function findDispatchedRun(options) {
       return String(run.databaseId);
     }
 
-    await delay(pollIntervalMs);
+    await runtime.delay(pollIntervalMs);
   }
 
   throw new Error(`Unable to find dispatched ${workflowFile} run for ${options.repo}@${options.ref}.`);
 }
 
-async function watchRun(repo, runId) {
-  const result = await runCommand("gh", [
+async function watchRun(runtime, repo, runId) {
+  const result = await runtime.runCommand("gh", [
     "run",
     "watch",
     runId,
@@ -236,6 +248,16 @@ async function watchRun(repo, runId) {
   if (result.exitCode !== 0) {
     throw new Error(`Hosted live provider smoke failed with exit code ${result.exitCode}.`);
   }
+}
+
+function defaultRuntime() {
+  return {
+    now: () => Date.now(),
+    delay,
+    log: (message) => console.log(message),
+    error: (message) => console.error(message),
+    runCommand
+  };
 }
 
 function runCommand(command, args, options = {}) {
@@ -272,4 +294,9 @@ function delay(ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const exitCode = await runHostedLiveProviderSmoke(process.argv.slice(2));
+  process.exit(exitCode);
 }

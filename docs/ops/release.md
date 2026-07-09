@@ -42,6 +42,7 @@ Public package publication and versioned Action tags require:
 - `.github/workflows/clarissimi-live-provider-smoke.yml` passes when using maintainer-owned
   repository secret configuration and a dispatch-time provider model
 - `pnpm run docs`
+- `pnpm run release-readiness` for non-credentialed release gate checks
 - `ssealed doctor . --json`
 - `actionlint` for workflow examples
 - root `action.yml` parses with `yq`
@@ -49,6 +50,16 @@ Public package publication and versioned Action tags require:
 - rollback instructions cover closing proposal pull requests and deleting proposal branches
 
 ## Hosted Live Provider Smoke
+
+Run non-credentialed release gates before any provider token is used:
+
+```powershell
+pnpm run release-readiness
+```
+
+This command checks documentation links, `ssealed doctor`, workflow `actionlint`, YAML parsing with
+`yq`, `git diff --check`, and a high-risk secret pattern scan. It does not call live providers and
+does not replace the credentialed smoke gates below.
 
 After `CLARISSIMI_PROVIDER_TOKEN` is configured as a repository secret, run the manual hosted smoke
 from a maintainer shell without printing the token value:

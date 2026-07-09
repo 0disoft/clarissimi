@@ -23,7 +23,9 @@ documents into one operational view so the next work item is not hidden across s
 
 The repository currently has a fixture-first MVP skeleton with a live GitHub collector boundary:
 
-- `packages/schemas`: config and contribution assessment vocabulary plus runtime validation
+- `packages/schemas`: config and contribution assessment vocabulary plus runtime validation,
+  including rejection of public score, rank, leaderboard, point, and contributor-tier fields in
+  assessment drafts
 - `packages/core`: prepared-evidence policy glue and approval gates
 - `packages/redaction`: deterministic string and JSON-like redaction
 - `packages/github`: fixture-first and injected-client live merged pull request evidence collection

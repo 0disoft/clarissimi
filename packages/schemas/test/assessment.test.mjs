@@ -80,6 +80,31 @@ test("rejects public ranking language in recognition text", () => {
   assert.equal(result.issues.some((issue) => issue.code === "public_ranking_language"), true);
 });
 
+test("rejects explicit public score fields in assessment drafts", () => {
+  const result = validateContributionAssessment({
+    ...validAssessment,
+    score: 92,
+    averageScore: 88,
+    contributor: {
+      ...validAssessment.contributor,
+      contributorTier: "gold"
+    },
+    evidenceRefs: [
+      {
+        ...validAssessment.evidenceRefs[0],
+        leaderboardPosition: 3
+      }
+    ]
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.issues.some((issue) => issue.path === "$.score"), true);
+  assert.equal(result.issues.some((issue) => issue.path === "$.averageScore"), true);
+  assert.equal(result.issues.some((issue) => issue.path === "$.contributor.contributorTier"), true);
+  assert.equal(result.issues.some((issue) => issue.path === "$.evidenceRefs[0].leaderboardPosition"), true);
+  assert.equal(result.issues.every((issue) => issue.code === "public_score_field"), true);
+});
+
 test("exports the product contribution type vocabulary", () => {
   assert.equal(CONTRIBUTION_TYPES.includes("release_validation"), true);
   assert.equal(CONTRIBUTION_TYPES.includes("leaderboard_points"), false);

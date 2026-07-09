@@ -29,6 +29,19 @@ const RANKING_LANGUAGE_PATTERNS: readonly RegExp[] = [
   /\blow-quality\s+contributor\b/i
 ];
 
+const PUBLIC_SCORE_FIELD_NAMES = new Set([
+  "score",
+  "totalScore",
+  "averageScore",
+  "rank",
+  "ranking",
+  "leaderboard",
+  "leaderboardPosition",
+  "contributorTier",
+  "tier",
+  "points"
+]);
+
 export function isContributionType(value: string): value is ContributionType {
   return (CONTRIBUTION_TYPES as readonly string[]).includes(value);
 }
@@ -77,6 +90,7 @@ export function validateContributionAssessment(
   }
 
   expectLiteral(value.schemaVersion, ASSESSMENT_SCHEMA_VERSION, "$.schemaVersion", issues);
+  rejectPublicScoreFields(value, "$", issues);
   validateContributor(value.contributor, "$.contributor", issues);
   expectEnum(value.contributionType, isContributionType, "$.contributionType", issues);
   expectNonEmptyString(value.affectedArea, "$.affectedArea", issues);
@@ -255,6 +269,37 @@ function expectConfidence(value: unknown, path: string, issues: ValidationIssue[
 
   if (value < 0 || value > 1) {
     pushIssue(issues, path, "out_of_range", "Confidence must be between 0 and 1.");
+  }
+}
+
+function rejectPublicScoreFields(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[]
+): void {
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => {
+      rejectPublicScoreFields(entry, `${path}[${index}]`, issues);
+    });
+    return;
+  }
+
+  if (!isRecord(value)) {
+    return;
+  }
+
+  for (const [key, nestedValue] of Object.entries(value)) {
+    const fieldPath = `${path}.${key}`;
+    if (PUBLIC_SCORE_FIELD_NAMES.has(key)) {
+      pushIssue(
+        issues,
+        fieldPath,
+        "public_score_field",
+        "Assessment must not contain public score, rank, leaderboard, point, or contributor tier fields."
+      );
+    }
+
+    rejectPublicScoreFields(nestedValue, fieldPath, issues);
   }
 }
 

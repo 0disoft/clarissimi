@@ -9,7 +9,8 @@
 - Trigger: public numeric scores, rankings, contributor tiers, or leaderboard language
 - Impact: community distrust and contributor pushback
 - Mitigation: public output is narrative-first; numeric weight stays internal; ADR records no public
-  leaderboard
+  leaderboard; schema validation rejects explicit public score, rank, leaderboard, point, and
+  contributor-tier fields in assessment drafts
 
 ## R2: Hallucinated Recognition
 

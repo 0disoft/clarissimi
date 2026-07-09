@@ -430,6 +430,14 @@ test("release readiness rejects observability document drift", () => {
       "hosted CI run status for `docs`, `release-readiness`, `lint`, `smoke`, `check`, and `contract`",
       "hosted CI run status for `docs`, `smoke`, `check`, and `contract`"
     )
+    .replace(
+      "manual dogfood workflow run URLs for propose, stage-draft, and live-provider smoke",
+      "manual dogfood workflow evidence"
+    )
+    .replace(
+      "Maintainers should preserve workflow URLs and PR URLs in",
+      "Maintainers should preserve release notes in"
+    )
     .replace("- `pnpm run release-readiness`", "")
     .replace("- `pnpm run lint`", "")
     .replace(
@@ -439,6 +447,8 @@ test("release readiness rejects observability document drift", () => {
 
   assert.deepEqual(validateObservabilityDocumentContract(text), [
     "docs/ops/observability.md must include hosted CI run status for `docs`, `release-readiness`, `lint`, `smoke`, `check`, and `contract`.",
+    "docs/ops/observability.md must include manual dogfood workflow run URLs for propose, stage-draft, and live-provider smoke.",
+    "docs/ops/observability.md must include Maintainers should preserve workflow URLs and PR URLs in.",
     "docs/ops/observability.md must include - `pnpm run release-readiness`.",
     "docs/ops/observability.md must include - `pnpm run lint`.",
     "docs/ops/observability.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
@@ -1604,6 +1614,10 @@ function createOperationalContractDocumentText() {
 function createObservabilityDocumentText() {
   return [
     "- hosted CI run status for `docs`, `release-readiness`, `lint`, `smoke`, `check`, and `contract`",
+    "- manual dogfood workflow run URLs for propose, stage-draft, and live-provider smoke",
+    "",
+    "Maintainers should preserve workflow URLs and PR URLs in",
+    "release evidence when a manual dogfood run proves a gate.",
     "",
     "Health checks:",
     "",

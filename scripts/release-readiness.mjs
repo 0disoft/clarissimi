@@ -265,6 +265,8 @@ export const observabilityDocumentContract = {
   path: "docs/ops/observability.md",
   requiredSnippets: [
     "hosted CI run status for `docs`, `release-readiness`, `lint`, `smoke`, `check`, and `contract`",
+    "manual dogfood workflow run URLs for propose, stage-draft, and live-provider smoke",
+    "Maintainers should preserve workflow URLs and PR URLs in",
     "- `pnpm run release-readiness`",
     "- `pnpm run lint`",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"

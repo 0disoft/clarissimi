@@ -309,6 +309,8 @@ Completed deliverables:
   `smoke`, `check`, and `contract` as source-only merge readiness gates
 - release-readiness validates that observability docs name the same hosted CI validation commands
   and health checks as the operational CI contract
+- release-readiness validates that observability docs keep manual dogfood workflow run URLs and PR
+  URLs as release evidence requirements
 - release-readiness validates that release and service-level docs keep source-only merge readiness
   aligned with the non-credentialed local validation gate
 - release-readiness validates that secrets and backup/restore docs keep leak-response and restore

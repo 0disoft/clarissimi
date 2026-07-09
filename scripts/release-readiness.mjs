@@ -2,68 +2,124 @@ import { readdir, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { spawn } from "node:child_process";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-const workflowDir = join(repoRoot, ".github", "workflows");
-const workflowFiles = await listFiles(workflowDir, (name) => name.endsWith(".yml") || name.endsWith(".yaml"));
-const yamlFiles = ["action.yml", ...workflowFiles.map(toRepoPath)];
+const defaultRepoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
-await runCheck({
-  name: "docs validation",
-  command: process.execPath,
-  args: ["scripts/validate-docs.mjs"]
-});
-
-await runTestRegistrationCheck();
-await runToolAvailabilityCheck();
-
-await runCheck({
-  name: "ssealed doctor",
-  command: "ssealed",
-  args: ["doctor", ".", "--json"],
-  validate({ stdout }) {
-    let result;
-    try {
-      result = JSON.parse(stdout);
-    } catch (error) {
-      throw new Error(`ssealed doctor did not emit parseable JSON: ${error.message}`);
-    }
-
-    if (result.ok !== true) {
-      throw new Error("ssealed doctor reported ok=false.");
-    }
+export const requiredPackageScripts = [
+  {
+    name: "docs",
+    includes: ["scripts/validate-docs.mjs"]
+  },
+  {
+    name: "smoke",
+    includes: ["scripts/smoke.mjs"]
+  },
+  {
+    name: "check",
+    includes: ["pnpm run typecheck", "pnpm run test"]
+  },
+  {
+    name: "contract",
+    includes: ["pnpm run typecheck", "pnpm run test"]
+  },
+  {
+    name: "release-readiness",
+    includes: ["scripts/release-readiness.mjs"]
+  },
+  {
+    name: "live-provider-smoke",
+    includes: ["scripts/live-provider-smoke.mjs"]
+  },
+  {
+    name: "hosted-live-provider-smoke",
+    includes: ["scripts/hosted-live-provider-smoke.mjs"]
   }
-});
+];
 
-await runCheck({
-  name: "workflow actionlint",
-  command: "actionlint",
-  args: workflowFiles.map(toRepoPath)
-});
+export const requiredTestGlobs = [
+  "packages/schemas/test/*.test.mjs",
+  "packages/redaction/test/*.test.mjs",
+  "packages/core/test/*.test.mjs",
+  "packages/github/test/*.test.mjs",
+  "packages/providers/test/*.test.mjs",
+  "packages/renderers/test/*.test.mjs",
+  "packages/cli/test/*.test.mjs",
+  "packages/action/test/*.test.mjs",
+  "scripts/test/*.test.mjs"
+];
 
-for (const file of yamlFiles) {
+export async function runReleaseReadiness(options = {}) {
+  const repoRoot = options.repoRoot ?? defaultRepoRoot;
+  const workflowDir = join(repoRoot, ".github", "workflows");
+  const workflowFiles = await listFiles(workflowDir, (name) => name.endsWith(".yml") || name.endsWith(".yaml"), repoRoot);
+  const yamlFiles = ["action.yml", ...workflowFiles.map((file) => toRepoPath(repoRoot, file))];
+
   await runCheck({
-    name: `yaml parse: ${file}`,
-    command: "yq",
-    args: ["eval", ".", file],
-    redactOutput: true
+    repoRoot,
+    name: "docs validation",
+    command: process.execPath,
+    args: ["scripts/validate-docs.mjs"]
   });
+
+  await runPackageScriptRegistrationCheck(repoRoot);
+  await runToolAvailabilityCheck(repoRoot);
+
+  await runCheck({
+    repoRoot,
+    name: "ssealed doctor",
+    command: "ssealed",
+    args: ["doctor", ".", "--json"],
+    validate({ stdout }) {
+      let result;
+      try {
+        result = JSON.parse(stdout);
+      } catch (error) {
+        throw new Error(`ssealed doctor did not emit parseable JSON: ${error.message}`);
+      }
+
+      if (result.ok !== true) {
+        throw new Error("ssealed doctor reported ok=false.");
+      }
+    }
+  });
+
+  await runCheck({
+    repoRoot,
+    name: "workflow actionlint",
+    command: "actionlint",
+    args: workflowFiles.map((file) => toRepoPath(repoRoot, file))
+  });
+
+  for (const file of yamlFiles) {
+    await runCheck({
+      repoRoot,
+      name: `yaml parse: ${file}`,
+      command: "yq",
+      args: ["eval", ".", file],
+      redactOutput: true
+    });
+  }
+
+  await runCheck({
+    repoRoot,
+    name: "git diff whitespace check",
+    command: "git",
+    args: ["diff", "--check"]
+  });
+
+  await runSecretScan(repoRoot);
+
+  console.log("release readiness static gates passed");
+  console.log("credentialed gates still required: pnpm run live-provider-smoke and hosted clarissimi-live-provider-smoke.yml");
 }
 
-await runCheck({
-  name: "git diff whitespace check",
-  command: "git",
-  args: ["diff", "--check"]
-});
-
-await runSecretScan();
-
-console.log("release readiness static gates passed");
-console.log("credentialed gates still required: pnpm run live-provider-smoke and hosted clarissimi-live-provider-smoke.yml");
+if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  await runReleaseReadiness();
+}
 
 async function runCheck(options) {
-  const result = await runCommand(options.command, options.args);
+  const result = await runCommand(options.command, options.args, options.repoRoot);
   if (result.exitCode !== 0) {
     const stdout = options.redactOutput ? "[redacted]" : result.stdout.trim();
     const stderr = options.redactOutput ? "[redacted]" : result.stderr.trim();
@@ -79,7 +135,7 @@ async function runCheck(options) {
   console.log(`${options.name} passed`);
 }
 
-function runCommand(command, args) {
+function runCommand(command, args, repoRoot) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: repoRoot,
@@ -105,7 +161,7 @@ function runCommand(command, args) {
   });
 }
 
-async function runSecretScan() {
+async function runSecretScan(repoRoot) {
   const highRiskEnvAssignments = [
     "NPM_TOKEN",
     "OPENAI_API_" + "KEY",
@@ -118,11 +174,11 @@ async function runSecretScan() {
     "BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY",
     ...highRiskEnvAssignments
   ].join("|"));
-  const files = await listFiles(repoRoot, () => true);
+  const files = await listFiles(repoRoot, () => true, repoRoot);
   const hits = [];
 
   for (const file of files) {
-    const repoPath = toRepoPath(file);
+    const repoPath = toRepoPath(repoRoot, file);
     if (shouldSkipSecretScanPath(repoPath)) {
       continue;
     }
@@ -149,7 +205,7 @@ async function runSecretScan() {
   console.log("secret scan passed");
 }
 
-async function runToolAvailabilityCheck() {
+async function runToolAvailabilityCheck(repoRoot) {
   const tools = [
     {
       name: "ssealed",
@@ -174,7 +230,7 @@ async function runToolAvailabilityCheck() {
   for (const tool of tools) {
     let result;
     try {
-      result = await runCommand(tool.command, tool.args);
+      result = await runCommand(tool.command, tool.args, repoRoot);
     } catch (error) {
       throw new Error(`${tool.name} is required but could not be started. ${tool.installHint} ${error.message}`);
     }
@@ -190,7 +246,7 @@ async function runToolAvailabilityCheck() {
   console.log("release readiness tool availability passed");
 }
 
-async function runTestRegistrationCheck() {
+async function runPackageScriptRegistrationCheck(repoRoot) {
   const packageJsonPath = join(repoRoot, "package.json");
   let packageJson;
   try {
@@ -199,28 +255,48 @@ async function runTestRegistrationCheck() {
     throw new Error(`package.json is not parseable JSON: ${error.message}`);
   }
 
-  const testScript = packageJson?.scripts?.test;
+  const issues = validatePackageScriptRegistration(packageJson);
+  if (issues.length > 0) {
+    throw new Error(`package.json script registration failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("package script registration passed");
+}
+
+export function validatePackageScriptRegistration(packageJson) {
+  const issues = [];
+  const scripts = packageJson?.scripts;
+  if (scripts === null || typeof scripts !== "object" || Array.isArray(scripts)) {
+    return ["package.json scripts must be configured."];
+  }
+
+  for (const script of requiredPackageScripts) {
+    const value = scripts[script.name];
+    if (typeof value !== "string") {
+      issues.push(`package.json scripts.${script.name} must be configured.`);
+      continue;
+    }
+
+    for (const expected of script.includes) {
+      if (!value.includes(expected)) {
+        issues.push(`package.json scripts.${script.name} must include ${expected}.`);
+      }
+    }
+  }
+
+  const testScript = scripts.test;
   if (typeof testScript !== "string") {
-    throw new Error("package.json scripts.test must be configured.");
+    issues.push("package.json scripts.test must be configured.");
+    return issues;
   }
 
-  const requiredTestGlobs = [
-    "packages/schemas/test/*.test.mjs",
-    "packages/redaction/test/*.test.mjs",
-    "packages/core/test/*.test.mjs",
-    "packages/github/test/*.test.mjs",
-    "packages/providers/test/*.test.mjs",
-    "packages/renderers/test/*.test.mjs",
-    "packages/cli/test/*.test.mjs",
-    "packages/action/test/*.test.mjs",
-    "scripts/test/*.test.mjs"
-  ];
-  const missing = requiredTestGlobs.filter((glob) => !testScript.includes(glob));
-  if (missing.length > 0) {
-    throw new Error(`package.json scripts.test is missing test globs:\n${missing.join("\n")}`);
+  for (const glob of requiredTestGlobs) {
+    if (!testScript.includes(glob)) {
+      issues.push(`package.json scripts.test must include ${glob}.`);
+    }
   }
 
-  console.log("test registration passed");
+  return issues;
 }
 
 function escapeRegExp(value) {
@@ -236,7 +312,7 @@ function shouldSkipSecretScanPath(repoPath) {
     || repoPath.endsWith(".tsbuildinfo");
 }
 
-async function listFiles(dir, predicate) {
+async function listFiles(dir, predicate, repoRoot) {
   if (!existsSync(dir)) {
     return [];
   }
@@ -246,11 +322,11 @@ async function listFiles(dir, predicate) {
   for (const entry of entries) {
     const entryPath = join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (shouldSkipTraversalPath(entryPath)) {
+      if (shouldSkipTraversalPath(repoRoot, entryPath)) {
         continue;
       }
 
-      files.push(...await listFiles(entryPath, predicate));
+      files.push(...await listFiles(entryPath, predicate, repoRoot));
       continue;
     }
 
@@ -262,10 +338,10 @@ async function listFiles(dir, predicate) {
   return files;
 }
 
-function shouldSkipTraversalPath(path) {
-  return shouldSkipSecretScanPath(toRepoPath(path));
+function shouldSkipTraversalPath(repoRoot, path) {
+  return shouldSkipSecretScanPath(toRepoPath(repoRoot, path));
 }
 
-function toRepoPath(path) {
+function toRepoPath(repoRoot, path) {
   return relative(repoRoot, path).replaceAll(sep, "/");
 }

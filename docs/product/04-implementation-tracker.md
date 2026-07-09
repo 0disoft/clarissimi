@@ -388,6 +388,8 @@ Completed deliverables:
 
 - `mode: stage-draft` routes through the same evidence, redaction, and provider path as dry-run and
   propose mode
+- unsupported Action modes are rejected before provider credential resolution, collection, staging,
+  branch publication, or pull request work begins
 - `stage-draft` accepts normal `draft` assessments and rejects approved public-output publication
   paths
 - staged files are limited to `.clarissimi/drafts/*.json`

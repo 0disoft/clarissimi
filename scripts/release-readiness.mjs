@@ -217,6 +217,25 @@ export const opsValidationFooterContract = {
   ]
 };
 
+export const engineeringValidationDocumentContract = {
+  documents: [
+    "docs/engineering/00-project-invariants.md",
+    "docs/engineering/01-design-review-questions.md",
+    "docs/engineering/02-code-review-checklist.md",
+    "docs/engineering/03-performance-budget.md",
+    "docs/engineering/04-security-baseline.md",
+    "docs/engineering/05-testing-standard.md",
+    "docs/engineering/06-dependency-and-change-policy.md",
+    "docs/engineering/07-operability-and-failure-standard.md",
+    "docs/engineering/08-threat-model.md",
+    "docs/engineering/09-data-integrity.md"
+  ],
+  requiredSnippets: [
+    "Merge-blocking validation: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
+    "`pnpm run smoke`, `pnpm run check`, `pnpm run contract`"
+  ]
+};
+
 export const packageOwnershipContract = {
   path: "docs/monorepo/package-ownership.md"
 };
@@ -657,6 +676,7 @@ export async function runReleaseReadiness(options = {}) {
   await runSecretsDocumentContractCheck(repoRoot);
   await runBackupRestoreDocumentContractCheck(repoRoot);
   await runOpsValidationFooterContractCheck(repoRoot);
+  await runEngineeringValidationDocumentContractCheck(repoRoot);
   await runTsconfigBuildGraphCheck(repoRoot);
   await runPackageOwnershipContractCheck(repoRoot);
   await runDryRunDogfoodEvidenceCheck(repoRoot);
@@ -1009,6 +1029,29 @@ export function validateOpsValidationFooterContract(textsByPath, contract = opsV
     const text = textsByPath[documentPath];
     if (typeof text !== "string") {
       issues.push(`${documentPath} must be readable for ops validation footer contract.`);
+      continue;
+    }
+
+    for (const snippet of contract.requiredSnippets) {
+      if (!text.includes(snippet)) {
+        issues.push(`${documentPath} must include ${snippet}.`);
+      }
+    }
+  }
+
+  return issues;
+}
+
+export function validateEngineeringValidationDocumentContract(
+  textsByPath,
+  contract = engineeringValidationDocumentContract
+) {
+  const issues = [];
+
+  for (const documentPath of contract.documents) {
+    const text = textsByPath[documentPath];
+    if (typeof text !== "string") {
+      issues.push(`${documentPath} must be readable for engineering validation document contract.`);
       continue;
     }
 
@@ -1468,6 +1511,25 @@ async function runOpsValidationFooterContractCheck(repoRoot) {
   }
 
   console.log("ops validation footer contract passed");
+}
+
+async function runEngineeringValidationDocumentContractCheck(repoRoot) {
+  const textsByPath = {};
+
+  for (const documentPath of engineeringValidationDocumentContract.documents) {
+    try {
+      textsByPath[documentPath] = await readFile(join(repoRoot, documentPath), "utf8");
+    } catch (error) {
+      throw new Error(`Unable to read ${documentPath}: ${error.message}`);
+    }
+  }
+
+  const issues = validateEngineeringValidationDocumentContract(textsByPath);
+  if (issues.length > 0) {
+    throw new Error(`engineering validation document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("engineering validation document contract passed");
 }
 
 async function runSmokePackCandidateContractCheck(repoRoot) {

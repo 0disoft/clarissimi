@@ -15,6 +15,7 @@ import {
   validateCredentialedReleaseEvidence,
   validateDryRunDogfoodEvidence,
   validateDogfoodWorkflowContract,
+  validateEngineeringValidationDocumentContract,
   validateHostedLiveProviderWorkflowContract,
   validateObservabilityDocumentContract,
   validateOpsValidationFooterContract,
@@ -382,6 +383,29 @@ test("release readiness rejects ops validation footer drift", () => {
   assert.deepEqual(validateOpsValidationFooterContract(texts), [
     "docs/ops/incident-response.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`.",
     "docs/ops/rollback.md must be readable for ops validation footer contract."
+  ]);
+});
+
+test("release readiness accepts engineering validation document contracts", () => {
+  assert.deepEqual(validateEngineeringValidationDocumentContract(createEngineeringValidationDocumentTexts()), []);
+});
+
+test("release readiness rejects engineering validation document drift", () => {
+  const texts = createEngineeringValidationDocumentTexts();
+  texts["docs/engineering/03-performance-budget.md"] = texts["docs/engineering/03-performance-budget.md"].replace(
+    "Merge-blocking validation: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
+    "Merge-blocking validation: `pnpm run lint`,"
+  );
+  texts["docs/engineering/04-security-baseline.md"] = texts["docs/engineering/04-security-baseline.md"].replace(
+    "  `pnpm run smoke`, `pnpm run check`, `pnpm run contract`",
+    "  `pnpm run check`, `pnpm run contract`"
+  );
+  delete texts["docs/engineering/09-data-integrity.md"];
+
+  assert.deepEqual(validateEngineeringValidationDocumentContract(texts), [
+    "docs/engineering/03-performance-budget.md must include Merge-blocking validation: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,.",
+    "docs/engineering/04-security-baseline.md must include `pnpm run smoke`, `pnpm run check`, `pnpm run contract`.",
+    "docs/engineering/09-data-integrity.md must be readable for engineering validation document contract."
   ]);
 });
 
@@ -1231,6 +1255,29 @@ function createOpsValidationFooterTexts() {
     "docs/ops/disaster-recovery.md": footer,
     "docs/ops/incident-response.md": footer,
     "docs/ops/rollback.md": footer
+  };
+}
+
+function createEngineeringValidationDocumentTexts() {
+  const text = [
+    "## Required Evidence",
+    "",
+    "- Merge-blocking validation: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
+    "  `pnpm run smoke`, `pnpm run check`, `pnpm run contract`",
+    ""
+  ].join("\n");
+
+  return {
+    "docs/engineering/00-project-invariants.md": text,
+    "docs/engineering/01-design-review-questions.md": text,
+    "docs/engineering/02-code-review-checklist.md": text,
+    "docs/engineering/03-performance-budget.md": text,
+    "docs/engineering/04-security-baseline.md": text,
+    "docs/engineering/05-testing-standard.md": text,
+    "docs/engineering/06-dependency-and-change-policy.md": text,
+    "docs/engineering/07-operability-and-failure-standard.md": text,
+    "docs/engineering/08-threat-model.md": text,
+    "docs/engineering/09-data-integrity.md": text
   };
 }
 

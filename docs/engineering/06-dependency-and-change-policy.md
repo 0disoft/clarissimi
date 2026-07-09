@@ -24,8 +24,8 @@ Current policy:
 - Source of truth: `docs/monorepo/package-ownership.md`, `docs/ops/release.md`, `package.json`,
   `pnpm-lock.yaml`
 - Owner: Repository maintainers
-- Merge-blocking validation: `pnpm run docs`, `pnpm run lint`, `pnpm run smoke`,
-  `pnpm run check`, `pnpm run contract`
+- Merge-blocking validation: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,
+  `pnpm run smoke`, `pnpm run check`, `pnpm run contract`
 - Related checklist: `.agents/checklists/dependency.md`
 
 ## Review Blockers

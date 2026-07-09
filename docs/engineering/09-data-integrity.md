@@ -25,8 +25,8 @@ Integrity requirements:
   `docs/adr/0022-keep-ledger-single-file-with-partition-path.md`, `packages/schemas`,
   `packages/renderers`
 - Owner: Repository maintainers
-- Merge-blocking validation: `pnpm run docs`, `pnpm run lint`, `pnpm run smoke`,
-  `pnpm run check`, `pnpm run contract`
+- Merge-blocking validation: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,
+  `pnpm run smoke`, `pnpm run check`, `pnpm run contract`
 - Related checklist: `CHECKLIST.md`
 
 ## Review Blockers

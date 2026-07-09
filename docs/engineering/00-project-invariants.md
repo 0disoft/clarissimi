@@ -27,8 +27,8 @@ Clarissimi's non-negotiable invariants are:
 
 - Source of truth: `docs/product/02-spec.md`, `docs/adr/`, `docs/monorepo/package-ownership.md`
 - Owner: Repository maintainers
-- Merge-blocking validation: `pnpm run docs`, `pnpm run lint`, `pnpm run smoke`,
-  `pnpm run check`, `pnpm run contract`
+- Merge-blocking validation: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,
+  `pnpm run smoke`, `pnpm run check`, `pnpm run contract`
 - Related checklist: `CHECKLIST.md`
 
 ## Review Blockers

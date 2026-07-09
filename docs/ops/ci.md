@@ -10,7 +10,9 @@ The current local CI parity commands are:
 
 - `pnpm run docs`: verifies required documentation targets and local Markdown links.
 - `pnpm run smoke`: builds the workspace, runs the CLI through real subprocesses, runs the Action
-  dry-run fixture path, and verifies default `propose` mode fails closed without `GITHUB_TOKEN`.
+  dry-run fixture path, verifies default `propose` mode fails closed without `GITHUB_TOKEN`, and
+  verifies the live-provider smoke preflight stops before provider calls when credentials are
+  missing.
 - `pnpm run live-provider-smoke`: builds the workspace and runs the CLI against the explicit
   OpenAI-compatible provider using maintainer-provided `CLARISSIMI_PROVIDER_TOKEN` and
   `CLARISSIMI_PROVIDER_MODEL`. It also accepts optional `CLARISSIMI_PROVIDER_ENDPOINT` and

@@ -208,6 +208,29 @@ await runCommand({
   }
 });
 
+await runCommand({
+  name: "Live provider smoke requires credentials before provider calls",
+  command: process.execPath,
+  args: ["scripts/live-provider-smoke.mjs"],
+  env: {
+    CLARISSIMI_PROVIDER_TOKEN: "",
+    CLARISSIMI_PROVIDER_MODEL: "",
+    CLARISSIMI_PROVIDER_ENDPOINT: "",
+    CLARISSIMI_PROVIDER_THINKING: ""
+  },
+  expectExitCode: 2,
+  validate({ stdout, stderr }) {
+    assertEqual(stdout, "", "live provider credential preflight should not write stdout.");
+    if (!stderr.includes("live provider smoke requires CLARISSIMI_PROVIDER_TOKEN and CLARISSIMI_PROVIDER_MODEL.")) {
+      throw new Error("live provider credential preflight should explain missing credentials.");
+    }
+
+    if (!stderr.includes("No provider call was made.")) {
+      throw new Error("live provider credential preflight should confirm no provider call was made.");
+    }
+  }
+});
+
 console.log("smoke validation passed");
 
 async function runJsonCommand(options) {

@@ -83,11 +83,13 @@ test("rejects public ranking language in recognition text", () => {
 test("rejects public contribution share language in recognition text", () => {
   const result = validateContributionAssessment({
     ...validAssessment,
+    affectedArea: "최근 3개월간 전체 기여점수 비율 37%",
     evidenceSummary: "This person contributed 37% of the last 90 days contribution score.",
-    publicRecognitionText: "Held a 22 percent share of recent contribution weight."
+    publicRecognitionText: "Held a 22 percent share of the last 3 months contribution weight."
   });
 
   assert.equal(result.ok, false);
+  assert.equal(result.issues.some((issue) => issue.path === "$.affectedArea"), true);
   assert.equal(result.issues.some((issue) => issue.path === "$.evidenceSummary"), true);
   assert.equal(result.issues.some((issue) => issue.path === "$.publicRecognitionText"), true);
   assert.equal(result.issues.every((issue) => issue.code === "public_ranking_language"), true);
@@ -173,6 +175,9 @@ test("rejects public contribution share fields across common field-name variants
     scoreShare: 0.37,
     "impact-weight-share": 0.22,
     recentContributionWeightShare: 0.18,
+    last90DaysScoreShare: 0.3,
+    threeMonthContributionShare: 0.27,
+    recentImpactWeightPercent: 0.19,
     contributor: {
       ...validAssessment.contributor,
       point_share: 0.4
@@ -183,6 +188,9 @@ test("rejects public contribution share fields across common field-name variants
   assert.equal(result.issues.some((issue) => issue.path === "$.scoreShare"), true);
   assert.equal(result.issues.some((issue) => issue.path === "$.impact-weight-share"), true);
   assert.equal(result.issues.some((issue) => issue.path === "$.recentContributionWeightShare"), true);
+  assert.equal(result.issues.some((issue) => issue.path === "$.last90DaysScoreShare"), true);
+  assert.equal(result.issues.some((issue) => issue.path === "$.threeMonthContributionShare"), true);
+  assert.equal(result.issues.some((issue) => issue.path === "$.recentImpactWeightPercent"), true);
   assert.equal(result.issues.some((issue) => issue.path === "$.contributor.point_share"), true);
   assert.equal(result.issues.every((issue) => issue.code === "public_score_field"), true);
 });
@@ -196,7 +204,8 @@ test("detects ranking language independently", () => {
   assert.equal(hasPublicRankingLanguage("Top 3 contributor on the leaderboard"), true);
   assert.equal(hasPublicRankingLanguage("Average score improved to 92."), true);
   assert.equal(hasPublicRankingLanguage("This person contributed 37% of the last 90 days contribution score."), true);
-  assert.equal(hasPublicRankingLanguage("Held a 22 percent share of recent contribution weight."), true);
+  assert.equal(hasPublicRankingLanguage("Held a 22 percent share of the last 3 months contribution weight."), true);
+  assert.equal(hasPublicRankingLanguage("최근 3개월간 전체 기여점수 비율 37%"), true);
   assert.equal(hasPublicRankingLanguage("Show score share for this contributor."), true);
   assert.equal(hasPublicRankingLanguage("Earned leaderboard points for this contribution."), true);
   assert.equal(hasPublicRankingLanguage("Promoted to gold contributor tier."), true);

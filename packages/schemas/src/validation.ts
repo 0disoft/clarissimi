@@ -29,9 +29,11 @@ const RANKING_LANGUAGE_PATTERNS: readonly RegExp[] = [
   /\bpoints\s+share\b/i,
   /\bimpact\s+weight\s+share\b/i,
   /\bcontribution\s+weight\s+share\b/i,
-  /\bshare\s+of\s+(?:recent\s+)?(?:total\s+)?(?:score|points|impact\s+weight|contribution\s+weight)\b/i,
-  /\b\d+(?:\.\d+)?\s*%\s+of\s+(?:the\s+)?(?:last\s+\d+\s+days'?|recent|total)?\s*(?:contribution\s+)?(?:score|points|impact\s+weight|contribution\s+weight)\b/i,
-  /\b\d+(?:\.\d+)?\s+percent\s+of\s+(?:the\s+)?(?:last\s+\d+\s+days'?|recent|total)?\s*(?:contribution\s+)?(?:score|points|impact\s+weight|contribution\s+weight)\b/i,
+  /\bshare\s+of\s+(?:the\s+)?(?:(?:last|past)\s+\d+\s+(?:days'?|months'?)\s+|recent\s+|total\s+)?(?:score|points|impact\s+weight|contribution\s+weight)\b/i,
+  /\b\d+(?:\.\d+)?\s*%\s+of\s+(?:the\s+)?(?:(?:last|past)\s+\d+\s+(?:days'?|months'?)|recent|total)?\s*(?:contribution\s+)?(?:score|points|impact\s+weight|contribution\s+weight)\b/i,
+  /\b\d+(?:\.\d+)?\s+percent\s+of\s+(?:the\s+)?(?:(?:last|past)\s+\d+\s+(?:days'?|months'?)|recent|total)?\s*(?:contribution\s+)?(?:score|points|impact\s+weight|contribution\s+weight)\b/i,
+  /최근\s*\d+\s*개월(?:간)?\s*(?:전체\s*)?(?:기여\s*)?(?:점수|가중치)\s*(?:비율|점유율|몫)?/i,
+  /(?:기여\s*)?(?:점수|가중치)\s*(?:비율|점유율)/i,
   /\bcontribution\s+points\b/i,
   /\bleaderboard\s+points\b/i,
   /\bcontributor\s+tier\b/i,
@@ -67,6 +69,21 @@ const PUBLIC_SCORE_FIELD_NAMES = new Set([
   "tier",
   "points"
 ]);
+
+const PUBLIC_SCORE_FIELD_SUFFIXES = [
+  "scoreshare",
+  "pointshare",
+  "pointsshare",
+  "impactweightshare",
+  "contributionweightshare",
+  "contributionshare",
+  "scorepercent",
+  "pointpercent",
+  "pointspercent",
+  "impactweightpercent",
+  "contributionweightpercent",
+  "contributionpercent"
+] as const;
 
 export function isContributionType(value: string): value is ContributionType {
   return (CONTRIBUTION_TYPES as readonly string[]).includes(value);
@@ -316,7 +333,7 @@ function rejectPublicScoreFields(
 
   for (const [key, nestedValue] of Object.entries(value)) {
     const fieldPath = `${path}.${key}`;
-    if (PUBLIC_SCORE_FIELD_NAMES.has(normalizeFieldName(key))) {
+    if (isPublicScoreFieldName(key)) {
       pushIssue(
         issues,
         fieldPath,
@@ -331,6 +348,14 @@ function rejectPublicScoreFields(
 
 function normalizeFieldName(value: string): string {
   return value.replace(/[^A-Za-z0-9]+/g, "").toLowerCase();
+}
+
+function isPublicScoreFieldName(value: string): boolean {
+  const normalized = normalizeFieldName(value);
+  return (
+    PUBLIC_SCORE_FIELD_NAMES.has(normalized) ||
+    PUBLIC_SCORE_FIELD_SUFFIXES.some((suffix) => normalized.endsWith(suffix))
+  );
 }
 
 function expectEnum(

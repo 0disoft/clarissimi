@@ -36,6 +36,10 @@ export const requiredPackageScripts = [
     includes: ["scripts/live-provider-smoke.mjs"]
   },
   {
+    name: "hosted-ci-validation",
+    includes: ["scripts/hosted-ci-validation.mjs"]
+  },
+  {
     name: "hosted-live-provider-smoke",
     includes: ["scripts/hosted-live-provider-smoke.mjs"]
   }
@@ -101,6 +105,7 @@ export const releasePolicyDocumentContract = {
     "- Public package publication: blocked.",
     "- Versioned GitHub Action tag: blocked.",
     "Public package publication and versioned Action tags require:",
+    "`pnpm run hosted-ci-validation`",
     "public product-positioning guardrails",
     "intentionally fail-closed `format` and `migration-check`",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
@@ -163,6 +168,7 @@ export const readmeValidationContract = {
     "- `pnpm run check`",
     "- `pnpm run contract`",
     "- `pnpm run live-provider-smoke`",
+    "- `pnpm run hosted-ci-validation`",
     "- `pnpm run hosted-live-provider-smoke -- --model <provider-model>`",
     "`format` intentionally fails closed",
     "`oxlint` is",
@@ -336,6 +342,8 @@ export const ciOperationalDocumentContract = {
     "The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and",
     "manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,",
     "`lint`, `smoke`, `check`, and `contract` with Node.js 24",
+    "`pnpm run hosted-ci-validation`",
+    "uses `gh run list` to find the `CI` workflow run",
     "The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`",
     "to pass with strict up-to-date status checks. Administrator enforcement is disabled",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"

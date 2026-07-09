@@ -56,6 +56,8 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   release tool availability, before live provider smoke
 - root `package.json`: configured `hosted-live-provider-smoke` script for maintainer-triggered
   hosted workflow dispatch and watch after the repository secret name is configured
+- root `package.json`: configured `hosted-ci-validation` script for release maintainers to verify
+  that the hosted `CI` workflow passed for the selected release candidate commit
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
   `event-path` inputs, including the sanitized JSON summary artifact path
 - `.github/workflows/clarissimi-propose-fixture.yml`: manual-only fixture propose dogfood
@@ -374,6 +376,8 @@ Completed deliverables:
 - release-readiness verifies that workflow files declare explicit `permissions` blocks and do not
   use `pull_request_target` or `write-all`, preserving the fork PR trust boundary
 - release-readiness verifies that release-critical package scripts remain registered
+- release-readiness verifies that the hosted CI validation wrapper remains registered as a
+  release-critical package script
 - release-readiness verifies that `pnpm run lint` remains backed by `oxlint . --deny-warnings`
 - release-readiness verifies that `pnpm run format` remains intentionally fail-closed until a
   formatter baseline ADR accepts the rewrite

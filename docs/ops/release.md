@@ -38,6 +38,8 @@ Public package publication and versioned Action tags require:
   passes
 - hosted CI workflow `.github/workflows/ci.yml`, including its non-credentialed
   `release-readiness` step, passes on the release candidate commit
+- `pnpm run hosted-ci-validation` confirms the hosted `CI` workflow passed for the release
+  candidate commit
 - `pnpm run lint`
 - `pnpm run check`
 - `pnpm run contract`
@@ -75,6 +77,18 @@ Action manifest contract drift, hosted CI workflow contract drift, dogfood workf
 hosted live-provider workflow trigger, permission, preflight, runtime, and command drift,
 `git diff --check`, tracked generated-output drift, and a high-risk secret pattern scan. It does
 not call live providers and does not replace the credentialed smoke gates below.
+
+After local gates and after the release candidate commit is pushed, confirm hosted CI for that
+exact commit:
+
+```powershell
+pnpm run hosted-ci-validation
+```
+
+The hosted CI validation helper uses `gh run list` to find the `CI` workflow run for the selected
+commit and uses `gh run watch` when the run is still queued or in progress. It defaults to the
+current local `HEAD`, `0disoft/clarissimi`, `main`, and workflow `CI`; pass `--sha`, `--repo`,
+`--ref`, or `--workflow` only when validating a different release candidate.
 
 After `CLARISSIMI_PROVIDER_TOKEN` is configured as a repository secret, run the manual hosted smoke
 from a maintainer shell without printing the token value:

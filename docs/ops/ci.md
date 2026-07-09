@@ -21,6 +21,12 @@ The current local CI parity commands are:
   `CLARISSIMI_PROVIDER_MODEL`. It also accepts optional `CLARISSIMI_PROVIDER_ENDPOINT` and
   `CLARISSIMI_PROVIDER_THINKING`, and validates those optional inputs before provider calls. This
   command is a release smoke, not a correctness check.
+- `pnpm run hosted-ci-validation`: checks the hosted GitHub Actions `CI` workflow result for the
+  selected commit. The helper uses `gh run list` to find the `CI` workflow run and `gh run watch`
+  when the run is still queued or in progress. It defaults to the current HEAD on
+  `0disoft/clarissimi@main`, validates repository, ref, workflow, and SHA inputs before GitHub API
+  calls, and does not read repository secrets. This command is a release candidate verification
+  helper, not a replacement for local checks.
 - `pnpm run release-readiness`: runs non-credentialed release checks for documentation,
   release-critical package script registration, package and script test-glob registration, the
   workspace package glob, workspace package manifest identity, the blocked root and workspace
@@ -30,7 +36,7 @@ The current local CI parity commands are:
   graph, recorded dry-run and write-mode dogfood evidence, the intentionally fail-closed `format`
   and `migration-check` placeholders, release tool availability, CI runtime and release-tool pin
   drift, `ssealed doctor`, workflow `actionlint`, YAML parsing, `git diff --check`, tracked
-  generated-output drift, and high-risk secret patterns.
+  generated-output drift, high-risk secret patterns, and hosted CI validation wrapper registration.
   It also verifies that rollback instructions still cover staging cleanup, proposal pull request
   closure, proposal branch deletion, post-merge reverts, and the no-database MVP policy; that
   `smoke` keeps workspace package pack dry-run coverage; that the root Action manifest keeps the
@@ -57,6 +63,15 @@ The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pul
 manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,
 `lint`, `smoke`, `check`, and `contract` with Node.js 24 and the package-manager version declared
 by `package.json`.
+
+Before public package publication or a versioned Action tag, release maintainers should run:
+
+```powershell
+pnpm run hosted-ci-validation
+```
+
+Use `--sha`, `--ref`, or `--repo` only when validating a release candidate that is not the current
+local `HEAD` on `main`.
 
 Hosted CI installs pinned non-credentialed release tooling before `release-readiness`:
 

@@ -213,6 +213,7 @@ test("release readiness rejects release policy document drift", () => {
     .replace("Do not bump versions, publish packages, or create", "Bump versions and publish packages.")
     .replace("Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,", "Source-only merge: allowed after `pnpm run lint`,")
     .replace("`pnpm run lint`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and repository hygiene", "`pnpm run check`, `pnpm run contract`, and repository hygiene")
+    .replace("`pnpm run hosted-ci-validation`", "`pnpm run hosted-live-provider-smoke`")
     .replace("public product-positioning guardrails", "public docs")
     .replace("intentionally fail-closed `format` and `migration-check`", "format and migration checks")
     .replace(
@@ -227,6 +228,7 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include `pnpm run lint`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and repository hygiene.",
     "docs/ops/release.md must include - Public package publication: blocked..",
     "docs/ops/release.md must include - Versioned GitHub Action tag: blocked..",
+    "docs/ops/release.md must include `pnpm run hosted-ci-validation`.",
     "docs/ops/release.md must include public product-positioning guardrails.",
     "docs/ops/release.md must include intentionally fail-closed `format` and `migration-check`.",
     "docs/ops/release.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
@@ -271,6 +273,7 @@ test("release readiness rejects README validation drift", () => {
     .replace("Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,", "Source-only merges require `pnpm run docs`,")
     .replace("- `pnpm run release-readiness`", "")
     .replace("- `pnpm run live-provider-smoke`", "")
+    .replace("- `pnpm run hosted-ci-validation`", "")
     .replace("`format` intentionally fails closed", "`format` is optional")
     .replace("`oxlint` is", "`eslint` is")
     .replace(
@@ -285,6 +288,7 @@ test("release readiness rejects README validation drift", () => {
     "README.md must include Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,.",
     "README.md must include - `pnpm run release-readiness`.",
     "README.md must include - `pnpm run live-provider-smoke`.",
+    "README.md must include - `pnpm run hosted-ci-validation`.",
     "README.md must include `format` intentionally fails closed.",
     "README.md must include `oxlint` is.",
     "README.md must include the current lint gate; `oxfmt` is not wired into the repository formatter surface yet."
@@ -484,9 +488,14 @@ test("release readiness rejects CI operational document drift", () => {
       "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
       "- Required validation names: `docs`, `smoke`, `check`, `contract`"
     );
+  const withoutHostedCiValidation = text
+    .replace("`pnpm run hosted-ci-validation`", "`pnpm run hosted-live-provider-smoke`")
+    .replace("uses `gh run list` to find the `CI` workflow run", "uses the GitHub UI");
 
-  assert.deepEqual(validateCiOperationalDocumentContract(text), [
+  assert.deepEqual(validateCiOperationalDocumentContract(withoutHostedCiValidation), [
     "docs/ops/ci.md must include `lint`, `smoke`, `check`, and `contract` with Node.js 24.",
+    "docs/ops/ci.md must include `pnpm run hosted-ci-validation`.",
+    "docs/ops/ci.md must include uses `gh run list` to find the `CI` workflow run.",
     "docs/ops/ci.md must include The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`.",
     "docs/ops/ci.md must include to pass with strict up-to-date status checks. Administrator enforcement is disabled.",
     "docs/ops/ci.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
@@ -1549,6 +1558,7 @@ function createReleasePolicyText() {
     "- Versioned GitHub Action tag: blocked.",
     "",
     "Public package publication and versioned Action tags require:",
+    "`pnpm run hosted-ci-validation`",
     "public product-positioning guardrails",
     "intentionally fail-closed `format` and `migration-check`",
     "",
@@ -1600,6 +1610,7 @@ function createReadmeValidationText() {
     "- `pnpm run check`",
     "- `pnpm run contract`",
     "- `pnpm run live-provider-smoke`",
+    "- `pnpm run hosted-ci-validation`",
     "- `pnpm run hosted-live-provider-smoke -- --model <provider-model>`",
     "",
     "`format` intentionally fails closed until maintainers accept a formatter baseline ADR. `oxlint` is",
@@ -1854,6 +1865,9 @@ function createCiOperationalDocumentText() {
     "manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,",
     "`lint`, `smoke`, `check`, and `contract` with Node.js 24 and the package-manager version declared",
     "by `package.json`.",
+    "",
+    "`pnpm run hosted-ci-validation` uses `gh run list` to find the `CI` workflow run",
+    "for the selected commit and `gh run watch` while it is still running.",
     "",
     "The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`",
     "to pass with strict up-to-date status checks. Administrator enforcement is disabled so repository",

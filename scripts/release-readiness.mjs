@@ -367,9 +367,11 @@ export function validateCiWorkflowContract(text, contract = ciWorkflowContract) 
 
 export function validateActionManifestContract(text, contract = actionManifestContract) {
   const issues = [];
+  const inputsBlock = findRequiredYamlMappingBlock(text, contract.path, "inputs", issues);
+  const outputsBlock = findRequiredYamlMappingBlock(text, contract.path, "outputs", issues);
 
   for (const input of contract.requiredInputs) {
-    const block = findYamlMappingBlock(text, input.name);
+    const block = inputsBlock === undefined ? undefined : findYamlMappingBlock(inputsBlock, input.name);
     if (block === undefined) {
       issues.push(`${contract.path} must define input ${input.name}.`);
       continue;
@@ -384,13 +386,13 @@ export function validateActionManifestContract(text, contract = actionManifestCo
   }
 
   for (const inputName of contract.forbiddenInputs) {
-    if (findYamlMappingBlock(text, inputName) !== undefined) {
+    if (inputsBlock !== undefined && findYamlMappingBlock(inputsBlock, inputName) !== undefined) {
       issues.push(`${contract.path} must not expose ${inputName} as an action input.`);
     }
   }
 
   for (const output of contract.requiredOutputs) {
-    if (findYamlMappingBlock(text, output) === undefined) {
+    if (outputsBlock === undefined || findYamlMappingBlock(outputsBlock, output) === undefined) {
       issues.push(`${contract.path} must define output ${output}.`);
     }
   }
@@ -559,8 +561,17 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function findRequiredYamlMappingBlock(text, path, key, issues) {
+  const block = findYamlMappingBlock(text, key);
+  if (block === undefined) {
+    issues.push(`${path} must define ${key}.`);
+  }
+
+  return block;
+}
+
 function findYamlMappingBlock(text, key) {
-  const lines = text.split(/\r?\n/);
+  const lines = Array.isArray(text) ? text : text.split(/\r?\n/);
   const keyPattern = new RegExp(`^(\\s*)${escapeRegExp(key)}:\\s*$`);
 
   for (let index = 0; index < lines.length; index += 1) {

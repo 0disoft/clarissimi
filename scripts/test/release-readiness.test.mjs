@@ -113,6 +113,22 @@ test("release readiness rejects Action manifest env and command drift", () => {
   ]);
 });
 
+test("release readiness scopes Action manifest input and output checks to their sections", () => {
+  const missingInputMode = createActionManifestText()
+    .replace("  mode:\n    required: false\n    default: propose\n", "");
+
+  assert.deepEqual(validateActionManifestContract(missingInputMode), [
+    "action.yml must define input mode."
+  ]);
+
+  const missingOutputMode = createActionManifestText()
+    .replace("  mode:\n    value: ${{ steps.clarissimi.outputs.mode }}\n", "");
+
+  assert.deepEqual(validateActionManifestContract(missingOutputMode), [
+    "action.yml must define output mode."
+  ]);
+});
+
 test("release readiness accepts the CI workflow contract", () => {
   assert.deepEqual(validateCiWorkflowContract(createCiWorkflowText()), []);
 });

@@ -379,6 +379,10 @@ Completed deliverables:
   formatter baseline ADR accepts the rewrite
 - release-readiness validates that ADR 0027 keeps `oxlint` as the current lint gate and keeps
   `format` fail-closed until a separate formatter baseline rewrite is accepted
+- formatter gate revalidation on 2026-07-10 confirmed `oxfmt@0.58.0` still reports JavaScript-family
+  drift only, while Prettier reports broader Markdown, JSON, YAML, TypeScript, and script drift; the
+  `format` validation remains fail-closed instead of pretending repository-wide formatting is
+  enforced
 - release-readiness verifies that `pnpm run migration-check` remains intentionally fail-closed
   until a real migration validation owner and command are accepted
 - release-readiness verifies that package test globs still include package and script test suites

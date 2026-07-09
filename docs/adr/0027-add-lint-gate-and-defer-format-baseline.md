@@ -20,6 +20,20 @@ under style churn and make future review harder.
 on JavaScript-family formatting rather than the full Markdown, YAML, JSON, and TypeScript surface
 owned by this repository.
 
+Formatter revalidation on 2026-07-10 kept this decision in place:
+
+- `npm view oxfmt version description license repository --json` reported `oxfmt@0.58.0`,
+  "Formatter for the JavaScript Oxidation Compiler", MIT license, and the `oxc` repository.
+- `pnpm dlx oxfmt@0.58.0 --check packages scripts action.yml .github --ignore-path=.gitignore
+  --no-error-on-unmatched-pattern` reported format issues in 76 JavaScript-family package and script
+  files.
+- `pnpm dlx prettier@3.9.5 --check "**/*.{md,json,yml,yaml,ts,mjs}" --ignore-path .gitignore`
+  reported style drift in 82 files across Markdown, JSON, YAML, TypeScript, and script surfaces.
+
+This means enabling `format` is still a dedicated formatter-baseline rewrite, not a small validation
+toggle. `oxfmt` remains useful to watch, but it cannot represent the repository-wide formatter
+contract by itself.
+
 ## Decision
 
 Use `oxlint` as the first real lint gate.

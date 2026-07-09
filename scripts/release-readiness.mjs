@@ -76,6 +76,35 @@ export const hostedLiveProviderWorkflowContract = {
     { name: "provider-endpoint", required: false },
     { name: "provider-thinking", required: false }
   ],
+  requiredSnippets: [
+    "workflow_dispatch:",
+    "contents: read",
+    "Verify provider inputs",
+    "Verify provider secret",
+    "uses: actions/checkout@v7",
+    "uses: actions/setup-node@v6",
+    "node-version: 24",
+    "corepack enable",
+    "pnpm install --frozen-lockfile",
+    "CLARISSIMI_PROVIDER_MODEL: ${{ inputs.provider-model }}",
+    "CLARISSIMI_PROVIDER_ENDPOINT: ${{ inputs.provider-endpoint }}",
+    "CLARISSIMI_PROVIDER_THINKING: ${{ inputs.provider-thinking }}"
+  ],
+  requiredOrder: [
+    "Verify provider inputs",
+    "Verify provider secret",
+    "Checkout repository",
+    "Set up Node.js",
+    "Install dependencies",
+    "Run live provider smoke"
+  ],
+  forbiddenSnippets: [
+    "push:",
+    "pull_request:",
+    "contents: write",
+    "pull-requests: write",
+    "issues: write"
+  ],
   secretName: "CLARISSIMI_PROVIDER_TOKEN",
   runCommand: "pnpm run live-provider-smoke"
 };
@@ -413,6 +442,20 @@ export function validateHostedLiveProviderWorkflowContract(text, contract = host
   if (!text.includes(contract.runCommand)) {
     issues.push(`${contract.path} must run ${contract.runCommand}.`);
   }
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  for (const snippet of contract.forbiddenSnippets) {
+    if (text.includes(snippet)) {
+      issues.push(`${contract.path} must not include ${snippet}.`);
+    }
+  }
+
+  issues.push(...validateSnippetOrder(text, contract.path, contract.requiredOrder));
 
   return issues;
 }
@@ -773,6 +816,27 @@ function findYamlScalarValue(block, key) {
 function leadingSpaceCount(value) {
   const match = /^ */.exec(value);
   return match === null ? 0 : match[0].length;
+}
+
+function validateSnippetOrder(text, path, snippets) {
+  const issues = [];
+  let cursor = -1;
+
+  for (const snippet of snippets) {
+    const next = text.indexOf(snippet);
+    if (next === -1) {
+      continue;
+    }
+
+    if (next <= cursor) {
+      issues.push(`${path} must keep ${snippet} after the previous release-check step.`);
+      continue;
+    }
+
+    cursor = next;
+  }
+
+  return issues;
 }
 
 function shouldSkipSecretScanPath(repoPath) {

@@ -28,7 +28,9 @@ The current local CI parity commands are:
   parity commands with read-only contents permission.
   Fixture dogfood workflow contracts are also checked so dry-run stays read-only and propose and
   stage-draft stay manual, fixture-backed, and output-asserting. It is a maintainer release gate,
-  not a live-provider check.
+  not a live-provider check. The hosted live-provider workflow contract is checked for manual-only
+  dispatch, read-only permissions, input and secret preflight before checkout, runtime setup, and
+  the release smoke command.
 - `pnpm run check`: runs typecheck and the package test suite.
 - `pnpm run contract`: runs typecheck and tests as the current contract gate.
 

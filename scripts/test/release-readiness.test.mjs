@@ -260,6 +260,40 @@ test("release readiness rejects hosted live provider workflow secret and command
   ]);
 });
 
+test("release readiness rejects hosted live provider trigger, permission, and preflight drift", () => {
+  const text = createHostedWorkflowText()
+    .replace("  workflow_dispatch:", "  push:")
+    .replace("contents: read", "contents: write")
+    .replace(
+      [
+        "      - name: Verify provider secret",
+        "        env:",
+        "          CLARISSIMI_PROVIDER_TOKEN: ${{ secrets.CLARISSIMI_PROVIDER_TOKEN }}",
+        "        run: test -n \"${CLARISSIMI_PROVIDER_TOKEN}\"",
+        "",
+        "      - name: Checkout repository",
+        "        uses: actions/checkout@v7"
+      ].join("\n"),
+      [
+        "      - name: Checkout repository",
+        "        uses: actions/checkout@v7",
+        "",
+        "      - name: Verify provider secret",
+        "        env:",
+        "          CLARISSIMI_PROVIDER_TOKEN: ${{ secrets.CLARISSIMI_PROVIDER_TOKEN }}",
+        "        run: test -n \"${CLARISSIMI_PROVIDER_TOKEN}\""
+      ].join("\n")
+    );
+
+  assert.deepEqual(validateHostedLiveProviderWorkflowContract(text), [
+    ".github/workflows/clarissimi-live-provider-smoke.yml must include workflow_dispatch:.",
+    ".github/workflows/clarissimi-live-provider-smoke.yml must include contents: read.",
+    ".github/workflows/clarissimi-live-provider-smoke.yml must not include push:.",
+    ".github/workflows/clarissimi-live-provider-smoke.yml must not include contents: write.",
+    ".github/workflows/clarissimi-live-provider-smoke.yml must keep Checkout repository after the previous release-check step."
+  ]);
+});
+
 function createValidScripts() {
   const scripts = {
     test: `node --test ${requiredTestGlobs.join(" ")}`
@@ -494,12 +528,45 @@ function createHostedWorkflowText() {
     "        description: Optional OpenAI-compatible thinking mode.",
     "        required: false",
     "",
+    "permissions:",
+    "  contents: read",
+    "",
     "jobs:",
     "  live-provider-smoke:",
     "    steps:",
+    "      - name: Verify provider inputs",
+    "        env:",
+    "          CLARISSIMI_PROVIDER_MODEL: ${{ inputs.provider-model }}",
+    "          CLARISSIMI_PROVIDER_ENDPOINT: ${{ inputs.provider-endpoint }}",
+    "          CLARISSIMI_PROVIDER_THINKING: ${{ inputs.provider-thinking }}",
+    "        run: |",
+    "          test -n \"${CLARISSIMI_PROVIDER_MODEL}\"",
+    "",
     "      - name: Verify provider secret",
     "        env:",
     "          CLARISSIMI_PROVIDER_TOKEN: ${{ secrets.CLARISSIMI_PROVIDER_TOKEN }}",
+    "        run: test -n \"${CLARISSIMI_PROVIDER_TOKEN}\"",
+    "",
+    "      - name: Checkout repository",
+    "        uses: actions/checkout@v7",
+    "",
+    "      - name: Set up Node.js",
+    "        uses: actions/setup-node@v6",
+    "        with:",
+    "          node-version: 24",
+    "",
+    "      - name: Enable Corepack",
+    "        run: corepack enable",
+    "",
+    "      - name: Install dependencies",
+    "        run: pnpm install --frozen-lockfile",
+    "",
+    "      - name: Run live provider smoke",
+    "        env:",
+    "          CLARISSIMI_PROVIDER_TOKEN: ${{ secrets.CLARISSIMI_PROVIDER_TOKEN }}",
+    "          CLARISSIMI_PROVIDER_MODEL: ${{ inputs.provider-model }}",
+    "          CLARISSIMI_PROVIDER_ENDPOINT: ${{ inputs.provider-endpoint }}",
+    "          CLARISSIMI_PROVIDER_THINKING: ${{ inputs.provider-thinking }}",
     "        run: pnpm run live-provider-smoke"
   ].join("\n");
 }

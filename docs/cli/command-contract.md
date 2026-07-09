@@ -112,8 +112,9 @@ rebuilds derived outputs. It does not call providers, read provider tokens, fetc
 decide approval, mutate branches, create pull requests, or store AI/provider provenance in public
 recognition records.
 
-By default, `--ledger` is `.clarissimi/contributions.jsonl`. The command writes output files only
-when `--out-dir` is explicit.
+By default, `--ledger` is `.clarissimi/contributions.jsonl`. The override is for local validation,
+test fixtures, and recovery workflows; it is not an MVP monthly or yearly partition mode. Public
+derived outputs still use the canonical Clarissimi output paths when `--out-dir` is explicit.
 
 ## Modes
 

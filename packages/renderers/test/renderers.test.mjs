@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  CONTRIBUTIONS_JSONL_PATH,
+  RENDERED_OUTPUT_PATHS,
   RendererValidationError,
   buildContributorsJsonDocument,
   buildStaticContributionsDocument,
@@ -57,6 +59,12 @@ test("renders approved assessments as parseable JSONL", () => {
   assert.equal(jsonl.endsWith("\n"), true);
   assert.equal(parsed.length, 1);
   assert.equal(parsed[0].publicRecognitionText, "Added regression coverage for the parser crash.");
+});
+
+test("keeps approved ledger output on the MVP single-file path", () => {
+  assert.equal(CONTRIBUTIONS_JSONL_PATH, ".clarissimi/contributions.jsonl");
+  assert.equal(RENDERED_OUTPUT_PATHS.contributionsJsonl, CONTRIBUTIONS_JSONL_PATH);
+  assert.equal(Object.values(RENDERED_OUTPUT_PATHS).includes(".clarissimi/contributions/2026.jsonl"), false);
 });
 
 test("renders only public contribution record fields", () => {

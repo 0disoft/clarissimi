@@ -15,6 +15,7 @@
 - Draft inbox boundary: `docs/adr/0021-add-draft-inbox-staging.md`
 - Draft approval helper: `docs/adr/0024-add-draft-approval-helper.md`
 - Config schema boundary: `docs/adr/0025-centralize-config-schema-validation.md`
+- Maintainer analytics boundary: `docs/adr/0026-add-maintainer-recent-share-analytics.md`
 
 ## MVP Commands
 
@@ -66,6 +67,18 @@ Rebuilds derived outputs from `.clarissimi/contributions.jsonl`.
 
 The fixture-first implementation previews rebuilds by default and writes files only when `--out-dir`
 is explicit.
+
+### `clarissimi analytics recent-share`
+
+Calculates maintainer-only recent recognition share from approved ledger records.
+
+By default, the command reads `.clarissimi/contributions.jsonl`, uses a 90-day window ending at the
+current time, and writes only to stdout. `--as-of <iso-date>` makes the window deterministic for
+release retrospectives or tests. `--window-days <days>` changes the lookback window.
+
+The command may report internal recognition weight and recognition share for maintainer review. It
+must not write `.clarissimi/contributors.json`, `CONTRIBUTORS.md`, static public JSON, or any public
+scoreboard artifact.
 
 ### `clarissimi stage-draft --draft <path>`
 

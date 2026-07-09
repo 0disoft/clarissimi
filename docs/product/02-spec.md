@@ -21,12 +21,13 @@ Do not describe it as:
 - an AI code reviewer
 - a maintainer replacement
 
-Internal policy may use `impactLevel` or `internalImpactWeight` to sort drafts and tune approval
-rules. Public output must prioritize the contribution story over numeric values.
+Internal policy may use `impactLevel` or `internalImpactWeight` to sort drafts, tune approval
+rules, or support maintainer-only analytics. Public output must prioritize the contribution story
+over numeric values.
 
 Public output must not show a contributor's percentage share of recent total impact weight, score,
 points, or contribution weight. A time-windowed share can read like a softer leaderboard even when
-no explicit rank is displayed. If Clarissimi later adds this kind of metric, it must be an opt-in
+no explicit rank is displayed. Clarissimi may expose this kind of metric only through a
 maintainer-only analytics view unless a future ADR accepts a safer public framing.
 
 ## Primary Event
@@ -202,6 +203,7 @@ The MVP CLI should expose:
 - `clarissimi approve-draft --draft <path>`
 - `clarissimi import-draft --draft <path>`
 - `clarissimi rebuild`
+- `clarissimi analytics recent-share`
 
 Fixture-first implementation is acceptable before live GitHub collection.
 

@@ -25,7 +25,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
   docs/adr/0022-keep-ledger-single-file-with-partition-path.md,
   docs/adr/0023-add-action-draft-inbox-proposal-mode.md,
   docs/adr/0024-add-draft-approval-helper.md,
-  docs/adr/0025-centralize-config-schema-validation.md
+  docs/adr/0025-centralize-config-schema-validation.md,
+  docs/adr/0026-add-maintainer-recent-share-analytics.md
 
 ## Required Decisions
 
@@ -49,7 +50,7 @@ This repository type owns workspace boundaries, package ownership, dependency po
 | `packages/redaction` | Implemented | String and JSON-like value redaction, redaction reports, secret/email/private-key/provider-token masking | Provider API calls, prompt construction, security severity decisions, recognition approval |
 | `packages/github` | Implemented | Fixture-first and injected-client live GitHub merged pull request evidence collection | Token loading, environment handling, domain policy, provider calls, redaction policy, CLI orchestration, Action orchestration, repository writes |
 | `packages/providers` | Implemented | Provider adapter interface, deterministic fake contribution draft provider, SDK-free OpenAI-compatible HTTP adapter | Schema vocabulary ownership, redaction policy, maintainer approval policy, environment token loading, live LLM SDK clients |
-| `packages/renderers` | Implemented | JSONL, derived contributor JSON, Markdown, static-data rendering, draft review JSON rendering, output path constants | Evidence collection, provider calls, approval policy, filesystem writes, CLI orchestration, Action orchestration |
+| `packages/renderers` | Implemented | JSONL, derived contributor JSON, Markdown, static-data rendering, draft review JSON rendering, maintainer-only analytics documents, output path constants | Evidence collection, provider calls, approval policy, filesystem writes, CLI orchestration, Action orchestration |
 | `packages/cli` | Implemented | Local command parsing, fixture-first orchestration, agent-assisted draft staging, approval, and import, config file loading, ledger validation, rebuild command I/O | Domain policy, schema vocabulary, shared config value validation, provider behavior, GitHub API collection, Action runtime |
 | `packages/action` | Implemented | GitHub Action entrypoint, environment input resolution, event file reading, live collector routing and token injection, bounded dry-run/propose/stage-draft summaries, internal proposal output staging into temporary directories, proposal branch writing and publishing behind narrow local git boundaries, proposal pull request creation/update boundary | Live GitHub evidence normalization, provider token handling, default-branch writes, domain policy, provider behavior |
 

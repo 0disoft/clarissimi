@@ -4,4 +4,5 @@ export * from "./drafts.js";
 export * from "./contributors.js";
 export * from "./markdown.js";
 export * from "./static-data.js";
+export * from "./analytics.js";
 export * from "./outputs.js";

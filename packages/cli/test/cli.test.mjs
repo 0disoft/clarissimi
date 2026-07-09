@@ -238,6 +238,83 @@ test("validate-ledger rejects draft records", async () => {
   });
 });
 
+test("analytics recent-share reports maintainer-only recognition share without writing files", async () => {
+  await withTempDir(async (dir) => {
+    const ledgerDir = join(dir, ".clarissimi");
+    const ledger = join(ledgerDir, "contributions.jsonl");
+    const otherContributor = {
+      platform: "github",
+      id: "456",
+      login: "doc-helper",
+      profileUrl: "https://github.com/doc-helper"
+    };
+    await mkdir(ledgerDir, { recursive: true });
+    await writeFile(
+      ledger,
+      [
+        assessment({
+          impactLevel: "high",
+          source: {
+            repository: "example/project",
+            event: "merged_pull_request",
+            pullRequestNumber: 40,
+            mergedAt: "2026-07-01T00:00:00.000Z"
+          }
+        }),
+        assessment({
+          contributor: otherContributor,
+          impactLevel: "low",
+          contributionType: "documentation",
+          affectedArea: "setup guide",
+          source: {
+            repository: "example/project",
+            event: "merged_pull_request",
+            pullRequestNumber: 41,
+            mergedAt: "2026-06-01T00:00:00.000Z"
+          }
+        }),
+        assessment({
+          source: {
+            repository: "example/project",
+            event: "merged_pull_request",
+            pullRequestNumber: 39,
+            mergedAt: "2026-01-01T00:00:00.000Z"
+          }
+        })
+      ].map((record) => JSON.stringify(record)).join("\n") + "\n",
+      "utf8"
+    );
+
+    const result = await run(
+      [
+        "analytics",
+        "recent-share",
+        "--ledger",
+        ledger,
+        "--as-of",
+        "2026-07-09T00:00:00.000Z",
+        "--window-days",
+        "90",
+        "--json"
+      ],
+      dir
+    );
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(result.stderr, "");
+    assert.equal(output.command, "analytics");
+    assert.equal(output.subcommand, "recent-share");
+    assert.equal(output.analytics.scope, "maintainer-only");
+    assert.equal(output.analytics.window.includedRecords, 2);
+    assert.equal(output.analytics.window.totalRecognitionWeight, 4);
+    assert.equal(output.analytics.contributors[0].contributor.login, "octocat");
+    assert.equal(output.analytics.contributors[0].recognitionShare, 0.75);
+    await assert.rejects(readFile(join(dir, ".clarissimi", "contributors.json"), "utf8"));
+    await assert.rejects(readFile(join(dir, "CONTRIBUTORS.md"), "utf8"));
+  });
+});
+
 test("stage-draft writes a sanitized review copy without touching the ledger", async () => {
   await withTempDir(async (dir) => {
     const draftPath = join(dir, "agent-draft.json");

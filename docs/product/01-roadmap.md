@@ -57,6 +57,7 @@ Done when:
 - `clarissimi validate-ledger`
 - `clarissimi recognize --fixture <path> --mode dry-run`
 - `clarissimi rebuild`
+- `clarissimi analytics recent-share`
 - fake provider produces deterministic assessment drafts for fixtures
 
 Validation:

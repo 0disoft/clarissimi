@@ -6,8 +6,8 @@
 ## Purpose
 
 The Clarissimi CLI gives maintainers a local, reviewable way to validate configuration, validate the
-recognition ledger, run fixture-based recognition, import agent-authored recognition drafts, and
-rebuild derived outputs.
+recognition ledger, run fixture-based recognition, import agent-authored recognition drafts, rebuild
+derived outputs, and inspect maintainer-only analytics.
 
 The CLI is an orchestration shell. It must not own domain policy that belongs in schemas, core,
 redaction, providers, or renderers.
@@ -23,6 +23,7 @@ redaction, providers, or renderers.
 - `clarissimi approve-draft --draft <path>`
 - `clarissimi import-draft --draft <path>`
 - `clarissimi rebuild`
+- `clarissimi analytics recent-share`
 
 Fixture-first behavior is acceptable for the first implementation. `--fixture` accepts Clarissimi's
 internal evidence fixture shape. `--github-fixture` accepts a GitHub-shaped merged pull request
@@ -44,6 +45,10 @@ that file, run `approve-draft` to mark it approved, and then pass it to `import-
 `approve-draft` is the maintainer approval helper. It rewrites a selected draft file as a sanitized
 approved assessment, but it does not import the record, rebuild public outputs, call providers, or
 create GitHub pull requests.
+
+`analytics recent-share` is a maintainer-only local report. It calculates recent recognition-weight
+share from approved ledger records and writes only to stdout. It must not be treated as public
+contributor ranking output.
 
 The public ledger format is documented in [`ledger-format.md`](ledger-format.md). The ledger stores
 PR numbers in `source.pullRequestNumber`, PR URLs in `evidenceRefs`, and no public contributor

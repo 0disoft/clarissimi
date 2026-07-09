@@ -39,6 +39,8 @@ engine.
 - `0024-add-draft-approval-helper.md`: add a CLI helper for maintainer approval of staged drafts
 - `0025-centralize-config-schema-validation.md`: centralize config schema validation in
   `packages/schemas`
+- `0026-add-maintainer-recent-share-analytics.md`: add maintainer-only recent recognition share
+  analytics
 
 ## Review Blockers
 

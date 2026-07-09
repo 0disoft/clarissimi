@@ -114,6 +114,9 @@ Rejected examples:
 Derived contributor profiles may include counts, contribution types, affected areas, badges, and
 recognition summaries. They must not compute public average scores or total scores.
 
+Maintainer-only analytics may calculate recent recognition share from the same ledger, but those
+results are stdout-only analysis and are not public derived ledger outputs.
+
 ## Drafts Versus Ledger
 
 Unapproved assessments belong in the draft inbox:

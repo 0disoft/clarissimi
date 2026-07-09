@@ -34,11 +34,11 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   OpenAI-compatible HTTP adapter; deterministic fake provider falls back to safe narrative values
   when maintainer hints would introduce public scoring or ranking language; OpenAI-compatible
   provider instructions reject public score-share and time-window contribution-percentage language
-- `packages/renderers`: JSONL, contributor JSON, Markdown, static-data renderers, and draft review
-  JSON rendering
+- `packages/renderers`: JSONL, contributor JSON, Markdown, static-data renderers, draft review
+  JSON rendering, and maintainer-only recent-share analytics
 - `packages/cli`: fixture-first validation, recognition dry-run, agent-assisted draft staging,
-  approval, import, rebuild commands, help output, and explicit fake or OpenAI-compatible provider
-  selection
+  approval, import, rebuild, maintainer-only analytics commands, help output, and explicit fake or
+  OpenAI-compatible provider selection
 - `packages/action`: Action runner for dry-run summaries, fixture-first public recognition
   proposals, fixture-first draft review proposals, and event-path live GitHub collection in write
   modes with explicit fake or OpenAI-compatible provider selection

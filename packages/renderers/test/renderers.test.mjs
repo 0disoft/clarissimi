@@ -6,6 +6,7 @@ import {
   RENDERED_OUTPUT_PATHS,
   RendererValidationError,
   buildContributorsJsonDocument,
+  buildMaintainerRecentRecognitionShareDocument,
   buildStaticContributionsDocument,
   draftReviewPathForAssessment,
   parseContributionsJsonl,
@@ -178,6 +179,81 @@ test("derived public profile and static data omit score-share ingredients", () =
   assert.equal(publicText.includes("contributionWeightShare"), false);
   assert.equal(publicText.includes("impactWeightShare"), false);
   assert.equal(publicText.includes("percent"), false);
+});
+
+test("builds maintainer-only recent recognition share analytics", () => {
+  const contributor = {
+    platform: "github",
+    id: "456",
+    login: "maintainer-helper",
+    profileUrl: "https://github.com/maintainer-helper"
+  };
+  const document = buildMaintainerRecentRecognitionShareDocument(
+    [
+      assessment({
+        impactLevel: "high",
+        source: {
+          ...source,
+          pullRequestNumber: 40,
+          mergedAt: "2026-07-01T00:00:00.000Z"
+        }
+      }),
+      assessment({
+        impactLevel: "medium",
+        contributionType: "documentation",
+        affectedArea: "setup guide",
+        source: {
+          ...source,
+          pullRequestNumber: 41,
+          mergedAt: "2026-05-01T00:00:00.000Z"
+        }
+      }),
+      assessment({
+        contributor,
+        impactLevel: "low",
+        source: {
+          ...source,
+          pullRequestNumber: 44,
+          mergedAt: "2026-06-15T00:00:00.000Z"
+        }
+      }),
+      assessment({
+        contributor,
+        source: {
+          ...source,
+          pullRequestNumber: 45,
+          mergedAt: "2026-02-01T00:00:00.000Z"
+        }
+      }),
+      assessment({
+        source: {
+          repository: source.repository,
+          event: source.event,
+          pullRequestNumber: 46
+        }
+      })
+    ],
+    {
+      asOf: "2026-07-09T00:00:00.000Z",
+      windowDays: 90
+    }
+  );
+
+  assert.equal(document.schemaVersion, "clarissimi.maintainer-analytics/v1");
+  assert.equal(document.scope, "maintainer-only");
+  assert.equal(document.window.includedRecords, 3);
+  assert.equal(document.window.excludedRecordsWithoutMergedAt, 1);
+  assert.equal(document.window.totalRecognitionWeight, 6);
+  assert.equal(document.contributors.length, 2);
+  assert.equal(document.contributors[0].contributor.login, "octocat");
+  assert.equal(document.contributors[0].recognitionCount, 2);
+  assert.equal(document.contributors[0].recognitionWeight, 5);
+  assert.equal(document.contributors[0].recognitionShare, 0.833333);
+  assert.deepEqual(document.contributors[0].contributionTypes, ["documentation", "test"]);
+  assert.equal(document.contributors[1].contributor.login, "maintainer-helper");
+  assert.equal(document.contributors[1].recognitionShare, 0.166667);
+  assert.equal(JSON.stringify(document).includes("rank"), false);
+  assert.equal(JSON.stringify(document).includes("score"), false);
 });
 
 test("renders idempotent contributors markdown", () => {

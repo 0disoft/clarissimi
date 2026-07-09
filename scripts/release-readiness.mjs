@@ -54,6 +54,14 @@ export const deferredPackageScripts = [
       "biome",
       "dprint"
     ]
+  },
+  {
+    name: "migration-check",
+    requiredSnippets: [
+      "migration-check is not configured",
+      "process.exit(1)"
+    ],
+    forbiddenSnippets: []
   }
 ];
 

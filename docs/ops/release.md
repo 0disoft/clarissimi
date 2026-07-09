@@ -67,8 +67,8 @@ the blocked root and workspace package release policy, workspace package publish
 policy document blocked-status coverage, release tool availability, package ownership table
 coverage, internal workspace dependency graph,
 package publication metadata, TypeScript project-reference build graph, recorded dry-run and
-write-mode dogfood evidence, the intentionally fail-closed `format` placeholder, CI runtime and
-release-tool pin drift,
+write-mode dogfood evidence, the intentionally fail-closed `format` and `migration-check`
+placeholders, CI runtime and release-tool pin drift,
 rollback procedure coverage, `ssealed doctor`, workflow `actionlint`, YAML parsing with `yq`,
 Action manifest contract drift, hosted CI workflow contract drift, dogfood workflow contract drift,
 hosted live-provider workflow trigger, permission, preflight, runtime, and command drift,

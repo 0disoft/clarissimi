@@ -28,9 +28,9 @@ The current local CI parity commands are:
   guardrails, workspace package publish surface, package ownership table coverage, package
   publication metadata, internal workspace dependency graph, TypeScript project-reference build
   graph, recorded dry-run and write-mode dogfood evidence, the intentionally fail-closed `format`
-  placeholder, release tool availability, CI runtime and release-tool pin drift, `ssealed doctor`,
-  workflow `actionlint`, YAML parsing, `git diff --check`, tracked generated-output drift, and
-  high-risk secret patterns.
+  and `migration-check` placeholders, release tool availability, CI runtime and release-tool pin
+  drift, `ssealed doctor`, workflow `actionlint`, YAML parsing, `git diff --check`, tracked
+  generated-output drift, and high-risk secret patterns.
   It also verifies that rollback instructions still cover staging cleanup, proposal pull request
   closure, proposal branch deletion, post-merge reverts, and the no-database MVP policy; that
   `smoke` keeps workspace package pack dry-run coverage; that the root Action manifest keeps the
@@ -49,8 +49,9 @@ The current local CI parity commands are:
 - `pnpm run contract`: runs typecheck and tests as the current contract gate.
 
 `format` remains intentionally unconfigured, fails closed, and is protected by
-`release-readiness` until a formatter baseline ADR accepts the rewrite. `migration-check` remains
-intentionally unconfigured and fails until its owner defines a real check.
+`release-readiness` until a formatter baseline ADR accepts the rewrite. `migration-check` also
+remains intentionally unconfigured, fails closed, and is protected by `release-readiness` until its
+owner defines a real check.
 
 The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and
 manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,

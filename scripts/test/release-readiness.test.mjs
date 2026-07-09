@@ -64,7 +64,7 @@ test("release readiness rejects drifted release-critical script commands", () =>
   ]);
 });
 
-test("release readiness keeps format intentionally fail-closed", () => {
+test("release readiness keeps deferred validations intentionally fail-closed", () => {
   const scripts = createValidScripts();
 
   assert.deepEqual(validatePackageScriptRegistration({ scripts }), []);
@@ -86,6 +86,16 @@ test("release readiness rejects fake or premature format command drift", () => {
     "package.json scripts.format must include format is not configured.",
     "package.json scripts.format must include process.exit(1).",
     "package.json scripts.format must not use oxfmt until a formatter baseline is accepted."
+  ]);
+});
+
+test("release readiness rejects fake migration-check command drift", () => {
+  const scripts = createValidScripts();
+  scripts["migration-check"] = "node -e \"console.log('no migrations')\"";
+
+  assert.deepEqual(validatePackageScriptRegistration({ scripts }), [
+    "package.json scripts.migration-check must include migration-check is not configured.",
+    "package.json scripts.migration-check must include process.exit(1)."
   ]);
 });
 
@@ -821,6 +831,7 @@ test("release readiness rejects hosted live provider trigger, permission, and pr
 function createValidScripts() {
   const scripts = {
     format: "node -e \"console.error('format is not configured. Configure this validation before relying on pnpm run format.'); process.exit(1)\"",
+    "migration-check": "node -e \"console.error('migration-check is not configured. Configure this validation before relying on pnpm run migration-check.'); process.exit(1)\"",
     test: `node --test ${requiredTestGlobs.join(" ")}`
   };
 

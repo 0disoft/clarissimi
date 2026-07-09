@@ -336,6 +336,8 @@ Completed deliverables:
   tool-backed release checks
 - release-readiness secret scan covers committed provider gateway token assignments including
   Clarissimi, OpenCode Go, UMANS, DeepSeek, Node auth, and GitHub PAT environment names
+- ADR 0027 records the `oxlint` merge gate decision and keeps `format` fail-closed until a separate
+  formatter baseline rewrite is accepted
 - agent-assisted draft guide documents a copyable assessment template, PR source fields, evidence
   refs, impact/confidence semantics, and delegated model envelopes
 - ledger format guide documents public ledger fields, PR number and URL placement, draft-versus-ledger

@@ -41,6 +41,8 @@ engine.
   `packages/schemas`
 - `0026-add-maintainer-recent-share-analytics.md`: add maintainer-only recent recognition share
   analytics
+- `0027-add-lint-gate-and-defer-format-baseline.md`: add an Oxlint merge gate and defer the
+  formatter baseline rewrite
 
 ## Review Blockers
 

@@ -46,6 +46,8 @@ endpoint.
 
 Repository Actions settings keep default workflow permissions at read-only, with workflow-created
 pull requests enabled so explicit `propose` and `stage-draft` jobs can open proposal pull requests.
+Write-mode dogfood remains manual-only through `.github/workflows/clarissimi-propose-fixture.yml`
+and `.github/workflows/clarissimi-stage-draft-fixture.yml`.
 
 The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`
 to pass with strict up-to-date status checks. Administrator enforcement is disabled so repository

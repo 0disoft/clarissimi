@@ -116,9 +116,11 @@ Recommended order:
 Do not replace the read-only dogfood workflow with a write-mode workflow.
 
 Current status: the read-only dry-run workflow remains in
-`.github/workflows/clarissimi-dry-run.yml`, and the maintainer-triggered fixture propose workflow is
-available in `.github/workflows/clarissimi-propose-fixture.yml`. A passing maintainer-triggered run
-is still required before public package publication or a versioned Action tag.
+`.github/workflows/clarissimi-dry-run.yml`, the maintainer-triggered fixture propose workflow is
+available in `.github/workflows/clarissimi-propose-fixture.yml`, and the maintainer-triggered
+fixture stage-draft workflow is available in
+`.github/workflows/clarissimi-stage-draft-fixture.yml`. Passing maintainer-triggered write-mode
+runs are still required before public package publication or a versioned Action tag.
 
 ## Rollback Expectations
 

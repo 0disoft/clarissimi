@@ -43,6 +43,7 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
   `event-path` inputs
 - `.github/workflows/clarissimi-propose-fixture.yml`: manual-only fixture propose dogfood
+- `.github/workflows/clarissimi-stage-draft-fixture.yml`: manual-only fixture stage-draft dogfood
 - `.github/workflows/clarissimi-live-provider-smoke.yml`: manual-only credentialed live provider
   smoke
 - `.github/workflows/ci.yml`: hosted validation for `docs`, `smoke`, `check`, and `contract`
@@ -392,6 +393,7 @@ Completed deliverables:
 - proposal pull request titles and bodies use draft review language instead of public recognition
   language
 - Action outputs and step summaries include proposal metadata without raw evidence
+- manual-only fixture dogfood workflow verifies stage-draft Action outputs
 
 Validation:
 

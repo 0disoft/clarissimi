@@ -182,10 +182,12 @@ steps:
 ```
 
 This repository keeps write-mode dogfood manual-only in
-`.github/workflows/clarissimi-propose-fixture.yml`. Maintainers can trigger it with
-`workflow_dispatch` to open or update a deterministic recognition proposal pull request from the
-approved fixture. Do not replace the read-only dry-run dogfood workflow with this write-mode
-workflow.
+`.github/workflows/clarissimi-propose-fixture.yml` and
+`.github/workflows/clarissimi-stage-draft-fixture.yml`. Maintainers can trigger them with
+`workflow_dispatch` to open or update deterministic proposal pull requests from fixture inputs.
+The propose workflow uses the approved fixture and the stage-draft workflow uses the unapproved
+draft fixture. Do not replace the read-only dry-run dogfood workflow with these write-mode
+workflows.
 
 ## Review Blockers
 

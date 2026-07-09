@@ -1,0 +1,54 @@
+name: Clarissimi stage draft fixture
+
+on:
+  workflow_dispatch:
+    inputs:
+      base-branch:
+        description: Base branch for the draft review pull request.
+        required: false
+        default: main
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+concurrency:
+  group: clarissimi-stage-draft-fixture-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  dogfood-stage-draft:
+    name: Fixture stage-draft dogfood
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Run fixture stage-draft action
+        id: stage
+        uses: ./
+        with:
+          mode: stage-draft
+          github-fixture: fixtures/github-merged-pr-basic.json
+          base-branch: ${{ inputs.base-branch }}
+
+      - name: Verify fixture stage-draft outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.stage.outputs.draft-count }}" = "1"
+          test "${{ steps.stage.outputs.proposed-entry-count }}" = "0"
+          test "${{ steps.stage.outputs.skipped-entry-count }}" = "0"
+          test "${{ steps.stage.outputs.mode }}" = "stage-draft"
+          test "${{ steps.stage.outputs.input-source }}" = "github_fixture"
+          test "${{ steps.stage.outputs.approval-status }}" = "draft"
+          test "${{ steps.stage.outputs.staged-file-count }}" = "1"
+          test -n "${{ steps.stage.outputs.proposal-branch }}"
+          test -n "${{ steps.stage.outputs.proposal-commit-sha }}"
+          test -n "${{ steps.stage.outputs.proposal-pull-request-number }}"
+          test -n "${{ steps.stage.outputs.proposal-pull-request-url }}"
+          test -n "${{ steps.stage.outputs.proposal-pull-request-action }}"

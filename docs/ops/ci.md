@@ -30,11 +30,13 @@ The current local CI parity commands are:
   `format` placeholder, release tool
   availability, CI runtime and release-tool pin drift, `ssealed doctor`, workflow `actionlint`,
   YAML parsing, `git diff --check`, tracked generated-output drift, and high-risk secret patterns.
-  It also verifies that `smoke` keeps workspace package pack dry-run coverage, that the root Action
-  manifest keeps the expected inputs, outputs, defaults, secret environment boundary, and runtime
-  commands, that workflow files declare explicit `permissions` blocks without
-  `pull_request_target` or `write-all`, and that the hosted CI workflow still runs the required
-  local parity commands with read-only contents permission.
+  It also verifies that rollback instructions still cover staging cleanup, proposal pull request
+  closure, proposal branch deletion, post-merge reverts, and the no-database MVP policy; that
+  `smoke` keeps workspace package pack dry-run coverage; that the root Action manifest keeps the
+  expected inputs, outputs, defaults, secret environment boundary, and runtime commands; that
+  workflow files declare explicit `permissions` blocks without `pull_request_target` or
+  `write-all`; and that the hosted CI workflow still runs the required local parity commands with
+  read-only contents permission.
   Fixture dogfood workflow contracts are also checked so dry-run stays read-only, exercises the
   sanitized JSON summary artifact path, and propose and stage-draft stay manual, fixture-backed,
   and output-asserting. It is a maintainer release gate, not a live-provider check. The hosted live

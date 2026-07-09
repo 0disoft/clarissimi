@@ -385,8 +385,9 @@ Completed deliverables:
 - script tests validate the agent-assisted draft guide's JSON examples against
   `clarissimi.assessment/v1`
 - script tests validate the ledger format guide's JSON example against `clarissimi.assessment/v1`
-- rollback instructions cover staging cleanup, proposal pull request closure, proposal branch
-  deletion, and post-merge recognition reverts
+- release-readiness verifies that rollback instructions cover staging cleanup, proposal pull
+  request closure, proposal branch deletion, post-merge recognition reverts, and the no-database MVP
+  rollback policy
 - manual-only fixture stage-draft dogfood workflow is available and passed run `29027802451`,
   updating `https://github.com/0disoft/clarissimi/pull/2`
 - read-only dry-run dogfood workflow passed run `29031384775`, including sanitized JSON summary

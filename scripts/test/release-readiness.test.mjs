@@ -18,6 +18,7 @@ import {
   validatePackageReleasePolicy,
   validatePackageScriptRegistration,
   validateRootTsconfigReferences,
+  validateRollbackProcedureContract,
   validateSmokePackCandidateContract,
   validateTrackedGeneratedOutputPaths,
   validateWorkspaceContract,
@@ -448,6 +449,25 @@ test("release readiness accepts recorded write-mode dogfood evidence", () => {
 
 test("release readiness accepts recorded dry-run dogfood evidence", () => {
   assert.deepEqual(validateDryRunDogfoodEvidence(createReleaseEvidenceText()), []);
+});
+
+test("release readiness accepts rollback procedure coverage", () => {
+  assert.deepEqual(validateRollbackProcedureContract(createRollbackProcedureText()), []);
+});
+
+test("release readiness rejects missing rollback procedure coverage", () => {
+  const text = createRollbackProcedureText()
+    .replace("Delete the temporary staging directory.", "Clean up temporary files.")
+    .replace("Close the proposal pull request and delete the proposal branch.", "Resolve the proposal.")
+    .replace("Revert the recognition pull request", "Undo the recognition change")
+    .replace("No database rollback exists in the MVP.", "Database rollback is TBD.");
+
+  assert.deepEqual(validateRollbackProcedureContract(text), [
+    "docs/ops/rollback.md must include Delete the temporary staging directory..",
+    "docs/ops/rollback.md must include Close the proposal pull request and delete the proposal branch..",
+    "docs/ops/rollback.md must include Revert the recognition pull request.",
+    "docs/ops/rollback.md must include No database rollback exists in the MVP.."
+  ]);
 });
 
 test("release readiness rejects missing hosted credentialed release evidence", () => {
@@ -886,6 +906,34 @@ function createReleaseEvidenceText() {
     "Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow run",
     "`29018826925` passed on `2026-07-09T12:39:17Z` using repository secret `CLARISSIMI_PROVIDER_TOKEN`",
     "and dispatch input `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`."
+  ].join("\n");
+}
+
+function createRollbackProcedureText() {
+  return [
+    "# Rollback",
+    "",
+    "| State | Rollback action |",
+    "| --- | --- |",
+    "| Temporary staging output only | Delete the temporary staging directory. |",
+    "| Local proposal branch only | Delete the local `clarissimi/recognition/<source-kind>-<source-id>` branch. |",
+    "| Published proposal branch without pull request | Delete the remote proposal branch. |",
+    "| Open proposal pull request before merge | Close the proposal pull request and delete the proposal branch. |",
+    "| Merged recognition pull request | Revert the recognition pull request and run the rebuild path for derived outputs. |",
+    "",
+    "```powershell",
+    "git branch --delete clarissimi/recognition/<source-kind>-<source-id>",
+    "git push origin --delete clarissimi/recognition/<source-kind>-<source-id>",
+    "```",
+    "",
+    "After the revert lands, regenerate derived outputs with the configured rebuild command.",
+    "",
+    "No database rollback exists in the MVP.",
+    "",
+    "- `.clarissimi/contributions.jsonl`",
+    "",
+    "Derived files should be regenerated from approved contribution records instead of hand-edited during rollback.",
+    ""
   ].join("\n");
 }
 

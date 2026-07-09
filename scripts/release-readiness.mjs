@@ -251,6 +251,21 @@ export const dryRunDogfoodEvidenceContract = {
   ]
 };
 
+export const rollbackProcedureContract = {
+  path: "docs/ops/rollback.md",
+  requiredSnippets: [
+    "Delete the temporary staging directory.",
+    "git branch --delete clarissimi/recognition/<source-kind>-<source-id>",
+    "git push origin --delete clarissimi/recognition/<source-kind>-<source-id>",
+    "Close the proposal pull request and delete the proposal branch.",
+    "Revert the recognition pull request",
+    "configured rebuild command",
+    "No database rollback exists in the MVP.",
+    ".clarissimi/contributions.jsonl",
+    "Derived files should be regenerated from approved contribution records"
+  ]
+};
+
 export const highRiskSecretEnvNames = [
   "NPM_TOKEN",
   "NODE_AUTH_TOKEN",
@@ -493,6 +508,7 @@ export async function runReleaseReadiness(options = {}) {
   await runDryRunDogfoodEvidenceCheck(repoRoot);
   await runWriteModeDogfoodEvidenceCheck(repoRoot);
   await runCredentialedReleaseEvidenceCheck(repoRoot);
+  await runRollbackProcedureContractCheck(repoRoot);
   await runToolAvailabilityCheck(repoRoot);
 
   await runCheck({
@@ -704,6 +720,18 @@ export function validateWorkflowTrustBoundaryContract(
   for (const snippet of contract.forbiddenSnippets) {
     if (text.includes(snippet)) {
       issues.push(`${path} must not include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateRollbackProcedureContract(text, contract = rollbackProcedureContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
     }
   }
 
@@ -947,6 +975,23 @@ async function runToolAvailabilityCheck(repoRoot) {
   }
 
   console.log("release readiness tool availability passed");
+}
+
+async function runRollbackProcedureContractCheck(repoRoot) {
+  const rollbackPath = join(repoRoot, rollbackProcedureContract.path);
+  let text;
+  try {
+    text = await readFile(rollbackPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${rollbackProcedureContract.path}: ${error.message}`);
+  }
+
+  const issues = validateRollbackProcedureContract(text);
+  if (issues.length > 0) {
+    throw new Error(`rollback procedure contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("rollback procedure contract passed");
 }
 
 async function runPackageScriptRegistrationCheck(repoRoot) {

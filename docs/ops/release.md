@@ -68,11 +68,11 @@ tool availability, package ownership table coverage, internal workspace dependen
 package publication metadata, TypeScript project-reference build graph, recorded dry-run and
 write-mode dogfood evidence, the intentionally fail-closed `format` placeholder, CI runtime and
 release-tool pin drift,
-`ssealed doctor`, workflow `actionlint`, YAML parsing with `yq`, Action manifest contract drift,
-hosted CI workflow contract drift, dogfood workflow contract drift, hosted live-provider workflow
-trigger, permission, preflight, runtime, and command drift, `git diff --check`, tracked
-generated-output drift, and a high-risk secret pattern scan. It does not call live providers and
-does not replace the credentialed smoke gates below.
+rollback procedure coverage, `ssealed doctor`, workflow `actionlint`, YAML parsing with `yq`,
+Action manifest contract drift, hosted CI workflow contract drift, dogfood workflow contract drift,
+hosted live-provider workflow trigger, permission, preflight, runtime, and command drift,
+`git diff --check`, tracked generated-output drift, and a high-risk secret pattern scan. It does
+not call live providers and does not replace the credentialed smoke gates below.
 
 After `CLARISSIMI_PROVIDER_TOKEN` is configured as a repository secret, run the manual hosted smoke
 from a maintainer shell without printing the token value:

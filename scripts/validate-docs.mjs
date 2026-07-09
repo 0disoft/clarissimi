@@ -1,10 +1,10 @@
 import { readdir, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join, relative, resolve, sep } from "node:path";
 
-const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-const requiredPaths = [
+const defaultRepoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+export const requiredDocumentationPaths = [
   "README.md",
   "action.yml",
   "VALIDATION.md",
@@ -24,52 +24,71 @@ const requiredPaths = [
   "scripts/release-readiness.mjs"
 ];
 
-const markdownFiles = [
-  ...await listMarkdownFiles(repoRoot, false),
-  ...await listMarkdownFiles(join(repoRoot, "docs"), true),
-  ...await listMarkdownFiles(join(repoRoot, ".agents"), true)
-];
-const issues = [];
+export async function validateDocs(options = {}) {
+  const repoRoot = options.repoRoot ?? defaultRepoRoot;
+  const requiredPaths = options.requiredPaths ?? requiredDocumentationPaths;
+  const markdownFiles = [
+    ...await listMarkdownFiles(repoRoot, false),
+    ...await listMarkdownFiles(join(repoRoot, "docs"), true),
+    ...await listMarkdownFiles(join(repoRoot, ".agents"), true)
+  ];
+  const issues = [];
 
-for (const requiredPath of requiredPaths) {
-  if (!existsSync(join(repoRoot, requiredPath))) {
-    issues.push(`missing required documentation target: ${requiredPath}`);
-  }
-}
-
-for (const filePath of markdownFiles) {
-  const text = await readFile(filePath, "utf8");
-  for (const block of extractJsonCodeBlocks(text)) {
-    try {
-      JSON.parse(block.value);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      issues.push(`${toRepoPath(filePath)} has invalid json code block ${block.index}: ${message}`);
+  for (const requiredPath of requiredPaths) {
+    if (!existsSync(join(repoRoot, requiredPath))) {
+      issues.push(`missing required documentation target: ${requiredPath}`);
     }
   }
 
-  for (const link of extractMarkdownLinks(text)) {
-    if (isExternalOrAnchor(link)) {
-      continue;
+  for (const filePath of markdownFiles) {
+    const text = await readFile(filePath, "utf8");
+    for (const block of extractJsonCodeBlocks(text)) {
+      try {
+        JSON.parse(block.value);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        issues.push(`${toRepoPath(repoRoot, filePath)} has invalid json code block ${block.index}: ${message}`);
+      }
     }
 
-    const target = stripLinkSuffix(link);
-    if (target.length === 0) {
-      continue;
-    }
+    for (const link of extractMarkdownLinks(text)) {
+      if (isExternalOrAnchor(link)) {
+        continue;
+      }
 
-    if (!localTargetExists(filePath, target)) {
-      issues.push(`${toRepoPath(filePath)} links to missing local target: ${link}`);
+      const target = stripLinkSuffix(link);
+      if (target.length === 0) {
+        continue;
+      }
+
+      if (!localTargetExists(repoRoot, filePath, target)) {
+        issues.push(`${toRepoPath(repoRoot, filePath)} links to missing local target: ${link}`);
+      }
     }
   }
+
+  return {
+    ok: issues.length === 0,
+    issues,
+    markdownFileCount: markdownFiles.length
+  };
 }
 
-if (issues.length > 0) {
-  console.error(issues.join("\n"));
-  process.exit(1);
+export async function runValidateDocs(options = {}) {
+  const result = await validateDocs(options);
+
+  if (!result.ok) {
+    console.error(result.issues.join("\n"));
+    return 1;
+  }
+
+  console.log(`docs validation passed (${result.markdownFileCount} markdown files)`);
+  return 0;
 }
 
-console.log(`docs validation passed (${markdownFiles.length} markdown files)`);
+if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  process.exitCode = await runValidateDocs();
+}
 
 async function listMarkdownFiles(dir, recursive) {
   if (!existsSync(dir)) {
@@ -129,14 +148,14 @@ function stripLinkSuffix(link) {
   return decodeURIComponent(withoutHash).replace(/^<|>$/g, "");
 }
 
-function localTargetExists(markdownFile, target) {
+function localTargetExists(repoRoot, markdownFile, target) {
   const candidates = [
     resolve(dirname(markdownFile), target),
     resolve(repoRoot, target)
   ];
 
   return candidates.some((candidate) => {
-    if (!isInsideRepo(candidate)) {
+    if (!isInsideRepo(repoRoot, candidate)) {
       return false;
     }
 
@@ -144,11 +163,11 @@ function localTargetExists(markdownFile, target) {
   });
 }
 
-function isInsideRepo(path) {
+function isInsideRepo(repoRoot, path) {
   const relativePath = relative(repoRoot, path);
   return relativePath === "" || (!relativePath.startsWith("..") && !relativePath.includes(`..${sep}`));
 }
 
-function toRepoPath(path) {
+function toRepoPath(repoRoot, path) {
   return relative(repoRoot, path).replaceAll(sep, "/");
 }

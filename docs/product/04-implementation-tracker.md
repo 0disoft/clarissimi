@@ -466,9 +466,10 @@ Completed deliverables:
   accidentally merged into the real repository ledger or draft inbox
 - release-readiness requires direct GitHub Actions run URLs for dry-run, propose, stage-draft, and
   hosted live-provider release evidence
-- hosted CI validation evidence records run `29050441506` on `2026-07-09T21:09:52Z` for
-  `2329da472e7c1e17074ae975ea7e2a2cd3116cbb`, and release-readiness requires direct hosted CI run
-  evidence for the source-only validation commands
+- hosted CI validation evidence records a direct CI run URL, timestamp, validated source commit, and
+  source-only validation commands without pinning `release-readiness` to one stale run id; release
+  maintainers must refresh this evidence with `pnpm run hosted-ci-validation` for the exact
+  release-candidate commit before publication or versioned Action tags
 
 Release follow-up:
 

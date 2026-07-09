@@ -827,24 +827,28 @@ export const dryRunDogfoodEvidenceContract = {
 export const hostedCiEvidenceContract = {
   path: "docs/ops/release.md",
   requiredSnippets: [
-    "Current hosted CI validation evidence: `CI` workflow run",
+    "Recent hosted CI validation evidence: `CI` workflow run",
     "validated source commit",
-    "2329da472e7c1e17074ae975ea7e2a2cd3116cbb",
     "`release-readiness`, `lint`, `smoke`, `check`, and `contract`",
-    "https://github.com/0disoft/clarissimi/actions/runs/29050441506"
+    "Refresh this evidence with",
+    "`pnpm run hosted-ci-validation` for the exact release-candidate commit"
   ],
   requiredPatterns: [
     {
       description: "a numeric hosted CI workflow run id",
-      pattern: /Current hosted CI validation evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/
+      pattern: /Recent hosted CI validation evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/
     },
     {
       description: "a hosted CI workflow timestamp",
-      pattern: /Current hosted CI validation evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/
+      pattern: /Recent hosted CI validation evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/
     },
     {
       description: "a hosted CI validated source commit sha",
-      pattern: /Current hosted CI validation evidence:[\s\S]*validated source commit[\s\S]*`[0-9a-f]{40}`/
+      pattern: /Recent hosted CI validation evidence:[\s\S]*validated source commit[\s\S]*`[0-9a-f]{40}`/
+    },
+    {
+      description: "a direct hosted CI workflow run URL",
+      pattern: /Recent hosted CI validation evidence:[\s\S]*Run URL:\s*`https:\/\/github\.com\/0disoft\/clarissimi\/actions\/runs\/[0-9]{8,}`\.[\s\S]*Refresh this evidence/
     }
   ]
 };

@@ -162,6 +162,24 @@ test("derives contributor profiles without public ranking fields", () => {
   assert.equal(JSON.stringify(document).includes("rank"), false);
 });
 
+test("derived public profile and static data omit score-share ingredients", () => {
+  const contributorDocument = buildContributorsJsonDocument([assessment()]);
+  const staticDocument = buildStaticContributionsDocument([assessment()]);
+  const publicText = JSON.stringify({
+    contributorDocument,
+    staticDocument
+  });
+
+  assert.equal(publicText.includes("confidence"), false);
+  assert.equal(publicText.includes("impactLevel"), false);
+  assert.equal(publicText.includes("evidenceSummary"), false);
+  assert.equal(publicText.includes("internalImpactWeight"), false);
+  assert.equal(publicText.includes("scoreShare"), false);
+  assert.equal(publicText.includes("contributionWeightShare"), false);
+  assert.equal(publicText.includes("impactWeightShare"), false);
+  assert.equal(publicText.includes("percent"), false);
+});
+
 test("renders idempotent contributors markdown", () => {
   const first = renderContributorsMarkdown([assessment()]);
   const second = renderContributorsMarkdown(parseContributionsJsonl(renderContributionsJsonl([assessment()])));

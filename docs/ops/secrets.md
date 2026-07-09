@@ -77,7 +77,8 @@ output, Action summary, CLI JSON, pull request body, or repository file:
 2. Revoke or rotate the affected credential.
 3. Close or revert the unsafe proposal pull request.
 4. Delete unsafe generated artifacts or branches according to `docs/ops/rollback.md`.
-5. Rerun secret scan, `pnpm run docs`, `pnpm run smoke`, `pnpm run check`, and `pnpm run contract`.
+5. Rerun secret scan, `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,
+   `pnpm run smoke`, `pnpm run check`, and `pnpm run contract`.
 
 ## Owners
 
@@ -87,7 +88,7 @@ output, Action summary, CLI JSON, pull request body, or repository file:
 
 ## Validation
 
-- Required validation names: `docs`, `smoke`, `check`, `contract`
+- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
 - Current hosted live-provider evidence: workflow run `29018826925` passed on

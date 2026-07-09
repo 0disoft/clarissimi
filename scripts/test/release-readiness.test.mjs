@@ -9,6 +9,7 @@ import {
   requiredPackageScripts,
   requiredTestGlobs,
   validateActionManifestContract,
+  validateBackupRestoreDocumentContract,
   validateCiOperationalDocumentContract,
   validateCiWorkflowContract,
   validateCredentialedReleaseEvidence,
@@ -26,6 +27,7 @@ import {
   validateRollbackProcedureContract,
   validateSmokePackCandidateContract,
   validateServiceLevelsDocumentContract,
+  validateSecretsDocumentContract,
   validateTrackedGeneratedOutputPaths,
   validateWorkspaceContract,
   validateWorkspaceInternalDependencies,
@@ -308,6 +310,54 @@ test("release readiness rejects service levels document drift", () => {
   assert.deepEqual(validateServiceLevelsDocumentContract(text), [
     "docs/ops/service-levels.md must include Source-only merge readiness | Local `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`, and hygiene checks pass before push..",
     "docs/ops/service-levels.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
+  ]);
+});
+
+test("release readiness accepts the secrets document contract", () => {
+  assert.deepEqual(validateSecretsDocumentContract(createSecretsDocumentText()), []);
+});
+
+test("release readiness rejects secrets document drift", () => {
+  const text = createSecretsDocumentText()
+    .replace(
+      "Rerun secret scan, `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
+      "Rerun secret scan, `pnpm run docs`,"
+    )
+    .replace(
+      "`pnpm run smoke`, `pnpm run check`, and `pnpm run contract`.",
+      "`pnpm run smoke`, `pnpm run check`, and `pnpm run contract` when convenient."
+    )
+    .replace(
+      "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
+      "- Required validation names: `docs`, `smoke`, `check`, `contract`"
+    );
+
+  assert.deepEqual(validateSecretsDocumentContract(text), [
+    "docs/ops/secrets.md must include Rerun secret scan, `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,.",
+    "docs/ops/secrets.md must include `pnpm run smoke`, `pnpm run check`, and `pnpm run contract`..",
+    "docs/ops/secrets.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
+  ]);
+});
+
+test("release readiness accepts the backup and restore document contract", () => {
+  assert.deepEqual(validateBackupRestoreDocumentContract(createBackupRestoreDocumentText()), []);
+});
+
+test("release readiness rejects backup and restore document drift", () => {
+  const text = createBackupRestoreDocumentText()
+    .replace("- `pnpm run release-readiness`", "")
+    .replace("- `pnpm run lint`", "")
+    .replace("secret scan for committed provider tokens, GitHub tokens, private keys, and environment files", "manual review")
+    .replace(
+      "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
+      "- Required validation names: `docs`, `smoke`, `check`, `contract`"
+    );
+
+  assert.deepEqual(validateBackupRestoreDocumentContract(text), [
+    "docs/ops/backup-and-restore.md must include - `pnpm run release-readiness`.",
+    "docs/ops/backup-and-restore.md must include - `pnpm run lint`.",
+    "docs/ops/backup-and-restore.md must include secret scan for committed provider tokens, GitHub tokens, private keys, and environment files.",
+    "docs/ops/backup-and-restore.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
   ]);
 });
 
@@ -1098,6 +1148,38 @@ function createServiceLevelsDocumentText() {
     "| Area | Target |",
     "| --- | --- |",
     "| Source-only merge readiness | Local `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`, and hygiene checks pass before push. |",
+    "",
+    "## Validation",
+    "",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
+    ""
+  ].join("\n");
+}
+
+function createSecretsDocumentText() {
+  return [
+    "Rerun secret scan, `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
+    "`pnpm run smoke`, `pnpm run check`, and `pnpm run contract`.",
+    "",
+    "## Validation",
+    "",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
+    ""
+  ].join("\n");
+}
+
+function createBackupRestoreDocumentText() {
+  return [
+    "Integrity checks after restore:",
+    "",
+    "- `clarissimi validate-ledger`",
+    "- `pnpm run docs`",
+    "- `pnpm run release-readiness`",
+    "- `pnpm run lint`",
+    "- `pnpm run smoke`",
+    "- `pnpm run check`",
+    "- `pnpm run contract`",
+    "- secret scan for committed provider tokens, GitHub tokens, private keys, and environment files",
     "",
     "## Validation",
     "",

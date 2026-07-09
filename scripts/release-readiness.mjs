@@ -181,6 +181,29 @@ export const serviceLevelsDocumentContract = {
   ]
 };
 
+export const secretsDocumentContract = {
+  path: "docs/ops/secrets.md",
+  requiredSnippets: [
+    "Rerun secret scan, `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
+    "`pnpm run smoke`, `pnpm run check`, and `pnpm run contract`.",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"
+  ]
+};
+
+export const backupRestoreDocumentContract = {
+  path: "docs/ops/backup-and-restore.md",
+  requiredSnippets: [
+    "- `clarissimi validate-ledger`",
+    "- `pnpm run release-readiness`",
+    "- `pnpm run lint`",
+    "- `pnpm run smoke`",
+    "- `pnpm run check`",
+    "- `pnpm run contract`",
+    "secret scan for committed provider tokens, GitHub tokens, private keys, and environment files",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"
+  ]
+};
+
 export const packageOwnershipContract = {
   path: "docs/monorepo/package-ownership.md"
 };
@@ -616,6 +639,8 @@ export async function runReleaseReadiness(options = {}) {
   await runOperationalContractDocumentContractCheck(repoRoot);
   await runObservabilityDocumentContractCheck(repoRoot);
   await runServiceLevelsDocumentContractCheck(repoRoot);
+  await runSecretsDocumentContractCheck(repoRoot);
+  await runBackupRestoreDocumentContractCheck(repoRoot);
   await runTsconfigBuildGraphCheck(repoRoot);
   await runPackageOwnershipContractCheck(repoRoot);
   await runDryRunDogfoodEvidenceCheck(repoRoot);
@@ -926,6 +951,30 @@ export function validateObservabilityDocumentContract(text, contract = observabi
 }
 
 export function validateServiceLevelsDocumentContract(text, contract = serviceLevelsDocumentContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateSecretsDocumentContract(text, contract = secretsDocumentContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateBackupRestoreDocumentContract(text, contract = backupRestoreDocumentContract) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1330,6 +1379,40 @@ async function runServiceLevelsDocumentContractCheck(repoRoot) {
   }
 
   console.log("service levels document contract passed");
+}
+
+async function runSecretsDocumentContractCheck(repoRoot) {
+  const secretsPath = join(repoRoot, secretsDocumentContract.path);
+  let text;
+  try {
+    text = await readFile(secretsPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${secretsDocumentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateSecretsDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`secrets document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("secrets document contract passed");
+}
+
+async function runBackupRestoreDocumentContractCheck(repoRoot) {
+  const backupRestorePath = join(repoRoot, backupRestoreDocumentContract.path);
+  let text;
+  try {
+    text = await readFile(backupRestorePath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${backupRestoreDocumentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateBackupRestoreDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`backup and restore document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("backup and restore document contract passed");
 }
 
 async function runSmokePackCandidateContractCheck(repoRoot) {

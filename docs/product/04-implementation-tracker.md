@@ -419,9 +419,11 @@ Completed deliverables:
 - agent-assisted draft guide documents a copyable assessment template, PR source fields, evidence
   refs, impact/confidence semantics, and delegated model envelopes
 - ledger format guide documents public ledger fields, PR number and URL placement, draft-versus-ledger
-  boundaries, no-public-score constraints, and the single-file MVP partition decision
+  boundaries, no-public-score constraints, no-public-provenance constraints, and the single-file MVP
+  partition decision
 - release-readiness validates that the ledger format guide keeps PR identity placement, no-public-score
-  constraints, maintainer-only analytics, and single-file-versus-partition guidance aligned
+  constraints, no-public-provenance constraints, maintainer-only analytics, and
+  single-file-versus-partition guidance aligned
 - release-readiness validates that the CLI command contract keeps help, config, provider, draft
   staging, approval, import, analytics, argument, exit-code, and write-boundary guidance aligned
 - product and ADR docs reject public recent score-share, point-share, impact-weight-share, and

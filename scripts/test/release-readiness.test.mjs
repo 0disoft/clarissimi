@@ -339,7 +339,10 @@ test("release readiness rejects ledger format document drift", () => {
     .replace("`evidenceRefs[]` stores the human-clickable PR URL", "URLs are optional metadata")
     .replace("Ledger records must not contain public contributor scores, average scores, ranks, leaderboard", "Ledger records may contain scores")
     .replace("The MVP keeps one canonical ledger file.", "The MVP uses monthly partitions.")
-    .replace("Maintainer-only analytics may calculate recent recognition share from the same ledger", "Public analytics may show share");
+    .replace("Maintainer-only analytics may calculate recent recognition share from the same ledger", "Public analytics may show share")
+    .replace("Public ledger records are assessment-only.", "Public ledger records may keep draft metadata.")
+    .replace("They must not store AI agent, delegated model, prompt,", "They may store model names, prompts,")
+    .replace("CLI draft commands sanitize public records so provenance does not", "CLI draft commands preserve provenance in public records");
 
   assert.deepEqual(validateLedgerFormatDocumentContract(text), [
     "docs/cli/ledger-format.md must include Each non-empty line is one approved `clarissimi.assessment/v1` JSON object..",
@@ -347,6 +350,9 @@ test("release readiness rejects ledger format document drift", () => {
     "docs/cli/ledger-format.md must include `evidenceRefs[]` stores the human-clickable PR URL.",
     "docs/cli/ledger-format.md must include Ledger records must not contain public contributor scores, average scores, ranks, leaderboard.",
     "docs/cli/ledger-format.md must include Maintainer-only analytics may calculate recent recognition share from the same ledger.",
+    "docs/cli/ledger-format.md must include Public ledger records are assessment-only..",
+    "docs/cli/ledger-format.md must include They must not store AI agent, delegated model, prompt,.",
+    "docs/cli/ledger-format.md must include CLI draft commands sanitize public records so provenance does not.",
     "docs/cli/ledger-format.md must include The MVP keeps one canonical ledger file."
   ]);
 });
@@ -1537,6 +1543,12 @@ function createLedgerFormatDocumentText() {
     "",
     "Maintainer-only analytics may calculate recent recognition share from the same ledger, but those",
     "results are stdout-only analysis and are not public derived ledger outputs.",
+    "",
+    "Public ledger records are assessment-only.",
+    "They must not store AI agent, delegated model, prompt,",
+    "token, provider, or draft-envelope provenance.",
+    "Delegated workflow metadata may exist in local draft envelopes before review, but CLI draft commands sanitize public records so provenance does not",
+    "become repository recognition truth.",
     "",
     "The MVP keeps one canonical ledger file.",
     "",

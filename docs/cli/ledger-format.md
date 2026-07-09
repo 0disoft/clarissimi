@@ -121,6 +121,13 @@ recognition summaries. They must not compute public average scores or total scor
 Maintainer-only analytics may calculate recent recognition share from the same ledger, but those
 results are stdout-only analysis and are not public derived ledger outputs.
 
+## No Draft Provenance
+
+Public ledger records are assessment-only. They must not store AI agent, delegated model, prompt,
+token, provider, or draft-envelope provenance. Delegated workflow metadata may exist in local draft
+envelopes before review, but CLI draft commands sanitize public records so provenance does not
+become repository recognition truth.
+
 ## Drafts Versus Ledger
 
 Unapproved assessments belong in the draft inbox:

@@ -212,6 +212,9 @@ export const ledgerFormatDocumentContract = {
     "- `confidence`: confidence in this draft assessment, not a contributor score",
     "- `impactLevel`: impact of this contribution event, not a person ranking",
     "Maintainer-only analytics may calculate recent recognition share from the same ledger",
+    "Public ledger records are assessment-only.",
+    "They must not store AI agent, delegated model, prompt,",
+    "CLI draft commands sanitize public records so provenance does not",
     "The MVP keeps one canonical ledger file",
     "yearly partitions plus an index",
     "Monthly partitions remain"

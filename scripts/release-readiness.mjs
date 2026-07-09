@@ -98,6 +98,7 @@ export const releasePolicyDocumentContract = {
     "Public package publication and versioned Action tags require:",
     "public product-positioning guardrails",
     "intentionally fail-closed `format` and `migration-check`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
     "Release blocker status: public package publication and versioned Action tags are blocked"
   ]
 };

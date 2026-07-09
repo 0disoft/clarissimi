@@ -130,7 +130,7 @@ Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow
 
 ## Validation
 
-- Required validation names: `check`, `contract`, `smoke`, `docs`, `release-readiness`
+- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags are blocked
 - Current dry-run dogfood evidence: `Clarissimi dry run` workflow run `29031384775` passed on
   `2026-07-09T15:54:58Z` at `77f3fcbbeb25e3338ee2a4bba3c8efbfc46e5cfb` and exercised the

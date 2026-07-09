@@ -179,7 +179,11 @@ test("release readiness rejects release policy document drift", () => {
     .replace("Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,", "Source-only merge: allowed after `pnpm run lint`,")
     .replace("`pnpm run lint`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and repository hygiene", "`pnpm run check`, `pnpm run contract`, and repository hygiene")
     .replace("public product-positioning guardrails", "public docs")
-    .replace("intentionally fail-closed `format` and `migration-check`", "format and migration checks");
+    .replace("intentionally fail-closed `format` and `migration-check`", "format and migration checks")
+    .replace(
+      "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
+      "- Required validation names: `docs`, `smoke`, `check`, `contract`"
+    );
 
   assert.deepEqual(validateReleasePolicyDocumentContract(text), [
     "docs/ops/release.md must include Clarissimi is not ready for public package publication..",
@@ -189,7 +193,8 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include - Public package publication: blocked..",
     "docs/ops/release.md must include - Versioned GitHub Action tag: blocked..",
     "docs/ops/release.md must include public product-positioning guardrails.",
-    "docs/ops/release.md must include intentionally fail-closed `format` and `migration-check`."
+    "docs/ops/release.md must include intentionally fail-closed `format` and `migration-check`.",
+    "docs/ops/release.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
   ]);
 });
 
@@ -1065,6 +1070,8 @@ function createReleasePolicyText() {
     "Public package publication and versioned Action tags require:",
     "public product-positioning guardrails",
     "intentionally fail-closed `format` and `migration-check`",
+    "",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
     "",
     "- Release blocker status: public package publication and versioned Action tags are blocked",
     ""

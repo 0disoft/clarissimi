@@ -14,6 +14,7 @@
 - Live GitHub collector boundary: `docs/adr/0018-add-live-github-collector-boundary.md`
 - Provider boundary: `docs/adr/0019-add-openai-compatible-provider-adapter.md`
 - Draft inbox Action boundary: `docs/adr/0023-add-action-draft-inbox-proposal-mode.md`
+- Explicit Action config path: `docs/adr/0029-add-explicit-action-config-path.md`
 
 ## Inputs
 
@@ -24,6 +25,7 @@ accepts:
 - `INPUT_EVENT_PATH`: explicit event payload path override for tests and local runs
 - `INPUT_GITHUB_FIXTURE`: explicit GitHub merged pull request fixture path
 - `INPUT_MODE`: `dry-run`, `propose`, or `stage-draft`, default `propose`
+- `INPUT_CONFIG_PATH`: optional explicit path to a Clarissimi config file
 - `INPUT_BASE_BRANCH`: base branch for proposal pull requests, default `main`
 - `INPUT_REMOTE_NAME`: remote name used to publish proposal branches, default `origin`
 - `INPUT_STAGING_DIR`: optional temporary directory for generated proposal files
@@ -41,17 +43,18 @@ The root `action.yml` exposes the same surface as a composite action:
 - `mode`: defaults to `propose`
 - `event-path`: optional event payload path override
 - `github-fixture`: optional GitHub merged pull request fixture path
+- `config-path`: optional explicit path to a JSON Clarissimi config file or `clarissimi.config.ts`
 - `base-branch`: defaults to `main`
 - `remote-name`: defaults to `origin`
 - `staging-dir`: optional temporary staging directory
-- `provider`: defaults to `fake`
+- `provider`: optional provider override; omitted values fall back to config, then the runner fake
+  default
 - `provider-model`: provider model required for `openai-compatible`
 - `provider-endpoint`: optional OpenAI-compatible endpoint
 - `provider-thinking`: optional OpenAI-compatible thinking mode, currently only `disabled`
 
 The future expanded action contract should include:
 
-- config path
 - mode: `commit`
 - pull request number or event-derived target
 - minimum confidence threshold
@@ -60,6 +63,12 @@ Secret values must be read from GitHub Actions secrets or environment variables,
 
 Action mode validation is owned inside `packages/action`. Unsupported `INPUT_MODE` values must fail
 as usage errors before collection, provider, staging, branch, or pull request work begins.
+
+`config-path` is explicit and optional. The Action does not automatically discover repository config
+files. When set, the path is resolved relative to `GITHUB_WORKSPACE` unless it is absolute, loaded,
+and validated through `packages/schemas`. Action inputs and workflow environment values take
+precedence over config values. Omitted provider inputs fall back to config values, then the runner's
+fake provider default. Unsupported `INPUT_MODE` values fail before config-file loading.
 
 Dry-run mode reads provider credentials only when `provider` is explicitly set to
 `openai-compatible`. The default provider is `fake`. The default Action mode is `propose`, which

@@ -43,8 +43,9 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   reading configs, ledgers, providers, or draft files
 - `packages/action`: Action runner for dry-run summaries, fixture-first public recognition
   proposals, fixture-first draft review proposals, and event-path live GitHub collection in write
-  modes with explicit fake or OpenAI-compatible provider selection
+  modes with explicit config-path loading and explicit fake or OpenAI-compatible provider selection
 - root `action.yml`: composite Action defaulting to `propose` and exposing explicit `dry-run`
+  and explicit config-path loading
 - root `package.json`: configured `docs`, `lint`, `smoke`, and release-only
   `live-provider-smoke` scripts for documentation integrity, fast Oxlint coverage, CLI subprocess
   smoke coverage, Action dry-run coverage, and default propose and live-provider credential
@@ -578,6 +579,34 @@ Completed deliverables:
   values
 - CLI remains responsible for supported config-file discovery, explicit `--config <path>`, JSON and
   TypeScript config loading, and invalid-config exit behavior
+
+Validation:
+
+- `pnpm run docs`
+- `pnpm run smoke`
+- `pnpm run check`
+- `pnpm run contract`
+
+### 17. Explicit Action Config Path
+
+Source: `docs/adr/0029-add-explicit-action-config-path.md`,
+`docs/github-action/action-contract.md`
+
+Status: Completed in `packages/action/src/run.ts` and root `action.yml`.
+
+Goal: let GitHub Action users share non-secret Clarissimi config with CLI workflows without
+automatic repository config discovery.
+
+Completed deliverables:
+
+- root `action.yml` exposes optional `config-path`
+- Action runner reads `INPUT_CONFIG_PATH` only when explicitly provided
+- config paths resolve relative to `GITHUB_WORKSPACE` unless absolute
+- JSON config files and `clarissimi.config.ts` are supported
+- loaded config values are validated through `packages/schemas`
+- Action inputs and workflow environment values override config values
+- unsupported `INPUT_MODE` values fail before config-file loading
+- provider tokens remain outside config files and Action inputs
 
 Validation:
 

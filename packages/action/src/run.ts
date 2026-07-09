@@ -1,6 +1,7 @@
 import { appendFile, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, isAbsolute, join } from "node:path";
 import { tmpdir } from "node:os";
+import { pathToFileURL } from "node:url";
 
 import { prepareEvidenceForProvider } from "@clarissimi/core";
 import {
@@ -19,8 +20,11 @@ import {
   isConfigProviderThinking,
   isApprovalStatus,
   type ApprovalStatus,
+  type ClarissimiConfig,
   type ConfigProviderThinking,
-  type ContributionAssessment
+  type ContributionAssessment,
+  type ValidationIssue,
+  validateClarissimiConfig
 } from "@clarissimi/schemas";
 
 import { publishProposalBranch } from "./branch-publisher.js";
@@ -210,14 +214,20 @@ export async function runActionFromEnvironment(
     const fallbackEventPath = githubFixturePath === undefined
       ? readEnvInput(env.GITHUB_EVENT_PATH)
       : undefined;
-    const mode = normalizeActionMode(readEnvInput(env.INPUT_MODE) ?? "propose");
+    const modeInput = readEnvInput(env.INPUT_MODE);
+    if (modeInput !== undefined) {
+      normalizeActionMode(modeInput);
+    }
+
+    const config = await loadActionConfigFromEnvironment(env);
+    const mode = normalizeActionMode(modeInput ?? config.mode ?? "propose");
     const input: ActionDryRunInput = {
       mode
     };
     assignOptional(input, "eventPath", explicitEventPath ?? fallbackEventPath);
     assignOptional(input, "githubFixturePath", githubFixturePath);
     assignOptional(input, "liveGitHubClient", runtime.liveGitHubClient);
-    assignOptional(input, "provider", runtime.provider ?? resolveActionProvider(env, runtime));
+    assignOptional(input, "provider", runtime.provider ?? resolveActionProvider(env, runtime, config));
 
     const summary = await runActionMode(input, env, runtime);
     await writeGitHubOutputs(env.GITHUB_OUTPUT, summary);
@@ -457,11 +467,81 @@ function requireProviderEnvInput(value: string | undefined, name: string): strin
   return normalized;
 }
 
+async function loadActionConfigFromEnvironment(env: NodeJS.ProcessEnv): Promise<ClarissimiConfig> {
+  const configPath = readEnvInput(env.INPUT_CONFIG_PATH);
+  if (configPath === undefined) {
+    return {};
+  }
+
+  const workspace = readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd();
+  const resolvedPath = isAbsolute(configPath) ? configPath : join(workspace, configPath);
+  const parsed = await loadActionConfigValue(configPath, resolvedPath);
+  const result = validateClarissimiConfig(parsed);
+  if (!result.ok) {
+    throw new ActionUsageError(formatActionConfigValidationIssue(result.issues[0]));
+  }
+
+  return result.value;
+}
+
+async function loadActionConfigValue(configPath: string, resolvedPath: string): Promise<unknown> {
+  if (resolvedPath.endsWith(".json")) {
+    try {
+      return JSON.parse(await readFile(resolvedPath, "utf8")) as unknown;
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        throw new ActionUsageError(`Invalid JSON in Action config ${configPath}.`);
+      }
+
+      throw new ActionUsageError(`Unable to read Action config ${configPath}.`);
+    }
+  }
+
+  if (basename(configPath.replaceAll("\\", "/")) === "clarissimi.config.ts") {
+    let module;
+    try {
+      module = await import(pathToFileURL(resolvedPath).href);
+    } catch {
+      throw new ActionUsageError(`Failed to load TypeScript Action config ${configPath}.`);
+    }
+
+    if (!("default" in module)) {
+      throw new ActionUsageError(`TypeScript Action config ${configPath} must export a default config object.`);
+    }
+
+    return module.default;
+  }
+
+  throw new ActionUsageError("Action config-path must point to a JSON config file or clarissimi.config.ts.");
+}
+
+function formatActionConfigValidationIssue(issue: ValidationIssue | undefined): string {
+  if (issue === undefined) {
+    return "Action config is invalid.";
+  }
+
+  if (issue.path === "$" && issue.code === "expected_object") {
+    return "Action config must be an object.";
+  }
+
+  const field = issue.path.startsWith("$.") ? issue.path.slice(2) : issue.path;
+  if (issue.code === "invalid_enum") {
+    return `Action config field ${field} has an unsupported value.`;
+  }
+
+  if (issue.code === "empty_string") {
+    return `Action config field ${field} must be a non-empty string.`;
+  }
+
+  return issue.message;
+}
+
 function resolveActionProvider(
   env: NodeJS.ProcessEnv,
-  runtime: ActionEnvironmentRuntime
+  runtime: ActionEnvironmentRuntime,
+  config: ClarissimiConfig
 ): ContributionDraftProvider {
-  const providerId = readEnvInput(env.INPUT_PROVIDER) ?? "fake";
+  const providerId = readEnvInput(env.INPUT_PROVIDER) ?? config.provider ?? "fake";
   if (!isConfigProvider(providerId)) {
     throw new ActionUsageError(`Unsupported provider: ${providerId}.`);
   }
@@ -472,11 +552,14 @@ function resolveActionProvider(
 
   if (providerId === "openai-compatible") {
     const options: Parameters<typeof createOpenAiCompatibleContributionDraftProvider>[0] = {
-      model: requireProviderEnvInput(env.INPUT_PROVIDER_MODEL, "INPUT_PROVIDER_MODEL"),
+      model: requireProviderEnvInput(
+        readEnvInput(env.INPUT_PROVIDER_MODEL) ?? config.providerModel,
+        "INPUT_PROVIDER_MODEL or config providerModel"
+      ),
       token: requireProviderEnvInput(env.CLARISSIMI_PROVIDER_TOKEN, "CLARISSIMI_PROVIDER_TOKEN")
     };
-    assignOptional(options, "endpoint", readEnvInput(env.INPUT_PROVIDER_ENDPOINT));
-    assignOptional(options, "thinking", parseProviderThinking(readEnvInput(env.INPUT_PROVIDER_THINKING)));
+    assignOptional(options, "endpoint", readEnvInput(env.INPUT_PROVIDER_ENDPOINT) ?? config.providerEndpoint);
+    assignOptional(options, "thinking", parseProviderThinking(readEnvInput(env.INPUT_PROVIDER_THINKING) ?? config.providerThinking));
     assignOptional(options, "fetch", runtime.fetch);
     return createOpenAiCompatibleContributionDraftProvider(options);
   }

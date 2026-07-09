@@ -44,6 +44,7 @@ engine.
 - `0027-add-lint-gate-and-defer-format-baseline.md`: add an Oxlint merge gate and defer the
   formatter baseline rewrite
 - `0028-add-native-typescript-config-loading.md`: add dependency-free TypeScript config loading
+- `0029-add-explicit-action-config-path.md`: add explicit Action config-file loading
 
 ## Review Blockers
 

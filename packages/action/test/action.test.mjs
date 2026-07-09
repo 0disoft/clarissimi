@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -310,6 +310,220 @@ test("environment runner can use the OpenAI-compatible provider when explicitly 
   });
 });
 
+test("environment runner can use OpenAI-compatible provider values from JSON config-path", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "github-fixture.json");
+    const configDir = join(dir, ".clarissimi");
+    const requests = [];
+    await mkdir(configDir, { recursive: true });
+    await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+    await writeFile(
+      join(configDir, "config.json"),
+      JSON.stringify({
+        provider: "openai-compatible",
+        providerModel: "action-config-model",
+        providerThinking: "disabled"
+      }),
+      "utf8"
+    );
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        GITHUB_WORKSPACE: dir,
+        INPUT_CONFIG_PATH: ".clarissimi/config.json",
+        INPUT_GITHUB_FIXTURE: fixturePath,
+        INPUT_MODE: "dry-run",
+        CLARISSIMI_PROVIDER_TOKEN: "unit-token"
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        }
+      },
+      {
+        fetch: async (url, init) => {
+          requests.push({
+            url: String(url),
+            body: JSON.parse(init.body)
+          });
+          return jsonResponse({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    contributionType: "test",
+                    affectedArea: "parser regression coverage",
+                    impactLevel: "medium",
+                    evidenceSummary: "Added regression coverage based on test evidence.",
+                    suggestedBadge: "Regression Shield",
+                    publicRecognitionText: "Added regression coverage for the parser.",
+                    confidence: 0.8
+                  })
+                }
+              }
+            ]
+          });
+        }
+      }
+    );
+
+    assert.equal(exitCode, 0);
+    assert.equal(stderr, "");
+    assert.equal(JSON.parse(stdout).approvalStatus, "draft");
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].body.model, "action-config-model");
+    assert.deepEqual(requests[0].body.thinking, { type: "disabled" });
+  });
+});
+
+test("environment runner can use provider values from TypeScript config-path", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "github-fixture.json");
+    const requests = [];
+    await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+    await writeFile(
+      join(dir, "clarissimi.config.ts"),
+      [
+        "import type { ClarissimiConfig } from \"@clarissimi/schemas\";",
+        "const config = {",
+        "  provider: \"openai-compatible\",",
+        "  providerModel: \"action-ts-config-model\",",
+        "  providerThinking: \"disabled\",",
+        "} satisfies ClarissimiConfig;",
+        "export default config;",
+        ""
+      ].join("\n"),
+      "utf8"
+    );
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        GITHUB_WORKSPACE: dir,
+        INPUT_CONFIG_PATH: "clarissimi.config.ts",
+        INPUT_GITHUB_FIXTURE: fixturePath,
+        INPUT_MODE: "dry-run",
+        CLARISSIMI_PROVIDER_TOKEN: "unit-token"
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        }
+      },
+      {
+        fetch: async (url, init) => {
+          requests.push({
+            url: String(url),
+            body: JSON.parse(init.body)
+          });
+          return jsonResponse({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    contributionType: "test",
+                    affectedArea: "parser regression coverage",
+                    impactLevel: "medium",
+                    evidenceSummary: "Added regression coverage based on test evidence.",
+                    suggestedBadge: "Regression Shield",
+                    publicRecognitionText: "Added regression coverage for the parser.",
+                    confidence: 0.8
+                  })
+                }
+              }
+            ]
+          });
+        }
+      }
+    );
+
+    assert.equal(exitCode, 0);
+    assert.equal(stderr, "");
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].body.model, "action-ts-config-model");
+  });
+});
+
+test("environment runner lets explicit provider inputs override config-path values", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "github-fixture.json");
+    const configDir = join(dir, ".clarissimi");
+    const requests = [];
+    await mkdir(configDir, { recursive: true });
+    await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+    await writeFile(
+      join(configDir, "config.json"),
+      JSON.stringify({
+        provider: "fake",
+        providerModel: "config-model"
+      }),
+      "utf8"
+    );
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        GITHUB_WORKSPACE: dir,
+        INPUT_CONFIG_PATH: ".clarissimi/config.json",
+        INPUT_GITHUB_FIXTURE: fixturePath,
+        INPUT_MODE: "dry-run",
+        INPUT_PROVIDER: "openai-compatible",
+        INPUT_PROVIDER_MODEL: "explicit-model",
+        CLARISSIMI_PROVIDER_TOKEN: "unit-token"
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        }
+      },
+      {
+        fetch: async (url, init) => {
+          requests.push({
+            url: String(url),
+            body: JSON.parse(init.body)
+          });
+          return jsonResponse({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    contributionType: "test",
+                    affectedArea: "parser regression coverage",
+                    impactLevel: "medium",
+                    evidenceSummary: "Added regression coverage based on test evidence.",
+                    suggestedBadge: "Regression Shield",
+                    publicRecognitionText: "Added regression coverage for the parser.",
+                    confidence: 0.8
+                  })
+                }
+              }
+            ]
+          });
+        }
+      }
+    );
+
+    assert.equal(exitCode, 0);
+    assert.equal(stderr, "");
+    assert.equal(JSON.parse(stdout).approvalStatus, "draft");
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].body.model, "explicit-model");
+  });
+});
+
 test("environment runner rejects unsupported provider thinking values", async () => {
   await withTempDir(async (dir) => {
     const fixturePath = join(dir, "github-fixture.json");
@@ -556,6 +770,39 @@ test("environment runner validates unsupported mode before resolving provider cr
   assert.equal(exitCode, 1);
   assert.equal(stdout, "");
   assert.equal(stderr, "Unsupported action mode: commit.\n");
+});
+
+test("environment runner validates unsupported mode before loading config-path", async () => {
+  await withTempDir(async (dir) => {
+    await writeFile(
+      join(dir, "clarissimi.config.ts"),
+      "throw new Error(\"CONFIG_SHOULD_NOT_LOAD\");\nexport default { provider: \"fake\" };\n",
+      "utf8"
+    );
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        GITHUB_WORKSPACE: dir,
+        INPUT_CONFIG_PATH: "clarissimi.config.ts",
+        INPUT_GITHUB_FIXTURE: "unused.json",
+        INPUT_MODE: "commit"
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        }
+      }
+    );
+
+    assert.equal(exitCode, 1);
+    assert.equal(stdout, "");
+    assert.equal(stderr, "Unsupported action mode: commit.\n");
+  });
 });
 
 test("environment runner requires a GitHub token before propose mode writes outputs", async () => {

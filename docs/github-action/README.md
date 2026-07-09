@@ -46,12 +46,14 @@ request. When `propose` or `stage-draft` receives `GITHUB_EVENT_PATH`, it routes
 request through the live GitHub collector using `GITHUB_TOKEN`; fixture inputs remain the
 deterministic local and test path.
 
-The Action defaults to the fake provider. To use an OpenAI-compatible provider, pass
-`provider: openai-compatible`, pass `provider-model`, and expose `CLARISSIMI_PROVIDER_TOKEN` from
-the workflow secret boundary. Do not pass provider tokens as action inputs.
+The Action defaults to the fake provider when no provider input or config value is set. To use an
+OpenAI-compatible provider, pass `provider: openai-compatible` and `provider-model`, or provide
+those values through `config-path`. Expose `CLARISSIMI_PROVIDER_TOKEN` from the workflow secret
+boundary. Do not pass provider tokens as action inputs.
 
-Repository config-file loading through a `config-path` input remains a future Action contract. The
-current Action configuration surface is `action.yml` inputs plus workflow environment variables.
+Repository config-file loading is explicit through `config-path`; the Action does not automatically
+discover config files. Action inputs and workflow environment values take precedence over config
+values.
 
 Detailed outputs and failure behavior are defined in `docs/github-action/action-contract.md`. The
 implemented propose-mode sequencing is recorded in
@@ -115,6 +117,19 @@ For local or CI checks against a GitHub event payload file, pass `event-path`:
 
 This repository dogfoods the root Action with both `github-fixture` and `event-path` inputs in
 `.github/workflows/clarissimi-dry-run.yml`.
+
+To share provider settings with the local CLI, pass an explicit config path and keep the provider
+token in the workflow secret boundary:
+
+```yaml
+steps:
+  - uses: 0disoft/clarissimi@main
+    env:
+      CLARISSIMI_PROVIDER_TOKEN: ${{ secrets.CLARISSIMI_PROVIDER_TOKEN }}
+    with:
+      mode: dry-run
+      config-path: .clarissimi/config.json
+```
 
 Propose mode against a merged pull request event requires checkout, explicit write permissions, and
 repository settings that allow GitHub Actions to create pull requests:

@@ -14,18 +14,18 @@
 
 - `event-path`: explicit event payload path for local runs, tests, and write-mode live collection
 - `github-fixture`: explicit GitHub merged pull request fixture path for fixture-first runs
+- `config-path`: optional explicit path to a JSON Clarissimi config file or `clarissimi.config.ts`
 - `mode`: `dry-run`, `propose`, or `stage-draft`, default `propose`
 - `base-branch`: base branch for proposal pull requests
 - `remote-name`: Git remote used to publish proposal branches
 - `staging-dir`: optional temporary staging directory for proposal outputs
-- `provider`: `fake` or `openai-compatible`, default `fake`
+- `provider`: `fake` or `openai-compatible`; omitted values fall back to config, then `fake`
 - `provider-model`: model name required when `provider` is `openai-compatible`
 - `provider-endpoint`: optional OpenAI-compatible chat completions endpoint
 - `provider-thinking`: optional OpenAI-compatible thinking mode; currently only `disabled`
 
 ## Future Inputs
 
-- `config-path`: path to `clarissimi.config.ts` or `.clarissimi/config.json`
 - `mode`: `commit`
 - `pull-request`: explicit pull request number when event resolution is not enough
 - `min-confidence`: minimum draft confidence for policy consideration
@@ -36,12 +36,16 @@ modes for live GitHub collection and proposal pull request creation or update. I
 `CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.
 
 The current package supports `INPUT_EVENT_PATH`, `GITHUB_EVENT_PATH`, `INPUT_GITHUB_FIXTURE`,
-`INPUT_MODE`, `INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`, `INPUT_STAGING_DIR`, `INPUT_PROVIDER`,
-`INPUT_PROVIDER_MODEL`, `INPUT_PROVIDER_ENDPOINT`, and `INPUT_PROVIDER_THINKING`.
+`INPUT_CONFIG_PATH`, `INPUT_MODE`, `INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`, `INPUT_STAGING_DIR`,
+`INPUT_PROVIDER`, `INPUT_PROVIDER_MODEL`, `INPUT_PROVIDER_ENDPOINT`, and
+`INPUT_PROVIDER_THINKING`.
 
 The root `action.yml` currently exposes `event-path`, `github-fixture`, `mode`, `base-branch`,
-`remote-name`, `staging-dir`, `provider`, `provider-model`, `provider-endpoint`, and
-`provider-thinking`.
+`remote-name`, `staging-dir`, `config-path`, `provider`, `provider-model`, `provider-endpoint`,
+and `provider-thinking`.
+`config-path` is explicit-only; the Action does not automatically discover repository config files.
+Action inputs and workflow environment values take precedence over config values. Omitted provider
+inputs fall back to config values, then `fake`.
 An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`
 fallback. An explicit `event-path` and `github-fixture` must not be provided together.
 In `dry-run`, event payloads are mapped from the local event file without live GitHub API calls.

@@ -13,6 +13,9 @@ inputs:
   github-fixture:
     description: Optional GitHub merged pull request fixture path for fixture-first runs.
     required: false
+  config-path:
+    description: Optional Clarissimi config file path. Supports explicit JSON config files or clarissimi.config.ts.
+    required: false
   base-branch:
     description: Base branch for propose and stage-draft mode pull requests.
     required: false
@@ -25,9 +28,8 @@ inputs:
     description: Optional temporary staging directory for propose or stage-draft generated files.
     required: false
   provider:
-    description: Draft provider id. Defaults to fake; use openai-compatible for an explicit live provider.
+    description: Draft provider id. Omit to use config-path provider or the runner fake default; use openai-compatible for an explicit live provider.
     required: false
-    default: fake
   provider-model:
     description: Provider model name required when provider is openai-compatible.
     required: false
@@ -90,6 +92,7 @@ runs:
         INPUT_MODE: ${{ inputs.mode }}
         INPUT_EVENT_PATH: ${{ inputs.event-path }}
         INPUT_GITHUB_FIXTURE: ${{ inputs.github-fixture }}
+        INPUT_CONFIG_PATH: ${{ inputs.config-path }}
         INPUT_BASE_BRANCH: ${{ inputs.base-branch }}
         INPUT_REMOTE_NAME: ${{ inputs.remote-name }}
         INPUT_STAGING_DIR: ${{ inputs.staging-dir }}

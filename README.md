@@ -82,8 +82,8 @@ Implemented MVP slices:
   agent-assisted draft staging, approval, import, rebuild previews, maintainer-only analytics, and
   help output; config loading supports `clarissimi.config.ts` and `.clarissimi/config.json`
 - `packages/action`: GitHub Action entrypoint for dry-run summaries, fixture-first proposal
-  branch/pull-request flows, draft review proposals, and event-path live GitHub collection in write
-  modes
+  branch/pull-request flows, draft review proposals, explicit config-path loading, and event-path
+  live GitHub collection in write modes
 
 Not implemented yet:
 
@@ -166,7 +166,8 @@ and local path. Explicit OpenAI-compatible provider selection is available for C
 but it requires the caller to provide a model and `CLARISSIMI_PROVIDER_TOKEN`; correctness tests
 continue to use fake providers or injected fetch implementations. Providers that emit hidden
 reasoning in message content can opt into `provider-thinking: disabled` or `--provider-thinking
-disabled`.
+disabled`. The Action can also load a JSON config file or `clarissimi.config.ts` when `config-path`
+is explicitly provided; it does not automatically discover config files.
 
 Release maintainers who want automated provider mode can run `pnpm run live-provider-smoke` with
 `CLARISSIMI_PROVIDER_TOKEN` and `CLARISSIMI_PROVIDER_MODEL` to perform an explicit credentialed

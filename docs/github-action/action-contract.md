@@ -141,6 +141,8 @@ permissions required to create a proposal branch and pull request. Commit mode i
 
 ## Review Blockers
 
+Block changes that introduce any of these conditions:
+
 - Default behavior requires broad write permissions.
 - Provider secrets are modeled as plain action inputs.
 - The Action runs untrusted PR head code.

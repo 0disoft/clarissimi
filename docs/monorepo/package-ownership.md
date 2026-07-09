@@ -26,7 +26,10 @@ This repository type owns workspace boundaries, package ownership, dependency po
   docs/adr/0023-add-action-draft-inbox-proposal-mode.md,
   docs/adr/0024-add-draft-approval-helper.md,
   docs/adr/0025-centralize-config-schema-validation.md,
-  docs/adr/0026-add-maintainer-recent-share-analytics.md
+  docs/adr/0026-add-maintainer-recent-share-analytics.md,
+  docs/adr/0028-add-native-typescript-config-loading.md,
+  docs/adr/0029-add-explicit-action-config-path.md,
+  docs/adr/0030-add-action-summary-artifact.md
 
 ## Required Decisions
 

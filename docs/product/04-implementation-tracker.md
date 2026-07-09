@@ -413,6 +413,8 @@ Completed deliverables:
   tracker as required documentation targets
 - release-readiness verifies that implemented workspace packages and the Package Table in
   `docs/monorepo/package-ownership.md` stay in sync
+- release-readiness verifies that package-boundary ADR references stay listed in
+  `docs/monorepo/package-ownership.md`
 - release-readiness verifies that internal workspace dependencies follow the documented package
   dependency graph and use `workspace:*`
 - release-readiness verifies that root and package TypeScript project references follow the

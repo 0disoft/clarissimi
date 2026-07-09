@@ -19,8 +19,8 @@ update this operational contract.
 
 ## Release Types
 
-- Source-only merge: allowed after `pnpm run check`, `pnpm run contract`, and repository hygiene
-  checks pass.
+- Source-only merge: allowed after `pnpm run lint`, `pnpm run check`, `pnpm run contract`, and
+  repository hygiene checks pass.
 - Dogfood workflow update: allowed when Action examples, permissions, `actionlint`, and root
   `action.yml` parsing pass.
 - Public package publication: blocked.
@@ -37,6 +37,7 @@ Public package publication and versioned Action tags require:
   passes
 - hosted CI workflow `.github/workflows/ci.yml`, including its non-credentialed
   `release-readiness` step, passes on the release candidate commit
+- `pnpm run lint`
 - `pnpm run check`
 - `pnpm run contract`
 - `pnpm run smoke`

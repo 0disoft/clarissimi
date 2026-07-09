@@ -32,7 +32,8 @@ Hot paths:
 - Source of truth: `docs/product/02-spec.md`, `docs/architecture/02-runtime-flow.md`,
   `docs/adr/0022-keep-ledger-single-file-with-partition-path.md`
 - Owner: Repository maintainers
-- Merge-blocking validation: `pnpm run smoke`, `pnpm run check`, `pnpm run contract`
+- Merge-blocking validation: `pnpm run lint`, `pnpm run smoke`, `pnpm run check`,
+  `pnpm run contract`
 - Related checklist: `.agents/checklists/performance.md`
 
 ## Review Blockers

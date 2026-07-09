@@ -25,8 +25,8 @@ Review code changes against these checks:
 
 - Source of truth: `AGENTS.md`, `VALIDATION.md`, `CHECKLIST.md`, `.agents/context-map.md`
 - Owner: Repository maintainers
-- Merge-blocking validation: `pnpm run docs`, `pnpm run smoke`, `pnpm run check`,
-  `pnpm run contract`
+- Merge-blocking validation: `pnpm run docs`, `pnpm run lint`, `pnpm run smoke`,
+  `pnpm run check`, `pnpm run contract`
 - Related checklist: `CHECKLIST.md`
 
 ## Review Blockers

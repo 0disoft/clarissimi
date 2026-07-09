@@ -303,7 +303,7 @@ function runCommand(options) {
       cwd: repoRoot,
       env: {
         ...process.env,
-        ...(options.env ?? {})
+        ...options.env
       },
       stdio: ["ignore", "pipe", "pipe"]
     });

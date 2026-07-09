@@ -14,7 +14,7 @@ Service levels:
 
 | Area | Target |
 | --- | --- |
-| Source-only merge readiness | Local `docs`, `smoke`, `check`, `contract`, and hygiene checks pass before push. |
+| Source-only merge readiness | Local `docs`, `lint`, `smoke`, `check`, `contract`, and hygiene checks pass before push. |
 | Hosted validation | `Validation` check passes on `main` after push. |
 | Write-mode dogfood | Manual propose and stage-draft workflows pass before release evidence claims support. |
 | Live provider release gate | Local live-provider smoke plus hosted manual live-provider smoke pass with maintainer-owned credentials. |

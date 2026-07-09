@@ -31,16 +31,18 @@ The current local CI parity commands are:
   not a live-provider check. The hosted live-provider workflow contract is checked for manual-only
   dispatch, read-only permissions, input and secret preflight before checkout, runtime setup, and
   the release smoke command.
+- `pnpm run lint`: runs `oxlint` across the repository as a fast JavaScript and TypeScript lint
+  gate.
 - `pnpm run check`: runs typecheck and the package test suite.
 - `pnpm run contract`: runs typecheck and tests as the current contract gate.
 
-`format`, `lint`, and `migration-check` remain intentionally unconfigured and fail until their
-owners define real checks.
+`format` and `migration-check` remain intentionally unconfigured and fail until their owners define
+real checks.
 
 The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and
 manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,
-`smoke`, `check`, and `contract` with Node.js 24 and the package-manager version declared by
-`package.json`.
+`lint`, `smoke`, `check`, and `contract` with Node.js 24 and the package-manager version declared
+by `package.json`.
 
 Hosted CI installs pinned non-credentialed release tooling before `release-readiness`:
 

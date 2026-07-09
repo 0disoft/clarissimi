@@ -222,6 +222,7 @@ The current executable checks are:
 
 - `pnpm run typecheck`
 - `pnpm run test`
+- `pnpm run lint`
 - `pnpm run contract`
 - `pnpm run smoke`
 - `pnpm run docs`
@@ -233,7 +234,7 @@ Release-only credentialed checks are:
 - `pnpm run live-provider-smoke`
 - `pnpm run hosted-live-provider-smoke -- --model <provider-model>`
 
-Unimplemented validation names intentionally fail until configured.
+`format` and `migration-check` intentionally fail until configured.
 
 `package.json` is project-owned after the first implementation package. `ssealed doctor` remains
 useful for scaffold provenance, but it is not the implementation merge gate once runner scripts are

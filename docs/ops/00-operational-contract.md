@@ -28,8 +28,8 @@ Operational priorities:
 
 SLOs are local and repository-scoped:
 
-- Correctness gate: `pnpm run docs`, `pnpm run smoke`, `pnpm run check`, and `pnpm run contract`
-  must pass before source-only merges.
+- Correctness gate: `pnpm run docs`, `pnpm run lint`, `pnpm run smoke`, `pnpm run check`, and
+  `pnpm run contract` must pass before source-only merges.
 - Recovery target: unsafe proposal branches or pull requests should be closed or deleted before
   further dogfood runs continue.
 - Data durability target: approved recognition can be restored from Git history plus the canonical

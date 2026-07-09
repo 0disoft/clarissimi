@@ -25,8 +25,8 @@ temporary repositories. `pnpm run live-provider-smoke` is a release smoke, not a
 
 - Source of truth: `VALIDATION.md`, `package.json`, `.github/workflows/ci.yml`
 - Owner: Repository maintainers
-- Merge-blocking validation: `pnpm run docs`, `pnpm run smoke`, `pnpm run check`,
-  `pnpm run contract`
+- Merge-blocking validation: `pnpm run docs`, `pnpm run lint`, `pnpm run smoke`,
+  `pnpm run check`, `pnpm run contract`
 - Related checklist: `.agents/skills/test-hardening/SKILL.md`
 
 ## Review Blockers

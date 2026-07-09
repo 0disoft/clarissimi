@@ -16,6 +16,10 @@ export const requiredPackageScripts = [
     includes: ["scripts/smoke.mjs"]
   },
   {
+    name: "lint",
+    includes: ["oxlint . --deny-warnings"]
+  },
+  {
     name: "check",
     includes: ["pnpm run typecheck", "pnpm run test"]
   },
@@ -160,6 +164,7 @@ export const ciWorkflowContract = {
     "pnpm install --frozen-lockfile",
     "pnpm run docs",
     "pnpm run release-readiness",
+    "pnpm run lint",
     "pnpm run smoke",
     "pnpm run check",
     "pnpm run contract"

@@ -24,8 +24,8 @@ Clarissimi MVP operability is repository-local:
 - Source of truth: `docs/ops/`, `docs/github-action/action-contract.md`,
   `docs/cli/command-contract.md`
 - Owner: Repository maintainers
-- Merge-blocking validation: `pnpm run docs`, `pnpm run smoke`, `pnpm run check`,
-  `pnpm run contract`
+- Merge-blocking validation: `pnpm run docs`, `pnpm run lint`, `pnpm run smoke`,
+  `pnpm run check`, `pnpm run contract`
 - Related checklist: `.agents/checklists/ops-change.md`
 
 ## Review Blockers

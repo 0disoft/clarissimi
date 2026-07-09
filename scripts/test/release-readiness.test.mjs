@@ -38,10 +38,12 @@ test("release readiness rejects missing release-critical scripts", () => {
 test("release readiness rejects drifted release-critical script commands", () => {
   const scripts = createValidScripts();
   scripts["release-readiness"] = "node scripts/renamed-release-check.mjs";
+  scripts.lint = "node -e \"process.exit(1)\"";
 
   const issues = validatePackageScriptRegistration({ scripts });
 
   assert.deepEqual(issues, [
+    "package.json scripts.lint must include oxlint . --deny-warnings.",
     "package.json scripts.release-readiness must include scripts/release-readiness.mjs."
   ]);
 });
@@ -184,10 +186,12 @@ test("release readiness accepts the CI workflow contract", () => {
 test("release readiness rejects CI workflow command drift", () => {
   const text = createCiWorkflowText()
     .replace("pnpm run release-readiness", "pnpm run docs")
+    .replace("pnpm run lint", "pnpm run typecheck")
     .replace("pnpm run contract", "pnpm run check");
 
   assert.deepEqual(validateCiWorkflowContract(text), [
     ".github/workflows/ci.yml must run pnpm run release-readiness.",
+    ".github/workflows/ci.yml must run pnpm run lint.",
     ".github/workflows/ci.yml must run pnpm run contract."
   ]);
 });
@@ -460,6 +464,7 @@ function createCiWorkflowText() {
     "          sha256sum --check -",
     "      - run: pnpm run docs",
     "      - run: pnpm run release-readiness",
+    "      - run: pnpm run lint",
     "      - run: pnpm run smoke",
     "      - run: pnpm run check",
     "      - run: pnpm run contract"

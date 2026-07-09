@@ -43,9 +43,10 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   proposals, fixture-first draft review proposals, and event-path live GitHub collection in write
   modes with explicit fake or OpenAI-compatible provider selection
 - root `action.yml`: composite Action defaulting to `propose` and exposing explicit `dry-run`
-- root `package.json`: configured `docs`, `smoke`, and release-only `live-provider-smoke` scripts
-  for documentation integrity, CLI subprocess smoke coverage, Action dry-run coverage, and default
-  propose and live-provider credential preflight fail-closed behavior
+- root `package.json`: configured `docs`, `lint`, `smoke`, and release-only
+  `live-provider-smoke` scripts for documentation integrity, fast Oxlint coverage, CLI subprocess
+  smoke coverage, Action dry-run coverage, and default propose and live-provider credential
+  preflight fail-closed behavior
 - root `package.json`: configured `release-readiness` script for non-credentialed release gate
   checks, including package test-registration drift and release tool availability, before live
   provider smoke
@@ -57,7 +58,7 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
 - `.github/workflows/clarissimi-stage-draft-fixture.yml`: manual-only fixture stage-draft dogfood
 - `.github/workflows/clarissimi-live-provider-smoke.yml`: manual-only credentialed live provider
   smoke
-- `.github/workflows/ci.yml`: hosted validation for `docs`, `release-readiness`, `smoke`,
+- `.github/workflows/ci.yml`: hosted validation for `docs`, `release-readiness`, `lint`, `smoke`,
   `check`, and `contract`
 
 ## Active Work Queue
@@ -325,6 +326,7 @@ Completed deliverables:
   permission, input and secret preflight ordering, Node.js runtime setup, and run-command contract
   before reporting static release gates as passed
 - release-readiness verifies that release-critical package scripts remain registered
+- release-readiness verifies that `pnpm run lint` remains backed by `oxlint . --deny-warnings`
 - release-readiness verifies that package test globs still include package and script test suites
 - release-readiness verifies that the root package remains private at `0.0.0` while public package
   publication and versioned Action tags are blocked

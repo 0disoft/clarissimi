@@ -70,6 +70,9 @@ jobs:
       - name: Run release readiness validation
         run: pnpm run release-readiness
 
+      - name: Run lint validation
+        run: pnpm run lint
+
       - name: Run smoke validation
         run: pnpm run smoke
 

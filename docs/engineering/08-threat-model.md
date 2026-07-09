@@ -40,8 +40,8 @@ Trust boundaries and mitigations:
 - Source of truth: `docs/product/02-spec.md`, `docs/adr/0003-ai-as-drafter-not-judge.md`,
   `docs/adr/0006-redaction-before-provider.md`, `docs/ops/secrets.md`
 - Owner: Repository maintainers
-- Merge-blocking validation: `pnpm run docs`, `pnpm run smoke`, `pnpm run check`,
-  `pnpm run contract`, secret scan
+- Merge-blocking validation: `pnpm run docs`, `pnpm run lint`, `pnpm run smoke`,
+  `pnpm run check`, `pnpm run contract`, secret scan
 - Related checklist: `.agents/checklists/security.md`
 
 ## Review Blockers

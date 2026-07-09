@@ -75,5 +75,5 @@ function normalizeTitle(value: string | undefined): string {
 }
 
 function escapeMarkdown(value: string): string {
-  return value.replace(/([\\`*_{}\[\]()#+.!|-])/g, "\\$1");
+  return value.replace(/([\\`*_{}[\]()#+.!|-])/g, "\\$1");
 }

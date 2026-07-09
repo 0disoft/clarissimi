@@ -1,5 +1,5 @@
 import { canPublishAssessment } from "@clarissimi/core";
-import type { ContributionAssessment, ValidationIssue } from "@clarissimi/schemas";
+import type { ContributionAssessment } from "@clarissimi/schemas";
 
 import { RendererValidationError, type PublicContributionRecord } from "./types.js";
 

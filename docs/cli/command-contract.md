@@ -12,6 +12,7 @@
 - Redaction boundary: `docs/adr/0006-redaction-before-provider.md`
 - Provider boundary: `docs/adr/0019-add-openai-compatible-provider-adapter.md`
 - Agent-assisted import boundary: `docs/adr/0020-add-agent-assisted-draft-import.md`
+- Draft inbox boundary: `docs/adr/0021-add-draft-inbox-staging.md`
 
 ## MVP Commands
 
@@ -59,6 +60,21 @@ Rebuilds derived outputs from `.clarissimi/contributions.jsonl`.
 The fixture-first implementation previews rebuilds by default and writes files only when `--out-dir`
 is explicit.
 
+### `clarissimi stage-draft --draft <path>`
+
+Stages an agent-authored `clarissimi.assessment/v1` JSON draft for maintainer review under
+`.clarissimi/drafts/`.
+
+The draft file may also be a `clarissimi.draft-envelope/v1` object with an `assessment` field. The
+command validates the contained assessment, accepts only `maintainerApprovalStatus: "draft"`, strips
+raw evidence excerpts, and writes a deterministic review file based on repository, event, and pull
+request number. It refuses to overwrite an existing staged draft by default.
+
+The command does not import records into `.clarissimi/contributions.jsonl`, decide approval, call
+providers, fetch GitHub evidence, create pull requests, or store AI/provider provenance.
+
+By default, `--drafts-dir` is `.clarissimi/drafts`.
+
 ### `clarissimi import-draft --draft <path>`
 
 Imports an agent-authored `clarissimi.assessment/v1` JSON draft. This command is for workflows
@@ -101,6 +117,7 @@ Initial numeric values are recorded in `docs/adr/0014-add-fixture-first-cli-pack
 ## Review Blockers
 
 - A command writes public recognition without approval or configured policy.
+- A draft staging command writes into the public ledger.
 - A command sends provider input before redaction.
 - A command uses live LLM tests as core correctness tests.
 - A command exposes raw provider output by default.

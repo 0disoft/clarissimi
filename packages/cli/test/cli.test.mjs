@@ -176,6 +176,110 @@ test("validate-ledger rejects draft records", async () => {
   });
 });
 
+test("stage-draft writes a sanitized review copy without touching the ledger", async () => {
+  await withTempDir(async (dir) => {
+    const draftPath = join(dir, "agent-draft.json");
+    const draftsDir = join(dir, ".clarissimi", "drafts");
+    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+    await writeFile(
+      draftPath,
+      JSON.stringify(
+        assessment({
+          maintainerApprovalStatus: "draft",
+          evidenceRefs: [
+            {
+              kind: "pull_request",
+              id: "PR-42",
+              url: "https://github.com/example/project/pull/42",
+              title: "Add parser regression coverage",
+              excerpt: "Raw PR body should stay out of staged review storage."
+            }
+          ]
+        })
+      ),
+      "utf8"
+    );
+
+    const result = await run(
+      ["stage-draft", "--draft", draftPath, "--drafts-dir", draftsDir, "--json"],
+      dir
+    );
+    const output = JSON.parse(result.stdout);
+    const stagedText = await readFile(output.stagedDraftPath, "utf8");
+    const stagedDraft = JSON.parse(stagedText);
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(output.command, "stage-draft");
+    assert.equal(output.approvalStatus, "draft");
+    assert.equal(output.stagedDraftPath.endsWith("example-project-merged_pull_request-42.json"), true);
+    assert.equal(stagedDraft.maintainerApprovalStatus, "draft");
+    assert.equal(stagedText.includes("Raw PR body should stay out"), false);
+    await assert.rejects(readFile(ledger, "utf8"));
+  });
+});
+
+test("stage-draft accepts delegated envelopes without storing provenance", async () => {
+  await withTempDir(async (dir) => {
+    const draftPath = join(dir, "delegated-draft.json");
+    const draftsDir = join(dir, ".clarissimi", "drafts");
+    await writeFile(
+      draftPath,
+      JSON.stringify({
+        schemaVersion: "clarissimi.draft-envelope/v1",
+        draftProvenance: {
+          drafter: "codex",
+          model: "example-model"
+        },
+        assessment: assessment({ maintainerApprovalStatus: "draft" })
+      }),
+      "utf8"
+    );
+
+    const result = await run(
+      ["stage-draft", "--draft", draftPath, "--drafts-dir", draftsDir, "--json"],
+      dir
+    );
+    const output = JSON.parse(result.stdout);
+    const stagedText = await readFile(output.stagedDraftPath, "utf8");
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(output.draftFormat, "draft-envelope");
+    assert.equal(stagedText.includes("draftProvenance"), false);
+    assert.equal(stagedText.includes("example-model"), false);
+  });
+});
+
+test("stage-draft rejects approved assessments before staging", async () => {
+  await withTempDir(async (dir) => {
+    const draftPath = join(dir, "approved-draft.json");
+    await writeFile(draftPath, JSON.stringify(assessment()), "utf8");
+
+    const result = await run(["stage-draft", "--draft", draftPath, "--json"], dir);
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(result.exitCode, 6);
+    assert.equal(output.message, "Only draft assessments can be staged for maintainer review.");
+  });
+});
+
+test("stage-draft rejects duplicate staged draft paths", async () => {
+  await withTempDir(async (dir) => {
+    const draftPath = join(dir, "agent-draft.json");
+    await writeFile(
+      draftPath,
+      JSON.stringify(assessment({ maintainerApprovalStatus: "draft" })),
+      "utf8"
+    );
+
+    const first = await run(["stage-draft", "--draft", draftPath, "--json"], dir);
+    const second = await run(["stage-draft", "--draft", draftPath, "--json"], dir);
+
+    assert.equal(first.exitCode, 0);
+    assert.equal(second.exitCode, 6);
+    assert.equal(JSON.parse(second.stdout).message.includes("already staged"), true);
+  });
+});
+
 test("import-draft appends an approved agent draft and writes derived outputs", async () => {
   await withTempDir(async (dir) => {
     const draftPath = join(dir, "agent-draft.json");

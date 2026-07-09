@@ -30,7 +30,7 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
 - `packages/providers`: provider adapter interface, deterministic fake provider, and SDK-free
   OpenAI-compatible HTTP adapter
 - `packages/renderers`: JSONL, contributor JSON, Markdown, and static-data renderers
-- `packages/cli`: fixture-first validation, recognition dry-run, agent-assisted draft import,
+- `packages/cli`: fixture-first validation, recognition dry-run, agent-assisted draft staging/import,
   rebuild commands, and explicit fake or OpenAI-compatible provider selection
 - `packages/action`: Action runner for dry-run summaries, fixture-first proposal pull requests, and
   event-path live GitHub collection in propose mode with explicit fake or OpenAI-compatible
@@ -316,13 +316,58 @@ Validation:
 - `pnpm run check`
 - `pnpm run contract`
 
+### 11. Draft Inbox Staging
+
+Source: `docs/adr/0021-add-draft-inbox-staging.md`,
+`docs/cli/command-contract.md`
+
+Status: Completed for local CLI staging.
+
+Goal: give maintainers a durable place to review AI-authored drafts before approval without mixing
+unapproved records into the public recognition ledger.
+
+Completed deliverables:
+
+- `clarissimi stage-draft --draft <path>` validates complete assessment JSON documents
+- `clarissimi.draft-envelope/v1` wrappers are accepted for delegated LLM workflows
+- only `maintainerApprovalStatus: "draft"` can be staged
+- staged files are written to deterministic paths under `.clarissimi/drafts/`
+- raw evidence excerpts and AI/provider provenance are omitted from staged files
+- existing staged draft paths are not overwritten
+- `.clarissimi/contributions.jsonl` remains untouched until `import-draft`
+
+Validation:
+
+- CLI stage-draft tests
+- `pnpm run docs`
+- `pnpm run smoke`
+- `pnpm run check`
+- `pnpm run contract`
+
+### 12. Ledger Partition Decision
+
+Source: `docs/adr/0022-keep-ledger-single-file-with-partition-path.md`,
+`docs/product/02-spec.md`
+
+Status: Completed as a product and architecture decision.
+
+Goal: keep the MVP ledger simple while documenting the migration path for repositories that later
+outgrow a single JSONL file.
+
+Completed deliverables:
+
+- `.clarissimi/contributions.jsonl` remains the MVP canonical ledger
+- yearly partitions plus an index are documented as the future migration path
+- monthly partitions are deferred until real repository volume justifies them
+- future partition migration requirements preserve schema versions, rebuild determinism, duplicate
+  detection, and no-public-score guarantees
+
 Validation:
 
 - `pnpm run docs`
 - `pnpm run smoke`
 - `pnpm run check`
-- `ssealed doctor . --json`
-- repository hygiene checks
+- `pnpm run contract`
 
 ## Deferred Work
 

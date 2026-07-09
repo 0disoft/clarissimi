@@ -31,6 +31,8 @@ The MVP primary event is a merged GitHub pull request.
 Clarissimi may support agent-assisted manual draft import for merged pull request assessments. The
 agent may draft directly or delegate the draft to another LLM, but public recognition output remains
 assessment-only and must not preserve AI agent, provider, prompt, or model provenance.
+Clarissimi may stage unapproved agent-authored drafts in a repository-local draft inbox for
+maintainer review. Staged drafts are review candidates, not public recognition records.
 Closed issues, linked issue authors, reviewers, release validators, and broader manual attribution
 remain later capabilities; the first implementation should avoid broad attribution complexity.
 
@@ -70,6 +72,17 @@ An assessment draft must include:
 - maintainer approval status
 
 The draft is not a public record until policy or maintainer approval allows it.
+
+## Draft Inbox
+
+Unapproved agent-authored drafts may be staged under:
+
+- `.clarissimi/drafts/*.json`
+
+The draft inbox exists so maintainers can inspect, edit, and approve a structured assessment before
+publication. Draft inbox files must not be treated as public recognition truth, must not preserve AI
+provider provenance, and must not include raw evidence excerpts that are unsafe for repository
+storage.
 
 ## Contribution Types
 
@@ -128,6 +141,11 @@ Approved recognition may update:
 `contributions.jsonl` is the source of truth. JSON and Markdown outputs are derived and must be
 rebuildable.
 
+The MVP keeps `contributions.jsonl` as a single file. If ledger size or merge conflicts become a
+real operational problem, Clarissimi should migrate through an explicit schema-versioned yearly
+partition plan such as `.clarissimi/contributions/2026.jsonl` plus an index file. Monthly partitions
+are deferred until repository volume justifies the extra lookup and migration complexity.
+
 ## LLM Role
 
 The LLM extracts and summarizes evidence into the fixed schema. It must not decide final public
@@ -175,6 +193,7 @@ The MVP CLI should expose:
 - `clarissimi validate-config`
 - `clarissimi validate-ledger`
 - `clarissimi recognize --fixture <path> --mode dry-run`
+- `clarissimi stage-draft --draft <path>`
 - `clarissimi import-draft --draft <path>`
 - `clarissimi rebuild`
 

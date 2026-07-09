@@ -116,6 +116,16 @@ node packages/cli/dist/bin/clarissimi.js import-draft --draft agent-draft.json -
 the ledger. It also accepts a `clarissimi.draft-envelope/v1` wrapper for delegated LLM workflows,
 but public outputs record only the validated assessment.
 
+To keep an unapproved draft in a reviewable repository inbox first:
+
+```powershell
+node packages/cli/dist/bin/clarissimi.js stage-draft --draft agent-draft.json --json
+```
+
+`stage-draft` writes a sanitized copy to `.clarissimi/drafts/` and leaves
+`.clarissimi/contributions.jsonl` untouched. A maintainer can review the staged file, change
+`maintainerApprovalStatus` to `approved`, and then import that reviewed file.
+
 ## GitHub Action
 
 The Action package runs dry-run summaries without GitHub API writes, live provider credentials, or

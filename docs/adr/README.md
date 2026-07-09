@@ -31,6 +31,9 @@ engine.
 - `0018-add-live-github-collector-boundary.md`: add live GitHub collector boundary
 - `0019-add-openai-compatible-provider-adapter.md`: add SDK-free OpenAI-compatible provider adapter
 - `0020-add-agent-assisted-draft-import.md`: add agent-assisted draft import
+- `0021-add-draft-inbox-staging.md`: add a review inbox for unapproved drafts
+- `0022-keep-ledger-single-file-with-partition-path.md`: keep MVP ledger single-file with a yearly
+  partition migration path
 
 ## Review Blockers
 

@@ -178,6 +178,8 @@ export const docsValidationScriptContract = {
     "\"docs/product/01-roadmap.md\"",
     "\"docs/product/02-spec.md\"",
     "\"docs/product/03-risk-register.md\"",
+    "\"docs/cli/README.md\"",
+    "\"docs/cli/configuration.md\"",
     "\"docs/cli/output-and-exit-codes.md\"",
     "\"docs/product/04-implementation-tracker.md\""
   ]
@@ -270,6 +272,32 @@ export const cliOutputExitCodesDocumentContract = {
     "Output calls a contributor high, medium, or low quality.",
     "JSON output leaks raw evidence.",
     "Exit behavior changes without CLI tests."
+  ]
+};
+
+export const cliConfigurationDocumentContract = {
+  path: "docs/cli/configuration.md",
+  requiredSnippets: [
+    "Default discovery checks",
+    "`clarissimi.config.ts` and `.clarissimi/config.json`; if both exist, the CLI fails closed",
+    "requires `--config <path>` so migration between formats is explicit",
+    "`packages/schemas` validates supported config values.",
+    "The CLI owns file loading and precedence.",
+    "explicit CLI flags",
+    "explicit `--config <path>` or the single discovered config file",
+    "package defaults",
+    "`provider`: `fake` or `openai-compatible`",
+    "`providerModel`: model name for `openai-compatible`",
+    "`providerEndpoint`: optional OpenAI-compatible chat completions endpoint; must be an HTTP(S) URL",
+    "`providerThinking`: optional OpenAI-compatible thinking mode; currently only `disabled`",
+    "`mode`: `dry-run`, `propose`, or `commit` as schema-recognized output mode values",
+    "TypeScript config files must be named `clarissimi.config.ts` and must export a default config",
+    "loaded through the Node.js 24 runtime rather than a third-party loader dependency",
+    "`recognize` currently supports only `dry-run`",
+    "Provider API keys and GitHub tokens must not be stored in config files.",
+    "The CLI reads `CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.",
+    "Config examples include fake tokens or real-looking secrets.",
+    "Config bypasses redaction before provider calls."
   ]
 };
 
@@ -923,6 +951,7 @@ export async function runReleaseReadiness(options = {}) {
   await runLedgerFormatDocumentContractCheck(repoRoot);
   await runCliCommandContractCheck(repoRoot);
   await runCliOutputExitCodesDocumentContractCheck(repoRoot);
+  await runCliConfigurationDocumentContractCheck(repoRoot);
   await runCiOperationalDocumentContractCheck(repoRoot);
   await runOperationalContractDocumentContractCheck(repoRoot);
   await runObservabilityDocumentContractCheck(repoRoot);
@@ -1274,6 +1303,21 @@ export function validateCliCommandContract(text, contract = cliCommandContract) 
 export function validateCliOutputExitCodesDocumentContract(
   text,
   contract = cliOutputExitCodesDocumentContract
+) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateCliConfigurationDocumentContract(
+  text,
+  contract = cliConfigurationDocumentContract
 ) {
   const issues = [];
 
@@ -1904,6 +1948,23 @@ async function runCliOutputExitCodesDocumentContractCheck(repoRoot) {
   }
 
   console.log("CLI output and exit codes document contract passed");
+}
+
+async function runCliConfigurationDocumentContractCheck(repoRoot) {
+  const configurationPath = join(repoRoot, cliConfigurationDocumentContract.path);
+  let text;
+  try {
+    text = await readFile(configurationPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${cliConfigurationDocumentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateCliConfigurationDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`CLI configuration document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("CLI configuration document contract passed");
 }
 
 async function runCiOperationalDocumentContractCheck(repoRoot) {

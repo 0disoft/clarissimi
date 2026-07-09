@@ -15,6 +15,7 @@ import {
   validateBackupRestoreDocumentContract,
   validateCiOperationalDocumentContract,
   validateCliCommandContract,
+  validateCliConfigurationDocumentContract,
   validateCliOutputExitCodesDocumentContract,
   validateCiWorkflowContract,
   validateCredentialedReleaseEvidence,
@@ -295,12 +296,14 @@ test("release readiness rejects docs validation script drift", () => {
   const text = createDocsValidationScriptText()
     .replace("\"docs/product/00-product-brief.md\"", "\"docs/product/00-product-brief-renamed.md\"")
     .replace("\"docs/product/02-spec.md\"", "\"docs/product/spec.md\"")
-    .replace("\"docs/product/03-risk-register.md\"", "\"docs/product/risk.md\"");
+    .replace("\"docs/product/03-risk-register.md\"", "\"docs/product/risk.md\"")
+    .replace("\"docs/cli/configuration.md\"", "\"docs/cli/config.md\"");
 
   assert.deepEqual(validateDocsValidationScriptContract(text), [
     "scripts/validate-docs.mjs must include \"docs/product/00-product-brief.md\".",
     "scripts/validate-docs.mjs must include \"docs/product/02-spec.md\".",
-    "scripts/validate-docs.mjs must include \"docs/product/03-risk-register.md\"."
+    "scripts/validate-docs.mjs must include \"docs/product/03-risk-register.md\".",
+    "scripts/validate-docs.mjs must include \"docs/cli/configuration.md\"."
   ]);
 });
 
@@ -410,6 +413,29 @@ test("release readiness rejects CLI output and exit codes drift", () => {
     "docs/cli/output-and-exit-codes.md must include - `7`: write failure.",
     "docs/cli/output-and-exit-codes.md must include Output implies a recognition entry was approved when it is only a draft..",
     "docs/cli/output-and-exit-codes.md must include JSON output leaks raw evidence.."
+  ]);
+});
+
+test("release readiness accepts the CLI configuration document contract", () => {
+  assert.deepEqual(validateCliConfigurationDocumentContract(createCliConfigurationDocumentText()), []);
+});
+
+test("release readiness rejects CLI configuration document drift", () => {
+  const text = createCliConfigurationDocumentText()
+    .replace("if both exist, the CLI fails closed", "if both exist, the CLI chooses one")
+    .replace("The CLI owns file loading and precedence.", "The schema owns file loading.")
+    .replace("explicit CLI flags", "config values")
+    .replace("`provider`: `fake` or `openai-compatible`", "`provider`: any model provider")
+    .replace("Provider API keys and GitHub tokens must not be stored in config files.", "Provider API keys may be stored in config files.")
+    .replace("The CLI reads `CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.", "The CLI always reads provider tokens.");
+
+  assert.deepEqual(validateCliConfigurationDocumentContract(text), [
+    "docs/cli/configuration.md must include `clarissimi.config.ts` and `.clarissimi/config.json`; if both exist, the CLI fails closed.",
+    "docs/cli/configuration.md must include The CLI owns file loading and precedence..",
+    "docs/cli/configuration.md must include explicit CLI flags.",
+    "docs/cli/configuration.md must include `provider`: `fake` or `openai-compatible`.",
+    "docs/cli/configuration.md must include Provider API keys and GitHub tokens must not be stored in config files..",
+    "docs/cli/configuration.md must include The CLI reads `CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.."
   ]);
 });
 
@@ -1517,6 +1543,8 @@ function createDocsValidationScriptText() {
     "  \"docs/product/01-roadmap.md\",",
     "  \"docs/product/02-spec.md\",",
     "  \"docs/product/03-risk-register.md\",",
+    "  \"docs/cli/README.md\",",
+    "  \"docs/cli/configuration.md\",",
     "  \"docs/cli/output-and-exit-codes.md\",",
     "  \"docs/product/04-implementation-tracker.md\",",
     "];",
@@ -1663,6 +1691,40 @@ function createCliOutputExitCodesDocumentText() {
     "- Output calls a contributor high, medium, or low quality.",
     "- JSON output leaks raw evidence.",
     "- Exit behavior changes without CLI tests.",
+    ""
+  ].join("\n");
+}
+
+function createCliConfigurationDocumentText() {
+  return [
+    "Default discovery checks",
+    "`clarissimi.config.ts` and `.clarissimi/config.json`; if both exist, the CLI fails closed and",
+    "requires `--config <path>` so migration between formats is explicit.",
+    "",
+    "`packages/schemas` validates supported config values. The CLI owns file loading and precedence.",
+    "",
+    "Current precedence is:",
+    "",
+    "1. explicit CLI flags",
+    "2. explicit `--config <path>` or the single discovered config file",
+    "3. package defaults",
+    "",
+    "- `provider`: `fake` or `openai-compatible`",
+    "- `providerModel`: model name for `openai-compatible`",
+    "- `providerEndpoint`: optional OpenAI-compatible chat completions endpoint; must be an HTTP(S) URL",
+    "- `providerThinking`: optional OpenAI-compatible thinking mode; currently only `disabled`",
+    "- `mode`: `dry-run`, `propose`, or `commit` as schema-recognized output mode values",
+    "",
+    "TypeScript config files must be named `clarissimi.config.ts` and must export a default config",
+    "object. They are loaded through the Node.js 24 runtime rather than a third-party loader dependency.",
+    "",
+    "`recognize` currently supports only `dry-run`.",
+    "",
+    "Provider API keys and GitHub tokens must not be stored in config files.",
+    "The CLI reads `CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.",
+    "",
+    "- Config examples include fake tokens or real-looking secrets.",
+    "- Config bypasses redaction before provider calls.",
     ""
   ].join("\n");
 }

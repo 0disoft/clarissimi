@@ -651,6 +651,9 @@ Completed deliverables:
   TypeScript config loading, and invalid-config exit behavior
 - release-readiness validates CLI output and exit-code documentation so raw-output exclusions,
   draft-only wording, and exit-code mappings cannot drift silently
+- release-readiness validates CLI configuration documentation so config precedence, fail-closed
+  default discovery, TypeScript loader behavior, and secret-placement boundaries cannot drift
+  silently
 
 Validation:
 

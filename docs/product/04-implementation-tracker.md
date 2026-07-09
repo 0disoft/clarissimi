@@ -27,7 +27,8 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
 - `packages/core`: prepared-evidence policy glue and approval gates
 - `packages/redaction`: deterministic string and JSON-like redaction
 - `packages/github`: fixture-first and injected-client live merged pull request evidence collection
-- `packages/providers`: provider adapter interface and deterministic fake provider
+- `packages/providers`: provider adapter interface, deterministic fake provider, and SDK-free
+  OpenAI-compatible HTTP adapter
 - `packages/renderers`: JSONL, contributor JSON, Markdown, and static-data renderers
 - `packages/cli`: fixture-first validation, recognition dry-run, and rebuild commands
 - `packages/action`: Action runner for dry-run summaries, fixture-first proposal pull requests, and
@@ -215,21 +216,27 @@ Validation:
 
 ### 8. Live Provider Adapter
 
-Source: `docs/adr/0007-provider-adapter-boundary.md`
+Source: `docs/adr/0007-provider-adapter-boundary.md`,
+`docs/adr/0019-add-openai-compatible-provider-adapter.md`
+
+Status: Completed for the provider package boundary in `packages/providers/src/openai-compatible-provider.ts`.
 
 Goal: add the first live provider adapter without moving provider-specific behavior into core,
 schemas, CLI, or Action shells.
 
-Expected deliverables:
+Completed deliverables:
 
 - provider adapter behind the existing provider interface
 - no raw evidence accepted without `PreparedProviderEvidence`
 - provider raw output not logged by default
 - fake provider remains the default correctness-test path
 - credential handling documented without fake secrets
+- no SDK dependency or environment-variable loading inside `packages/providers`
+- model output cannot approve contributions or alter contributor identity, evidence refs, or source
 
 Validation:
 
+- OpenAI-compatible provider fake-fetch tests
 - fake-provider core tests continue to pass
 - live-provider smoke tests are explicit and optional
 
@@ -254,6 +261,11 @@ Completed deliverables:
 - smoke validation exercises the built CLI and Action bins without live provider credentials
 - rollback instructions cover staging cleanup, proposal pull request closure, proposal branch
   deletion, and post-merge recognition reverts
+
+Remaining work:
+
+- CLI and Action provider selection still use the deterministic fake provider by default.
+- Credentialed live-provider smoke remains optional and is not part of correctness tests.
 
 Validation:
 

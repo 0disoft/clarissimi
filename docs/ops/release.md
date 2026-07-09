@@ -30,6 +30,8 @@ update this operational contract.
 Public package publication and versioned Action tags require:
 
 - live provider adapter credential handling is implemented and documented without fake secrets
+- CLI and Action provider selection for live providers is implemented without making live calls part
+  of correctness tests
 - `.github/workflows/clarissimi-propose-fixture.yml` or an equivalent public repository scenario
   passes
 - `pnpm run check`
@@ -55,4 +57,5 @@ Public package publication and versioned Action tags require:
 - Current dogfood evidence: `Clarissimi propose fixture` workflow run
   `28984721611` passed on `2026-07-09T00:14:30Z` and created proposal pull request
   `https://github.com/0disoft/clarissimi/pull/1`.
-- Remaining operational risk: live provider behavior is not complete
+- Remaining operational risk: CLI and Action live-provider selection and credentialed live-provider
+  smoke are not complete

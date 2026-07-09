@@ -58,7 +58,7 @@ This repository is a single public-ready monorepo. The intended implementation p
 - `packages/core`: pure policy, normalization, aggregation, and recognition logic
 - `packages/redaction`: secret, email, private-key, and environment-file redaction
 - `packages/github`: GitHub event and evidence collection
-- `packages/providers`: LLM provider adapters and fake deterministic provider
+- `packages/providers`: fake deterministic provider and SDK-free OpenAI-compatible provider adapter
 - `packages/renderers`: JSONL, JSON, Markdown, and static-data renderers
 - `packages/cli`: local commands and orchestration
 - `packages/action`: thin GitHub Action entrypoint
@@ -74,8 +74,8 @@ Implemented MVP slices:
   provider calls
 - `packages/github`: fixture-first and injected-client live GitHub merged pull request evidence
   collection
-- `packages/providers`: provider adapter interface and deterministic fake contribution draft
-  provider for tests and fixture-first workflows
+- `packages/providers`: provider adapter interface, deterministic fake contribution draft provider
+  for tests and fixture-first workflows, and SDK-free OpenAI-compatible HTTP adapter
 - `packages/renderers`: deterministic JSONL, contributor JSON, Markdown, and static-data output
   rendering
 - `packages/cli`: fixture-first local command orchestration for validation, recognition dry runs,
@@ -85,7 +85,7 @@ Implemented MVP slices:
 
 Not implemented yet:
 
-- live provider calls
+- CLI and Action live provider selection
 - repository write modes such as direct `commit`
 - comment updates or default-branch mutation
 

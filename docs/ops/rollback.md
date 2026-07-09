@@ -93,5 +93,5 @@ Resume the release or dogfood run only after:
 - Required validation names: `docs`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
-- Remaining operational risk: live provider behavior and hosted branch-protection enforcement are
-  not complete.
+- Remaining operational risk: CLI and Action live-provider selection plus hosted branch-protection
+  enforcement are not complete.

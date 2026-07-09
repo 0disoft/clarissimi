@@ -34,8 +34,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
   provider boundaries.
 - `packages/github`: Fixture-first and injected-client live GitHub merged pull request evidence
   collection.
-- `packages/providers`: Provider adapter interface and deterministic fake contribution draft
-  provider.
+- `packages/providers`: Provider adapter interface, deterministic fake contribution draft
+  provider, and SDK-free OpenAI-compatible HTTP adapter.
 - `packages/renderers`: Deterministic JSONL, contributor JSON, Markdown, and static-data output
   rendering.
 - `packages/cli`: Fixture-first local command orchestration for config validation, ledger

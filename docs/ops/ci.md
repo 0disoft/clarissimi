@@ -31,5 +31,5 @@ pull requests enabled so explicit `propose` jobs can open recognition proposal p
 - Required validation names: `docs`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
-- Remaining operational risk: branch protection, hosted CI enforcement, and live-provider smoke
-  coverage are not complete.
+- Remaining operational risk: branch protection, hosted CI enforcement, CLI and Action
+  live-provider selection, and credentialed live-provider smoke coverage are not complete.

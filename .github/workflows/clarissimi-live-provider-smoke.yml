@@ -26,6 +26,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Verify provider secret
+        shell: bash
+        env:
+          CLARISSIMI_PROVIDER_TOKEN: ${{ secrets.CLARISSIMI_PROVIDER_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CLARISSIMI_PROVIDER_TOKEN}" ]; then
+            echo "::error title=Missing repository secret::Set CLARISSIMI_PROVIDER_TOKEN before running Clarissimi live provider smoke."
+            exit 2
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v7
 

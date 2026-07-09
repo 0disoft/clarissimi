@@ -31,6 +31,7 @@ import { createOrUpdateProposalPullRequest, type ProposalPullRequestClient } fro
 import { stageProposalDraftReviewOutput, stageProposalRecognitionOutputs } from "./staging.js";
 import { sanitizeAssessmentForActionSummary } from "./summary.js";
 import type {
+  ActionMode,
   ActionDryRunInput,
   ActionDryRunSummary,
   ActionInputSource,
@@ -39,6 +40,7 @@ import type {
   ActionProcessIo,
   ActionStageDraftInput
 } from "./types.js";
+import { isActionMode } from "./types.js";
 
 export class ActionUsageError extends Error {
   constructor(message: string) {
@@ -208,8 +210,9 @@ export async function runActionFromEnvironment(
     const fallbackEventPath = githubFixturePath === undefined
       ? readEnvInput(env.GITHUB_EVENT_PATH)
       : undefined;
+    const mode = normalizeActionMode(readEnvInput(env.INPUT_MODE) ?? "propose");
     const input: ActionDryRunInput = {
-      mode: readEnvInput(env.INPUT_MODE) ?? "propose"
+      mode
     };
     assignOptional(input, "eventPath", explicitEventPath ?? fallbackEventPath);
     assignOptional(input, "githubFixturePath", githubFixturePath);
@@ -233,15 +236,28 @@ async function runActionMode(
   env: NodeJS.ProcessEnv,
   runtime: ActionEnvironmentRuntime
 ): Promise<ActionDryRunSummary | ActionProposeSummary> {
-  if (input.mode === "propose") {
+  const mode = normalizeActionMode(input.mode ?? "dry-run");
+
+  if (mode === "propose") {
     return runActionPropose(buildActionWriteInput(input, env, runtime, "propose"));
   }
 
-  if (input.mode === "stage-draft") {
+  if (mode === "stage-draft") {
     return runActionStageDraft(buildActionWriteInput(input, env, runtime, "stage-draft"));
   }
 
-  return runActionDryRun(input);
+  return runActionDryRun({
+    ...input,
+    mode
+  });
+}
+
+function normalizeActionMode(value: string): ActionMode {
+  if (!isActionMode(value)) {
+    throw new ActionUsageError(`Unsupported action mode: ${value}.`);
+  }
+
+  return value;
 }
 
 function buildActionWriteInput(

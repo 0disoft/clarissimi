@@ -58,6 +58,9 @@ The future expanded action contract should include:
 
 Secret values must be read from GitHub Actions secrets or environment variables, not action inputs.
 
+Action mode validation is owned inside `packages/action`. Unsupported `INPUT_MODE` values must fail
+as usage errors before collection, provider, staging, branch, or pull request work begins.
+
 Dry-run mode reads provider credentials only when `provider` is explicitly set to
 `openai-compatible`. The default provider is `fake`. The default Action mode is `propose`, which
 reads `GITHUB_TOKEN` for live GitHub collection and proposal pull request creation or update.

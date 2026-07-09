@@ -3,7 +3,13 @@ import type { LiveGitHubClient } from "@clarissimi/github";
 import type { ContributionDraftProvider } from "@clarissimi/providers";
 import type { ProposalPullRequestClient } from "./pull-request.js";
 
-export type ActionMode = "dry-run" | "propose" | "stage-draft";
+export const ACTION_MODES = ["dry-run", "propose", "stage-draft"] as const;
+
+export type ActionMode = (typeof ACTION_MODES)[number];
+
+export function isActionMode(value: string): value is ActionMode {
+  return (ACTION_MODES as readonly string[]).includes(value);
+}
 
 export type ActionInputSource = "github_event_path" | "github_fixture";
 

@@ -530,7 +530,32 @@ test("environment runner returns usage failure for unsupported mode", async () =
 
   assert.equal(exitCode, 1);
   assert.equal(stdout, "");
-  assert.equal(stderr, "runActionDryRun supports only dry-run mode.\n");
+  assert.equal(stderr, "Unsupported action mode: commit.\n");
+});
+
+test("environment runner validates unsupported mode before resolving provider credentials", async () => {
+  let stdout = "";
+  let stderr = "";
+
+  const exitCode = await runActionFromEnvironment(
+    {
+      INPUT_GITHUB_FIXTURE: "unused.json",
+      INPUT_MODE: "commit",
+      INPUT_PROVIDER: "openai-compatible"
+    },
+    {
+      stdout: (value) => {
+        stdout += value;
+      },
+      stderr: (value) => {
+        stderr += value;
+      }
+    }
+  );
+
+  assert.equal(exitCode, 1);
+  assert.equal(stdout, "");
+  assert.equal(stderr, "Unsupported action mode: commit.\n");
 });
 
 test("environment runner requires a GitHub token before propose mode writes outputs", async () => {

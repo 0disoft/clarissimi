@@ -193,7 +193,15 @@ export const docsValidationScriptContract = {
     "\"docs/cli/output-and-exit-codes.md\"",
     "\"docs/ops/disaster-recovery.md\"",
     "\"docs/ops/incident-response.md\"",
-    "\"docs/product/04-implementation-tracker.md\""
+    "\"docs/product/04-implementation-tracker.md\"",
+    "\"packages/action/README.md\"",
+    "\"packages/cli/README.md\"",
+    "\"packages/core/README.md\"",
+    "\"packages/github/README.md\"",
+    "\"packages/providers/README.md\"",
+    "\"packages/redaction/README.md\"",
+    "\"packages/renderers/README.md\"",
+    "\"packages/schemas/README.md\""
   ]
 };
 

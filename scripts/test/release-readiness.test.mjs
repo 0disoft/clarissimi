@@ -310,7 +310,8 @@ test("release readiness rejects docs validation script drift", () => {
     .replace("\"docs/product/03-risk-register.md\"", "\"docs/product/risk.md\"")
     .replace("\"docs/cli/configuration.md\"", "\"docs/cli/config.md\"")
     .replace("\"docs/cli/ledger-format.md\"", "\"docs/cli/ledger.md\"")
-    .replace("\"docs/ops/incident-response.md\"", "\"docs/ops/incidents.md\"");
+    .replace("\"docs/ops/incident-response.md\"", "\"docs/ops/incidents.md\"")
+    .replace("\"packages/renderers/README.md\"", "\"packages/renderers/README-renamed.md\"");
 
   assert.deepEqual(validateDocsValidationScriptContract(text), [
     "scripts/validate-docs.mjs must include \"docs/product/00-product-brief.md\".",
@@ -318,7 +319,8 @@ test("release readiness rejects docs validation script drift", () => {
     "scripts/validate-docs.mjs must include \"docs/product/03-risk-register.md\".",
     "scripts/validate-docs.mjs must include \"docs/cli/configuration.md\".",
     "scripts/validate-docs.mjs must include \"docs/cli/ledger-format.md\".",
-    "scripts/validate-docs.mjs must include \"docs/ops/incident-response.md\"."
+    "scripts/validate-docs.mjs must include \"docs/ops/incident-response.md\".",
+    "scripts/validate-docs.mjs must include \"packages/renderers/README.md\"."
   ]);
 });
 
@@ -1658,6 +1660,14 @@ function createDocsValidationScriptText() {
     "  \"docs/ops/disaster-recovery.md\",",
     "  \"docs/ops/incident-response.md\",",
     "  \"docs/product/04-implementation-tracker.md\",",
+    "  \"packages/action/README.md\",",
+    "  \"packages/cli/README.md\",",
+    "  \"packages/core/README.md\",",
+    "  \"packages/github/README.md\",",
+    "  \"packages/providers/README.md\",",
+    "  \"packages/redaction/README.md\",",
+    "  \"packages/renderers/README.md\",",
+    "  \"packages/schemas/README.md\",",
     "];",
     ""
   ].join("\n");

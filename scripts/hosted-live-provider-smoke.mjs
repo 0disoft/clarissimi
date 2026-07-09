@@ -194,7 +194,9 @@ async function requireRepositorySecret(runtime, repo, secretName) {
   if (!Array.isArray(secrets) || !secrets.some((secret) => secret.name === secretName)) {
     throw new Error(
       `Missing repository secret ${secretName} for ${repo}. ` +
-      "Set it before running hosted live provider smoke. No workflow was dispatched."
+      "Set it before running hosted live provider smoke. " +
+      `Example: $env:OPENAI_API_KEY | gh secret set ${secretName} --repo ${repo} --app actions. ` +
+      "No workflow was dispatched."
     );
   }
 

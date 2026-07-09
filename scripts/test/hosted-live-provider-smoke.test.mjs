@@ -16,7 +16,7 @@ test("hosted live provider smoke stops before dispatch when the repository secre
   assert.equal(exitCode, 1);
   assert.match(
     harness.errors.join("\n"),
-    /Missing repository secret CLARISSIMI_PROVIDER_TOKEN .* No workflow was dispatched\./
+    /Missing repository secret CLARISSIMI_PROVIDER_TOKEN .* gh secret set CLARISSIMI_PROVIDER_TOKEN --repo 0disoft\/clarissimi --app actions\. No workflow was dispatched\./
   );
   assert.equal(
     harness.commands.some((command) => command.args[0] === "workflow" && command.args[1] === "run"),

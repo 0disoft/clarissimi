@@ -560,7 +560,8 @@ export const credentialedReleaseEvidenceContract = {
     "CLARISSIMI_PROVIDER_MODEL=umans-glm-5.2",
     "Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow run",
     "CLARISSIMI_PROVIDER_TOKEN",
-    "CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini"
+    "CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini",
+    "https://github.com/0disoft/clarissimi/actions/runs/29018826925"
   ],
   requiredPatterns: [
     {
@@ -579,6 +580,8 @@ export const writeModeDogfoodEvidenceContract = {
   requiredSnippets: [
     "Current dogfood evidence: `Clarissimi propose fixture` workflow run",
     "Current draft dogfood evidence: `Clarissimi stage draft fixture` workflow run",
+    "https://github.com/0disoft/clarissimi/actions/runs/29027800039",
+    "https://github.com/0disoft/clarissimi/actions/runs/29027802451",
     "https://github.com/0disoft/clarissimi/pull/1",
     "https://github.com/0disoft/clarissimi/pull/2"
   ],
@@ -607,7 +610,8 @@ export const dryRunDogfoodEvidenceContract = {
   requiredSnippets: [
     "Current dry-run dogfood evidence: `Clarissimi dry run` workflow run",
     "summary artifact validation",
-    "77f3fcbbeb25e3338ee2a4bba3c8efbfc46e5cfb"
+    "77f3fcbbeb25e3338ee2a4bba3c8efbfc46e5cfb",
+    "https://github.com/0disoft/clarissimi/actions/runs/29031384775"
   ],
   requiredPatterns: [
     {

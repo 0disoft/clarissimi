@@ -121,6 +121,7 @@ Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow
 `29018826925` passed on `2026-07-09T12:39:17Z` from `main` at
 `799119fd146bb6e62bf0413caf0773559aee63ee` using repository secret
 `CLARISSIMI_PROVIDER_TOKEN` and dispatch input `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.
+Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29018826925`.
 
 ## Owners
 
@@ -134,13 +135,16 @@ Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow
 - Release blocker status: public package publication and versioned Action tags are blocked
 - Current dry-run dogfood evidence: `Clarissimi dry run` workflow run `29031384775` passed on
   `2026-07-09T15:54:58Z` at `77f3fcbbeb25e3338ee2a4bba3c8efbfc46e5cfb` and exercised the
-  summary artifact validation path.
+  summary artifact validation path. Run URL:
+  `https://github.com/0disoft/clarissimi/actions/runs/29031384775`.
 - Current dogfood evidence: `Clarissimi propose fixture` workflow run
   `29027800039` passed on `2026-07-09T15:02:15Z` and updated proposal pull request
-  `https://github.com/0disoft/clarissimi/pull/1`.
+  `https://github.com/0disoft/clarissimi/pull/1`. Run URL:
+  `https://github.com/0disoft/clarissimi/actions/runs/29027800039`.
 - Current draft dogfood evidence: `Clarissimi stage draft fixture` workflow run
   `29027802451` passed on `2026-07-09T15:02:10Z` and updated draft review pull request
-  `https://github.com/0disoft/clarissimi/pull/2`.
+  `https://github.com/0disoft/clarissimi/pull/2`. Run URL:
+  `https://github.com/0disoft/clarissimi/actions/runs/29027802451`.
 - Current live-provider evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09`
   using maintainer-owned provider credentials and `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.
 - Current OpenCode Go evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09`
@@ -152,3 +156,4 @@ Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow
 - Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow run
   `29018826925` passed on `2026-07-09T12:39:17Z` using repository secret
   `CLARISSIMI_PROVIDER_TOKEN` and dispatch input `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.
+  Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29018826925`.

@@ -439,6 +439,8 @@ Completed deliverables:
   updating `https://github.com/0disoft/clarissimi/pull/2`
 - read-only dry-run dogfood workflow passed run `29031384775`, including sanitized JSON summary
   artifact validation
+- release-readiness requires direct GitHub Actions run URLs for dry-run, propose, stage-draft, and
+  hosted live-provider release evidence
 
 Release follow-up:
 

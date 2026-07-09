@@ -52,5 +52,7 @@ Public package publication and versioned Action tags require:
 
 - Required validation names: `check`, `contract`, `smoke`, `docs`
 - Release blocker status: public package publication and versioned Action tags are blocked
-- Remaining operational risk: live provider behavior and a passing maintainer-triggered propose
-  dogfood run are not complete
+- Current dogfood evidence: `Clarissimi propose fixture` workflow run
+  `28984721611` passed on `2026-07-09T00:14:30Z` and created proposal pull request
+  `https://github.com/0disoft/clarissimi/pull/1`.
+- Remaining operational risk: live provider behavior is not complete

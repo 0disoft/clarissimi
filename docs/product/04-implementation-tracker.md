@@ -248,7 +248,8 @@ Completed deliverables:
 - installation and dry-run examples match the root Action contract
 - propose mode docs are added only when implementation exists
 - release or versioning policy blocks package publication until release gates are satisfied
-- manual-only fixture propose dogfood workflow is available
+- manual-only fixture propose dogfood workflow is available and passed run `28984721611`, creating
+  `https://github.com/0disoft/clarissimi/pull/1`
 - docs validation checks required documentation targets and local Markdown links
 - smoke validation exercises the built CLI and Action bins without live provider credentials
 - rollback instructions cover staging cleanup, proposal pull request closure, proposal branch

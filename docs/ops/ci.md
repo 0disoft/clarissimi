@@ -17,6 +17,9 @@ The current local CI parity commands are:
 `format`, `lint`, and `migration-check` remain intentionally unconfigured and fail until their
 owners define real checks.
 
+Repository Actions settings keep default workflow permissions at read-only, with workflow-created
+pull requests enabled so explicit `propose` jobs can open recognition proposal pull requests.
+
 ## Owners
 
 - Primary owner: UNASSIGNED

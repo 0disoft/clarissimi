@@ -217,6 +217,8 @@ test("release readiness accepts the CI operational document contract", () => {
 test("release readiness rejects CI operational document drift", () => {
   const text = createCiOperationalDocumentText()
     .replace("`lint`, `smoke`, `check`, and `contract` with Node.js 24", "`smoke`, `check`, and `contract` with Node.js 24")
+    .replace("The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`", "The `main` branch is protected by maintainers")
+    .replace("to pass with strict up-to-date status checks. Administrator enforcement is disabled", "with repository-owner recovery.")
     .replace(
       "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
       "- Required validation names: `docs`, `smoke`, `check`, `contract`"
@@ -224,6 +226,8 @@ test("release readiness rejects CI operational document drift", () => {
 
   assert.deepEqual(validateCiOperationalDocumentContract(text), [
     "docs/ops/ci.md must include `lint`, `smoke`, `check`, and `contract` with Node.js 24.",
+    "docs/ops/ci.md must include The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`.",
+    "docs/ops/ci.md must include to pass with strict up-to-date status checks. Administrator enforcement is disabled.",
     "docs/ops/ci.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
   ]);
 });
@@ -965,6 +969,10 @@ function createCiOperationalDocumentText() {
     "manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,",
     "`lint`, `smoke`, `check`, and `contract` with Node.js 24 and the package-manager version declared",
     "by `package.json`.",
+    "",
+    "The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`",
+    "to pass with strict up-to-date status checks. Administrator enforcement is disabled so repository",
+    "owners can recover from CI or protection misconfiguration without changing the branch rule first.",
     "",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
     ""

@@ -146,6 +146,8 @@ export const ciOperationalDocumentContract = {
     "The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and",
     "manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,",
     "`lint`, `smoke`, `check`, and `contract` with Node.js 24",
+    "The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`",
+    "to pass with strict up-to-date status checks. Administrator enforcement is disabled",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"
   ]
 };

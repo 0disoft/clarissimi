@@ -295,6 +295,8 @@ Completed deliverables:
   command contract before reporting static release gates as passed
 - release-readiness validates that the CI operational document names the same hosted validation
   commands as the workflow contract
+- release-readiness validates that the CI operational document records the protected `main` branch
+  `Validation` check and strict up-to-date status requirement
 - release-readiness validates the fixture dogfood workflow permission, mode, fixture, and output
   assertion contracts before reporting static release gates as passed
 - release-readiness validates that current write-mode dogfood evidence remains recorded in

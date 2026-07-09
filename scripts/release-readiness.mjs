@@ -49,6 +49,21 @@ export const requiredTestGlobs = [
   "scripts/test/*.test.mjs"
 ];
 
+export const highRiskSecretEnvNames = [
+  "NPM_TOKEN",
+  "NODE_AUTH_TOKEN",
+  "CLARISSIMI_PROVIDER_TOKEN",
+  "OPENAI_API_" + "KEY",
+  "ANTHROPIC_API_" + "KEY",
+  "GEMINI_API_" + "KEY",
+  "DEEPSEEK_API_" + "KEY",
+  "OPENCODE_GO_API_" + "KEY",
+  "UMANS_API_" + "KEY",
+  "GITHUB_TOKEN",
+  "GITHUB_PAT",
+  "GITHUB_PAT_ODISOFT"
+];
+
 export async function runReleaseReadiness(options = {}) {
   const repoRoot = options.repoRoot ?? defaultRepoRoot;
   const workflowDir = join(repoRoot, ".github", "workflows");
@@ -162,18 +177,6 @@ function runCommand(command, args, repoRoot) {
 }
 
 async function runSecretScan(repoRoot) {
-  const highRiskEnvAssignments = [
-    "NPM_TOKEN",
-    "OPENAI_API_" + "KEY",
-    "ANTHROPIC_API_" + "KEY",
-    "GEMINI_API_" + "KEY"
-  ].map((name) => `${escapeRegExp(name)}=`);
-  const pattern = new RegExp([
-    "sk-(proj|live|test|ant|svc|admin|user|org|key)-[A-Za-z0-9_-]{8,}",
-    "ghp_[A-Za-z0-9]{20,}",
-    "BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY",
-    ...highRiskEnvAssignments
-  ].join("|"));
   const files = await listFiles(repoRoot, () => true, repoRoot);
   const hits = [];
 
@@ -190,12 +193,7 @@ async function runSecretScan(repoRoot) {
       continue;
     }
 
-    const lines = text.split(/\r?\n/);
-    for (let index = 0; index < lines.length; index += 1) {
-      if (pattern.test(lines[index])) {
-        hits.push(`${repoPath}:${index + 1}`);
-      }
-    }
+    hits.push(...findHighRiskSecretLines(repoPath, text));
   }
 
   if (hits.length > 0) {
@@ -203,6 +201,26 @@ async function runSecretScan(repoRoot) {
   }
 
   console.log("secret scan passed");
+}
+
+export function findHighRiskSecretLines(repoPath, text) {
+  const highRiskEnvAssignments = highRiskSecretEnvNames.map((name) => `${escapeRegExp(name)}\\s*=`);
+  const pattern = new RegExp([
+    "sk-(proj|live|test|ant|svc|admin|user|org|key)-[A-Za-z0-9_-]{8,}",
+    "ghp_[A-Za-z0-9]{20,}",
+    "BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY",
+    ...highRiskEnvAssignments
+  ].join("|"));
+  const lines = text.split(/\r?\n/);
+  const hits = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    if (pattern.test(lines[index])) {
+      hits.push(`${repoPath}:${index + 1}`);
+    }
+  }
+
+  return hits;
 }
 
 async function runToolAvailabilityCheck(repoRoot) {

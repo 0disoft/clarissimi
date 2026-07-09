@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  findHighRiskSecretLines,
   requiredPackageScripts,
   requiredTestGlobs,
   validatePackageScriptRegistration
@@ -48,6 +49,39 @@ test("release readiness rejects missing package and script test globs", () => {
     "package.json scripts.test must include packages/action/test/*.test.mjs.",
     "package.json scripts.test must include scripts/test/*.test.mjs."
   ]);
+});
+
+test("release readiness secret scan detects provider gateway env assignments", () => {
+  const names = [
+    ["CLARISSIMI", "PROVIDER", "TOKEN"],
+    ["OPENCODE", "GO", "API", "KEY"],
+    ["UMANS", "API", "KEY"],
+    ["DEEPSEEK", "API", "KEY"],
+    ["NODE", "AUTH", "TOKEN"],
+    ["GITHUB", "PAT", "ODISOFT"]
+  ].map((parts) => parts.join("_"));
+  const text = names.map((name, index) =>
+    index === 0 ? `${name} = synthetic-token` : `${name}=synthetic-token`
+  ).join("\n");
+
+  assert.deepEqual(findHighRiskSecretLines("sample.env", text), [
+    "sample.env:1",
+    "sample.env:2",
+    "sample.env:3",
+    "sample.env:4",
+    "sample.env:5",
+    "sample.env:6"
+  ]);
+});
+
+test("release readiness secret scan allows documented secret names without assigned values", () => {
+  const text = [
+    "Set CLARISSIMI_PROVIDER_TOKEN in repository secrets.",
+    "$env:OPENAI_API_KEY | gh secret set CLARISSIMI_PROVIDER_TOKEN --repo owner/repo --app actions",
+    "Provider examples may mention OPENCODE_GO_API_KEY or UMANS_API_KEY by name."
+  ].join("\n");
+
+  assert.deepEqual(findHighRiskSecretLines("docs/ops/secrets.md", text), []);
 });
 
 function createValidScripts() {

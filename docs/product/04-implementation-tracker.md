@@ -311,6 +311,8 @@ Completed deliverables:
 - release-readiness verifies that package test globs still include package and script test suites
 - release-readiness verifies that `ssealed`, `actionlint`, and `yq` are available before running
   tool-backed release checks
+- release-readiness secret scan covers committed provider gateway token assignments including
+  Clarissimi, OpenCode Go, UMANS, DeepSeek, Node auth, and GitHub PAT environment names
 - agent-assisted draft guide documents a copyable assessment template, PR source fields, evidence
   refs, impact/confidence semantics, and delegated model envelopes
 - ledger format guide documents public ledger fields, PR number and URL placement, draft-versus-ledger

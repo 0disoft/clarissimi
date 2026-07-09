@@ -241,6 +241,7 @@ Bad:
 - "This contributor is high score."
 - "Rank 3 contributor."
 - "AI judged this contributor as medium quality."
+- "Earned leaderboard points and gold contributor tier."
 
 ## Review Blockers
 

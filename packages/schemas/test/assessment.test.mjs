@@ -112,7 +112,12 @@ test("exports the product contribution type vocabulary", () => {
 
 test("detects ranking language independently", () => {
   assert.equal(hasPublicRankingLanguage("Top 3 contributor on the leaderboard"), true);
+  assert.equal(hasPublicRankingLanguage("Average score improved to 92."), true);
+  assert.equal(hasPublicRankingLanguage("Earned leaderboard points for this contribution."), true);
+  assert.equal(hasPublicRankingLanguage("Promoted to gold contributor tier."), true);
+  assert.equal(hasPublicRankingLanguage("AI judged this contributor as medium quality."), true);
   assert.equal(hasPublicRankingLanguage("Added regression coverage for the parser crash"), false);
+  assert.equal(hasPublicRankingLanguage("Clarified three setup points in the documentation."), false);
 });
 
 test("accepts supported Clarissimi config values", () => {

@@ -22,10 +22,16 @@ import {
 const RANKING_LANGUAGE_PATTERNS: readonly RegExp[] = [
   /\bleaderboard\b/i,
   /\btotal\s+score\b/i,
+  /\baverage\s+score\b/i,
   /\bhigh\s+score\b/i,
+  /\bcontribution\s+points\b/i,
+  /\bleaderboard\s+points\b/i,
+  /\bcontributor\s+tier\b/i,
   /\brank(?:ed|ing)?\b/i,
   /\btop\s+\d+\s+contributor\b/i,
+  /\b(?:gold|silver|bronze)\s+contributor\b/i,
   /\bmedium\s+contributor\b/i,
+  /\bmedium\s+quality\b/i,
   /\blow-quality\s+contributor\b/i
 ];
 

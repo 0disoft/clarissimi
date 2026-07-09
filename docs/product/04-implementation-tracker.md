@@ -57,7 +57,7 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
 - root `package.json`: configured `hosted-live-provider-smoke` script for maintainer-triggered
   hosted workflow dispatch and watch after the repository secret name is configured
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
-  `event-path` inputs
+  `event-path` inputs, including the sanitized JSON summary artifact path
 - `.github/workflows/clarissimi-propose-fixture.yml`: manual-only fixture propose dogfood
 - `.github/workflows/clarissimi-stage-draft-fixture.yml`: manual-only fixture stage-draft dogfood
 - `.github/workflows/clarissimi-live-provider-smoke.yml`: manual-only credentialed live provider
@@ -636,6 +636,8 @@ Completed deliverables:
   written
 - the summary artifact follows the same raw-evidence and secret exclusion rules as stdout,
   GitHub outputs, and step summaries
+- read-only dry-run dogfood exercises `summary-path`, validates the `summary-json-path` output,
+  parses the generated JSON, and checks that raw fixture evidence is not written
 
 Validation:
 

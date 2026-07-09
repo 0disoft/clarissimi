@@ -346,11 +346,15 @@ export const dogfoodWorkflowContracts = [
       "contents: read",
       "mode: dry-run",
       "github-fixture: fixtures/github-merged-pr-basic.json",
+      "summary-path: .clarissimi/dogfood-fixture-summary.json",
       "event-path: fixtures/github-pull-request-merged-event.json",
       "test \"${{ steps.fixture.outputs.mode }}\" = \"dry-run\"",
       "test \"${{ steps.event.outputs.mode }}\" = \"dry-run\"",
       "test \"${{ steps.fixture.outputs.input-source }}\" = \"github_fixture\"",
-      "test \"${{ steps.event.outputs.input-source }}\" = \"github_event_path\""
+      "test \"${{ steps.event.outputs.input-source }}\" = \"github_event_path\"",
+      "test -n \"${{ steps.fixture.outputs.summary-json-path }}\"",
+      "test -f \"${{ steps.fixture.outputs.summary-json-path }}\"",
+      "Summary artifact leaked raw fixture evidence."
     ],
     forbiddenSnippets: [
       "contents: write",

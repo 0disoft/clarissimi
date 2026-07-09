@@ -21,6 +21,7 @@ jobs:
         with:
           mode: dry-run
           github-fixture: fixtures/github-merged-pr-basic.json
+          summary-path: .clarissimi/dogfood-fixture-summary.json
 
       - name: Verify fixture dry-run outputs
         shell: bash
@@ -33,6 +34,29 @@ jobs:
           test "${{ steps.fixture.outputs.input-source }}" = "github_fixture"
           test "${{ steps.fixture.outputs.approval-status }}" = "draft"
           test "${{ steps.fixture.outputs.redaction-match-count }}" = "0"
+          test -n "${{ steps.fixture.outputs.summary-json-path }}"
+          test -f "${{ steps.fixture.outputs.summary-json-path }}"
+          SUMMARY_PATH="${{ steps.fixture.outputs.summary-json-path }}" node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+
+          const summary = JSON.parse(readFileSync(process.env.SUMMARY_PATH, "utf8"));
+          if (summary.mode !== "dry-run") {
+            throw new Error(`Expected dry-run summary, got ${summary.mode}.`);
+          }
+          if (summary.inputSource !== "github_fixture") {
+            throw new Error(`Expected github_fixture summary, got ${summary.inputSource}.`);
+          }
+          if (summary.draftCount !== 1 || summary.proposedEntryCount !== 0) {
+            throw new Error("Fixture summary counts drifted.");
+          }
+
+          const text = JSON.stringify(summary);
+          for (const unsafe of ["Adds a failing parser case", "parses nested input"]) {
+            if (text.includes(unsafe)) {
+              throw new Error("Summary artifact leaked raw fixture evidence.");
+            }
+          }
+          NODE
 
       - name: Run event-path dry-run action
         id: event

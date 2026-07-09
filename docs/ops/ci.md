@@ -31,11 +31,11 @@ The current local CI parity commands are:
   that the root Action manifest keeps the expected inputs, outputs, defaults, secret environment
   boundary, and runtime commands, and that the hosted CI workflow still runs the required local
   parity commands with read-only contents permission.
-  Fixture dogfood workflow contracts are also checked so dry-run stays read-only and propose and
-  stage-draft stay manual, fixture-backed, and output-asserting. It is a maintainer release gate,
-  not a live-provider check. The hosted live-provider workflow contract is checked for manual-only
-  dispatch, read-only permissions, input and secret preflight before checkout, runtime setup, and
-  the release smoke command.
+  Fixture dogfood workflow contracts are also checked so dry-run stays read-only, exercises the
+  sanitized JSON summary artifact path, and propose and stage-draft stay manual, fixture-backed,
+  and output-asserting. It is a maintainer release gate, not a live-provider check. The hosted live
+  provider workflow contract is checked for manual-only dispatch, read-only permissions, input and
+  secret preflight before checkout, runtime setup, and the release smoke command.
 - `pnpm run lint`: runs `oxlint` across the repository as a fast JavaScript and TypeScript lint
   gate.
 - `pnpm run check`: runs typecheck and the package test suite.

@@ -64,6 +64,17 @@ export const highRiskSecretEnvNames = [
   "GITHUB_PAT_ODISOFT"
 ];
 
+export const hostedLiveProviderWorkflowContract = {
+  path: ".github/workflows/clarissimi-live-provider-smoke.yml",
+  requiredInputs: [
+    { name: "provider-model", required: true },
+    { name: "provider-endpoint", required: false },
+    { name: "provider-thinking", required: false }
+  ],
+  secretName: "CLARISSIMI_PROVIDER_TOKEN",
+  runCommand: "pnpm run live-provider-smoke"
+};
+
 export async function runReleaseReadiness(options = {}) {
   const repoRoot = options.repoRoot ?? defaultRepoRoot;
   const workflowDir = join(repoRoot, ".github", "workflows");
@@ -115,6 +126,8 @@ export async function runReleaseReadiness(options = {}) {
       redactOutput: true
     });
   }
+
+  await runHostedLiveProviderWorkflowContractCheck(repoRoot);
 
   await runCheck({
     repoRoot,
@@ -223,6 +236,51 @@ export function findHighRiskSecretLines(repoPath, text) {
   return hits;
 }
 
+export function validateHostedLiveProviderWorkflowContract(text, contract = hostedLiveProviderWorkflowContract) {
+  const issues = [];
+
+  for (const input of contract.requiredInputs) {
+    const block = findYamlMappingBlock(text, input.name);
+    if (block === undefined) {
+      issues.push(`${contract.path} must define workflow_dispatch input ${input.name}.`);
+      continue;
+    }
+
+    const requiredValue = findYamlScalarValue(block, "required");
+    const expected = String(input.required);
+    if (requiredValue !== expected) {
+      issues.push(`${contract.path} input ${input.name} must set required: ${expected}.`);
+    }
+  }
+
+  if (!text.includes(`secrets.${contract.secretName}`)) {
+    issues.push(`${contract.path} must read secrets.${contract.secretName}.`);
+  }
+
+  if (!text.includes(contract.runCommand)) {
+    issues.push(`${contract.path} must run ${contract.runCommand}.`);
+  }
+
+  return issues;
+}
+
+async function runHostedLiveProviderWorkflowContractCheck(repoRoot) {
+  const workflowPath = join(repoRoot, hostedLiveProviderWorkflowContract.path);
+  let text;
+  try {
+    text = await readFile(workflowPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${hostedLiveProviderWorkflowContract.path}: ${error.message}`);
+  }
+
+  const issues = validateHostedLiveProviderWorkflowContract(text);
+  if (issues.length > 0) {
+    throw new Error(`hosted live provider workflow contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("hosted live provider workflow contract passed");
+}
+
 async function runToolAvailabilityCheck(repoRoot) {
   const tools = [
     {
@@ -319,6 +377,50 @@ export function validatePackageScriptRegistration(packageJson) {
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function findYamlMappingBlock(text, key) {
+  const lines = text.split(/\r?\n/);
+  const keyPattern = new RegExp(`^(\\s*)${escapeRegExp(key)}:\\s*$`);
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = keyPattern.exec(lines[index]);
+    if (match === null) {
+      continue;
+    }
+
+    const indent = match[1].length;
+    const block = [lines[index]];
+    for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
+      const line = lines[cursor];
+      if (line.trim().length > 0 && leadingSpaceCount(line) <= indent) {
+        break;
+      }
+
+      block.push(line);
+    }
+
+    return block;
+  }
+
+  return undefined;
+}
+
+function findYamlScalarValue(block, key) {
+  const pattern = new RegExp(`^\\s+${escapeRegExp(key)}:\\s*(\\S+)\\s*$`);
+  for (const line of block) {
+    const match = pattern.exec(line);
+    if (match !== null) {
+      return match[1];
+    }
+  }
+
+  return undefined;
+}
+
+function leadingSpaceCount(value) {
+  const match = /^ */.exec(value);
+  return match === null ? 0 : match[0].length;
 }
 
 function shouldSkipSecretScanPath(repoPath) {

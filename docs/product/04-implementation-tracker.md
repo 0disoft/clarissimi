@@ -312,6 +312,8 @@ Completed deliverables:
 - hosted live-provider smoke wrapper validates repository and ref arguments before calling `gh`
 - hosted live-provider smoke wrapper rejects malformed dispatched run metadata before invoking
   `gh run watch`
+- release-readiness validates the hosted live-provider workflow input, secret, and run-command
+  contract before reporting static release gates as passed
 - release-readiness verifies that release-critical package scripts remain registered
 - release-readiness verifies that package test globs still include package and script test suites
 - release-readiness verifies that `ssealed`, `actionlint`, and `yq` are available before running

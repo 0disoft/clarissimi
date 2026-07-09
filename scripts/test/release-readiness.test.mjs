@@ -5,6 +5,7 @@ import {
   findHighRiskSecretLines,
   requiredPackageScripts,
   requiredTestGlobs,
+  validateHostedLiveProviderWorkflowContract,
   validatePackageScriptRegistration
 } from "../release-readiness.mjs";
 
@@ -84,6 +85,32 @@ test("release readiness secret scan allows documented secret names without assig
   assert.deepEqual(findHighRiskSecretLines("docs/ops/secrets.md", text), []);
 });
 
+test("release readiness accepts the hosted live provider workflow contract", () => {
+  assert.deepEqual(validateHostedLiveProviderWorkflowContract(createHostedWorkflowText()), []);
+});
+
+test("release readiness rejects hosted live provider workflow input drift", () => {
+  const text = createHostedWorkflowText()
+    .replace("provider-model:", "model-name:")
+    .replace("required: false", "required: true");
+
+  assert.deepEqual(validateHostedLiveProviderWorkflowContract(text), [
+    ".github/workflows/clarissimi-live-provider-smoke.yml must define workflow_dispatch input provider-model.",
+    ".github/workflows/clarissimi-live-provider-smoke.yml input provider-endpoint must set required: false."
+  ]);
+});
+
+test("release readiness rejects hosted live provider workflow secret and command drift", () => {
+  const text = createHostedWorkflowText()
+    .replaceAll("CLARISSIMI_PROVIDER_TOKEN", "RENAMED_PROVIDER_TOKEN")
+    .replace("pnpm run live-provider-smoke", "pnpm run smoke");
+
+  assert.deepEqual(validateHostedLiveProviderWorkflowContract(text), [
+    ".github/workflows/clarissimi-live-provider-smoke.yml must read secrets.CLARISSIMI_PROVIDER_TOKEN.",
+    ".github/workflows/clarissimi-live-provider-smoke.yml must run pnpm run live-provider-smoke."
+  ]);
+});
+
 function createValidScripts() {
   const scripts = {
     test: `node --test ${requiredTestGlobs.join(" ")}`
@@ -97,4 +124,31 @@ function createValidScripts() {
   scripts.contract = "pnpm run typecheck && pnpm run test";
 
   return scripts;
+}
+
+function createHostedWorkflowText() {
+  return [
+    "name: Clarissimi live provider smoke",
+    "",
+    "on:",
+    "  workflow_dispatch:",
+    "    inputs:",
+    "      provider-model:",
+    "        description: OpenAI-compatible model name for the smoke run.",
+    "        required: true",
+    "      provider-endpoint:",
+    "        description: Optional OpenAI-compatible chat completions endpoint override.",
+    "        required: false",
+    "      provider-thinking:",
+    "        description: Optional OpenAI-compatible thinking mode.",
+    "        required: false",
+    "",
+    "jobs:",
+    "  live-provider-smoke:",
+    "    steps:",
+    "      - name: Verify provider secret",
+    "        env:",
+    "          CLARISSIMI_PROVIDER_TOKEN: ${{ secrets.CLARISSIMI_PROVIDER_TOKEN }}",
+    "        run: pnpm run live-provider-smoke"
+  ].join("\n");
 }

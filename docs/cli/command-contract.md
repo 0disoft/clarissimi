@@ -63,10 +63,15 @@ Imports an agent-authored `clarissimi.assessment/v1` JSON draft. This command is
 where a maintainer gives a PR or issue URL to an already-running AI coding agent, and the agent
 returns a Clarissimi-compatible assessment document.
 
+The draft file may also be a `clarissimi.draft-envelope/v1` object with an `assessment` field. This
+allows an agent to delegate drafting to another LLM and include local provenance metadata without
+putting that provenance in the public ledger.
+
 The command validates the draft, rejects non-public approval states, appends the sanitized public
 record to the selected ledger, refuses duplicate contributor/source pull request records, and
 rebuilds derived outputs. It does not call providers, read provider tokens, fetch GitHub evidence,
-decide approval, mutate branches, or create pull requests.
+decide approval, mutate branches, create pull requests, or store AI/provider provenance in public
+recognition records.
 
 By default, `--ledger` is `.clarissimi/contributions.jsonl`. The command writes output files only
 when `--out-dir` is explicit.

@@ -18,7 +18,7 @@ import {
   createOpenAiCompatibleContributionDraftProvider,
   type ContributionDraftProvider
 } from "@clarissimi/providers";
-import { validateContributionAssessment } from "@clarissimi/schemas";
+import { validateContributionAssessment, type ValidationIssue } from "@clarissimi/schemas";
 
 import { CliUsageError, getBooleanFlag, getStringFlag, parseArgs, type ParsedArgs } from "./args.js";
 import { validateConfigFile } from "./config.js";
@@ -196,11 +196,12 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
   const outDir = getStringFlag(args, "out-dir");
 
   try {
-    const parsedDraft = parseJsonText(
+    const parsedDraftInput = parseJsonText(
       await readTextFile(resolveFromCwd(io.cwd, draftPath)),
       draftPath
     );
-    const validation = validateContributionAssessment(parsedDraft);
+    const draftInput = parseDraftImportInput(parsedDraftInput);
+    const validation = validateContributionAssessment(draftInput.assessment);
     if (!validation.ok) {
       throw new RendererValidationError("Draft is not a valid contribution assessment.", validation.issues);
     }
@@ -230,6 +231,7 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
     writeOutput(io, args, {
       ok: true,
       command: "import-draft",
+      draftFormat: draftInput.format,
       draftPath,
       ledgerPath,
       records: nextRecords.length,
@@ -256,6 +258,48 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
       ? CLI_EXIT_CODES.policyRejection
       : CLI_EXIT_CODES.writeFailure;
   }
+}
+
+function parseDraftImportInput(value: unknown): {
+  readonly format: "assessment" | "draft-envelope";
+  readonly assessment: unknown;
+} {
+  if (!isRecord(value) || value.schemaVersion !== "clarissimi.draft-envelope/v1") {
+    return {
+      format: "assessment",
+      assessment: value
+    };
+  }
+
+  const issues: ValidationIssue[] = [];
+  if (value.assessment === undefined) {
+    issues.push({
+      path: "$.assessment",
+      code: "missing_assessment",
+      message: "Draft envelope must include an assessment object."
+    });
+  }
+
+  if (value.draftProvenance !== undefined && !isRecord(value.draftProvenance)) {
+    issues.push({
+      path: "$.draftProvenance",
+      code: "expected_object",
+      message: "Draft provenance must be an object when present."
+    });
+  }
+
+  if (issues.length > 0) {
+    throw new RendererValidationError("Draft envelope is not valid.", issues);
+  }
+
+  return {
+    format: "draft-envelope",
+    assessment: value.assessment
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function hasSameContributionIdentity(

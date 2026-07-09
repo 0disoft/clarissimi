@@ -226,6 +226,64 @@ test("import-draft appends an approved agent draft and writes derived outputs", 
   });
 });
 
+test("import-draft accepts a delegated LLM draft envelope without storing provenance", async () => {
+  await withTempDir(async (dir) => {
+    const draftPath = join(dir, "delegated-draft.json");
+    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+    await writeFile(
+      draftPath,
+      JSON.stringify({
+        schemaVersion: "clarissimi.draft-envelope/v1",
+        draftProvenance: {
+          drafter: "codex",
+          delegatedTo: "external-llm",
+          model: "example-model"
+        },
+        assessment: assessment()
+      }),
+      "utf8"
+    );
+
+    const result = await run(
+      ["import-draft", "--draft", draftPath, "--ledger", ledger, "--json"],
+      dir
+    );
+    const output = JSON.parse(result.stdout);
+    const ledgerText = await readFile(ledger, "utf8");
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(output.draftFormat, "draft-envelope");
+    assert.equal(ledgerText.includes("delegatedTo"), false);
+    assert.equal(ledgerText.includes("example-model"), false);
+    assert.equal(ledgerText.includes("Added regression coverage"), true);
+  });
+});
+
+test("import-draft rejects malformed delegated draft envelopes", async () => {
+  await withTempDir(async (dir) => {
+    const draftPath = join(dir, "malformed-delegated-draft.json");
+    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+    await writeFile(
+      draftPath,
+      JSON.stringify({
+        schemaVersion: "clarissimi.draft-envelope/v1",
+        draftProvenance: "external-llm"
+      }),
+      "utf8"
+    );
+
+    const result = await run(
+      ["import-draft", "--draft", draftPath, "--ledger", ledger, "--json"],
+      dir
+    );
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(result.exitCode, 6);
+    assert.equal(output.message, "Draft envelope is not valid.");
+    await assert.rejects(readFile(ledger, "utf8"));
+  });
+});
+
 test("import-draft rejects draft approval status before writing ledger output", async () => {
   await withTempDir(async (dir) => {
     const draftPath = join(dir, "agent-draft.json");

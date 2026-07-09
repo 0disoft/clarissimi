@@ -32,6 +32,10 @@ or another already-running AI coding agent to inspect a PR and produce a Clariss
 document. The CLI validates that document and records it only when it already carries an approved
 or auto-approved maintainer status.
 
+If the current agent delegates drafting to another LLM, it may wrap the assessment in
+`clarissimi.draft-envelope/v1`. Clarissimi accepts the wrapper but records only the validated
+assessment in public outputs.
+
 ## Output Contract
 
 - Human output should be concise and reviewable.

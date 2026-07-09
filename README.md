@@ -104,15 +104,17 @@ fixture or a GitHub-shaped merged pull request fixture. Public output previews a
 when the fixture explicitly carries maintainer approval.
 
 For the agent-assisted path, use an already-running AI coding agent to inspect a PR or issue and
-produce a `clarissimi.assessment/v1` JSON draft. Clarissimi can then validate and record the
-maintainer-approved draft without owning the agent's API key:
+produce a `clarissimi.assessment/v1` JSON draft. The agent may draft directly or delegate that
+assessment to another LLM. Clarissimi can then validate and record the maintainer-approved draft
+without owning the agent's API key:
 
 ```powershell
 node packages/cli/dist/bin/clarissimi.js import-draft --draft agent-draft.json --out-dir . --json
 ```
 
 `import-draft` rejects unapproved drafts and duplicate contributor/source records before writing
-the ledger.
+the ledger. It also accepts a `clarissimi.draft-envelope/v1` wrapper for delegated LLM workflows,
+but public outputs record only the validated assessment.
 
 ## GitHub Action
 

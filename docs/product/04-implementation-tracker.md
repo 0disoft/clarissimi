@@ -294,10 +294,11 @@ Clarissimi to own or configure that agent's provider API key.
 Completed deliverables:
 
 - `clarissimi import-draft --draft <path>` validates complete assessment JSON documents
+- `clarissimi.draft-envelope/v1` wrappers are accepted for delegated LLM workflows
 - approved and auto-approved drafts can be imported into the JSONL ledger
 - draft, rejected, skipped, invalid, and duplicate contributor/source records are rejected
 - derived contributors JSON, Markdown, and static JSON can be rebuilt through `--out-dir`
-- public ledger records continue to omit raw evidence excerpts
+- public ledger records continue to omit raw evidence excerpts and AI/provider provenance
 
 Validation:
 

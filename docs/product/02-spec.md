@@ -28,7 +28,9 @@ rules. Public output must prioritize the contribution story over numeric values.
 
 The MVP primary event is a merged GitHub pull request.
 
-Clarissimi may support agent-assisted manual draft import for merged pull request assessments.
+Clarissimi may support agent-assisted manual draft import for merged pull request assessments. The
+agent may draft directly or delegate the draft to another LLM, but public recognition output remains
+assessment-only and must not preserve AI agent, provider, prompt, or model provenance.
 Closed issues, linked issue authors, reviewers, release validators, and broader manual attribution
 remain later capabilities; the first implementation should avoid broad attribution complexity.
 

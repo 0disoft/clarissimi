@@ -115,19 +115,23 @@ when `--out-dir` is explicit.
 - `propose`: prepares changes for maintainer review
 - `commit`: writes directly only when explicitly configured
 
-## Exit-Code Direction
+## Exit Codes
 
-The exact numeric taxonomy is not implemented yet. The first implementation should distinguish:
+The implemented CLI exit-code taxonomy is:
 
-- success
-- invalid configuration
-- invalid ledger
-- provider failure
-- schema validation failure
-- unsafe or redacted input failure
-- write failure
+| Code | Meaning |
+| --- | --- |
+| `0` | success |
+| `1` | usage error |
+| `2` | invalid config |
+| `3` | invalid ledger |
+| `4` | provider or fixture recognition failure |
+| `5` | provider schema validation failure |
+| `6` | policy rejection |
+| `7` | write failure |
 
-Initial numeric values are recorded in `docs/adr/0014-add-fixture-first-cli-package.md`.
+The initial numeric values are recorded in `docs/adr/0014-add-fixture-first-cli-package.md` and
+implemented in `packages/cli/src/exit-codes.ts`.
 
 ## Review Blockers
 

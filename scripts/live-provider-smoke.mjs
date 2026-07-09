@@ -2,13 +2,9 @@ import { spawn } from "node:child_process";
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-const providerToken = readEnv("CLARISSIMI_PROVIDER_TOKEN");
-const providerModel = readEnv("CLARISSIMI_PROVIDER_MODEL");
-const providerEndpoint = readEnv("CLARISSIMI_PROVIDER_ENDPOINT");
-const providerThinking = readEnv("CLARISSIMI_PROVIDER_THINKING");
 const smokeEmail = "clarissimi-live-smoke@example.com";
 const deniedChildEnvNames = new Set([
   "NODE_AUTH_TOKEN",
@@ -23,91 +19,99 @@ const deniedChildEnvNames = new Set([
   "GITHUB_PAT_ODISOFT"
 ]);
 
-if (providerToken === undefined || providerModel === undefined) {
-  const missing = [
-    providerToken === undefined ? "CLARISSIMI_PROVIDER_TOKEN" : undefined,
-    providerModel === undefined ? "CLARISSIMI_PROVIDER_MODEL" : undefined
-  ].filter(Boolean);
-  console.error(`live provider smoke requires ${missing.join(" and ")}.`);
-  console.error("No provider call was made.");
-  process.exit(2);
-}
+export async function runLiveProviderSmoke() {
+  const providerToken = readEnv("CLARISSIMI_PROVIDER_TOKEN");
+  const providerModel = readEnv("CLARISSIMI_PROVIDER_MODEL");
+  const providerEndpoint = readEnv("CLARISSIMI_PROVIDER_ENDPOINT");
+  const providerThinking = readEnv("CLARISSIMI_PROVIDER_THINKING");
 
-if (providerEndpoint !== undefined && !isHttpsUrl(providerEndpoint)) {
-  console.error("live provider smoke requires CLARISSIMI_PROVIDER_ENDPOINT to be an https URL when provided.");
-  console.error("No provider call was made.");
-  process.exit(2);
-}
-
-if (providerThinking !== undefined && providerThinking !== "disabled") {
-  console.error("live provider smoke supports only CLARISSIMI_PROVIDER_THINKING=disabled.");
-  console.error("No provider call was made.");
-  process.exit(2);
-}
-
-const fixturePath = await createSmokeFixture();
-const args = [
-  "packages/cli/dist/bin/clarissimi.js",
-  "recognize",
-  "--github-fixture",
-  fixturePath,
-  "--mode",
-  "dry-run",
-  "--provider",
-  "openai-compatible",
-  "--provider-model",
-  providerModel,
-  "--json"
-];
-
-if (providerEndpoint !== undefined) {
-  args.push("--provider-endpoint", providerEndpoint);
-}
-
-if (providerThinking !== undefined) {
-  args.push("--provider-thinking", providerThinking);
-}
-
-const result = await runCommand({
-  command: process.execPath,
-  args,
-  env: {
-    CLARISSIMI_PROVIDER_TOKEN: providerToken
+  if (providerToken === undefined || providerModel === undefined) {
+    const missing = [
+      providerToken === undefined ? "CLARISSIMI_PROVIDER_TOKEN" : undefined,
+      providerModel === undefined ? "CLARISSIMI_PROVIDER_MODEL" : undefined
+    ].filter(Boolean);
+    console.error(`live provider smoke requires ${missing.join(" and ")}.`);
+    console.error("No provider call was made.");
+    return 2;
   }
-});
 
-if (result.exitCode !== 0) {
-  console.error(`live provider smoke failed with exit code ${result.exitCode}.`);
-  writeBoundedProcessOutput(result);
-  process.exit(result.exitCode ?? 1);
+  if (providerEndpoint !== undefined && !isHttpsUrl(providerEndpoint)) {
+    console.error("live provider smoke requires CLARISSIMI_PROVIDER_ENDPOINT to be an https URL when provided.");
+    console.error("No provider call was made.");
+    return 2;
+  }
+
+  if (providerThinking !== undefined && providerThinking !== "disabled") {
+    console.error("live provider smoke supports only CLARISSIMI_PROVIDER_THINKING=disabled.");
+    console.error("No provider call was made.");
+    return 2;
+  }
+
+  const fixturePath = await createSmokeFixture();
+  const args = [
+    "packages/cli/dist/bin/clarissimi.js",
+    "recognize",
+    "--github-fixture",
+    fixturePath,
+    "--mode",
+    "dry-run",
+    "--provider",
+    "openai-compatible",
+    "--provider-model",
+    providerModel,
+    "--json"
+  ];
+
+  if (providerEndpoint !== undefined) {
+    args.push("--provider-endpoint", providerEndpoint);
+  }
+
+  if (providerThinking !== undefined) {
+    args.push("--provider-thinking", providerThinking);
+  }
+
+  const result = await runCommand({
+    command: process.execPath,
+    args,
+    env: {
+      CLARISSIMI_PROVIDER_TOKEN: providerToken
+    }
+  });
+
+  if (result.exitCode !== 0) {
+    console.error(`live provider smoke failed with exit code ${result.exitCode}.`);
+    writeBoundedProcessOutput(result, { providerToken });
+    return result.exitCode ?? 1;
+  }
+
+  let output;
+  try {
+    output = JSON.parse(result.stdout);
+  } catch (error) {
+    console.error(`live provider smoke did not emit parseable JSON: ${error.message}`);
+    writeBoundedProcessOutput(result, { providerToken });
+    return 1;
+  }
+
+  assertEqual(output.ok, true, "recognize should succeed.");
+  assertEqual(output.command, "recognize", "recognize command name should match.");
+  assertEqual(output.provider, "openai-compatible", "recognize should use the selected provider.");
+  assertEqual(output.fixtureKind, "github", "recognize should use the GitHub fixture path.");
+  assertEqual(output.approvalStatus, "draft", "live provider drafts must remain draft.");
+  assertEqual(output.publicOutputsRendered, false, "live provider drafts must not render public output.");
+
+  const outputText = JSON.stringify(output);
+  if (outputText.includes(providerToken)) {
+    throw new Error("live provider smoke output leaked CLARISSIMI_PROVIDER_TOKEN.");
+  }
+
+  if (outputText.includes(smokeEmail)) {
+    throw new Error("live provider smoke output leaked an unredacted email sentinel.");
+  }
+
+  console.log("live provider smoke passed");
+  return 0;
 }
-
-let output;
-try {
-  output = JSON.parse(result.stdout);
-} catch (error) {
-  console.error(`live provider smoke did not emit parseable JSON: ${error.message}`);
-  writeBoundedProcessOutput(result);
-  process.exit(1);
-}
-
-assertEqual(output.ok, true, "recognize should succeed.");
-assertEqual(output.command, "recognize", "recognize command name should match.");
-assertEqual(output.provider, "openai-compatible", "recognize should use the selected provider.");
-assertEqual(output.fixtureKind, "github", "recognize should use the GitHub fixture path.");
-assertEqual(output.approvalStatus, "draft", "live provider drafts must remain draft.");
-assertEqual(output.publicOutputsRendered, false, "live provider drafts must not render public output.");
-
-const outputText = JSON.stringify(output);
-if (outputText.includes(providerToken)) {
-  throw new Error("live provider smoke output leaked CLARISSIMI_PROVIDER_TOKEN.");
-}
-
-if (outputText.includes(smokeEmail)) {
-  throw new Error("live provider smoke output leaked an unredacted email sentinel.");
-}
-
-console.log("live provider smoke passed");
 
 async function createSmokeFixture() {
   const baseFixturePath = join(repoRoot, "fixtures/github-merged-pr-basic.json");
@@ -140,7 +144,7 @@ function runCommand(options) {
   return new Promise((resolve, reject) => {
     const child = spawn(options.command, options.args, {
       cwd: repoRoot,
-      env: buildChildEnv(options.env),
+      env: buildLiveProviderSmokeChildEnv(process.env, options.env),
       stdio: ["ignore", "pipe", "pipe"]
     });
     let stdout = "";
@@ -161,10 +165,10 @@ function runCommand(options) {
   });
 }
 
-function buildChildEnv(extraEnv) {
+export function buildLiveProviderSmokeChildEnv(baseEnv, extraEnv = {}) {
   const env = {};
 
-  for (const [name, value] of Object.entries(process.env)) {
+  for (const [name, value] of Object.entries(baseEnv)) {
     if (deniedChildEnvNames.has(name.toUpperCase())) {
       continue;
     }
@@ -178,9 +182,9 @@ function buildChildEnv(extraEnv) {
   };
 }
 
-function writeBoundedProcessOutput(result) {
-  const stdout = redactSensitiveText(result.stdout).slice(0, 4000);
-  const stderr = redactSensitiveText(result.stderr).slice(0, 4000);
+function writeBoundedProcessOutput(result, sensitive) {
+  const stdout = redactSensitiveText(result.stdout, sensitive).slice(0, 4000);
+  const stderr = redactSensitiveText(result.stderr, sensitive).slice(0, 4000);
   if (stdout.length > 0) {
     console.error(`STDOUT:\n${stdout}`);
   }
@@ -190,9 +194,9 @@ function writeBoundedProcessOutput(result) {
   }
 }
 
-function redactSensitiveText(value) {
+function redactSensitiveText(value, sensitive) {
   return value
-    .replaceAll(providerToken, "[REDACTED_PROVIDER_TOKEN]")
+    .replaceAll(sensitive.providerToken, "[REDACTED_PROVIDER_TOKEN]")
     .replaceAll(smokeEmail, "[REDACTED_EMAIL_SENTINEL]");
 }
 
@@ -200,4 +204,9 @@ function assertEqual(actual, expected, message) {
   if (actual !== expected) {
     throw new Error(`${message} Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}.`);
   }
+}
+
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const exitCode = await runLiveProviderSmoke();
+  process.exit(exitCode);
 }

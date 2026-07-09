@@ -303,6 +303,8 @@ Completed deliverables:
   workflow, and watches the matching run without reading or printing the token value
 - hosted live-provider smoke wrapper tests cover missing-secret fail-closed behavior and
   dispatch/list/watch argument construction with a fake `gh` command runner
+- live-provider smoke script tests cover import-safe execution and child-process environment
+  filtering for unrelated provider and GitHub token names
 - hosted live-provider smoke wrapper validates non-empty model, HTTPS endpoint override, and
   supported thinking mode before reading secret metadata or dispatching a workflow
 - hosted live-provider smoke workflow validates model, endpoint, and thinking inputs before

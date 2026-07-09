@@ -300,6 +300,7 @@ Completed deliverables:
   tool-backed release checks
 - agent-assisted draft guide documents a copyable assessment template, PR source fields, evidence
   refs, impact/confidence semantics, and delegated model envelopes
+- docs validation treats the agent-assisted draft guide as a required documentation target
 - docs validation parses fenced `json` examples so copyable draft templates cannot silently drift
 - script tests cover docs validation success, invalid fenced JSON, and missing local Markdown links
 - script tests validate the agent-assisted draft guide's JSON examples against

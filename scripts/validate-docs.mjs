@@ -8,6 +8,7 @@ export const requiredDocumentationPaths = [
   "README.md",
   "action.yml",
   "VALIDATION.md",
+  "docs/cli/agent-assisted-drafts.md",
   "docs/product/04-implementation-tracker.md",
   "docs/github-action/README.md",
   "docs/github-action/action-contract.md",

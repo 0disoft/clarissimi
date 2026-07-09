@@ -40,7 +40,7 @@ Public package publication and versioned Action tags require:
 - `pnpm run smoke`
 - `pnpm run live-provider-smoke` with maintainer-owned live provider credentials
 - `.github/workflows/clarissimi-live-provider-smoke.yml` passes when using maintainer-owned
-  repository secret and variable configuration
+  repository secret configuration and a dispatch-time provider model
 - `pnpm run docs`
 - `ssealed doctor . --json`
 - `actionlint` for workflow examples

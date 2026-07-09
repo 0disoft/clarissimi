@@ -272,7 +272,7 @@ Completed deliverables:
 - smoke validation exercises the built CLI and Action bins without live provider credentials
 - live-provider smoke command is available as a release-only credentialed check
 - manual live-provider smoke workflow is available for maintainer-owned repository secrets and
-  variables
+  dispatch-time provider model input
 - rollback instructions cover staging cleanup, proposal pull request closure, proposal branch
   deletion, and post-merge recognition reverts
 

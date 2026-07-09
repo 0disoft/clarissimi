@@ -31,8 +31,8 @@ The release-only live provider smoke uses `CLARISSIMI_PROVIDER_TOKEN`,
 maintainer-controlled environment that owns those values.
 
 The manual GitHub workflow `.github/workflows/clarissimi-live-provider-smoke.yml` reads
-`CLARISSIMI_PROVIDER_TOKEN` from repository secrets and `CLARISSIMI_PROVIDER_MODEL` from repository
-variables. The optional provider endpoint may be supplied as a workflow dispatch input.
+`CLARISSIMI_PROVIDER_TOKEN` from repository secrets. The provider model is a required workflow
+dispatch input, and the optional provider endpoint may also be supplied as a dispatch input.
 
 ## Leak Response
 

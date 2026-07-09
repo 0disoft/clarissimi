@@ -26,8 +26,8 @@ manual dispatch. It uses read-only repository permissions and runs `docs`, `smok
 
 The live provider smoke workflow `.github/workflows/clarissimi-live-provider-smoke.yml` is
 manual-only. It reads `CLARISSIMI_PROVIDER_TOKEN` from repository secrets,
-`CLARISSIMI_PROVIDER_MODEL` from repository variables, and an optional dispatch-time
-`provider-endpoint` input before running `pnpm run live-provider-smoke`.
+a required dispatch-time `provider-model` input, and an optional dispatch-time `provider-endpoint`
+input before running `pnpm run live-provider-smoke`.
 
 Repository Actions settings keep default workflow permissions at read-only, with workflow-created
 pull requests enabled so explicit `propose` jobs can open recognition proposal pull requests.

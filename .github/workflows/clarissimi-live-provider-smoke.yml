@@ -3,6 +3,9 @@ name: Clarissimi live provider smoke
 on:
   workflow_dispatch:
     inputs:
+      provider-model:
+        description: OpenAI-compatible model name for the smoke run.
+        required: true
       provider-endpoint:
         description: Optional OpenAI-compatible chat completions endpoint override.
         required: false
@@ -37,6 +40,6 @@ jobs:
       - name: Run live provider smoke
         env:
           CLARISSIMI_PROVIDER_TOKEN: ${{ secrets.CLARISSIMI_PROVIDER_TOKEN }}
-          CLARISSIMI_PROVIDER_MODEL: ${{ vars.CLARISSIMI_PROVIDER_MODEL }}
+          CLARISSIMI_PROVIDER_MODEL: ${{ inputs.provider-model }}
           CLARISSIMI_PROVIDER_ENDPOINT: ${{ inputs.provider-endpoint }}
         run: pnpm run live-provider-smoke

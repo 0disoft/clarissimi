@@ -234,7 +234,9 @@ Release-only credentialed checks are:
 - `pnpm run live-provider-smoke`
 - `pnpm run hosted-live-provider-smoke -- --model <provider-model>`
 
-`format` and `migration-check` intentionally fail until configured.
+`format` intentionally fails closed until maintainers accept a formatter baseline ADR. `oxlint` is
+the current lint gate; `oxfmt` is not wired into the repository formatter surface yet.
+`migration-check` intentionally fails until configured.
 
 `package.json` is project-owned after the first implementation package. `ssealed doctor` remains
 useful for scaffold provenance, but it is not the implementation merge gate once runner scripts are

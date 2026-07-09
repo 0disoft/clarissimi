@@ -327,6 +327,8 @@ Completed deliverables:
   before reporting static release gates as passed
 - release-readiness verifies that release-critical package scripts remain registered
 - release-readiness verifies that `pnpm run lint` remains backed by `oxlint . --deny-warnings`
+- release-readiness verifies that `pnpm run format` remains intentionally fail-closed until a
+  formatter baseline ADR accepts the rewrite
 - release-readiness verifies that package test globs still include package and script test suites
 - release-readiness verifies that `pnpm-workspace.yaml` keeps the `packages/*` workspace glob and
   that workspace package names stay aligned with their `packages/<name>` directories

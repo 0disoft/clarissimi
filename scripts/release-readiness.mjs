@@ -41,6 +41,22 @@ export const requiredPackageScripts = [
   }
 ];
 
+export const deferredPackageScripts = [
+  {
+    name: "format",
+    requiredSnippets: [
+      "format is not configured",
+      "process.exit(1)"
+    ],
+    forbiddenSnippets: [
+      "oxfmt",
+      "prettier",
+      "biome",
+      "dprint"
+    ]
+  }
+];
+
 export const requiredTestGlobs = [
   "packages/schemas/test/*.test.mjs",
   "packages/redaction/test/*.test.mjs",
@@ -866,6 +882,26 @@ export function validatePackageScriptRegistration(packageJson) {
     for (const expected of script.includes) {
       if (!value.includes(expected)) {
         issues.push(`package.json scripts.${script.name} must include ${expected}.`);
+      }
+    }
+  }
+
+  for (const script of deferredPackageScripts) {
+    const value = scripts[script.name];
+    if (typeof value !== "string") {
+      issues.push(`package.json scripts.${script.name} must remain explicitly fail-closed until configured.`);
+      continue;
+    }
+
+    for (const expected of script.requiredSnippets) {
+      if (!value.includes(expected)) {
+        issues.push(`package.json scripts.${script.name} must include ${expected}.`);
+      }
+    }
+
+    for (const forbidden of script.forbiddenSnippets) {
+      if (value.includes(forbidden)) {
+        issues.push(`package.json scripts.${script.name} must not use ${forbidden} until a formatter baseline is accepted.`);
       }
     }
   }

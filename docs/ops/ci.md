@@ -23,8 +23,8 @@ The current local CI parity commands are:
   release-critical package script registration, package and script test-glob registration, the
   workspace package glob, workspace package manifest identity, the blocked root and workspace
   package release policy, package ownership table coverage, internal workspace dependency graph,
-  release tool availability, CI runtime and release-tool pin drift, `ssealed doctor`, workflow
-  `actionlint`, YAML parsing,
+  the intentionally fail-closed `format` placeholder, release tool availability, CI runtime and
+  release-tool pin drift, `ssealed doctor`, workflow `actionlint`, YAML parsing,
   `git diff --check`, and high-risk secret patterns. It also verifies
   that the root Action manifest keeps the expected inputs, outputs, defaults, secret environment
   boundary, and runtime commands, and that the hosted CI workflow still runs the required local
@@ -39,8 +39,9 @@ The current local CI parity commands are:
 - `pnpm run check`: runs typecheck and the package test suite.
 - `pnpm run contract`: runs typecheck and tests as the current contract gate.
 
-`format` and `migration-check` remain intentionally unconfigured and fail until their owners define
-real checks.
+`format` remains intentionally unconfigured, fails closed, and is protected by
+`release-readiness` until a formatter baseline ADR accepts the rewrite. `migration-check` remains
+intentionally unconfigured and fails until its owner defines a real check.
 
 The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and
 manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,

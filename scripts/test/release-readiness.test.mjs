@@ -53,6 +53,31 @@ test("release readiness rejects drifted release-critical script commands", () =>
   ]);
 });
 
+test("release readiness keeps format intentionally fail-closed", () => {
+  const scripts = createValidScripts();
+
+  assert.deepEqual(validatePackageScriptRegistration({ scripts }), []);
+});
+
+test("release readiness rejects fake or premature format command drift", () => {
+  const fakeSuccessScripts = createValidScripts();
+  fakeSuccessScripts.format = "node -e \"console.log('formatted')\"";
+
+  assert.deepEqual(validatePackageScriptRegistration({ scripts: fakeSuccessScripts }), [
+    "package.json scripts.format must include format is not configured.",
+    "package.json scripts.format must include process.exit(1)."
+  ]);
+
+  const prematureFormatterScripts = createValidScripts();
+  prematureFormatterScripts.format = "oxfmt --write .";
+
+  assert.deepEqual(validatePackageScriptRegistration({ scripts: prematureFormatterScripts }), [
+    "package.json scripts.format must include format is not configured.",
+    "package.json scripts.format must include process.exit(1).",
+    "package.json scripts.format must not use oxfmt until a formatter baseline is accepted."
+  ]);
+});
+
 test("release readiness rejects missing package and script test globs", () => {
   const scripts = createValidScripts();
   scripts.test = scripts.test.replace(" packages/action/test/*.test.mjs", "");
@@ -440,6 +465,7 @@ test("release readiness rejects hosted live provider trigger, permission, and pr
 
 function createValidScripts() {
   const scripts = {
+    format: "node -e \"console.error('format is not configured. Configure this validation before relying on pnpm run format.'); process.exit(1)\"",
     test: `node --test ${requiredTestGlobs.join(" ")}`
   };
 

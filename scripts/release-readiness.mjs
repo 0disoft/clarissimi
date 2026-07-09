@@ -151,6 +151,9 @@ export const productPositioningContract = {
 export const readmeValidationContract = {
   path: "README.md",
   requiredSnippets: [
+    "Not implemented yet:",
+    "repository write modes such as direct `commit`",
+    "comment updates or default-branch mutation",
     "Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
     "`pnpm run smoke`, `pnpm run check`, and `pnpm run contract`, plus repository hygiene checks.",
     "- `pnpm run docs`",

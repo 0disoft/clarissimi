@@ -260,6 +260,9 @@ test("release readiness accepts the README validation contract", () => {
 
 test("release readiness rejects README validation drift", () => {
   const text = createReadmeValidationText()
+    .replace("Not implemented yet:", "Implemented now:")
+    .replace("repository write modes such as direct `commit`", "repository direct commit mode")
+    .replace("comment updates or default-branch mutation", "comment and default branch updates")
     .replace("Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,", "Source-only merges require `pnpm run docs`,")
     .replace("- `pnpm run release-readiness`", "")
     .replace("- `pnpm run live-provider-smoke`", "")
@@ -271,6 +274,9 @@ test("release readiness rejects README validation drift", () => {
     );
 
   assert.deepEqual(validateReadmeValidationContract(text), [
+    "README.md must include Not implemented yet:.",
+    "README.md must include repository write modes such as direct `commit`.",
+    "README.md must include comment updates or default-branch mutation.",
     "README.md must include Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,.",
     "README.md must include - `pnpm run release-readiness`.",
     "README.md must include - `pnpm run live-provider-smoke`.",
@@ -1442,6 +1448,11 @@ function createProductPositioningTexts() {
 
 function createReadmeValidationText() {
   return [
+    "Not implemented yet:",
+    "",
+    "- repository write modes such as direct `commit`",
+    "- comment updates or default-branch mutation",
+    "",
     "Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
     "`pnpm run smoke`, `pnpm run check`, and `pnpm run contract`, plus repository hygiene checks.",
     "",

@@ -338,6 +338,8 @@ Completed deliverables:
   `docs/monorepo/package-ownership.md` stay in sync
 - release-readiness verifies that internal workspace dependencies follow the documented package
   dependency graph and use `workspace:*`
+- release-readiness verifies that root and package TypeScript project references follow the
+  implemented workspace package graph
 - release-readiness verifies hosted CI Node.js runtime, release-tool versions, and release-tool
   checksum verification snippets before reporting static release gates as passed
 - release-readiness verifies that `ssealed`, `actionlint`, and `yq` are available before running

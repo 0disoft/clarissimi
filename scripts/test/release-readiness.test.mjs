@@ -16,9 +16,11 @@ import {
   validatePackageOwnershipContract,
   validatePackageReleasePolicy,
   validatePackageScriptRegistration,
+  validateRootTsconfigReferences,
   validateWorkspaceContract,
   validateWorkspaceInternalDependencies,
-  validateWorkspacePackageManifest
+  validateWorkspacePackageManifest,
+  validateWorkspacePackageTsconfigReferences
 } from "../release-readiness.mjs";
 
 test("release readiness accepts the current package script registration", () => {
@@ -201,6 +203,90 @@ test("release readiness rejects internal workspace dependency drift", () => {
       "packages/providers/package.json dependency @clarissimi/core must use workspace:*.",
       "packages/providers/package.json dependencies must not include undeclared internal dependency @clarissimi/renderers.",
       "packages/providers/package.json devDependencies must not declare internal dependency @clarissimi/schemas; use dependencies."
+    ]
+  );
+});
+
+test("release readiness accepts the TypeScript build graph", () => {
+  assert.deepEqual(
+    validateRootTsconfigReferences(
+      {
+        references: [
+          { path: "./packages/schemas" },
+          { path: "./packages/cli" }
+        ]
+      },
+      ["cli", "schemas"]
+    ),
+    []
+  );
+
+  assert.deepEqual(
+    validateWorkspacePackageTsconfigReferences(
+      {
+        compilerOptions: {
+          composite: true
+        },
+        references: [
+          { path: "../schemas" },
+          { path: "../core" }
+        ]
+      },
+      "providers",
+      "packages/providers/tsconfig.json"
+    ),
+    []
+  );
+
+  assert.deepEqual(
+    validateWorkspacePackageTsconfigReferences(
+      {
+        compilerOptions: {
+          composite: true
+        }
+      },
+      "schemas",
+      "packages/schemas/tsconfig.json"
+    ),
+    []
+  );
+});
+
+test("release readiness rejects TypeScript build graph drift", () => {
+  assert.deepEqual(
+    validateRootTsconfigReferences(
+      {
+        references: [
+          { path: "./packages/schemas" },
+          { path: "./packages/old-cli" }
+        ]
+      },
+      ["cli", "schemas"]
+    ),
+    [
+      "tsconfig.json references must include ./packages/cli.",
+      "tsconfig.json references must not include undeclared project reference ./packages/old-cli."
+    ]
+  );
+
+  assert.deepEqual(
+    validateWorkspacePackageTsconfigReferences(
+      {
+        compilerOptions: {
+          composite: false
+        },
+        references: [
+          { path: "../core" },
+          { path: "../renderers" }
+        ]
+      },
+      "providers",
+      "packages/providers/tsconfig.json"
+    ),
+    [
+      "packages/providers/tsconfig.json compilerOptions.composite must remain true for TypeScript project references.",
+      "packages/providers/tsconfig.json references must include ../schemas.",
+      "packages/providers/tsconfig.json references must not include undeclared project reference ../renderers."
     ]
   );
 });

@@ -99,6 +99,11 @@ export const workspaceInternalDependencyContract = {
   }
 };
 
+export const tsconfigBuildGraphContract = {
+  path: "tsconfig.json",
+  packageReferencePrefix: "./packages/"
+};
+
 export const credentialedReleaseEvidenceContract = {
   path: "docs/ops/release.md",
   requiredSnippets: [
@@ -341,6 +346,7 @@ export async function runReleaseReadiness(options = {}) {
   await runWorkspaceContractCheck(repoRoot);
   await runPackageReleasePolicyCheck(repoRoot);
   await runWorkspacePackageReleasePolicyCheck(repoRoot);
+  await runTsconfigBuildGraphCheck(repoRoot);
   await runPackageOwnershipContractCheck(repoRoot);
   await runCredentialedReleaseEvidenceCheck(repoRoot);
   await runToolAvailabilityCheck(repoRoot);
@@ -813,6 +819,40 @@ async function runWorkspacePackageReleasePolicyCheck(repoRoot) {
   console.log("workspace package release policy passed");
 }
 
+async function runTsconfigBuildGraphCheck(repoRoot) {
+  const packageDirs = await listWorkspacePackageDirs(repoRoot);
+  const issues = [];
+
+  let rootTsconfig;
+  try {
+    rootTsconfig = JSON.parse(await readFile(join(repoRoot, tsconfigBuildGraphContract.path), "utf8"));
+  } catch (error) {
+    throw new Error(`${tsconfigBuildGraphContract.path} is not parseable JSON: ${error.message}`);
+  }
+
+  issues.push(...validateRootTsconfigReferences(rootTsconfig, packageDirs));
+
+  for (const packageDir of packageDirs) {
+    const tsconfigPath = join(repoRoot, "packages", packageDir, "tsconfig.json");
+    const repoPath = toRepoPath(repoRoot, tsconfigPath);
+    let tsconfig;
+    try {
+      tsconfig = JSON.parse(await readFile(tsconfigPath, "utf8"));
+    } catch (error) {
+      issues.push(`${repoPath} is not parseable JSON: ${error.message}`);
+      continue;
+    }
+
+    issues.push(...validateWorkspacePackageTsconfigReferences(tsconfig, packageDir, repoPath));
+  }
+
+  if (issues.length > 0) {
+    throw new Error(`tsconfig build graph failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("tsconfig build graph passed");
+}
+
 async function runWorkspaceContractCheck(repoRoot) {
   const workspacePath = join(repoRoot, workspaceContract.path);
   let text;
@@ -1016,6 +1056,69 @@ export function validateWorkspaceInternalDependencies(
   return issues;
 }
 
+export function validateRootTsconfigReferences(
+  tsconfig,
+  packageDirs,
+  contract = tsconfigBuildGraphContract
+) {
+  const issues = [];
+  const referencePaths = tsconfigReferencePaths(tsconfig?.references, contract.path, issues);
+  const expectedPaths = packageDirs.map((dir) => `${contract.packageReferencePrefix}${dir}`);
+  const expectedSet = new Set(expectedPaths);
+  const declaredSet = new Set(referencePaths);
+
+  for (const expected of expectedPaths) {
+    if (!declaredSet.has(expected)) {
+      issues.push(`${contract.path} references must include ${expected}.`);
+    }
+  }
+
+  for (const referencePath of referencePaths) {
+    if (!expectedSet.has(referencePath)) {
+      issues.push(`${contract.path} references must not include undeclared project reference ${referencePath}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateWorkspacePackageTsconfigReferences(
+  tsconfig,
+  packageDir,
+  tsconfigPath,
+  contract = workspaceInternalDependencyContract
+) {
+  const issues = [];
+  const allowedDirs = contract.dependenciesByPackageDir[packageDir];
+  if (allowedDirs === undefined) {
+    issues.push(`${tsconfigPath} has no internal dependency contract for packages/${packageDir}.`);
+    return issues;
+  }
+
+  if (tsconfig?.compilerOptions?.composite !== true) {
+    issues.push(`${tsconfigPath} compilerOptions.composite must remain true for TypeScript project references.`);
+  }
+
+  const referencePaths = tsconfigReferencePaths(tsconfig?.references, tsconfigPath, issues);
+  const expectedPaths = allowedDirs.map((dir) => `../${dir}`);
+  const expectedSet = new Set(expectedPaths);
+  const declaredSet = new Set(referencePaths);
+
+  for (const expected of expectedPaths) {
+    if (!declaredSet.has(expected)) {
+      issues.push(`${tsconfigPath} references must include ${expected}.`);
+    }
+  }
+
+  for (const referencePath of referencePaths) {
+    if (!expectedSet.has(referencePath)) {
+      issues.push(`${tsconfigPath} references must not include undeclared project reference ${referencePath}.`);
+    }
+  }
+
+  return issues;
+}
+
 export function validatePackageOwnershipContract(
   text,
   packageDirs,
@@ -1121,6 +1224,34 @@ function dependencyEntries(value) {
   }
 
   return Object.entries(value);
+}
+
+function tsconfigReferencePaths(value, path, issues) {
+  if (value === undefined) {
+    return [];
+  }
+
+  if (!Array.isArray(value)) {
+    issues.push(`${path} references must be an array when present.`);
+    return [];
+  }
+
+  const paths = [];
+  for (const reference of value) {
+    if (reference === null || typeof reference !== "object" || Array.isArray(reference)) {
+      issues.push(`${path} references entries must be objects with a path string.`);
+      continue;
+    }
+
+    if (typeof reference.path !== "string" || reference.path.length === 0) {
+      issues.push(`${path} references entries must include a non-empty path string.`);
+      continue;
+    }
+
+    paths.push(reference.path);
+  }
+
+  return paths;
 }
 
 function findRequiredYamlMappingBlock(text, path, key, issues) {

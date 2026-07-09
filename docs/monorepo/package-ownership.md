@@ -38,8 +38,9 @@ This repository type owns workspace boundaries, package ownership, dependency po
   Package Table, that Package Table entries point at existing package directories, and that
   workspace package names stay aligned with their `packages/<name>` directories.
 - Monorepo internal dependency policy: internal package dependencies must use `workspace:*` in
-  `dependencies`, not dev, peer, or optional dependency sections, and must follow the dependency
-  graph below.
+  `dependencies`, not dev, peer, or optional dependency sections. TypeScript project references
+  must also follow the dependency graph below so package manifests and `tsconfig` build order do
+  not drift apart.
 - Monorepo release or rollout policy: source-only merges may continue after local and hosted
   validation, but public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`; release-readiness keeps root and workspace package manifests private at

@@ -211,6 +211,60 @@ test("keeps raw evidence and provider output out of the proposal title and body"
   }
 });
 
+test("keeps assessment scoring and share signals out of the proposal title and body", () => {
+  const scoringStrings = [
+    "CONFIDENCE_SENTINEL",
+    "IMPACT_LEVEL_SENTINEL",
+    "EVIDENCE_SUMMARY_SENTINEL",
+    "INTERNAL_WEIGHT_SENTINEL",
+    "SCORE_SHARE_SENTINEL",
+    "CONTRIBUTION_WEIGHT_SHARE_SENTINEL",
+    "IMPACT_WEIGHT_SHARE_SENTINEL",
+    "RECENT_THREE_MONTH_SHARE_SENTINEL"
+  ];
+  const text = [
+    buildProposalPullRequestTitle({
+      ...manifest,
+      confidence: "CONFIDENCE_SENTINEL",
+      impactLevel: "IMPACT_LEVEL_SENTINEL",
+      evidenceSummary: "EVIDENCE_SUMMARY_SENTINEL",
+      internalImpactWeight: "INTERNAL_WEIGHT_SENTINEL",
+      scoreShare: "SCORE_SHARE_SENTINEL",
+      contributionWeightShare: "CONTRIBUTION_WEIGHT_SHARE_SENTINEL",
+      impactWeightShare: "IMPACT_WEIGHT_SHARE_SENTINEL",
+      recentThreeMonthShare: "RECENT_THREE_MONTH_SHARE_SENTINEL"
+    }),
+    buildProposalPullRequestBody({
+      manifest: {
+        ...manifest,
+        confidence: "CONFIDENCE_SENTINEL",
+        impactLevel: "IMPACT_LEVEL_SENTINEL",
+        evidenceSummary: "EVIDENCE_SUMMARY_SENTINEL",
+        internalImpactWeight: "INTERNAL_WEIGHT_SENTINEL",
+        scoreShare: "SCORE_SHARE_SENTINEL",
+        contributionWeightShare: "CONTRIBUTION_WEIGHT_SHARE_SENTINEL",
+        impactWeightShare: "IMPACT_WEIGHT_SHARE_SENTINEL",
+        recentThreeMonthShare: "RECENT_THREE_MONTH_SHARE_SENTINEL"
+      },
+      branch: {
+        ...branch,
+        confidence: "CONFIDENCE_SENTINEL",
+        impactLevel: "IMPACT_LEVEL_SENTINEL",
+        evidenceSummary: "EVIDENCE_SUMMARY_SENTINEL",
+        internalImpactWeight: "INTERNAL_WEIGHT_SENTINEL",
+        scoreShare: "SCORE_SHARE_SENTINEL",
+        contributionWeightShare: "CONTRIBUTION_WEIGHT_SHARE_SENTINEL",
+        impactWeightShare: "IMPACT_WEIGHT_SHARE_SENTINEL",
+        recentThreeMonthShare: "RECENT_THREE_MONTH_SHARE_SENTINEL"
+      }
+    })
+  ].join("\n");
+
+  for (const value of scoringStrings) {
+    assert.equal(text.includes(value), false);
+  }
+});
+
 test("bounds long changed file lists in the proposal body", () => {
   const manyFiles = Array.from(
     { length: 30 },

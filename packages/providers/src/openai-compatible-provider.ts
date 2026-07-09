@@ -165,7 +165,7 @@ function buildSystemPrompt(): string {
     `impactLevel must be one of: ${IMPACT_LEVELS.join(", ")}.`,
     "confidence must be a number between 0 and 1.",
     "Base every claim on the provided redacted evidence. Do not invent evidence.",
-    "Do not include raw provider output, raw diffs, secrets, leaderboard language, rankings, or numeric contributor scores.",
+    "Do not include raw provider output, raw diffs, secrets, leaderboard language, rankings, numeric contributor scores, score shares, point shares, impact-weight shares, contribution-weight shares, or recent time-window contribution percentages.",
     "Do not wrap the JSON object in Markdown code fences."
   ].join("\n");
 }

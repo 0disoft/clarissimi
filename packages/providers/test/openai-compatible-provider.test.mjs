@@ -105,6 +105,8 @@ test("creates a draft assessment from an OpenAI-compatible response", async () =
   assert.equal(requests[0].body.model, "clarissimi-test-model");
   assert.equal(requests[0].body.response_format.type, "json_object");
   assert.equal(requests[0].body.thinking, undefined);
+  assert.equal(requests[0].body.messages[0].content.includes("score shares"), true);
+  assert.equal(requests[0].body.messages[0].content.includes("recent time-window contribution percentages"), true);
   const requestText = JSON.stringify(requests[0].body);
   assert.equal(requestText.includes("person@example.com"), false);
   assert.equal(requestText.includes("[REDACTED]"), true);
@@ -268,6 +270,43 @@ test("rejects invalid model drafts after schema validation", async () => {
                 evidenceSummary: "Added regression coverage based on test evidence.",
                 suggestedBadge: "Regression Shield",
                 publicRecognitionText: "Top 1 contributor on the leaderboard.",
+                confidence: 0.9
+              })
+            }
+          }
+        ]
+      })
+  });
+
+  await assert.rejects(
+    () =>
+      provider.createAssessment({
+        contributor,
+        preparedEvidence: preparedEvidence()
+      }),
+    (error) =>
+      error instanceof OpenAiCompatibleProviderError
+      && error.code === "invalid_assessment"
+      && error.issues.some((issue) => issue.code === "public_ranking_language")
+  );
+});
+
+test("rejects model drafts that include public contribution share language", async () => {
+  const provider = createOpenAiCompatibleContributionDraftProvider({
+    model: "clarissimi-test-model",
+    token: "unit-token",
+    fetch: async () =>
+      jsonResponse({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                contributionType: "test",
+                affectedArea: "parser regression coverage",
+                impactLevel: "medium",
+                evidenceSummary: "Held a 22 percent share of the last 3 months contribution weight.",
+                suggestedBadge: "Regression Shield",
+                publicRecognitionText: "Added regression coverage for the parser.",
                 confidence: 0.9
               })
             }

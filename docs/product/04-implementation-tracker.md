@@ -32,7 +32,8 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
 - `packages/github`: fixture-first and injected-client live merged pull request evidence collection
 - `packages/providers`: provider adapter interface, deterministic fake provider, and SDK-free
   OpenAI-compatible HTTP adapter; deterministic fake provider falls back to safe narrative values
-  when maintainer hints would introduce public scoring or ranking language
+  when maintainer hints would introduce public scoring or ranking language; OpenAI-compatible
+  provider instructions reject public score-share and time-window contribution-percentage language
 - `packages/renderers`: JSONL, contributor JSON, Markdown, static-data renderers, and draft review
   JSON rendering
 - `packages/cli`: fixture-first validation, recognition dry-run, agent-assisted draft staging,

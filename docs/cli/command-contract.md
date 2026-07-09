@@ -33,7 +33,7 @@ deferred until a safe loader decision exists.
 
 Validates `.clarissimi/contributions.jsonl` schema versions, required fields, and parseability.
 
-### `clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run`
+### `clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run [--config <path>]`
 
 Runs a fixture-based recognition flow. The default provider is the deterministic fake provider.
 

@@ -18,7 +18,7 @@ redaction, providers, or renderers.
 - `clarissimi --help`
 - `clarissimi validate-config`
 - `clarissimi validate-ledger`
-- `clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run`
+- `clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run [--config <path>]`
 - `clarissimi stage-draft --draft <path>`
 - `clarissimi approve-draft --draft <path>`
 - `clarissimi import-draft --draft <path>`

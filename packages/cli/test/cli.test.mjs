@@ -144,6 +144,7 @@ test("global help flag prints usage successfully", async () => {
     assert.equal(result.stderr, "");
     assert.match(result.stdout, /Clarissimi CLI/);
     assert.match(result.stdout, /clarissimi --help/);
+    assert.match(result.stdout, /--config <path>/);
     assert.match(result.stdout, /--provider-endpoint <url>/);
   });
 });

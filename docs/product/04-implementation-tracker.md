@@ -248,6 +248,8 @@ Completed deliverables:
 - manual-only fixture propose dogfood workflow is available
 - docs validation checks required documentation targets and local Markdown links
 - smoke validation exercises the built CLI and Action bins without live provider credentials
+- rollback instructions cover staging cleanup, proposal pull request closure, proposal branch
+  deletion, and post-merge recognition reverts
 
 Validation:
 

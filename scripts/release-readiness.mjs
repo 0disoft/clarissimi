@@ -58,6 +58,10 @@ export const packageReleasePolicy = {
   version: "0.0.0"
 };
 
+export const packageOwnershipContract = {
+  path: "docs/monorepo/package-ownership.md"
+};
+
 export const credentialedReleaseEvidenceContract = {
   path: "docs/ops/release.md",
   requiredSnippets: [
@@ -299,6 +303,7 @@ export async function runReleaseReadiness(options = {}) {
   await runPackageScriptRegistrationCheck(repoRoot);
   await runPackageReleasePolicyCheck(repoRoot);
   await runWorkspacePackageReleasePolicyCheck(repoRoot);
+  await runPackageOwnershipContractCheck(repoRoot);
   await runCredentialedReleaseEvidenceCheck(repoRoot);
   await runToolAvailabilityCheck(repoRoot);
 
@@ -745,11 +750,7 @@ async function runPackageReleasePolicyCheck(repoRoot) {
 }
 
 async function runWorkspacePackageReleasePolicyCheck(repoRoot) {
-  const packageManifestPaths = await listFiles(
-    join(repoRoot, "packages"),
-    (name) => name === "package.json",
-    repoRoot
-  );
+  const packageManifestPaths = await listWorkspacePackageManifests(repoRoot);
   const issues = [];
 
   for (const packageJsonPath of packageManifestPaths) {
@@ -770,6 +771,24 @@ async function runWorkspacePackageReleasePolicyCheck(repoRoot) {
   }
 
   console.log("workspace package release policy passed");
+}
+
+async function runPackageOwnershipContractCheck(repoRoot) {
+  const packageDirs = await listWorkspacePackageDirs(repoRoot);
+  const ownershipPath = join(repoRoot, packageOwnershipContract.path);
+  let text;
+  try {
+    text = await readFile(ownershipPath, "utf8");
+  } catch (error) {
+    throw new Error(`${packageOwnershipContract.path} is not readable: ${error.message}`);
+  }
+
+  const issues = validatePackageOwnershipContract(text, packageDirs);
+  if (issues.length > 0) {
+    throw new Error(`package ownership contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("package ownership contract passed");
 }
 
 async function runCredentialedReleaseEvidenceCheck(repoRoot) {
@@ -843,6 +862,35 @@ export function validatePackageReleasePolicy(
   return issues;
 }
 
+export function validatePackageOwnershipContract(
+  text,
+  packageDirs,
+  contract = packageOwnershipContract
+) {
+  const issues = [];
+  const tableEntries = extractPackageOwnershipEntries(text);
+  const documentedPackages = new Set(tableEntries.map((entry) => entry.packagePath));
+  const workspacePackages = new Set(packageDirs.map((dir) => `packages/${dir}`));
+
+  for (const packagePath of workspacePackages) {
+    if (!documentedPackages.has(packagePath)) {
+      issues.push(`${contract.path} missing Package Table entry for ${packagePath}.`);
+    }
+  }
+
+  for (const entry of tableEntries) {
+    if (!workspacePackages.has(entry.packagePath)) {
+      issues.push(`${contract.path} references missing workspace package ${entry.packagePath}.`);
+    }
+
+    if (entry.status !== "Implemented") {
+      issues.push(`${contract.path} Package Table entry for ${entry.packagePath} must have status Implemented.`);
+    }
+  }
+
+  return issues;
+}
+
 export function validateCredentialedReleaseEvidence(text, contract = credentialedReleaseEvidenceContract) {
   const issues = [];
 
@@ -863,6 +911,26 @@ export function validateCredentialedReleaseEvidence(text, contract = credentiale
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractPackageOwnershipEntries(text) {
+  const entries = [];
+  const lines = text.split(/\r?\n/);
+  const pattern = /^\| `(?<packagePath>packages\/[^`]+)` \| (?<status>[^|]+) \|/;
+
+  for (const line of lines) {
+    const match = pattern.exec(line);
+    if (match?.groups === undefined) {
+      continue;
+    }
+
+    entries.push({
+      packagePath: match.groups.packagePath.trim(),
+      status: match.groups.status.trim()
+    });
+  }
+
+  return entries;
 }
 
 function findRequiredYamlMappingBlock(text, path, key, issues) {
@@ -972,6 +1040,21 @@ async function listFiles(dir, predicate, repoRoot) {
   }
 
   return files;
+}
+
+async function listWorkspacePackageManifests(repoRoot) {
+  return listFiles(
+    join(repoRoot, "packages"),
+    (name) => name === "package.json",
+    repoRoot
+  );
+}
+
+async function listWorkspacePackageDirs(repoRoot) {
+  const manifests = await listWorkspacePackageManifests(repoRoot);
+  return manifests
+    .map((manifestPath) => relative(join(repoRoot, "packages"), dirname(manifestPath)).replaceAll(sep, "/"))
+    .sort();
 }
 
 function shouldSkipTraversalPath(repoRoot, path) {

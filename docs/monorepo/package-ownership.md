@@ -34,7 +34,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
   documents.
 - Monorepo public contract: packages expose only documented types, functions, and constants.
 - Monorepo validation evidence: implemented packages must pass `typecheck`, `test`, `contract`,
-  and `check`.
+  and `check`; release-readiness verifies that implemented package directories stay listed in the
+  Package Table and that Package Table entries point at existing package directories.
 - Monorepo release or rollout policy: source-only merges may continue after local and hosted
   validation, but public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`; release-readiness keeps root and workspace package manifests private at

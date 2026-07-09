@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   dogfoodWorkflowContracts,
   findHighRiskSecretLines,
+  packageOwnershipContract,
   packageReleasePolicy,
   requiredPackageScripts,
   requiredTestGlobs,
@@ -12,6 +13,7 @@ import {
   validateCredentialedReleaseEvidence,
   validateDogfoodWorkflowContract,
   validateHostedLiveProviderWorkflowContract,
+  validatePackageOwnershipContract,
   validatePackageReleasePolicy,
   validatePackageScriptRegistration
 } from "../release-readiness.mjs";
@@ -84,6 +86,25 @@ test("release readiness reports workspace package release policy drift with mani
   assert.deepEqual(validatePackageReleasePolicy(packageJson, packageReleasePolicy, "packages/cli/package.json"), [
     "packages/cli/package.json private must remain true until release blockers are cleared.",
     "packages/cli/package.json version must remain 0.0.0 until release blockers are cleared."
+  ]);
+});
+
+test("release readiness accepts package ownership table coverage", () => {
+  assert.deepEqual(
+    validatePackageOwnershipContract(createPackageOwnershipText(), ["cli", "schemas"]),
+    []
+  );
+});
+
+test("release readiness rejects package ownership table drift", () => {
+  const text = createPackageOwnershipText()
+    .replace("| `packages/cli` | Implemented |", "| `packages/old-cli` | Implemented |")
+    .replace("| `packages/schemas` | Implemented |", "| `packages/schemas` | Planned |");
+
+  assert.deepEqual(validatePackageOwnershipContract(text, ["cli", "schemas"]), [
+    `${packageOwnershipContract.path} missing Package Table entry for packages/cli.`,
+    `${packageOwnershipContract.path} references missing workspace package packages/old-cli.`,
+    `${packageOwnershipContract.path} Package Table entry for packages/schemas must have status Implemented.`
   ]);
 });
 
@@ -346,6 +367,20 @@ function createBlockedReleasePackageJson() {
     private: packageReleasePolicy.private,
     version: packageReleasePolicy.version
   };
+}
+
+function createPackageOwnershipText() {
+  return [
+    "# Package Ownership",
+    "",
+    "## Package Table",
+    "",
+    "| Package | Status | Owns | Must Not Own |",
+    "| --- | --- | --- | --- |",
+    "| `packages/cli` | Implemented | CLI orchestration | Domain policy |",
+    "| `packages/schemas` | Implemented | Shared schema vocabulary | CLI orchestration |",
+    ""
+  ].join("\n");
 }
 
 function createReleaseEvidenceText() {

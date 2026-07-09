@@ -34,7 +34,8 @@ Public package publication and versioned Action tags require:
   of correctness tests
 - `.github/workflows/clarissimi-propose-fixture.yml` or an equivalent public repository scenario
   passes
-- hosted CI workflow `.github/workflows/ci.yml` passes on the release candidate commit
+- hosted CI workflow `.github/workflows/ci.yml`, including its non-credentialed
+  `release-readiness` step, passes on the release candidate commit
 - `pnpm run check`
 - `pnpm run contract`
 - `pnpm run smoke`

@@ -10,6 +10,13 @@ on:
 permissions:
   contents: read
 
+env:
+  ACTIONLINT_LINUX_AMD64_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+  ACTIONLINT_VERSION: 1.7.12
+  SSEALED_VERSION: 0.6.8
+  YQ_LINUX_AMD64_SHA256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
+  YQ_VERSION: 4.53.3
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -34,8 +41,34 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install release readiness tools
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          npm install --global "ssealed@${SSEALED_VERSION}"
+
+          mkdir -p "${RUNNER_TEMP}/release-tools/actionlint"
+          curl --fail --location --silent --show-error \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+            --output "${RUNNER_TEMP}/release-tools/actionlint.tar.gz"
+          echo "${ACTIONLINT_LINUX_AMD64_SHA256}  ${RUNNER_TEMP}/release-tools/actionlint.tar.gz" | sha256sum --check -
+          tar --extract --gzip --file "${RUNNER_TEMP}/release-tools/actionlint.tar.gz" --directory "${RUNNER_TEMP}/release-tools/actionlint" actionlint
+          chmod +x "${RUNNER_TEMP}/release-tools/actionlint/actionlint"
+          echo "${RUNNER_TEMP}/release-tools/actionlint" >> "${GITHUB_PATH}"
+
+          curl --fail --location --silent --show-error \
+            "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64" \
+            --output "${RUNNER_TEMP}/release-tools/yq"
+          echo "${YQ_LINUX_AMD64_SHA256}  ${RUNNER_TEMP}/release-tools/yq" | sha256sum --check -
+          chmod +x "${RUNNER_TEMP}/release-tools/yq"
+          echo "${RUNNER_TEMP}/release-tools" >> "${GITHUB_PATH}"
+
       - name: Validate documentation
         run: pnpm run docs
+
+      - name: Run release readiness validation
+        run: pnpm run release-readiness
 
       - name: Run smoke validation
         run: pnpm run smoke

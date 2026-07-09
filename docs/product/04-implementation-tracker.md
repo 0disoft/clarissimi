@@ -52,7 +52,8 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
 - `.github/workflows/clarissimi-stage-draft-fixture.yml`: manual-only fixture stage-draft dogfood
 - `.github/workflows/clarissimi-live-provider-smoke.yml`: manual-only credentialed live provider
   smoke
-- `.github/workflows/ci.yml`: hosted validation for `docs`, `smoke`, `check`, and `contract`
+- `.github/workflows/ci.yml`: hosted validation for `docs`, `release-readiness`, `smoke`,
+  `check`, and `contract`
 
 ## Active Work Queue
 
@@ -275,6 +276,7 @@ Completed deliverables:
 - manual-only fixture propose dogfood workflow is available and passed run `28984721611`, creating
   `https://github.com/0disoft/clarissimi/pull/1`
 - hosted CI workflow exists for push, pull request, and manual validation
+- hosted CI installs pinned non-credentialed release tooling and runs `release-readiness`
 - `main` branch protection requires the hosted `Validation` check with strict status checks
 - docs validation checks required documentation targets and local Markdown links
 - smoke validation exercises the built CLI and Action bins without live provider credentials

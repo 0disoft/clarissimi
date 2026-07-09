@@ -28,8 +28,15 @@ The current local CI parity commands are:
 owners define real checks.
 
 The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and
-manual dispatch. It uses read-only repository permissions and runs `docs`, `smoke`, `check`, and
-`contract` with Node.js 24 and the package-manager version declared by `package.json`.
+manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,
+`smoke`, `check`, and `contract` with Node.js 24 and the package-manager version declared by
+`package.json`.
+
+Hosted CI installs pinned non-credentialed release tooling before `release-readiness`:
+
+- `ssealed@0.6.8` from npm
+- `rhysd/actionlint@1.7.12` from the GitHub release `linux_amd64` asset with sha256 verification
+- `mikefarah/yq@4.53.3` from the GitHub release `linux_amd64` asset with sha256 verification
 
 The live provider smoke workflow `.github/workflows/clarissimi-live-provider-smoke.yml` is
 manual-only. It reads `CLARISSIMI_PROVIDER_TOKEN` from repository secrets,

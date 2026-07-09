@@ -334,6 +334,8 @@ Completed deliverables:
   that workspace package names stay aligned with their `packages/<name>` directories
 - release-readiness verifies that root and workspace package manifests remain private at `0.0.0`
   while public package publication and versioned Action tags are blocked
+- release-readiness verifies that workspace package manifests keep their `dist` entrypoints,
+  package files, build scripts, and CLI/Action bin boundaries aligned
 - release-readiness verifies that implemented workspace packages and the Package Table in
   `docs/monorepo/package-ownership.md` stay in sync
 - release-readiness verifies that internal workspace dependencies follow the documented package
@@ -344,6 +346,8 @@ Completed deliverables:
   checksum verification snippets before reporting static release gates as passed
 - release-readiness verifies that `ssealed`, `actionlint`, and `yq` are available before running
   tool-backed release checks
+- release-readiness verifies that tracked files do not include generated output paths such as
+  `dist`, `build`, `coverage`, cache directories, `node_modules`, or `.tsbuildinfo`
 - release-readiness secret scan covers committed provider gateway token assignments including
   Clarissimi, OpenCode Go, UMANS, DeepSeek, Node auth, and GitHub PAT environment names
 - ADR 0027 records the `oxlint` merge gate decision and keeps `format` fail-closed until a separate

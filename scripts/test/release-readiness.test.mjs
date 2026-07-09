@@ -17,9 +17,11 @@ import {
   validatePackageReleasePolicy,
   validatePackageScriptRegistration,
   validateRootTsconfigReferences,
+  validateTrackedGeneratedOutputPaths,
   validateWorkspaceContract,
   validateWorkspaceInternalDependencies,
   validateWorkspacePackageManifest,
+  validateWorkspacePackageManifestSurface,
   validateWorkspacePackageTsconfigReferences
 } from "../release-readiness.mjs";
 
@@ -151,6 +153,70 @@ test("release readiness rejects workspace and package manifest identity drift", 
     [
       "packages/cli/package.json name must be @clarissimi/cli.",
       "packages/cli/package.json type must remain module."
+    ]
+  );
+});
+
+test("release readiness accepts workspace package manifest publish surfaces", () => {
+  assert.deepEqual(
+    validateWorkspacePackageManifestSurface(createWorkspacePackageManifest(), "schemas", "packages/schemas/package.json"),
+    []
+  );
+
+  assert.deepEqual(
+    validateWorkspacePackageManifestSurface(
+      {
+        ...createWorkspacePackageManifest(),
+        bin: {
+          clarissimi: "./dist/bin/clarissimi.js"
+        }
+      },
+      "cli",
+      "packages/cli/package.json"
+    ),
+    []
+  );
+});
+
+test("release readiness rejects workspace package manifest publish surface drift", () => {
+  const packageJson = {
+    ...createWorkspacePackageManifest(),
+    main: "./src/index.ts",
+    types: "./dist/renamed.d.ts",
+    exports: {
+      ".": {
+        types: "./dist/renamed.d.ts",
+        default: "./dist/renamed.js"
+      }
+    },
+    files: ["dist", "src"],
+    scripts: {
+      build: "tsc",
+      typecheck: "tsc --noEmit"
+    },
+    bin: {
+      extra: "./dist/bin/extra.js"
+    }
+  };
+
+  assert.deepEqual(
+    validateWorkspacePackageManifestSurface(packageJson, "schemas", "packages/schemas/package.json"),
+    [
+      "packages/schemas/package.json main must remain ./dist/index.js.",
+      "packages/schemas/package.json types must remain ./dist/index.d.ts.",
+      "packages/schemas/package.json exports[\".\"].types must remain ./dist/index.d.ts.",
+      "packages/schemas/package.json exports[\".\"].default must remain ./dist/index.js.",
+      "packages/schemas/package.json files must remain [\"dist\"].",
+      "packages/schemas/package.json scripts.build must remain tsc -b.",
+      "packages/schemas/package.json scripts.typecheck must remain tsc -b --pretty false.",
+      "packages/schemas/package.json must not expose package bin entries."
+    ]
+  );
+
+  assert.deepEqual(
+    validateWorkspacePackageManifestSurface(createWorkspacePackageManifest(), "cli", "packages/cli/package.json"),
+    [
+      "packages/cli/package.json bin must remain {\"clarissimi\":\"./dist/bin/clarissimi.js\"}."
     ]
   );
 });
@@ -287,6 +353,25 @@ test("release readiness rejects TypeScript build graph drift", () => {
       "packages/providers/tsconfig.json compilerOptions.composite must remain true for TypeScript project references.",
       "packages/providers/tsconfig.json references must include ../schemas.",
       "packages/providers/tsconfig.json references must not include undeclared project reference ../renderers."
+    ]
+  );
+});
+
+test("release readiness rejects tracked generated output paths", () => {
+  assert.deepEqual(
+    validateTrackedGeneratedOutputPaths([
+      "README.md",
+      "packages/cli/src/index.ts",
+      "packages/cli/dist/index.js",
+      "packages/core/tsconfig.tsbuildinfo",
+      "coverage/report.json",
+      "node_modules/example/index.js"
+    ]),
+    [
+      "tracked generated output must not include packages/cli/dist/index.js.",
+      "tracked generated output must not include packages/core/tsconfig.tsbuildinfo.",
+      "tracked generated output must not include coverage/report.json.",
+      "tracked generated output must not include node_modules/example/index.js."
     ]
   );
 });
@@ -569,6 +654,24 @@ function createBlockedReleasePackageJson() {
   return {
     private: packageReleasePolicy.private,
     version: packageReleasePolicy.version
+  };
+}
+
+function createWorkspacePackageManifest() {
+  return {
+    main: "./dist/index.js",
+    types: "./dist/index.d.ts",
+    exports: {
+      ".": {
+        types: "./dist/index.d.ts",
+        default: "./dist/index.js"
+      }
+    },
+    files: ["dist"],
+    scripts: {
+      build: "tsc -b",
+      typecheck: "tsc -b --pretty false"
+    }
   };
 }
 

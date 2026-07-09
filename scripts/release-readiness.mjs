@@ -84,6 +84,24 @@ export const workspaceContract = {
   packageNameScope: "@clarissimi"
 };
 
+export const workspacePackageManifestSurfaceContract = {
+  main: "./dist/index.js",
+  types: "./dist/index.d.ts",
+  files: ["dist"],
+  scripts: {
+    build: "tsc -b",
+    typecheck: "tsc -b --pretty false"
+  },
+  binsByPackageDir: {
+    action: {
+      "clarissimi-action": "./dist/bin/clarissimi-action.js"
+    },
+    cli: {
+      clarissimi: "./dist/bin/clarissimi.js"
+    }
+  }
+};
+
 export const workspaceInternalDependencyContract = {
   internalScope: "@clarissimi/",
   workspaceRange: "workspace:*",
@@ -102,6 +120,21 @@ export const workspaceInternalDependencyContract = {
 export const tsconfigBuildGraphContract = {
   path: "tsconfig.json",
   packageReferencePrefix: "./packages/"
+};
+
+export const trackedGeneratedOutputContract = {
+  forbiddenPathFragments: [
+    "/dist/",
+    "/build/",
+    "/coverage/",
+    "/.cache/",
+    "/.tmp/",
+    "/tmp/",
+    "/node_modules/"
+  ],
+  forbiddenPathSuffixes: [
+    ".tsbuildinfo"
+  ]
 };
 
 export const credentialedReleaseEvidenceContract = {
@@ -399,6 +432,7 @@ export async function runReleaseReadiness(options = {}) {
     args: ["diff", "--check"]
   });
 
+  await runTrackedGeneratedOutputCheck(repoRoot);
   await runSecretScan(repoRoot);
 
   console.log("release readiness static gates passed");
@@ -809,6 +843,7 @@ async function runWorkspacePackageReleasePolicyCheck(repoRoot) {
 
     issues.push(...validatePackageReleasePolicy(packageJson, packageReleasePolicy, repoPath));
     issues.push(...validateWorkspacePackageManifest(packageJson, workspaceDirFromManifestPath(repoRoot, packageJsonPath), repoPath));
+    issues.push(...validateWorkspacePackageManifestSurface(packageJson, workspaceDirFromManifestPath(repoRoot, packageJsonPath), repoPath));
     issues.push(...validateWorkspaceInternalDependencies(packageJson, workspaceDirFromManifestPath(repoRoot, packageJsonPath), repoPath));
   }
 
@@ -817,6 +852,23 @@ async function runWorkspacePackageReleasePolicyCheck(repoRoot) {
   }
 
   console.log("workspace package release policy passed");
+}
+
+async function runTrackedGeneratedOutputCheck(repoRoot) {
+  const result = await runCommand("git", ["ls-files"], repoRoot);
+  if (result.exitCode !== 0) {
+    throw new Error(
+      `tracked generated output check failed to list tracked files.\nSTDOUT:\n${result.stdout.trim()}\nSTDERR:\n${result.stderr.trim()}`
+    );
+  }
+
+  const paths = result.stdout.split(/\r?\n/).filter((line) => line.length > 0);
+  const issues = validateTrackedGeneratedOutputPaths(paths);
+  if (issues.length > 0) {
+    throw new Error(`tracked generated output check failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("tracked generated output check passed");
 }
 
 async function runTsconfigBuildGraphCheck(repoRoot) {
@@ -1009,6 +1061,57 @@ export function validateWorkspacePackageManifest(
   return issues;
 }
 
+export function validateWorkspacePackageManifestSurface(
+  packageJson,
+  packageDir,
+  manifestPath,
+  contract = workspacePackageManifestSurfaceContract
+) {
+  const issues = [];
+
+  if (packageJson?.main !== contract.main) {
+    issues.push(`${manifestPath} main must remain ${contract.main}.`);
+  }
+
+  if (packageJson?.types !== contract.types) {
+    issues.push(`${manifestPath} types must remain ${contract.types}.`);
+  }
+
+  const exportRoot = packageJson?.exports?.["."];
+  if (exportRoot === null || typeof exportRoot !== "object" || Array.isArray(exportRoot)) {
+    issues.push(`${manifestPath} exports["."] must define types and default entrypoints.`);
+  } else {
+    if (exportRoot.types !== contract.types) {
+      issues.push(`${manifestPath} exports["."].types must remain ${contract.types}.`);
+    }
+
+    if (exportRoot.default !== contract.main) {
+      issues.push(`${manifestPath} exports["."].default must remain ${contract.main}.`);
+    }
+  }
+
+  if (!arraysEqual(packageJson?.files, contract.files)) {
+    issues.push(`${manifestPath} files must remain ${JSON.stringify(contract.files)}.`);
+  }
+
+  for (const [scriptName, expectedValue] of Object.entries(contract.scripts)) {
+    if (packageJson?.scripts?.[scriptName] !== expectedValue) {
+      issues.push(`${manifestPath} scripts.${scriptName} must remain ${expectedValue}.`);
+    }
+  }
+
+  const expectedBin = contract.binsByPackageDir[packageDir];
+  if (expectedBin === undefined) {
+    if (packageJson?.bin !== undefined) {
+      issues.push(`${manifestPath} must not expose package bin entries.`);
+    }
+  } else if (!objectsEqual(packageJson?.bin, expectedBin)) {
+    issues.push(`${manifestPath} bin must remain ${JSON.stringify(expectedBin)}.`);
+  }
+
+  return issues;
+}
+
 export function validateWorkspaceInternalDependencies(
   packageJson,
   packageDir,
@@ -1050,6 +1153,29 @@ export function validateWorkspaceInternalDependencies(
       if (name.startsWith(contract.internalScope)) {
         issues.push(`${manifestPath} ${sectionName} must not declare internal dependency ${name}; use dependencies.`);
       }
+    }
+  }
+
+  return issues;
+}
+
+export function validateTrackedGeneratedOutputPaths(
+  paths,
+  contract = trackedGeneratedOutputContract
+) {
+  const issues = [];
+
+  for (const rawPath of paths) {
+    const path = rawPath.replaceAll("\\", "/");
+
+    if (contract.forbiddenPathSuffixes.some((suffix) => path.endsWith(suffix))) {
+      issues.push(`tracked generated output must not include ${path}.`);
+      continue;
+    }
+
+    const boundedPath = `/${path}`;
+    if (contract.forbiddenPathFragments.some((fragment) => boundedPath.includes(fragment))) {
+      issues.push(`tracked generated output must not include ${path}.`);
     }
   }
 
@@ -1224,6 +1350,28 @@ function dependencyEntries(value) {
   }
 
   return Object.entries(value);
+}
+
+function arraysEqual(actual, expected) {
+  if (!Array.isArray(actual) || actual.length !== expected.length) {
+    return false;
+  }
+
+  return actual.every((value, index) => value === expected[index]);
+}
+
+function objectsEqual(actual, expected) {
+  if (actual === null || typeof actual !== "object" || Array.isArray(actual)) {
+    return false;
+  }
+
+  const actualEntries = Object.entries(actual);
+  const expectedEntries = Object.entries(expected);
+  if (actualEntries.length !== expectedEntries.length) {
+    return false;
+  }
+
+  return expectedEntries.every(([key, value]) => actual[key] === value);
 }
 
 function tsconfigReferencePaths(value, path, issues) {

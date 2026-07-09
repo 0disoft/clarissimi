@@ -265,6 +265,32 @@ export const backupRestoreDocumentContract = {
   ]
 };
 
+export const actionInputsOutputsDocumentContract = {
+  path: "docs/github-action/inputs-and-outputs.md",
+  requiredSnippets: [
+    "- `mode`: `dry-run`, `propose`, or `stage-draft`, default `propose`",
+    "- `summary-path`: optional workspace-relative path for a sanitized JSON summary artifact",
+    "- `provider`: `fake` or `openai-compatible`; omitted values fall back to config, then `fake`",
+    "- `provider-thinking`: optional OpenAI-compatible thinking mode; currently only `disabled`",
+    "Provider API keys and GitHub tokens are not plain inputs.",
+    "reads `GITHUB_TOKEN` only in `propose` and `stage-draft`",
+    "`CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`",
+    "`INPUT_SUMMARY_PATH`, `INPUT_PROVIDER`, `INPUT_PROVIDER_MODEL`, `INPUT_PROVIDER_ENDPOINT`, and",
+    "`INPUT_PROVIDER_THINKING`.",
+    "The root `action.yml` currently exposes `event-path`, `github-fixture`, `mode`, `base-branch`,",
+    "`remote-name`, `staging-dir`, `summary-path`, `config-path`, `provider`, `provider-model`,",
+    "`provider-endpoint`, and `provider-thinking`.",
+    "`config-path` is explicit-only; the Action does not automatically discover repository config files.",
+    "`summary-path` is explicit-only, must be relative, and must stay inside `GITHUB_WORKSPACE`.",
+    "An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`",
+    "In `propose` and `stage-draft`, event payloads route to the live GitHub collector",
+    "- `summary-json-path` when `summary-path` is set",
+    "Outputs must not include raw provider output, raw diff text, raw issue text, tokens, private keys",
+    "Step summary content follows the same",
+    "raw-evidence exclusion rules as action outputs."
+  ]
+};
+
 export const opsValidationFooterContract = {
   documents: [
     "docs/ops/config-and-env.md",
@@ -755,6 +781,7 @@ export async function runReleaseReadiness(options = {}) {
   await runServiceLevelsDocumentContractCheck(repoRoot);
   await runSecretsDocumentContractCheck(repoRoot);
   await runBackupRestoreDocumentContractCheck(repoRoot);
+  await runActionInputsOutputsDocumentContractCheck(repoRoot);
   await runOpsValidationFooterContractCheck(repoRoot);
   await runEngineeringValidationDocumentContractCheck(repoRoot);
   await runMonorepoValidationDocumentContractCheck(repoRoot);
@@ -1128,6 +1155,18 @@ export function validateSecretsDocumentContract(text, contract = secretsDocument
 }
 
 export function validateBackupRestoreDocumentContract(text, contract = backupRestoreDocumentContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateActionInputsOutputsDocumentContract(text, contract = actionInputsOutputsDocumentContract) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1683,6 +1722,23 @@ async function runBackupRestoreDocumentContractCheck(repoRoot) {
   }
 
   console.log("backup and restore document contract passed");
+}
+
+async function runActionInputsOutputsDocumentContractCheck(repoRoot) {
+  const inputsOutputsPath = join(repoRoot, actionInputsOutputsDocumentContract.path);
+  let text;
+  try {
+    text = await readFile(inputsOutputsPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${actionInputsOutputsDocumentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateActionInputsOutputsDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`Action inputs and outputs document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("Action inputs and outputs document contract passed");
 }
 
 async function runOpsValidationFooterContractCheck(repoRoot) {

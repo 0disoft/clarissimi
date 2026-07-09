@@ -291,6 +291,9 @@ Completed deliverables:
 - docs validation checks required documentation targets and local Markdown links
 - release-readiness validates the root Action manifest input, output, default, secret-boundary, and
   runtime command contract before reporting static release gates as passed
+- release-readiness validates that the Action inputs and outputs guide keeps input names, secret
+  boundaries, explicit config and summary paths, fixture precedence, output names, and raw-evidence
+  exclusion guidance aligned
 - release-readiness validates the hosted CI workflow trigger, read-only permission, and required
   command contract before reporting static release gates as passed
 - release-readiness validates that the CI operational document names the same hosted validation

@@ -8,6 +8,7 @@ import {
   packageReleasePolicy,
   requiredPackageScripts,
   requiredTestGlobs,
+  validateActionInputsOutputsDocumentContract,
   validateActionManifestContract,
   validateBackupRestoreDocumentContract,
   validateCiOperationalDocumentContract,
@@ -438,6 +439,45 @@ test("release readiness rejects backup and restore document drift", () => {
     "docs/ops/backup-and-restore.md must include - `pnpm run lint`.",
     "docs/ops/backup-and-restore.md must include secret scan for committed provider tokens, GitHub tokens, private keys, and environment files.",
     "docs/ops/backup-and-restore.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
+  ]);
+});
+
+test("release readiness accepts the Action inputs and outputs document contract", () => {
+  assert.deepEqual(validateActionInputsOutputsDocumentContract(createActionInputsOutputsDocumentText()), []);
+});
+
+test("release readiness rejects Action inputs and outputs document drift", () => {
+  const text = createActionInputsOutputsDocumentText()
+    .replace("- `mode`: `dry-run`, `propose`, or `stage-draft`, default `propose`", "- `mode`: `dry-run`")
+    .replace("Provider API keys and GitHub tokens are not plain inputs.", "Provider API keys can be inputs.")
+    .replace("reads `GITHUB_TOKEN` only in `propose` and `stage-draft`", "reads `GITHUB_TOKEN` in all modes")
+    .replace(
+      "`config-path` is explicit-only; the Action does not automatically discover repository config files.",
+      "`config-path` can be discovered."
+    )
+    .replace(
+      "`summary-path` is explicit-only, must be relative, and must stay inside `GITHUB_WORKSPACE`.",
+      "`summary-path` can be absolute."
+    )
+    .replace(
+      "An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`",
+      "Event path takes precedence."
+    )
+    .replace(
+      "Outputs must not include raw provider output, raw diff text, raw issue text, tokens, private keys",
+      "Outputs may include raw provider output."
+    )
+    .replace("raw-evidence exclusion rules as action outputs.", "summary rules.");
+
+  assert.deepEqual(validateActionInputsOutputsDocumentContract(text), [
+    "docs/github-action/inputs-and-outputs.md must include - `mode`: `dry-run`, `propose`, or `stage-draft`, default `propose`.",
+    "docs/github-action/inputs-and-outputs.md must include Provider API keys and GitHub tokens are not plain inputs..",
+    "docs/github-action/inputs-and-outputs.md must include reads `GITHUB_TOKEN` only in `propose` and `stage-draft`.",
+    "docs/github-action/inputs-and-outputs.md must include `config-path` is explicit-only; the Action does not automatically discover repository config files..",
+    "docs/github-action/inputs-and-outputs.md must include `summary-path` is explicit-only, must be relative, and must stay inside `GITHUB_WORKSPACE`..",
+    "docs/github-action/inputs-and-outputs.md must include An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`.",
+    "docs/github-action/inputs-and-outputs.md must include Outputs must not include raw provider output, raw diff text, raw issue text, tokens, private keys.",
+    "docs/github-action/inputs-and-outputs.md must include raw-evidence exclusion rules as action outputs.."
   ]);
 });
 
@@ -1423,6 +1463,42 @@ function createBackupRestoreDocumentText() {
     "## Validation",
     "",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
+    ""
+  ].join("\n");
+}
+
+function createActionInputsOutputsDocumentText() {
+  return [
+    "- `mode`: `dry-run`, `propose`, or `stage-draft`, default `propose`",
+    "- `summary-path`: optional workspace-relative path for a sanitized JSON summary artifact",
+    "- `provider`: `fake` or `openai-compatible`; omitted values fall back to config, then `fake`",
+    "- `provider-thinking`: optional OpenAI-compatible thinking mode; currently only `disabled`",
+    "",
+    "Provider API keys and GitHub tokens are not plain inputs. They must come from secrets or the",
+    "workflow environment. The current Action reads `GITHUB_TOKEN` only in `propose` and `stage-draft`",
+    "modes for live GitHub collection and proposal pull request creation or update. It reads",
+    "`CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.",
+    "",
+    "`INPUT_SUMMARY_PATH`, `INPUT_PROVIDER`, `INPUT_PROVIDER_MODEL`, `INPUT_PROVIDER_ENDPOINT`, and",
+    "`INPUT_PROVIDER_THINKING`.",
+    "",
+    "The root `action.yml` currently exposes `event-path`, `github-fixture`, `mode`, `base-branch`,",
+    "`remote-name`, `staging-dir`, `summary-path`, `config-path`, `provider`, `provider-model`,",
+    "`provider-endpoint`, and `provider-thinking`.",
+    "",
+    "`config-path` is explicit-only; the Action does not automatically discover repository config files.",
+    "`summary-path` is explicit-only, must be relative, and must stay inside `GITHUB_WORKSPACE`.",
+    "An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`",
+    "fallback.",
+    "In `propose` and `stage-draft`, event payloads route to the live GitHub collector when no explicit",
+    "fixture is provided.",
+    "",
+    "- `summary-json-path` when `summary-path` is set",
+    "",
+    "Outputs must not include raw provider output, raw diff text, raw issue text, tokens, private keys,",
+    "raw pull request bodies, raw patch excerpts, or sensitive security details.",
+    "Step summary content follows the same",
+    "raw-evidence exclusion rules as action outputs.",
     ""
   ].join("\n");
 }

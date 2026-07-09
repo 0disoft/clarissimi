@@ -284,6 +284,8 @@ Completed deliverables:
 - hosted CI installs pinned non-credentialed release tooling and runs `release-readiness`
 - `main` branch protection requires the hosted `Validation` check with strict status checks
 - docs validation checks required documentation targets and local Markdown links
+- release-readiness validates the root Action manifest input, output, default, secret-boundary, and
+  runtime command contract before reporting static release gates as passed
 - release-readiness validates the hosted CI workflow trigger, read-only permission, and required
   command contract before reporting static release gates as passed
 - smoke validation exercises the built CLI and Action bins without live provider credentials

@@ -95,6 +95,61 @@ export const ciWorkflowContract = {
   ]
 };
 
+export const actionManifestContract = {
+  path: "action.yml",
+  requiredInputs: [
+    { name: "mode", default: "propose" },
+    { name: "event-path" },
+    { name: "github-fixture" },
+    { name: "base-branch", default: "main" },
+    { name: "remote-name", default: "origin" },
+    { name: "staging-dir" },
+    { name: "provider", default: "fake" },
+    { name: "provider-model" },
+    { name: "provider-endpoint" },
+    { name: "provider-thinking" }
+  ],
+  forbiddenInputs: [
+    "github-token",
+    "provider-token",
+    "clarissimi-provider-token"
+  ],
+  requiredOutputs: [
+    "draft-count",
+    "proposed-entry-count",
+    "skipped-entry-count",
+    "mode",
+    "input-source",
+    "approval-status",
+    "redaction-match-count",
+    "staged-file-count",
+    "proposal-branch",
+    "proposal-commit-sha",
+    "proposal-pull-request-number",
+    "proposal-pull-request-url",
+    "proposal-pull-request-action"
+  ],
+  requiredEnvMappings: [
+    "GITHUB_TOKEN: ${{ (inputs.mode == 'propose' || inputs.mode == 'stage-draft') && github.token || '' }}",
+    "INPUT_MODE: ${{ inputs.mode }}",
+    "INPUT_EVENT_PATH: ${{ inputs.event-path }}",
+    "INPUT_GITHUB_FIXTURE: ${{ inputs.github-fixture }}",
+    "INPUT_BASE_BRANCH: ${{ inputs.base-branch }}",
+    "INPUT_REMOTE_NAME: ${{ inputs.remote-name }}",
+    "INPUT_STAGING_DIR: ${{ inputs.staging-dir }}",
+    "INPUT_PROVIDER: ${{ inputs.provider }}",
+    "INPUT_PROVIDER_MODEL: ${{ inputs.provider-model }}",
+    "INPUT_PROVIDER_ENDPOINT: ${{ inputs.provider-endpoint }}",
+    "INPUT_PROVIDER_THINKING: ${{ inputs.provider-thinking }}",
+    "CLARISSIMI_PROVIDER_TOKEN: ${{ env.CLARISSIMI_PROVIDER_TOKEN }}"
+  ],
+  requiredCommands: [
+    "pnpm --dir \"$GITHUB_ACTION_PATH\" install --frozen-lockfile",
+    "pnpm --dir \"$GITHUB_ACTION_PATH\" --filter @clarissimi/action build",
+    "node \"$GITHUB_ACTION_PATH/packages/action/dist/bin/clarissimi-action.js\""
+  ]
+};
+
 export async function runReleaseReadiness(options = {}) {
   const repoRoot = options.repoRoot ?? defaultRepoRoot;
   const workflowDir = join(repoRoot, ".github", "workflows");
@@ -147,6 +202,7 @@ export async function runReleaseReadiness(options = {}) {
     });
   }
 
+  await runActionManifestContractCheck(repoRoot);
   await runCiWorkflowContractCheck(repoRoot);
   await runHostedLiveProviderWorkflowContractCheck(repoRoot);
 
@@ -307,6 +363,68 @@ export function validateCiWorkflowContract(text, contract = ciWorkflowContract) 
   }
 
   return issues;
+}
+
+export function validateActionManifestContract(text, contract = actionManifestContract) {
+  const issues = [];
+
+  for (const input of contract.requiredInputs) {
+    const block = findYamlMappingBlock(text, input.name);
+    if (block === undefined) {
+      issues.push(`${contract.path} must define input ${input.name}.`);
+      continue;
+    }
+
+    if (input.default !== undefined) {
+      const defaultValue = findYamlScalarValue(block, "default");
+      if (defaultValue !== input.default) {
+        issues.push(`${contract.path} input ${input.name} must set default: ${input.default}.`);
+      }
+    }
+  }
+
+  for (const inputName of contract.forbiddenInputs) {
+    if (findYamlMappingBlock(text, inputName) !== undefined) {
+      issues.push(`${contract.path} must not expose ${inputName} as an action input.`);
+    }
+  }
+
+  for (const output of contract.requiredOutputs) {
+    if (findYamlMappingBlock(text, output) === undefined) {
+      issues.push(`${contract.path} must define output ${output}.`);
+    }
+  }
+
+  for (const mapping of contract.requiredEnvMappings) {
+    if (!text.includes(mapping)) {
+      issues.push(`${contract.path} must include env mapping ${mapping}.`);
+    }
+  }
+
+  for (const command of contract.requiredCommands) {
+    if (!text.includes(command)) {
+      issues.push(`${contract.path} must run ${command}.`);
+    }
+  }
+
+  return issues;
+}
+
+async function runActionManifestContractCheck(repoRoot) {
+  const actionPath = join(repoRoot, actionManifestContract.path);
+  let text;
+  try {
+    text = await readFile(actionPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${actionManifestContract.path}: ${error.message}`);
+  }
+
+  const issues = validateActionManifestContract(text);
+  if (issues.length > 0) {
+    throw new Error(`Action manifest contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("Action manifest contract passed");
 }
 
 async function runCiWorkflowContractCheck(repoRoot) {

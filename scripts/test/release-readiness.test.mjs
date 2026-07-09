@@ -5,6 +5,7 @@ import {
   findHighRiskSecretLines,
   requiredPackageScripts,
   requiredTestGlobs,
+  validateActionManifestContract,
   validateCiWorkflowContract,
   validateHostedLiveProviderWorkflowContract,
   validatePackageScriptRegistration
@@ -86,6 +87,32 @@ test("release readiness secret scan allows documented secret names without assig
   assert.deepEqual(findHighRiskSecretLines("docs/ops/secrets.md", text), []);
 });
 
+test("release readiness accepts the Action manifest contract", () => {
+  assert.deepEqual(validateActionManifestContract(createActionManifestText()), []);
+});
+
+test("release readiness rejects Action manifest input default drift and secret inputs", () => {
+  const text = createActionManifestText()
+    .replace("default: propose", "default: dry-run")
+    .replace("  provider-model:", "  provider-token:\n    required: false\n  provider-model:");
+
+  assert.deepEqual(validateActionManifestContract(text), [
+    "action.yml input mode must set default: propose.",
+    "action.yml must not expose provider-token as an action input."
+  ]);
+});
+
+test("release readiness rejects Action manifest env and command drift", () => {
+  const text = createActionManifestText()
+    .replace("CLARISSIMI_PROVIDER_TOKEN: ${{ env.CLARISSIMI_PROVIDER_TOKEN }}", "CLARISSIMI_PROVIDER_TOKEN: ${{ inputs.provider-token }}")
+    .replace("pnpm --dir \"$GITHUB_ACTION_PATH\" --filter @clarissimi/action build", "pnpm --dir \"$GITHUB_ACTION_PATH\" build");
+
+  assert.deepEqual(validateActionManifestContract(text), [
+    "action.yml must include env mapping CLARISSIMI_PROVIDER_TOKEN: ${{ env.CLARISSIMI_PROVIDER_TOKEN }}.",
+    "action.yml must run pnpm --dir \"$GITHUB_ACTION_PATH\" --filter @clarissimi/action build."
+  ]);
+});
+
 test("release readiness accepts the CI workflow contract", () => {
   assert.deepEqual(validateCiWorkflowContract(createCiWorkflowText()), []);
 });
@@ -151,6 +178,85 @@ function createValidScripts() {
   scripts.contract = "pnpm run typecheck && pnpm run test";
 
   return scripts;
+}
+
+function createActionManifestText() {
+  return [
+    "name: Clarissimi",
+    "inputs:",
+    "  mode:",
+    "    required: false",
+    "    default: propose",
+    "  event-path:",
+    "    required: false",
+    "  github-fixture:",
+    "    required: false",
+    "  base-branch:",
+    "    required: false",
+    "    default: main",
+    "  remote-name:",
+    "    required: false",
+    "    default: origin",
+    "  staging-dir:",
+    "    required: false",
+    "  provider:",
+    "    required: false",
+    "    default: fake",
+    "  provider-model:",
+    "    required: false",
+    "  provider-endpoint:",
+    "    required: false",
+    "  provider-thinking:",
+    "    required: false",
+    "outputs:",
+    "  draft-count:",
+    "    value: ${{ steps.clarissimi.outputs.draft-count }}",
+    "  proposed-entry-count:",
+    "    value: ${{ steps.clarissimi.outputs.proposed-entry-count }}",
+    "  skipped-entry-count:",
+    "    value: ${{ steps.clarissimi.outputs.skipped-entry-count }}",
+    "  mode:",
+    "    value: ${{ steps.clarissimi.outputs.mode }}",
+    "  input-source:",
+    "    value: ${{ steps.clarissimi.outputs.input-source }}",
+    "  approval-status:",
+    "    value: ${{ steps.clarissimi.outputs.approval-status }}",
+    "  redaction-match-count:",
+    "    value: ${{ steps.clarissimi.outputs.redaction-match-count }}",
+    "  staged-file-count:",
+    "    value: ${{ steps.clarissimi.outputs.staged-file-count }}",
+    "  proposal-branch:",
+    "    value: ${{ steps.clarissimi.outputs.proposal-branch }}",
+    "  proposal-commit-sha:",
+    "    value: ${{ steps.clarissimi.outputs.proposal-commit-sha }}",
+    "  proposal-pull-request-number:",
+    "    value: ${{ steps.clarissimi.outputs.proposal-pull-request-number }}",
+    "  proposal-pull-request-url:",
+    "    value: ${{ steps.clarissimi.outputs.proposal-pull-request-url }}",
+    "  proposal-pull-request-action:",
+    "    value: ${{ steps.clarissimi.outputs.proposal-pull-request-action }}",
+    "runs:",
+    "  using: composite",
+    "  steps:",
+    "    - name: Run Clarissimi",
+    "      env:",
+    "        GITHUB_TOKEN: ${{ (inputs.mode == 'propose' || inputs.mode == 'stage-draft') && github.token || '' }}",
+    "        INPUT_MODE: ${{ inputs.mode }}",
+    "        INPUT_EVENT_PATH: ${{ inputs.event-path }}",
+    "        INPUT_GITHUB_FIXTURE: ${{ inputs.github-fixture }}",
+    "        INPUT_BASE_BRANCH: ${{ inputs.base-branch }}",
+    "        INPUT_REMOTE_NAME: ${{ inputs.remote-name }}",
+    "        INPUT_STAGING_DIR: ${{ inputs.staging-dir }}",
+    "        INPUT_PROVIDER: ${{ inputs.provider }}",
+    "        INPUT_PROVIDER_MODEL: ${{ inputs.provider-model }}",
+    "        INPUT_PROVIDER_ENDPOINT: ${{ inputs.provider-endpoint }}",
+    "        INPUT_PROVIDER_THINKING: ${{ inputs.provider-thinking }}",
+    "        CLARISSIMI_PROVIDER_TOKEN: ${{ env.CLARISSIMI_PROVIDER_TOKEN }}",
+    "      run: |",
+    "        pnpm --dir \"$GITHUB_ACTION_PATH\" install --frozen-lockfile",
+    "        pnpm --dir \"$GITHUB_ACTION_PATH\" --filter @clarissimi/action build",
+    "        node \"$GITHUB_ACTION_PATH/packages/action/dist/bin/clarissimi-action.js\""
+  ].join("\n");
 }
 
 function createCiWorkflowText() {

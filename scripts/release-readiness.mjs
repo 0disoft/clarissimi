@@ -306,6 +306,13 @@ export const hostedLiveProviderWorkflowContract = {
   runCommand: "pnpm run live-provider-smoke"
 };
 
+export const workflowTrustBoundaryContract = {
+  forbiddenSnippets: [
+    "pull_request_target:",
+    "write-all"
+  ]
+};
+
 export const ciWorkflowContract = {
   path: ".github/workflows/ci.yml",
   requiredTriggers: [
@@ -522,6 +529,7 @@ export async function runReleaseReadiness(options = {}) {
   }
 
   await runActionManifestContractCheck(repoRoot);
+  await runWorkflowTrustBoundaryContractCheck(repoRoot, workflowFiles);
   await runCiWorkflowContractCheck(repoRoot);
   await runDogfoodWorkflowContractChecks(repoRoot);
   await runHostedLiveProviderWorkflowContractCheck(repoRoot);
@@ -677,6 +685,22 @@ export function validateHostedLiveProviderWorkflowContract(text, contract = host
   return issues;
 }
 
+export function validateWorkflowTrustBoundaryContract(
+  text,
+  path,
+  contract = workflowTrustBoundaryContract
+) {
+  const issues = [];
+
+  for (const snippet of contract.forbiddenSnippets) {
+    if (text.includes(snippet)) {
+      issues.push(`${path} must not include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
 export function validateCiWorkflowContract(text, contract = ciWorkflowContract) {
   const issues = [];
 
@@ -817,6 +841,28 @@ async function runActionManifestContractCheck(repoRoot) {
   }
 
   console.log("Action manifest contract passed");
+}
+
+async function runWorkflowTrustBoundaryContractCheck(repoRoot, workflowFiles) {
+  const issues = [];
+
+  for (const file of workflowFiles) {
+    const path = toRepoPath(repoRoot, file);
+    let text;
+    try {
+      text = await readFile(file, "utf8");
+    } catch (error) {
+      throw new Error(`Unable to read ${path}: ${error.message}`);
+    }
+
+    issues.push(...validateWorkflowTrustBoundaryContract(text, path));
+  }
+
+  if (issues.length > 0) {
+    throw new Error(`workflow trust boundary contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("workflow trust boundary contract passed");
 }
 
 async function runCiWorkflowContractCheck(repoRoot) {

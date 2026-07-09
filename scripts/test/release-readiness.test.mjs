@@ -25,6 +25,7 @@ import {
   validateWorkspacePackageManifest,
   validateWorkspacePackageManifestSurface,
   validateWorkspacePackageTsconfigReferences,
+  validateWorkflowTrustBoundaryContract,
   validateWriteModeDogfoodEvidence
 } from "../release-readiness.mjs";
 
@@ -578,6 +579,28 @@ test("release readiness rejects Action manifest output value drift", () => {
 
 test("release readiness accepts the CI workflow contract", () => {
   assert.deepEqual(validateCiWorkflowContract(createCiWorkflowText()), []);
+});
+
+test("release readiness accepts safe workflow trust boundaries", () => {
+  assert.deepEqual(
+    validateWorkflowTrustBoundaryContract(createCiWorkflowText(), ".github/workflows/ci.yml"),
+    []
+  );
+});
+
+test("release readiness rejects pull_request_target and broad workflow permissions", () => {
+  const text = [
+    "name: Risky",
+    "on:",
+    "  pull_request_target:",
+    "permissions: write-all",
+    ""
+  ].join("\n");
+
+  assert.deepEqual(validateWorkflowTrustBoundaryContract(text, ".github/workflows/risky.yml"), [
+    ".github/workflows/risky.yml must not include pull_request_target:.",
+    ".github/workflows/risky.yml must not include write-all."
+  ]);
 });
 
 test("release readiness rejects CI workflow command drift", () => {

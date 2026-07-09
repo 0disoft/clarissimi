@@ -334,6 +334,8 @@ Completed deliverables:
 - release-readiness validates the hosted live-provider workflow manual trigger, read-only
   permission, input and secret preflight ordering, Node.js runtime setup, and run-command contract
   before reporting static release gates as passed
+- release-readiness verifies that workflow files do not use `pull_request_target` or `write-all`
+  permissions, preserving the fork PR trust boundary
 - release-readiness verifies that release-critical package scripts remain registered
 - release-readiness verifies that `pnpm run lint` remains backed by `oxlint . --deny-warnings`
 - release-readiness verifies that `pnpm run format` remains intentionally fail-closed until a

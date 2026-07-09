@@ -17,6 +17,7 @@ import {
   validateDogfoodWorkflowContract,
   validateEngineeringValidationDocumentContract,
   validateHostedLiveProviderWorkflowContract,
+  validateLedgerFormatDocumentContract,
   validateMonorepoValidationDocumentContract,
   validateObservabilityDocumentContract,
   validateOpsValidationFooterContract,
@@ -244,6 +245,29 @@ test("release readiness rejects README validation drift", () => {
     "README.md must include - `pnpm run release-readiness`.",
     "README.md must include - `pnpm run live-provider-smoke`.",
     "README.md must include `format` intentionally fails closed."
+  ]);
+});
+
+test("release readiness accepts the ledger format document contract", () => {
+  assert.deepEqual(validateLedgerFormatDocumentContract(createLedgerFormatDocumentText()), []);
+});
+
+test("release readiness rejects ledger format document drift", () => {
+  const text = createLedgerFormatDocumentText()
+    .replace("Each non-empty line is one approved `clarissimi.assessment/v1` JSON object.", "Each line stores a contribution.")
+    .replace("`source.pullRequestNumber` stores the PR number", "`source` stores event data")
+    .replace("`evidenceRefs[]` stores the human-clickable PR URL", "URLs are optional metadata")
+    .replace("Ledger records must not contain public contributor scores, average scores, ranks, leaderboard", "Ledger records may contain scores")
+    .replace("The MVP keeps one canonical ledger file.", "The MVP uses monthly partitions.")
+    .replace("Maintainer-only analytics may calculate recent recognition share from the same ledger", "Public analytics may show share");
+
+  assert.deepEqual(validateLedgerFormatDocumentContract(text), [
+    "docs/cli/ledger-format.md must include Each non-empty line is one approved `clarissimi.assessment/v1` JSON object..",
+    "docs/cli/ledger-format.md must include `source.pullRequestNumber` stores the PR number.",
+    "docs/cli/ledger-format.md must include `evidenceRefs[]` stores the human-clickable PR URL.",
+    "docs/cli/ledger-format.md must include Ledger records must not contain public contributor scores, average scores, ranks, leaderboard.",
+    "docs/cli/ledger-format.md must include Maintainer-only analytics may calculate recent recognition share from the same ledger.",
+    "docs/cli/ledger-format.md must include The MVP keeps one canonical ledger file."
   ]);
 });
 
@@ -1204,6 +1228,34 @@ function createReadmeValidationText() {
     "",
     "`format` intentionally fails closed until maintainers accept a formatter baseline ADR.",
     "`migration-check` intentionally fails until configured.",
+    ""
+  ].join("\n");
+}
+
+function createLedgerFormatDocumentText() {
+  return [
+    "Each non-empty line is one approved `clarissimi.assessment/v1` JSON object.",
+    "",
+    "`source.pullRequestNumber` stores the PR number used for duplicate detection and rebuild ordering.",
+    "`evidenceRefs[]` stores the human-clickable PR URL when a `pull_request` evidence reference is",
+    "available.",
+    "The MVP schema does not store a separate top-level ledger `id` or `source.url`.",
+    "",
+    "Ledger records must not contain public contributor scores, average scores, ranks, leaderboard",
+    "positions, contributor tiers, or points.",
+    "",
+    "- `confidence`: confidence in this draft assessment, not a contributor score",
+    "- `impactLevel`: impact of this contribution event, not a person ranking",
+    "",
+    "Maintainer-only analytics may calculate recent recognition share from the same ledger, but those",
+    "results are stdout-only analysis and are not public derived ledger outputs.",
+    "",
+    "The MVP keeps one canonical ledger file.",
+    "",
+    "If ledger size or merge conflicts become a real operational problem, the accepted migration path is",
+    "yearly partitions plus an index, as described in",
+    "[`ADR 0022`](../adr/0022-keep-ledger-single-file-with-partition-path.md). Monthly partitions remain",
+    "deferred until repository volume justifies the extra lookup and migration complexity.",
     ""
   ].join("\n");
 }

@@ -400,6 +400,8 @@ Completed deliverables:
   refs, impact/confidence semantics, and delegated model envelopes
 - ledger format guide documents public ledger fields, PR number and URL placement, draft-versus-ledger
   boundaries, no-public-score constraints, and the single-file MVP partition decision
+- release-readiness validates that the ledger format guide keeps PR identity placement, no-public-score
+  constraints, maintainer-only analytics, and single-file-versus-partition guidance aligned
 - product and ADR docs reject public recent score-share, point-share, impact-weight-share, and
   contribution-weight-share metrics while leaving room for future opt-in maintainer analytics
 - docs validation treats the agent-assisted draft guide as a required documentation target

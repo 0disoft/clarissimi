@@ -161,6 +161,23 @@ export const readmeValidationContract = {
   ]
 };
 
+export const ledgerFormatDocumentContract = {
+  path: "docs/cli/ledger-format.md",
+  requiredSnippets: [
+    "Each non-empty line is one approved `clarissimi.assessment/v1` JSON object.",
+    "`source.pullRequestNumber` stores the PR number",
+    "`evidenceRefs[]` stores the human-clickable PR URL",
+    "does not store a separate top-level ledger `id` or `source.url`",
+    "Ledger records must not contain public contributor scores, average scores, ranks, leaderboard",
+    "- `confidence`: confidence in this draft assessment, not a contributor score",
+    "- `impactLevel`: impact of this contribution event, not a person ranking",
+    "Maintainer-only analytics may calculate recent recognition share from the same ledger",
+    "The MVP keeps one canonical ledger file",
+    "yearly partitions plus an index",
+    "Monthly partitions remain"
+  ]
+};
+
 export const ciOperationalDocumentContract = {
   path: "docs/ops/ci.md",
   requiredSnippets: [
@@ -705,6 +722,7 @@ export async function runReleaseReadiness(options = {}) {
   await runReleasePolicyDocumentContractCheck(repoRoot);
   await runProductPositioningContractCheck(repoRoot);
   await runReadmeValidationContractCheck(repoRoot);
+  await runLedgerFormatDocumentContractCheck(repoRoot);
   await runCiOperationalDocumentContractCheck(repoRoot);
   await runOperationalContractDocumentContractCheck(repoRoot);
   await runObservabilityDocumentContractCheck(repoRoot);
@@ -988,6 +1006,18 @@ export function validateProductPositioningContract(textsByPath, contract = produ
 }
 
 export function validateReadmeValidationContract(text, contract = readmeValidationContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateLedgerFormatDocumentContract(text, contract = ledgerFormatDocumentContract) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1479,6 +1509,23 @@ async function runReadmeValidationContractCheck(repoRoot) {
   }
 
   console.log("README validation contract passed");
+}
+
+async function runLedgerFormatDocumentContractCheck(repoRoot) {
+  const ledgerFormatPath = join(repoRoot, ledgerFormatDocumentContract.path);
+  let text;
+  try {
+    text = await readFile(ledgerFormatPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${ledgerFormatDocumentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateLedgerFormatDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`ledger format document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("ledger format document contract passed");
 }
 
 async function runCiOperationalDocumentContractCheck(repoRoot) {

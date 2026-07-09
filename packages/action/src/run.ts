@@ -15,8 +15,11 @@ import {
   type ContributionDraftProvider
 } from "@clarissimi/providers";
 import {
+  isConfigProvider,
+  isConfigProviderThinking,
   isApprovalStatus,
   type ApprovalStatus,
+  type ConfigProviderThinking,
   type ContributionAssessment
 } from "@clarissimi/schemas";
 
@@ -443,6 +446,9 @@ function resolveActionProvider(
   runtime: ActionEnvironmentRuntime
 ): ContributionDraftProvider {
   const providerId = readEnvInput(env.INPUT_PROVIDER) ?? "fake";
+  if (!isConfigProvider(providerId)) {
+    throw new ActionUsageError(`Unsupported provider: ${providerId}.`);
+  }
 
   if (providerId === "fake") {
     return createFakeContributionDraftProvider();
@@ -462,12 +468,12 @@ function resolveActionProvider(
   throw new ActionUsageError(`Unsupported provider: ${providerId}.`);
 }
 
-function parseProviderThinking(value: string | undefined): "disabled" | undefined {
+function parseProviderThinking(value: string | undefined): ConfigProviderThinking | undefined {
   if (value === undefined) {
     return undefined;
   }
 
-  if (value !== "disabled") {
+  if (!isConfigProviderThinking(value)) {
     throw new ActionUsageError("INPUT_PROVIDER_THINKING supports only disabled.");
   }
 

@@ -23,7 +23,13 @@ import {
   createOpenAiCompatibleContributionDraftProvider,
   type ContributionDraftProvider
 } from "@clarissimi/providers";
-import { validateContributionAssessment, type ValidationIssue } from "@clarissimi/schemas";
+import {
+  isConfigProvider,
+  isConfigProviderThinking,
+  validateContributionAssessment,
+  type ConfigProviderThinking,
+  type ValidationIssue
+} from "@clarissimi/schemas";
 
 import { CliUsageError, getBooleanFlag, getStringFlag, parseArgs, type ParsedArgs } from "./args.js";
 import { validateConfigFile, type CliConfig } from "./config.js";
@@ -538,6 +544,9 @@ async function resolveRecognitionProvider(
   const configPath = getStringFlag(args, "config");
   const config = existingConfig ?? (await validateConfigFile(io.cwd, configPath)).config;
   const providerId = getStringFlag(args, "provider") ?? config.provider ?? "fake";
+  if (!isConfigProvider(providerId)) {
+    throw new CliUsageError(`Unsupported provider: ${providerId}`);
+  }
 
   if (providerId === "fake") {
     return createFakeContributionDraftProvider();
@@ -586,12 +595,12 @@ function requiredProviderToken(env: NodeJS.ProcessEnv): string {
   return token;
 }
 
-function parseProviderThinking(value: string | undefined): "disabled" | undefined {
+function parseProviderThinking(value: string | undefined): ConfigProviderThinking | undefined {
   if (value === undefined || value.trim().length === 0) {
     return undefined;
   }
 
-  if (value !== "disabled") {
+  if (!isConfigProviderThinking(value)) {
     throw new CliUsageError("OpenAI-compatible provider thinking supports only disabled.");
   }
 

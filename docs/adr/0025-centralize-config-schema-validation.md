@@ -35,6 +35,9 @@ Move shared JSON config value validation into `packages/schemas`.
 - applying CLI flag precedence over config defaults
 - mapping schema validation failures to CLI exit code `2`
 
+CLI flags and GitHub Action inputs that accept the same provider identifiers or provider thinking
+values should reuse the exported schema guards instead of redefining those value sets.
+
 The config schema must not store or validate provider tokens. Tokens stay in process environment,
 local secret stores, or GitHub Actions secrets.
 

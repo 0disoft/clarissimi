@@ -477,6 +477,8 @@ Completed deliverables:
   `ClarissimiConfig`
 - `validateClarissimiConfig` validates config object values without reading files or secrets
 - CLI config loading delegates value validation to `packages/schemas`
+- CLI flags and Action inputs reuse schema guards for provider identifiers and provider thinking
+  values
 - CLI remains responsible for `.clarissimi/config.json`, explicit `--config <path>`, JSON parsing,
   and invalid-config exit behavior
 

@@ -309,6 +309,7 @@ test("release readiness rejects docs validation script drift", () => {
     .replace("\"docs/product/02-spec.md\"", "\"docs/product/spec.md\"")
     .replace("\"docs/product/03-risk-register.md\"", "\"docs/product/risk.md\"")
     .replace("\"docs/cli/configuration.md\"", "\"docs/cli/config.md\"")
+    .replace("\"docs/cli/ledger-format.md\"", "\"docs/cli/ledger.md\"")
     .replace("\"docs/ops/incident-response.md\"", "\"docs/ops/incidents.md\"");
 
   assert.deepEqual(validateDocsValidationScriptContract(text), [
@@ -316,6 +317,7 @@ test("release readiness rejects docs validation script drift", () => {
     "scripts/validate-docs.mjs must include \"docs/product/02-spec.md\".",
     "scripts/validate-docs.mjs must include \"docs/product/03-risk-register.md\".",
     "scripts/validate-docs.mjs must include \"docs/cli/configuration.md\".",
+    "scripts/validate-docs.mjs must include \"docs/cli/ledger-format.md\".",
     "scripts/validate-docs.mjs must include \"docs/ops/incident-response.md\"."
   ]);
 });
@@ -1651,6 +1653,7 @@ function createDocsValidationScriptText() {
     "  \"docs/cli/README.md\",",
     "  \"docs/cli/agent-assisted-drafts.md\",",
     "  \"docs/cli/configuration.md\",",
+    "  \"docs/cli/ledger-format.md\",",
     "  \"docs/cli/output-and-exit-codes.md\",",
     "  \"docs/ops/disaster-recovery.md\",",
     "  \"docs/ops/incident-response.md\",",

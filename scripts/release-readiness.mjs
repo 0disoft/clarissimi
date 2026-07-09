@@ -189,6 +189,7 @@ export const docsValidationScriptContract = {
     "\"docs/cli/README.md\"",
     "\"docs/cli/agent-assisted-drafts.md\"",
     "\"docs/cli/configuration.md\"",
+    "\"docs/cli/ledger-format.md\"",
     "\"docs/cli/output-and-exit-codes.md\"",
     "\"docs/ops/disaster-recovery.md\"",
     "\"docs/ops/incident-response.md\"",

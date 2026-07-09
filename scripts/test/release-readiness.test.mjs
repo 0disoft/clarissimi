@@ -32,6 +32,7 @@ import {
   validateProductPositioningContract,
   validateReadmeValidationContract,
   validateReleasePolicyDocumentContract,
+  validateRootPackageManager,
   validateRootTsconfigReferences,
   validateRollbackProcedureContract,
   validateSmokePackCandidateContract,
@@ -124,6 +125,24 @@ test("release readiness rejects missing package and script test globs", () => {
   assert.deepEqual(issues, [
     "package.json scripts.test must include packages/action/test/*.test.mjs.",
     "package.json scripts.test must include scripts/test/*.test.mjs."
+  ]);
+});
+
+test("release readiness accepts the root package manager contract", () => {
+  assert.deepEqual(validateRootPackageManager(createRootPackageManagerPackageJson()), []);
+});
+
+test("release readiness rejects root package manager drift", () => {
+  assert.deepEqual(validateRootPackageManager({ packageManager: "pnpm@latest" }), [
+    "package.json packageManager must remain pnpm@11.7.0."
+  ]);
+
+  assert.deepEqual(validateRootPackageManager({ packageManager: "npm@11.7.0" }), [
+    "package.json packageManager must remain pnpm@11.7.0."
+  ]);
+
+  assert.deepEqual(validateRootPackageManager({}), [
+    "package.json packageManager must remain pnpm@11.7.0."
   ]);
 });
 
@@ -1295,6 +1314,12 @@ function createBlockedReleasePackageJson() {
   return {
     private: packageReleasePolicy.private,
     version: packageReleasePolicy.version
+  };
+}
+
+function createRootPackageManagerPackageJson() {
+  return {
+    packageManager: "pnpm@11.7.0"
   };
 }
 

@@ -82,6 +82,11 @@ export const packageReleasePolicy = {
   version: "0.0.0"
 };
 
+export const rootPackageManagerContract = {
+  path: "package.json",
+  packageManager: "pnpm@11.7.0"
+};
+
 export const releasePolicyDocumentContract = {
   path: "docs/ops/release.md",
   requiredSnippets: [
@@ -825,6 +830,7 @@ export async function runReleaseReadiness(options = {}) {
   });
 
   await runPackageScriptRegistrationCheck(repoRoot);
+  await runRootPackageManagerContractCheck(repoRoot);
   await runSmokePackCandidateContractCheck(repoRoot);
   await runWorkspaceContractCheck(repoRoot);
   await runPackageReleasePolicyCheck(repoRoot);
@@ -1605,6 +1611,23 @@ async function runPackageScriptRegistrationCheck(repoRoot) {
   console.log("package script registration passed");
 }
 
+async function runRootPackageManagerContractCheck(repoRoot) {
+  const packageJsonPath = join(repoRoot, rootPackageManagerContract.path);
+  let packageJson;
+  try {
+    packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
+  } catch (error) {
+    throw new Error(`${rootPackageManagerContract.path} is not parseable JSON: ${error.message}`);
+  }
+
+  const issues = validateRootPackageManager(packageJson);
+  if (issues.length > 0) {
+    throw new Error(`root package manager contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("root package manager contract passed");
+}
+
 async function runPackageReleasePolicyCheck(repoRoot) {
   const packageJsonPath = join(repoRoot, "package.json");
   let packageJson;
@@ -2152,6 +2175,16 @@ export function validatePackageScriptRegistration(packageJson) {
     if (!testScript.includes(glob)) {
       issues.push(`package.json scripts.test must include ${glob}.`);
     }
+  }
+
+  return issues;
+}
+
+export function validateRootPackageManager(packageJson, contract = rootPackageManagerContract) {
+  const issues = [];
+
+  if (packageJson?.packageManager !== contract.packageManager) {
+    issues.push(`${contract.path} packageManager must remain ${contract.packageManager}.`);
   }
 
   return issues;

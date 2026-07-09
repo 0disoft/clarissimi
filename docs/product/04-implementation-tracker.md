@@ -374,6 +374,8 @@ Completed deliverables:
 - release-readiness verifies that package test globs still include package and script test suites
 - release-readiness verifies that `pnpm-workspace.yaml` keeps the `packages/*` workspace glob and
   that workspace package names stay aligned with their `packages/<name>` directories
+- release-readiness verifies that the root `packageManager` remains pinned to the package manager
+  version used by hosted CI through Corepack
 - release-readiness verifies that root and workspace package manifests remain private at `0.0.0`
   while public package publication and versioned Action tags are blocked
 - release-readiness verifies that `docs/ops/release.md` keeps public package publication,

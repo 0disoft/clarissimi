@@ -17,6 +17,7 @@ import {
   validateDogfoodWorkflowContract,
   validateHostedLiveProviderWorkflowContract,
   validateObservabilityDocumentContract,
+  validateOpsValidationFooterContract,
   validateOperationalContractDocumentContract,
   validatePackageOwnershipContract,
   validatePackageReleasePolicy,
@@ -366,6 +367,24 @@ test("release readiness rejects backup and restore document drift", () => {
   ]);
 });
 
+test("release readiness accepts ops validation footer contracts", () => {
+  assert.deepEqual(validateOpsValidationFooterContract(createOpsValidationFooterTexts()), []);
+});
+
+test("release readiness rejects ops validation footer drift", () => {
+  const texts = createOpsValidationFooterTexts();
+  texts["docs/ops/incident-response.md"] = texts["docs/ops/incident-response.md"].replace(
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
+    "- Required validation names: `docs`, `smoke`, `check`, `contract`"
+  );
+  delete texts["docs/ops/rollback.md"];
+
+  assert.deepEqual(validateOpsValidationFooterContract(texts), [
+    "docs/ops/incident-response.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`.",
+    "docs/ops/rollback.md must be readable for ops validation footer contract."
+  ]);
+});
+
 test("release readiness accepts workspace contract and package manifest identity", () => {
   assert.deepEqual(validateWorkspaceContract('packages:\n  - "packages/*"\n'), []);
   assert.deepEqual(
@@ -675,12 +694,16 @@ test("release readiness accepts rollback procedure coverage", () => {
 
 test("release readiness rejects missing rollback procedure coverage", () => {
   const text = createRollbackProcedureText()
+    .replace("`pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`, `pnpm run smoke`,", "`pnpm run docs`,")
+    .replace("`pnpm run check`, `pnpm run contract`, `actionlint`, `ssealed doctor . --json`, YAML parsing,", "`pnpm run check`,")
     .replace("Delete the temporary staging directory.", "Clean up temporary files.")
     .replace("Close the proposal pull request and delete the proposal branch.", "Resolve the proposal.")
     .replace("Revert the recognition pull request", "Undo the recognition change")
     .replace("No database rollback exists in the MVP.", "Database rollback is TBD.");
 
   assert.deepEqual(validateRollbackProcedureContract(text), [
+    "docs/ops/rollback.md must include `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`, `pnpm run smoke`,.",
+    "docs/ops/rollback.md must include `pnpm run check`, `pnpm run contract`, `actionlint`, `ssealed doctor . --json`, YAML parsing,.",
     "docs/ops/rollback.md must include Delete the temporary staging directory..",
     "docs/ops/rollback.md must include Close the proposal pull request and delete the proposal branch..",
     "docs/ops/rollback.md must include Revert the recognition pull request.",
@@ -1195,6 +1218,22 @@ function createBackupRestoreDocumentText() {
   ].join("\n");
 }
 
+function createOpsValidationFooterTexts() {
+  const footer = [
+    "## Validation",
+    "",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
+    ""
+  ].join("\n");
+
+  return {
+    "docs/ops/config-and-env.md": footer,
+    "docs/ops/disaster-recovery.md": footer,
+    "docs/ops/incident-response.md": footer,
+    "docs/ops/rollback.md": footer
+  };
+}
+
 function createWorkspacePackageManifest(packageDir = "schemas") {
   return {
     main: "./dist/index.js",
@@ -1273,6 +1312,9 @@ function createReleaseEvidenceText() {
 function createRollbackProcedureText() {
   return [
     "# Rollback",
+    "",
+    "`pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`, `pnpm run smoke`,",
+    "`pnpm run check`, `pnpm run contract`, `actionlint`, `ssealed doctor . --json`, YAML parsing,",
     "",
     "| State | Rollback action |",
     "| --- | --- |",

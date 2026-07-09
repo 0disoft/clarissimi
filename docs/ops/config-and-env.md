@@ -38,7 +38,7 @@ Current implementation status:
 
 ## Validation
 
-- Required validation names: `docs`, `smoke`, `check`, `contract`
+- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
 - Current hosted live-provider evidence: workflow run `29018826925` passed on

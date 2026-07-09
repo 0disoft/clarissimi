@@ -205,6 +205,18 @@ export const backupRestoreDocumentContract = {
   ]
 };
 
+export const opsValidationFooterContract = {
+  documents: [
+    "docs/ops/config-and-env.md",
+    "docs/ops/disaster-recovery.md",
+    "docs/ops/incident-response.md",
+    "docs/ops/rollback.md"
+  ],
+  requiredSnippets: [
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"
+  ]
+};
+
 export const packageOwnershipContract = {
   path: "docs/monorepo/package-ownership.md"
 };
@@ -385,6 +397,8 @@ export const dryRunDogfoodEvidenceContract = {
 export const rollbackProcedureContract = {
   path: "docs/ops/rollback.md",
   requiredSnippets: [
+    "`pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`, `pnpm run smoke`,",
+    "`pnpm run check`, `pnpm run contract`, `actionlint`, `ssealed doctor . --json`, YAML parsing,",
     "Delete the temporary staging directory.",
     "git branch --delete clarissimi/recognition/<source-kind>-<source-id>",
     "git push origin --delete clarissimi/recognition/<source-kind>-<source-id>",
@@ -642,6 +656,7 @@ export async function runReleaseReadiness(options = {}) {
   await runServiceLevelsDocumentContractCheck(repoRoot);
   await runSecretsDocumentContractCheck(repoRoot);
   await runBackupRestoreDocumentContractCheck(repoRoot);
+  await runOpsValidationFooterContractCheck(repoRoot);
   await runTsconfigBuildGraphCheck(repoRoot);
   await runPackageOwnershipContractCheck(repoRoot);
   await runDryRunDogfoodEvidenceCheck(repoRoot);
@@ -981,6 +996,26 @@ export function validateBackupRestoreDocumentContract(text, contract = backupRes
   for (const snippet of contract.requiredSnippets) {
     if (!text.includes(snippet)) {
       issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateOpsValidationFooterContract(textsByPath, contract = opsValidationFooterContract) {
+  const issues = [];
+
+  for (const documentPath of contract.documents) {
+    const text = textsByPath[documentPath];
+    if (typeof text !== "string") {
+      issues.push(`${documentPath} must be readable for ops validation footer contract.`);
+      continue;
+    }
+
+    for (const snippet of contract.requiredSnippets) {
+      if (!text.includes(snippet)) {
+        issues.push(`${documentPath} must include ${snippet}.`);
+      }
     }
   }
 
@@ -1414,6 +1449,25 @@ async function runBackupRestoreDocumentContractCheck(repoRoot) {
   }
 
   console.log("backup and restore document contract passed");
+}
+
+async function runOpsValidationFooterContractCheck(repoRoot) {
+  const textsByPath = {};
+
+  for (const documentPath of opsValidationFooterContract.documents) {
+    try {
+      textsByPath[documentPath] = await readFile(join(repoRoot, documentPath), "utf8");
+    } catch (error) {
+      throw new Error(`Unable to read ${documentPath}: ${error.message}`);
+    }
+  }
+
+  const issues = validateOpsValidationFooterContract(textsByPath);
+  if (issues.length > 0) {
+    throw new Error(`ops validation footer contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("ops validation footer contract passed");
 }
 
 async function runSmokePackCandidateContractCheck(repoRoot) {

@@ -19,8 +19,9 @@ Stop the current release, dogfood run, or source-only merge when any of these ha
   excerpts.
 - The proposal branch mutates the default branch or cannot prove its base commit.
 - The Action uses broader permissions than `docs/github-action/permissions.md` allows.
-- `pnpm run docs`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, `actionlint`,
-  `ssealed doctor . --json`, YAML parsing, secret scan, or repository hygiene checks fail.
+- `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`, `pnpm run smoke`,
+  `pnpm run check`, `pnpm run contract`, `actionlint`, `ssealed doctor . --json`, YAML parsing,
+  secret scan, or repository hygiene checks fail.
 
 Choose the narrowest rollback path:
 
@@ -90,7 +91,7 @@ Resume the release or dogfood run only after:
 
 ## Validation
 
-- Required validation names: `docs`, `smoke`, `check`, `contract`
+- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
 - Current hosted live-provider evidence: workflow run `29018826925` passed on

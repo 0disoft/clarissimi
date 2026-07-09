@@ -365,6 +365,30 @@ test("analytics recent-share rejects invalid as-of values as usage errors", asyn
   });
 });
 
+test("analytics recent-share rejects invalid window-day values as usage errors", async () => {
+  await withTempDir(async (dir) => {
+    const ledger = join(dir, "ledger.jsonl");
+    await writeFile(ledger, `${JSON.stringify(assessment())}\n`, "utf8");
+
+    const result = await run(
+      [
+        "analytics",
+        "recent-share",
+        "--ledger",
+        ledger,
+        "--window-days",
+        "0",
+        "--json"
+      ],
+      dir
+    );
+
+    assert.equal(result.exitCode, 1);
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, /--window-days must be a positive integer/);
+  });
+});
+
 test("rebuild rejects duplicate ledger records before writing derived outputs", async () => {
   await withTempDir(async (dir) => {
     const ledgerDir = join(dir, ".clarissimi");

@@ -426,6 +426,9 @@ Completed deliverables:
   single-file-versus-partition guidance aligned
 - release-readiness validates that the CLI command contract keeps help, config, provider, draft
   staging, approval, import, analytics, argument, exit-code, and write-boundary guidance aligned
+- release-readiness validates that the agent-assisted draft guide keeps the already-running-agent
+  path, no-provider-key boundary, approval enforcement, no-public-score guidance, draft review
+  commands, and no-public-provenance guidance aligned
 - product and ADR docs reject public recent score-share, point-share, impact-weight-share, and
   contribution-weight-share metrics while leaving room for future opt-in maintainer analytics
 - docs validation treats the agent-assisted draft guide as a required documentation target

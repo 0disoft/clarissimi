@@ -8,6 +8,7 @@ import {
   packageReleasePolicy,
   requiredPackageScripts,
   requiredTestGlobs,
+  validateAgentAssistedDraftsDocumentContract,
   validateActionContractDocumentContract,
   validateActionInputsOutputsDocumentContract,
   validateActionManifestContract,
@@ -436,6 +437,33 @@ test("release readiness rejects CLI configuration document drift", () => {
     "docs/cli/configuration.md must include `provider`: `fake` or `openai-compatible`.",
     "docs/cli/configuration.md must include Provider API keys and GitHub tokens must not be stored in config files..",
     "docs/cli/configuration.md must include The CLI reads `CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.."
+  ]);
+});
+
+test("release readiness accepts the agent-assisted drafts document contract", () => {
+  assert.deepEqual(validateAgentAssistedDraftsDocumentContract(createAgentAssistedDraftsDocumentText()), []);
+});
+
+test("release readiness rejects agent-assisted drafts document drift", () => {
+  const text = createAgentAssistedDraftsDocumentText()
+    .replace("already-running AI coding agent", "external automation")
+    .replace("Clarissimi a provider API key.", "Clarissimi a configured provider key.")
+    .replace(
+      "responsible for validating the resulting JSON, enforcing approval status, and rendering public",
+      "Clarissimi accepts the result"
+    )
+    .replace("Public outputs must not include total score, average score, rank, leaderboard", "Public outputs may include ranking")
+    .replace("`import-draft` appends only approved or auto-approved records to `.clarissimi/contributions.jsonl`.", "`import-draft` appends records.")
+    .replace("The public ledger does not store AI agent, model, prompt, token, or", "The public ledger stores model data.");
+
+  assert.deepEqual(validateAgentAssistedDraftsDocumentContract(text), [
+    "docs/cli/agent-assisted-drafts.md must include already-running AI coding agent.",
+    "docs/cli/agent-assisted-drafts.md must include Clarissimi a provider API key..",
+    "docs/cli/agent-assisted-drafts.md must include responsible for validating the resulting JSON.",
+    "docs/cli/agent-assisted-drafts.md must include enforcing approval status, and rendering public.",
+    "docs/cli/agent-assisted-drafts.md must include Public outputs must not include total score, average score, rank, leaderboard.",
+    "docs/cli/agent-assisted-drafts.md must include `import-draft` appends only approved or auto-approved records to `.clarissimi/contributions.jsonl`..",
+    "docs/cli/agent-assisted-drafts.md must include The public ledger does not store AI agent, model, prompt, token, or."
   ]);
 });
 
@@ -1544,6 +1572,7 @@ function createDocsValidationScriptText() {
     "  \"docs/product/02-spec.md\",",
     "  \"docs/product/03-risk-register.md\",",
     "  \"docs/cli/README.md\",",
+    "  \"docs/cli/agent-assisted-drafts.md\",",
     "  \"docs/cli/configuration.md\",",
     "  \"docs/cli/output-and-exit-codes.md\",",
     "  \"docs/product/04-implementation-tracker.md\",",
@@ -1725,6 +1754,46 @@ function createCliConfigurationDocumentText() {
     "",
     "- Config examples include fake tokens or real-looking secrets.",
     "- Config bypasses redaction before provider calls.",
+    ""
+  ].join("\n");
+}
+
+function createAgentAssistedDraftsDocumentText() {
+  return [
+    "Use this guide when a maintainer asks an already-running AI coding agent, such as Codex, Claude",
+    "Code, Grok, or OpenCode, to inspect a pull request and produce a Clarissimi draft without giving",
+    "Clarissimi a provider API key.",
+    "",
+    "The agent is responsible for reading the pull request evidence in conversation. Clarissimi is",
+    "responsible for validating the resulting JSON, enforcing approval status, and rendering public",
+    "recognition files.",
+    "",
+    "For the current MVP, agent-authored drafts use `clarissimi.assessment/v1` and represent a merged",
+    "pull request source.",
+    "",
+    "- `source.pullRequestNumber` stores the pull request number used for duplicate detection.",
+    "- `impactLevel` is an internal recognition weight of `low`, `medium`, or `high`; it is not a public",
+    "  contributor score.",
+    "- `confidence` is provider or agent confidence from `0` to `1`; it is not averaged into a public",
+    "  contributor score.",
+    "- Public outputs must not include total score, average score, rank, leaderboard, or contributor tier",
+    "  fields.",
+    "- Raw evidence excerpts may be useful while drafting, but public ledger rendering strips",
+    "  `evidenceRefs[].excerpt`.",
+    "",
+    "node packages/cli/dist/bin/clarissimi.js stage-draft --draft agent-draft.json --json",
+    "node packages/cli/dist/bin/clarissimi.js approve-draft --draft .clarissimi/drafts/example-project-merged_pull_request-42.json --json",
+    "node packages/cli/dist/bin/clarissimi.js import-draft --draft .clarissimi/drafts/example-project-merged_pull_request-42.json --out-dir . --json",
+    "",
+    "`import-draft` appends only approved or auto-approved records to `.clarissimi/contributions.jsonl`.",
+    "Derived files such as `.clarissimi/contributors.json`, `CONTRIBUTORS.md`, and static JSON are",
+    "rebuilt from the ledger.",
+    "",
+    "clarissimi.draft-envelope/v1",
+    "",
+    "The envelope is accepted for interoperability, but Clarissimi records only the validated",
+    "`assessment` in public outputs. The public ledger does not store AI agent, model, prompt, token, or",
+    "provider provenance.",
     ""
   ].join("\n");
 }

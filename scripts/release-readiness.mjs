@@ -179,6 +179,7 @@ export const docsValidationScriptContract = {
     "\"docs/product/02-spec.md\"",
     "\"docs/product/03-risk-register.md\"",
     "\"docs/cli/README.md\"",
+    "\"docs/cli/agent-assisted-drafts.md\"",
     "\"docs/cli/configuration.md\"",
     "\"docs/cli/output-and-exit-codes.md\"",
     "\"docs/product/04-implementation-tracker.md\""
@@ -298,6 +299,32 @@ export const cliConfigurationDocumentContract = {
     "The CLI reads `CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.",
     "Config examples include fake tokens or real-looking secrets.",
     "Config bypasses redaction before provider calls."
+  ]
+};
+
+export const agentAssistedDraftsDocumentContract = {
+  path: "docs/cli/agent-assisted-drafts.md",
+  requiredSnippets: [
+    "already-running AI coding agent",
+    "Clarissimi a provider API key.",
+    "The agent is responsible for reading the pull request evidence in conversation.",
+    "responsible for validating the resulting JSON",
+    "enforcing approval status, and rendering public",
+    "agent-authored drafts use `clarissimi.assessment/v1` and represent a merged",
+    "`source.pullRequestNumber` stores the pull request number",
+    "`impactLevel` is an internal recognition weight",
+    "`confidence` is provider or agent confidence",
+    "Public outputs must not include total score, average score, rank, leaderboard",
+    "Raw evidence excerpts may be useful while drafting, but public ledger rendering strips",
+    "stage-draft --draft agent-draft.json --json",
+    "approve-draft --draft .clarissimi/drafts/example-project-merged_pull_request-42.json --json",
+    "import-draft --draft .clarissimi/drafts/example-project-merged_pull_request-42.json --out-dir . --json",
+    "`import-draft` appends only approved or auto-approved records to `.clarissimi/contributions.jsonl`.",
+    "Derived files such as `.clarissimi/contributors.json`, `CONTRIBUTORS.md`, and static JSON are",
+    "clarissimi.draft-envelope/v1",
+    "records only the validated",
+    "The public ledger does not store AI agent, model, prompt, token, or",
+    "provider provenance."
   ]
 };
 
@@ -952,6 +979,7 @@ export async function runReleaseReadiness(options = {}) {
   await runCliCommandContractCheck(repoRoot);
   await runCliOutputExitCodesDocumentContractCheck(repoRoot);
   await runCliConfigurationDocumentContractCheck(repoRoot);
+  await runAgentAssistedDraftsDocumentContractCheck(repoRoot);
   await runCiOperationalDocumentContractCheck(repoRoot);
   await runOperationalContractDocumentContractCheck(repoRoot);
   await runObservabilityDocumentContractCheck(repoRoot);
@@ -1318,6 +1346,21 @@ export function validateCliOutputExitCodesDocumentContract(
 export function validateCliConfigurationDocumentContract(
   text,
   contract = cliConfigurationDocumentContract
+) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateAgentAssistedDraftsDocumentContract(
+  text,
+  contract = agentAssistedDraftsDocumentContract
 ) {
   const issues = [];
 
@@ -1965,6 +2008,23 @@ async function runCliConfigurationDocumentContractCheck(repoRoot) {
   }
 
   console.log("CLI configuration document contract passed");
+}
+
+async function runAgentAssistedDraftsDocumentContractCheck(repoRoot) {
+  const agentAssistedDraftsPath = join(repoRoot, agentAssistedDraftsDocumentContract.path);
+  let text;
+  try {
+    text = await readFile(agentAssistedDraftsPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${agentAssistedDraftsDocumentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateAgentAssistedDraftsDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`agent-assisted drafts document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("agent-assisted drafts document contract passed");
 }
 
 async function runCiOperationalDocumentContractCheck(repoRoot) {

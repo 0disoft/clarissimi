@@ -23,8 +23,10 @@ The current local CI parity commands are:
   tool availability, `ssealed doctor`, workflow `actionlint`, YAML parsing, `git diff --check`, and
   high-risk secret patterns. It also verifies that the root Action manifest keeps the expected
   inputs, outputs, defaults, secret environment boundary, and runtime commands, and that the hosted
-  CI workflow still runs the required local parity commands with read-only contents permission. It
-  is a maintainer release gate, not a live-provider check.
+  CI workflow still runs the required local parity commands with read-only contents permission.
+  Fixture dogfood workflow contracts are also checked so dry-run stays read-only and propose and
+  stage-draft stay manual, fixture-backed, and output-asserting. It is a maintainer release gate,
+  not a live-provider check.
 - `pnpm run check`: runs typecheck and the package test suite.
 - `pnpm run contract`: runs typecheck and tests as the current contract gate.
 

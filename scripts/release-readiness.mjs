@@ -150,6 +150,63 @@ export const actionManifestContract = {
   ]
 };
 
+export const dogfoodWorkflowContracts = [
+  {
+    path: ".github/workflows/clarissimi-dry-run.yml",
+    requiredSnippets: [
+      "workflow_dispatch:",
+      "contents: read",
+      "mode: dry-run",
+      "github-fixture: fixtures/github-merged-pr-basic.json",
+      "event-path: fixtures/github-pull-request-merged-event.json",
+      "test \"${{ steps.fixture.outputs.mode }}\" = \"dry-run\"",
+      "test \"${{ steps.event.outputs.mode }}\" = \"dry-run\"",
+      "test \"${{ steps.fixture.outputs.input-source }}\" = \"github_fixture\"",
+      "test \"${{ steps.event.outputs.input-source }}\" = \"github_event_path\""
+    ],
+    forbiddenSnippets: [
+      "contents: write",
+      "pull-requests: write"
+    ]
+  },
+  {
+    path: ".github/workflows/clarissimi-propose-fixture.yml",
+    requiredSnippets: [
+      "workflow_dispatch:",
+      "contents: write",
+      "pull-requests: write",
+      "issues: read",
+      "fetch-depth: 0",
+      "mode: propose",
+      "github-fixture: fixtures/github-merged-pr-approved.json",
+      "base-branch: ${{ inputs.base-branch }}",
+      "test \"${{ steps.propose.outputs.proposed-entry-count }}\" = \"1\"",
+      "test \"${{ steps.propose.outputs.mode }}\" = \"propose\"",
+      "test \"${{ steps.propose.outputs.approval-status }}\" = \"approved\"",
+      "test \"${{ steps.propose.outputs.staged-file-count }}\" = \"4\"",
+      "test -n \"${{ steps.propose.outputs.proposal-pull-request-url }}\""
+    ]
+  },
+  {
+    path: ".github/workflows/clarissimi-stage-draft-fixture.yml",
+    requiredSnippets: [
+      "workflow_dispatch:",
+      "contents: write",
+      "pull-requests: write",
+      "issues: read",
+      "fetch-depth: 0",
+      "mode: stage-draft",
+      "github-fixture: fixtures/github-merged-pr-basic.json",
+      "base-branch: ${{ inputs.base-branch }}",
+      "test \"${{ steps.stage.outputs.proposed-entry-count }}\" = \"0\"",
+      "test \"${{ steps.stage.outputs.mode }}\" = \"stage-draft\"",
+      "test \"${{ steps.stage.outputs.approval-status }}\" = \"draft\"",
+      "test \"${{ steps.stage.outputs.staged-file-count }}\" = \"1\"",
+      "test -n \"${{ steps.stage.outputs.proposal-pull-request-url }}\""
+    ]
+  }
+];
+
 export async function runReleaseReadiness(options = {}) {
   const repoRoot = options.repoRoot ?? defaultRepoRoot;
   const workflowDir = join(repoRoot, ".github", "workflows");
@@ -204,6 +261,7 @@ export async function runReleaseReadiness(options = {}) {
 
   await runActionManifestContractCheck(repoRoot);
   await runCiWorkflowContractCheck(repoRoot);
+  await runDogfoodWorkflowContractChecks(repoRoot);
   await runHostedLiveProviderWorkflowContractCheck(repoRoot);
 
   await runCheck({
@@ -418,6 +476,46 @@ export function validateActionManifestContract(text, contract = actionManifestCo
   }
 
   return issues;
+}
+
+export function validateDogfoodWorkflowContract(text, contract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  for (const snippet of contract.forbiddenSnippets ?? []) {
+    if (text.includes(snippet)) {
+      issues.push(`${contract.path} must not include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+async function runDogfoodWorkflowContractChecks(repoRoot) {
+  const issues = [];
+
+  for (const contract of dogfoodWorkflowContracts) {
+    const workflowPath = join(repoRoot, contract.path);
+    let text;
+    try {
+      text = await readFile(workflowPath, "utf8");
+    } catch (error) {
+      throw new Error(`Unable to read ${contract.path}: ${error.message}`);
+    }
+
+    issues.push(...validateDogfoodWorkflowContract(text, contract));
+  }
+
+  if (issues.length > 0) {
+    throw new Error(`dogfood workflow contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("dogfood workflow contract passed");
 }
 
 async function runActionManifestContractCheck(repoRoot) {

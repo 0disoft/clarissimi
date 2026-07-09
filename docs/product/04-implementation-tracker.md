@@ -288,6 +288,8 @@ Completed deliverables:
   runtime command contract before reporting static release gates as passed
 - release-readiness validates the hosted CI workflow trigger, read-only permission, and required
   command contract before reporting static release gates as passed
+- release-readiness validates the fixture dogfood workflow permission, mode, fixture, and output
+  assertion contracts before reporting static release gates as passed
 - smoke validation exercises the built CLI and Action bins without live provider credentials
 - live-provider smoke command is available as a release-only credentialed check and passed locally
   on `2026-07-09` with maintainer-owned credentials and

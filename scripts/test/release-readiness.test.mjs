@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  dogfoodWorkflowContracts,
   findHighRiskSecretLines,
   requiredPackageScripts,
   requiredTestGlobs,
   validateActionManifestContract,
   validateCiWorkflowContract,
+  validateDogfoodWorkflowContract,
   validateHostedLiveProviderWorkflowContract,
   validatePackageScriptRegistration
 } from "../release-readiness.mjs";
@@ -167,6 +169,41 @@ test("release readiness rejects CI workflow trigger and permission drift", () =>
   ]);
 });
 
+test("release readiness accepts dogfood workflow contracts", () => {
+  assert.deepEqual(validateDogfoodWorkflowContract(createDryRunWorkflowText(), dogfoodWorkflowContracts[0]), []);
+  assert.deepEqual(validateDogfoodWorkflowContract(createProposeWorkflowText(), dogfoodWorkflowContracts[1]), []);
+  assert.deepEqual(validateDogfoodWorkflowContract(createStageDraftWorkflowText(), dogfoodWorkflowContracts[2]), []);
+});
+
+test("release readiness rejects dry-run dogfood write permission drift", () => {
+  const text = createDryRunWorkflowText().replace("contents: read", "contents: write");
+
+  assert.deepEqual(validateDogfoodWorkflowContract(text, dogfoodWorkflowContracts[0]), [
+    ".github/workflows/clarissimi-dry-run.yml must include contents: read.",
+    ".github/workflows/clarissimi-dry-run.yml must not include contents: write."
+  ]);
+});
+
+test("release readiness rejects propose and stage-draft dogfood drift", () => {
+  const proposeText = createProposeWorkflowText()
+    .replace("mode: propose", "mode: dry-run")
+    .replace("github-fixture: fixtures/github-merged-pr-approved.json", "github-fixture: fixtures/github-merged-pr-basic.json");
+
+  assert.deepEqual(validateDogfoodWorkflowContract(proposeText, dogfoodWorkflowContracts[1]), [
+    ".github/workflows/clarissimi-propose-fixture.yml must include mode: propose.",
+    ".github/workflows/clarissimi-propose-fixture.yml must include github-fixture: fixtures/github-merged-pr-approved.json."
+  ]);
+
+  const stageDraftText = createStageDraftWorkflowText()
+    .replace("mode: stage-draft", "mode: propose")
+    .replace("test \"${{ steps.stage.outputs.staged-file-count }}\" = \"1\"", "test \"${{ steps.stage.outputs.staged-file-count }}\" = \"4\"");
+
+  assert.deepEqual(validateDogfoodWorkflowContract(stageDraftText, dogfoodWorkflowContracts[2]), [
+    ".github/workflows/clarissimi-stage-draft-fixture.yml must include mode: stage-draft.",
+    ".github/workflows/clarissimi-stage-draft-fixture.yml must include test \"${{ steps.stage.outputs.staged-file-count }}\" = \"1\"."
+  ]);
+});
+
 test("release readiness accepts the hosted live provider workflow contract", () => {
   assert.deepEqual(validateHostedLiveProviderWorkflowContract(createHostedWorkflowText()), []);
 });
@@ -310,6 +347,82 @@ function createCiWorkflowText() {
     "      - run: pnpm run smoke",
     "      - run: pnpm run check",
     "      - run: pnpm run contract"
+  ].join("\n");
+}
+
+function createDryRunWorkflowText() {
+  return [
+    "on:",
+    "  workflow_dispatch:",
+    "permissions:",
+    "  contents: read",
+    "steps:",
+    "  - uses: ./",
+    "    with:",
+    "      mode: dry-run",
+    "      github-fixture: fixtures/github-merged-pr-basic.json",
+    "  - run: |",
+    "      test \"${{ steps.fixture.outputs.mode }}\" = \"dry-run\"",
+    "      test \"${{ steps.fixture.outputs.input-source }}\" = \"github_fixture\"",
+    "  - uses: ./",
+    "    with:",
+    "      mode: dry-run",
+    "      event-path: fixtures/github-pull-request-merged-event.json",
+    "  - run: |",
+    "      test \"${{ steps.event.outputs.mode }}\" = \"dry-run\"",
+    "      test \"${{ steps.event.outputs.input-source }}\" = \"github_event_path\""
+  ].join("\n");
+}
+
+function createProposeWorkflowText() {
+  return [
+    "on:",
+    "  workflow_dispatch:",
+    "permissions:",
+    "  contents: write",
+    "  pull-requests: write",
+    "  issues: read",
+    "steps:",
+    "  - uses: actions/checkout@v7",
+    "    with:",
+    "      fetch-depth: 0",
+    "  - uses: ./",
+    "    with:",
+    "      mode: propose",
+    "      github-fixture: fixtures/github-merged-pr-approved.json",
+    "      base-branch: ${{ inputs.base-branch }}",
+    "  - run: |",
+    "      test \"${{ steps.propose.outputs.proposed-entry-count }}\" = \"1\"",
+    "      test \"${{ steps.propose.outputs.mode }}\" = \"propose\"",
+    "      test \"${{ steps.propose.outputs.approval-status }}\" = \"approved\"",
+    "      test \"${{ steps.propose.outputs.staged-file-count }}\" = \"4\"",
+    "      test -n \"${{ steps.propose.outputs.proposal-pull-request-url }}\""
+  ].join("\n");
+}
+
+function createStageDraftWorkflowText() {
+  return [
+    "on:",
+    "  workflow_dispatch:",
+    "permissions:",
+    "  contents: write",
+    "  pull-requests: write",
+    "  issues: read",
+    "steps:",
+    "  - uses: actions/checkout@v7",
+    "    with:",
+    "      fetch-depth: 0",
+    "  - uses: ./",
+    "    with:",
+    "      mode: stage-draft",
+    "      github-fixture: fixtures/github-merged-pr-basic.json",
+    "      base-branch: ${{ inputs.base-branch }}",
+    "  - run: |",
+    "      test \"${{ steps.stage.outputs.proposed-entry-count }}\" = \"0\"",
+    "      test \"${{ steps.stage.outputs.mode }}\" = \"stage-draft\"",
+    "      test \"${{ steps.stage.outputs.approval-status }}\" = \"draft\"",
+    "      test \"${{ steps.stage.outputs.staged-file-count }}\" = \"1\"",
+    "      test -n \"${{ steps.stage.outputs.proposal-pull-request-url }}\""
   ].join("\n");
 }
 

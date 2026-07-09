@@ -5,6 +5,7 @@ import {
   findHighRiskSecretLines,
   requiredPackageScripts,
   requiredTestGlobs,
+  validateCiWorkflowContract,
   validateHostedLiveProviderWorkflowContract,
   validatePackageScriptRegistration
 } from "../release-readiness.mjs";
@@ -85,6 +86,32 @@ test("release readiness secret scan allows documented secret names without assig
   assert.deepEqual(findHighRiskSecretLines("docs/ops/secrets.md", text), []);
 });
 
+test("release readiness accepts the CI workflow contract", () => {
+  assert.deepEqual(validateCiWorkflowContract(createCiWorkflowText()), []);
+});
+
+test("release readiness rejects CI workflow command drift", () => {
+  const text = createCiWorkflowText()
+    .replace("pnpm run release-readiness", "pnpm run docs")
+    .replace("pnpm run contract", "pnpm run check");
+
+  assert.deepEqual(validateCiWorkflowContract(text), [
+    ".github/workflows/ci.yml must run pnpm run release-readiness.",
+    ".github/workflows/ci.yml must run pnpm run contract."
+  ]);
+});
+
+test("release readiness rejects CI workflow trigger and permission drift", () => {
+  const text = createCiWorkflowText()
+    .replace("pull_request:", "pull-request:")
+    .replace("contents: read", "contents: write");
+
+  assert.deepEqual(validateCiWorkflowContract(text), [
+    ".github/workflows/ci.yml must define pull_request: trigger.",
+    ".github/workflows/ci.yml must set contents: read."
+  ]);
+});
+
 test("release readiness accepts the hosted live provider workflow contract", () => {
   assert.deepEqual(validateHostedLiveProviderWorkflowContract(createHostedWorkflowText()), []);
 });
@@ -124,6 +151,32 @@ function createValidScripts() {
   scripts.contract = "pnpm run typecheck && pnpm run test";
 
   return scripts;
+}
+
+function createCiWorkflowText() {
+  return [
+    "name: CI",
+    "",
+    "on:",
+    "  push:",
+    "    branches:",
+    "      - main",
+    "  pull_request:",
+    "  workflow_dispatch:",
+    "",
+    "permissions:",
+    "  contents: read",
+    "",
+    "jobs:",
+    "  validation:",
+    "    steps:",
+    "      - run: pnpm install --frozen-lockfile",
+    "      - run: pnpm run docs",
+    "      - run: pnpm run release-readiness",
+    "      - run: pnpm run smoke",
+    "      - run: pnpm run check",
+    "      - run: pnpm run contract"
+  ].join("\n");
 }
 
 function createHostedWorkflowText() {

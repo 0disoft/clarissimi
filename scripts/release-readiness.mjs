@@ -75,6 +75,26 @@ export const hostedLiveProviderWorkflowContract = {
   runCommand: "pnpm run live-provider-smoke"
 };
 
+export const ciWorkflowContract = {
+  path: ".github/workflows/ci.yml",
+  requiredTriggers: [
+    "push:",
+    "pull_request:",
+    "workflow_dispatch:"
+  ],
+  requiredPermissions: [
+    "contents: read"
+  ],
+  requiredCommands: [
+    "pnpm install --frozen-lockfile",
+    "pnpm run docs",
+    "pnpm run release-readiness",
+    "pnpm run smoke",
+    "pnpm run check",
+    "pnpm run contract"
+  ]
+};
+
 export async function runReleaseReadiness(options = {}) {
   const repoRoot = options.repoRoot ?? defaultRepoRoot;
   const workflowDir = join(repoRoot, ".github", "workflows");
@@ -127,6 +147,7 @@ export async function runReleaseReadiness(options = {}) {
     });
   }
 
+  await runCiWorkflowContractCheck(repoRoot);
   await runHostedLiveProviderWorkflowContractCheck(repoRoot);
 
   await runCheck({
@@ -262,6 +283,47 @@ export function validateHostedLiveProviderWorkflowContract(text, contract = host
   }
 
   return issues;
+}
+
+export function validateCiWorkflowContract(text, contract = ciWorkflowContract) {
+  const issues = [];
+
+  for (const trigger of contract.requiredTriggers) {
+    if (!text.includes(trigger)) {
+      issues.push(`${contract.path} must define ${trigger} trigger.`);
+    }
+  }
+
+  for (const permission of contract.requiredPermissions) {
+    if (!text.includes(permission)) {
+      issues.push(`${contract.path} must set ${permission}.`);
+    }
+  }
+
+  for (const command of contract.requiredCommands) {
+    if (!text.includes(command)) {
+      issues.push(`${contract.path} must run ${command}.`);
+    }
+  }
+
+  return issues;
+}
+
+async function runCiWorkflowContractCheck(repoRoot) {
+  const workflowPath = join(repoRoot, ciWorkflowContract.path);
+  let text;
+  try {
+    text = await readFile(workflowPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${ciWorkflowContract.path}: ${error.message}`);
+  }
+
+  const issues = validateCiWorkflowContract(text);
+  if (issues.length > 0) {
+    throw new Error(`CI workflow contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("CI workflow contract passed");
 }
 
 async function runHostedLiveProviderWorkflowContractCheck(repoRoot) {

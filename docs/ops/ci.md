@@ -21,7 +21,9 @@ The current local CI parity commands are:
 - `pnpm run release-readiness`: runs non-credentialed release checks for documentation,
   release-critical package script registration, package and script test-glob registration, release
   tool availability, `ssealed doctor`, workflow `actionlint`, YAML parsing, `git diff --check`, and
-  high-risk secret patterns. It is a maintainer release gate, not a live-provider check.
+  high-risk secret patterns. It also verifies that the hosted CI workflow still runs the required
+  local parity commands and uses read-only contents permission. It is a maintainer release gate,
+  not a live-provider check.
 - `pnpm run check`: runs typecheck and the package test suite.
 - `pnpm run contract`: runs typecheck and tests as the current contract gate.
 

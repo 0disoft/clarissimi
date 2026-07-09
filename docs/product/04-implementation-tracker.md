@@ -296,6 +296,9 @@ Completed deliverables:
   exclusion guidance aligned
 - release-readiness validates that the Action contract keeps mode, secret, config, summary,
   propose, stage-draft, output, failure, permission, and review-blocker guidance aligned
+- release-readiness validates that the Action permissions guide keeps least-privilege mode
+  permissions, no `write-all`, no default `pull_request_target`, proposal branch scope, and
+  untrusted fork secret guidance aligned
 - release-readiness validates the hosted CI workflow trigger, read-only permission, and required
   command contract before reporting static release gates as passed
 - release-readiness validates that the CI operational document names the same hosted validation

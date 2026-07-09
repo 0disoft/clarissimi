@@ -355,6 +355,36 @@ export const actionContractDocumentContract = {
   ]
 };
 
+export const actionPermissionsDocumentContract = {
+  path: "docs/github-action/permissions.md",
+  requiredSnippets: [
+    "Clarissimi should request the narrowest permissions required for the selected mode.",
+    "Workflow examples must use explicit `permissions`.",
+    "A workflow must not use `write-all`.",
+    "| `dry-run` | `read` | `read` | `read` | No | No |",
+    "| `propose` | `write` | `write` | `read` | Proposal branch only | Yes |",
+    "| `stage-draft` | `write` | `write` | `read` | Draft proposal branch only | Yes |",
+    "Any permission not listed in a workflow should remain unset",
+    "- `contents: read`",
+    "Dry-run mode should not write recognition files, branches, comments, or pull requests.",
+    "Do not document `pull_request_target`",
+    "- `contents: write`",
+    "- `pull-requests: write`",
+    "- `issues: read`",
+    "The proposal branch name should be deterministic and scoped under",
+    "`clarissimi/recognition/<source-kind>-<source-id>`",
+    "Clarissimi should fail with an actionable diagnostic",
+    "instead of falling back to direct commits or broader credentials.",
+    "Stage-draft mode writes only a sanitized draft inbox file",
+    "`clarissimi/drafts/<source-kind>-<source-id>`",
+    "Commit mode requires explicit configuration and should not be the default.",
+    "Avoid default `pull_request_target` examples.",
+    "Do not checkout or execute untrusted pull request head",
+    "Secrets are exposed to untrusted fork code.",
+    "Permission changes are not reflected in examples and tests."
+  ]
+};
+
 export const opsValidationFooterContract = {
   documents: [
     "docs/ops/config-and-env.md",
@@ -849,6 +879,7 @@ export async function runReleaseReadiness(options = {}) {
   await runBackupRestoreDocumentContractCheck(repoRoot);
   await runActionInputsOutputsDocumentContractCheck(repoRoot);
   await runActionContractDocumentContractCheck(repoRoot);
+  await runActionPermissionsDocumentContractCheck(repoRoot);
   await runOpsValidationFooterContractCheck(repoRoot);
   await runEngineeringValidationDocumentContractCheck(repoRoot);
   await runMonorepoValidationDocumentContractCheck(repoRoot);
@@ -1261,6 +1292,18 @@ export function validateActionInputsOutputsDocumentContract(text, contract = act
 }
 
 export function validateActionContractDocumentContract(text, contract = actionContractDocumentContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateActionPermissionsDocumentContract(text, contract = actionPermissionsDocumentContract) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1884,6 +1927,23 @@ async function runActionContractDocumentContractCheck(repoRoot) {
   }
 
   console.log("Action contract document contract passed");
+}
+
+async function runActionPermissionsDocumentContractCheck(repoRoot) {
+  const actionPermissionsPath = join(repoRoot, actionPermissionsDocumentContract.path);
+  let text;
+  try {
+    text = await readFile(actionPermissionsPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${actionPermissionsDocumentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateActionPermissionsDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`Action permissions document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("Action permissions document contract passed");
 }
 
 async function runOpsValidationFooterContractCheck(repoRoot) {

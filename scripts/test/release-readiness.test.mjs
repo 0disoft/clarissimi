@@ -11,6 +11,7 @@ import {
   validateActionContractDocumentContract,
   validateActionInputsOutputsDocumentContract,
   validateActionManifestContract,
+  validateActionPermissionsDocumentContract,
   validateBackupRestoreDocumentContract,
   validateCiOperationalDocumentContract,
   validateCliCommandContract,
@@ -564,6 +565,37 @@ test("release readiness rejects Action contract document drift", () => {
     "docs/github-action/action-contract.md must include - Missing input source: exit `1`, empty stdout, usage message on stderr..",
     "docs/github-action/action-contract.md must include Dry-run mode should need read permissions only..",
     "docs/github-action/action-contract.md must include - Provider secrets are modeled as plain action inputs.."
+  ]);
+});
+
+test("release readiness accepts the Action permissions document contract", () => {
+  assert.deepEqual(validateActionPermissionsDocumentContract(createActionPermissionsDocumentText()), []);
+});
+
+test("release readiness rejects Action permissions document drift", () => {
+  const text = createActionPermissionsDocumentText()
+    .replace("Clarissimi should request the narrowest permissions required for the selected mode.", "Clarissimi can request broad permissions.")
+    .replace("A workflow must not use `write-all`.", "A workflow may use `write-all`.")
+    .replace("| `dry-run` | `read` | `read` | `read` | No | No |", "| `dry-run` | `write` | `write` | `read` | Yes | Yes |")
+    .replace("Dry-run mode should not write recognition files, branches, comments, or pull requests.", "Dry-run mode can update branches.")
+    .replace("Do not document `pull_request_target`", "Document `pull_request_target`")
+    .replace("instead of falling back to direct commits or broader credentials.", "or fall back to direct commits.")
+    .replace("Stage-draft mode writes only a sanitized draft inbox file", "Stage-draft mode writes public recognition files")
+    .replace("Commit mode requires explicit configuration and should not be the default.", "Commit mode can be the default.")
+    .replace("Do not checkout or execute untrusted pull request head", "Checkout untrusted pull request head")
+    .replace("Secrets are exposed to untrusted fork code.", "Secrets are safe in untrusted fork code.");
+
+  assert.deepEqual(validateActionPermissionsDocumentContract(text), [
+    "docs/github-action/permissions.md must include Clarissimi should request the narrowest permissions required for the selected mode..",
+    "docs/github-action/permissions.md must include A workflow must not use `write-all`..",
+    "docs/github-action/permissions.md must include | `dry-run` | `read` | `read` | `read` | No | No |.",
+    "docs/github-action/permissions.md must include Dry-run mode should not write recognition files, branches, comments, or pull requests..",
+    "docs/github-action/permissions.md must include Do not document `pull_request_target`.",
+    "docs/github-action/permissions.md must include instead of falling back to direct commits or broader credentials..",
+    "docs/github-action/permissions.md must include Stage-draft mode writes only a sanitized draft inbox file.",
+    "docs/github-action/permissions.md must include Commit mode requires explicit configuration and should not be the default..",
+    "docs/github-action/permissions.md must include Do not checkout or execute untrusted pull request head.",
+    "docs/github-action/permissions.md must include Secrets are exposed to untrusted fork code.."
   ]);
 });
 
@@ -1684,6 +1716,50 @@ function createActionContractDocumentText() {
     "- Provider secrets are modeled as plain action inputs.",
     "- The Action runs untrusted PR head code.",
     "- `stage-draft` mode writes public recognition outputs or implies maintainer approval.",
+    ""
+  ].join("\n");
+}
+
+function createActionPermissionsDocumentText() {
+  return [
+    "Clarissimi should request the narrowest permissions required for the selected mode.",
+    "Workflow examples must use explicit `permissions`. A workflow must not use `write-all`.",
+    "",
+    "| Mode | `contents` | `pull-requests` | `issues` | Writes repository files | Opens pull request |",
+    "| --- | --- | --- | --- | --- | --- |",
+    "| `dry-run` | `read` | `read` | `read` | No | No |",
+    "| `propose` | `write` | `write` | `read` | Proposal branch only | Yes |",
+    "| `stage-draft` | `write` | `write` | `read` | Draft proposal branch only | Yes |",
+    "",
+    "Any permission not listed in a workflow should remain unset, which GitHub treats as `none` when",
+    "the workflow uses an explicit `permissions` block.",
+    "",
+    "- `contents: read`",
+    "- `pull-requests: read`",
+    "- `issues: read`",
+    "",
+    "Dry-run mode should not write recognition files, branches, comments, or pull requests.",
+    "Do not document `pull_request_target` as the default event.",
+    "",
+    "- `contents: write`",
+    "- `pull-requests: write`",
+    "- `issues: read`",
+    "",
+    "The proposal branch name should be deterministic and scoped under",
+    "`clarissimi/recognition/<source-kind>-<source-id>`.",
+    "Clarissimi should fail with an actionable diagnostic instead of falling back to direct commits or broader credentials.",
+    "",
+    "Stage-draft mode writes only a sanitized draft inbox file to a branch and opens a pull request for",
+    "maintainer review.",
+    "`clarissimi/drafts/<source-kind>-<source-id>`.",
+    "",
+    "Commit mode requires explicit configuration and should not be the default.",
+    "",
+    "Avoid default `pull_request_target` examples. Do not checkout or execute untrusted pull request head",
+    "code.",
+    "",
+    "- Secrets are exposed to untrusted fork code.",
+    "- Permission changes are not reflected in examples and tests.",
     ""
   ].join("\n");
 }

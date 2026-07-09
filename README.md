@@ -67,8 +67,8 @@ The Action and CLI are execution shells. They must not own domain policy.
 
 Implemented MVP slices:
 
-- `packages/schemas`: TypeScript vocabulary and runtime validation for contribution assessment
-  drafts
+- `packages/schemas`: TypeScript vocabulary and runtime validation for config values and
+  contribution assessment drafts
 - `packages/core`: pure policy glue for prepared evidence and approval gates
 - `packages/redaction`: deterministic redaction for evidence text and JSON-like values before
   provider calls

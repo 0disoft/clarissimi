@@ -25,7 +25,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
   `docs/adr/0020-add-agent-assisted-draft-import.md`,
   `docs/adr/0021-add-draft-inbox-staging.md`,
   `docs/adr/0023-add-action-draft-inbox-proposal-mode.md`,
-  `docs/adr/0024-add-draft-approval-helper.md`
+  `docs/adr/0024-add-draft-approval-helper.md`,
+  `docs/adr/0025-centralize-config-schema-validation.md`
 
 ## Required Decisions
 
@@ -42,14 +43,14 @@ This repository type owns workspace boundaries, package ownership, dependency po
 
 ## Boundary Rules
 
-- `packages/schemas` owns vocabulary and validation.
+- `packages/schemas` owns vocabulary, config value validation, and assessment validation.
 - `packages/core` owns policy glue but not I/O.
 - `packages/redaction` owns masking and redaction reports.
 - `packages/github` owns GitHub evidence collection but not tokens, redaction, providers, or
   repository writes.
 - `packages/providers` owns provider adapters but not environment loading or approval policy.
 - `packages/renderers` owns deterministic output rendering but not filesystem writes.
-- `packages/cli` owns local command orchestration.
+- `packages/cli` owns local command orchestration and config file loading.
 - `packages/action` owns GitHub Action runtime orchestration and proposal boundaries.
 
 ## Review Blockers

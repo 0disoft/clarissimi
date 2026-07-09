@@ -1,12 +1,12 @@
+import {
+  validateClarissimiConfig,
+  type ClarissimiConfig,
+  type ValidationIssue
+} from "@clarissimi/schemas";
+
 import { fileExists, parseJsonText, readTextFile, resolveFromCwd } from "./io.js";
 
-export interface CliConfig {
-  readonly provider?: "fake" | "openai-compatible";
-  readonly providerEndpoint?: string;
-  readonly providerModel?: string;
-  readonly providerThinking?: "disabled";
-  readonly mode?: "dry-run" | "propose" | "commit";
-}
+export type CliConfig = ClarissimiConfig;
 
 export interface ConfigValidationResult {
   readonly ok: true;
@@ -33,84 +33,35 @@ export async function validateConfigFile(
   }
 
   const parsed = parseJsonText(await readTextFile(resolvedPath), path);
-  if (!isRecord(parsed)) {
-    throw new Error("Clarissimi config must be a JSON object.");
+  const result = validateClarissimiConfig(parsed);
+  if (!result.ok) {
+    throw new Error(formatConfigValidationIssue(result.issues[0]));
   }
-
-  const config = parseConfig(parsed);
 
   return {
     ok: true,
     path,
-    config
+    config: result.value
   };
 }
 
-function parseConfig(value: Record<string, unknown>): CliConfig {
-  const provider = parseOptionalEnum(value.provider, ["fake", "openai-compatible"], "provider");
-  const providerEndpoint = parseOptionalString(value.providerEndpoint, "providerEndpoint");
-  const providerModel = parseOptionalString(value.providerModel, "providerModel");
-  const providerThinking = parseOptionalEnum(value.providerThinking, ["disabled"], "providerThinking");
-  const mode = parseOptionalEnum(value.mode, ["dry-run", "propose", "commit"], "mode");
-  const config: {
-    provider?: "fake" | "openai-compatible";
-    providerEndpoint?: string;
-    providerModel?: string;
-    providerThinking?: "disabled";
-    mode?: "dry-run" | "propose" | "commit";
-  } = {};
-
-  if (provider !== undefined) {
-    config.provider = provider;
+function formatConfigValidationIssue(issue: ValidationIssue | undefined): string {
+  if (issue === undefined) {
+    return "Clarissimi config is invalid.";
   }
 
-  if (providerEndpoint !== undefined) {
-    config.providerEndpoint = providerEndpoint;
+  if (issue.path === "$" && issue.code === "expected_object") {
+    return "Clarissimi config must be a JSON object.";
   }
 
-  if (providerModel !== undefined) {
-    config.providerModel = providerModel;
+  const field = issue.path.startsWith("$.") ? issue.path.slice(2) : issue.path;
+  if (issue.code === "invalid_enum") {
+    return `Config field ${field} has an unsupported value.`;
   }
 
-  if (providerThinking !== undefined) {
-    config.providerThinking = providerThinking;
+  if (issue.code === "empty_string") {
+    return `Config field ${field} must be a non-empty string.`;
   }
 
-  if (mode !== undefined) {
-    config.mode = mode;
-  }
-
-  return config;
-}
-
-function parseOptionalString(value: unknown, field: string): string | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new Error(`Config field ${field} must be a non-empty string.`);
-  }
-
-  return value;
-}
-
-function parseOptionalEnum<T extends string>(
-  value: unknown,
-  allowed: readonly T[],
-  field: string
-): T | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  if (typeof value !== "string" || !(allowed as readonly string[]).includes(value)) {
-    throw new Error(`Config field ${field} has an unsupported value.`);
-  }
-
-  return value as T;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  return issue.message;
 }

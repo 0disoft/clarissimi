@@ -6,9 +6,10 @@
 ## Source of Truth
 
 - Product behavior: `docs/product/02-spec.md`
-- Schema ownership: `packages/schemas` once implementation begins
+- Schema ownership: `packages/schemas`
 - Redaction boundary: `docs/adr/0006-redaction-before-provider.md`
 - Provider boundary: `docs/adr/0007-provider-adapter-boundary.md`
+- Config schema boundary: `docs/adr/0025-centralize-config-schema-validation.md`
 
 ## Supported Config Files
 
@@ -19,6 +20,8 @@ Clarissimi should support:
 
 The current implementation loads `.clarissimi/config.json`. TypeScript config loading remains
 deferred until a safe loader decision exists.
+
+`packages/schemas` validates supported config values. The CLI owns file loading and precedence.
 
 Current precedence is:
 

@@ -4,7 +4,10 @@ import test from "node:test";
 import {
   ASSESSMENT_SCHEMA_VERSION,
   CONTRIBUTION_TYPES,
+  CONFIG_MODES,
+  CONFIG_PROVIDERS,
   hasPublicRankingLanguage,
+  validateClarissimiConfig,
   validateContributionAssessment
 } from "../dist/index.js";
 
@@ -85,4 +88,32 @@ test("exports the product contribution type vocabulary", () => {
 test("detects ranking language independently", () => {
   assert.equal(hasPublicRankingLanguage("Top 3 contributor on the leaderboard"), true);
   assert.equal(hasPublicRankingLanguage("Added regression coverage for the parser crash"), false);
+});
+
+test("accepts supported Clarissimi config values", () => {
+  const result = validateClarissimiConfig({
+    provider: "openai-compatible",
+    providerModel: "example-model",
+    providerEndpoint: "https://example.com/v1/chat/completions",
+    providerThinking: "disabled",
+    mode: "dry-run"
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.value.provider, "openai-compatible");
+});
+
+test("rejects unsupported Clarissimi config values", () => {
+  const result = validateClarissimiConfig({
+    provider: "leaderboard-provider"
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.issues.some((issue) => issue.path === "$.provider"), true);
+});
+
+test("exports Clarissimi config vocabulary", () => {
+  assert.equal(CONFIG_PROVIDERS.includes("openai-compatible"), true);
+  assert.equal(CONFIG_PROVIDERS.includes("ranking-model"), false);
+  assert.equal(CONFIG_MODES.includes("propose"), true);
 });

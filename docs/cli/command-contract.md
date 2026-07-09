@@ -14,6 +14,7 @@
 - Agent-assisted import boundary: `docs/adr/0020-add-agent-assisted-draft-import.md`
 - Draft inbox boundary: `docs/adr/0021-add-draft-inbox-staging.md`
 - Draft approval helper: `docs/adr/0024-add-draft-approval-helper.md`
+- Config schema boundary: `docs/adr/0025-centralize-config-schema-validation.md`
 
 ## MVP Commands
 

@@ -1,5 +1,17 @@
 export const ASSESSMENT_SCHEMA_VERSION = "clarissimi.assessment/v1" as const;
 
+export const CONFIG_PROVIDERS = ["fake", "openai-compatible"] as const;
+
+export type ConfigProvider = (typeof CONFIG_PROVIDERS)[number];
+
+export const CONFIG_PROVIDER_THINKING_VALUES = ["disabled"] as const;
+
+export type ConfigProviderThinking = (typeof CONFIG_PROVIDER_THINKING_VALUES)[number];
+
+export const CONFIG_MODES = ["dry-run", "propose", "commit"] as const;
+
+export type ConfigMode = (typeof CONFIG_MODES)[number];
+
 export const CONTRIBUTION_TYPES = [
   "bug_fix",
   "bug_report",
@@ -47,6 +59,14 @@ export const EVIDENCE_KINDS = [
 ] as const;
 
 export type EvidenceKind = (typeof EVIDENCE_KINDS)[number];
+
+export interface ClarissimiConfig {
+  readonly provider?: ConfigProvider;
+  readonly providerEndpoint?: string;
+  readonly providerModel?: string;
+  readonly providerThinking?: ConfigProviderThinking;
+  readonly mode?: ConfigMode;
+}
 
 export interface ContributorIdentity {
   readonly platform: "github";

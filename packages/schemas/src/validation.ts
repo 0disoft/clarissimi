@@ -1,11 +1,18 @@
 import {
   APPROVAL_STATUSES,
   ASSESSMENT_SCHEMA_VERSION,
+  CONFIG_MODES,
+  CONFIG_PROVIDERS,
+  CONFIG_PROVIDER_THINKING_VALUES,
   CONTRIBUTION_TYPES,
   EVIDENCE_KINDS,
   IMPACT_LEVELS,
   type ApprovalStatus,
+  type ClarissimiConfig,
   type ContributionAssessment,
+  type ConfigMode,
+  type ConfigProvider,
+  type ConfigProviderThinking,
   type ContributionType,
   type EvidenceKind,
   type ValidationIssue,
@@ -24,6 +31,18 @@ const RANKING_LANGUAGE_PATTERNS: readonly RegExp[] = [
 
 export function isContributionType(value: string): value is ContributionType {
   return (CONTRIBUTION_TYPES as readonly string[]).includes(value);
+}
+
+export function isConfigProvider(value: string): value is ConfigProvider {
+  return (CONFIG_PROVIDERS as readonly string[]).includes(value);
+}
+
+export function isConfigProviderThinking(value: string): value is ConfigProviderThinking {
+  return (CONFIG_PROVIDER_THINKING_VALUES as readonly string[]).includes(value);
+}
+
+export function isConfigMode(value: string): value is ConfigMode {
+  return (CONFIG_MODES as readonly string[]).includes(value);
 }
 
 export function isImpactLevel(value: string): value is ContributionAssessment["impactLevel"] {
@@ -77,6 +96,73 @@ export function validateContributionAssessment(
   return {
     ok: true,
     value: value as unknown as ContributionAssessment,
+    issues: []
+  };
+}
+
+export function validateClarissimiConfig(value: unknown): ValidationResult<ClarissimiConfig> {
+  const issues: ValidationIssue[] = [];
+
+  if (!isRecord(value)) {
+    return invalid([
+      {
+        path: "$",
+        code: "expected_object",
+        message: "Clarissimi config must be a JSON object."
+      }
+    ]);
+  }
+
+  const provider = expectOptionalEnum(value.provider, isConfigProvider, "$.provider", issues);
+  const providerEndpoint = expectOptionalNonEmptyString(
+    value.providerEndpoint,
+    "$.providerEndpoint",
+    issues
+  );
+  const providerModel = expectOptionalNonEmptyString(value.providerModel, "$.providerModel", issues);
+  const providerThinking = expectOptionalEnum(
+    value.providerThinking,
+    isConfigProviderThinking,
+    "$.providerThinking",
+    issues
+  );
+  const mode = expectOptionalEnum(value.mode, isConfigMode, "$.mode", issues);
+
+  if (issues.length > 0) {
+    return invalid(issues);
+  }
+
+  const config: {
+    provider?: ConfigProvider;
+    providerEndpoint?: string;
+    providerModel?: string;
+    providerThinking?: ConfigProviderThinking;
+    mode?: ConfigMode;
+  } = {};
+
+  if (provider !== undefined) {
+    config.provider = provider;
+  }
+
+  if (providerEndpoint !== undefined) {
+    config.providerEndpoint = providerEndpoint;
+  }
+
+  if (providerModel !== undefined) {
+    config.providerModel = providerModel;
+  }
+
+  if (providerThinking !== undefined) {
+    config.providerThinking = providerThinking;
+  }
+
+  if (mode !== undefined) {
+    config.mode = mode;
+  }
+
+  return {
+    ok: true,
+    value: config,
     issues: []
   };
 }
@@ -200,6 +286,41 @@ function expectNonEmptyString(value: unknown, path: string, issues: ValidationIs
   }
 }
 
+function expectOptionalNonEmptyString(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[]
+): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== "string" || value.trim().length === 0) {
+    pushIssue(issues, path, "empty_string", "Value must be a non-empty string.");
+    return undefined;
+  }
+
+  return value;
+}
+
+function expectOptionalEnum<T extends string>(
+  value: unknown,
+  guard: (candidate: string) => candidate is T,
+  path: string,
+  issues: ValidationIssue[]
+): T | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== "string" || !guard(value)) {
+    pushIssue(issues, path, "invalid_enum", "Value is not in the allowed set.");
+    return undefined;
+  }
+
+  return value;
+}
+
 function expectUrl(value: unknown, path: string, issues: ValidationIssue[]): void {
   if (typeof value !== "string" || value.trim().length === 0) {
     pushIssue(issues, path, "invalid_url", "Value must be a non-empty URL string.");
@@ -247,7 +368,7 @@ function pushIssue(
   issues.push({ path, code, message });
 }
 
-function invalid(issues: ValidationIssue[]): ValidationResult<ContributionAssessment> {
+function invalid<T>(issues: ValidationIssue[]): ValidationResult<T> {
   return {
     ok: false,
     issues

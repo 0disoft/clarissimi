@@ -23,7 +23,7 @@ documents into one operational view so the next work item is not hidden across s
 
 The repository currently has a fixture-first MVP skeleton with a live GitHub collector boundary:
 
-- `packages/schemas`: contribution assessment vocabulary and runtime validation
+- `packages/schemas`: config and contribution assessment vocabulary plus runtime validation
 - `packages/core`: prepared-evidence policy glue and approval gates
 - `packages/redaction`: deterministic string and JSON-like redaction
 - `packages/github`: fixture-first and injected-client live merged pull request evidence collection
@@ -453,6 +453,32 @@ Completed deliverables:
   expectations are named
 - review blockers cover public scores, unredacted provider input, pre-approval writes,
   non-deterministic ledger rendering, and package boundary drift
+
+Validation:
+
+- `pnpm run docs`
+- `pnpm run smoke`
+- `pnpm run check`
+- `pnpm run contract`
+
+### 16. Shared Config Schema Validation
+
+Source: `docs/adr/0025-centralize-config-schema-validation.md`,
+`docs/cli/configuration.md`, `docs/monorepo/package-ownership.md`
+
+Status: Completed in `packages/schemas/src/validation.ts` and `packages/cli/src/config.ts`.
+
+Goal: keep config value validation in the schema package while leaving file loading and CLI
+precedence in the CLI shell.
+
+Completed deliverables:
+
+- `packages/schemas` exports supported config providers, modes, provider thinking values, and
+  `ClarissimiConfig`
+- `validateClarissimiConfig` validates config object values without reading files or secrets
+- CLI config loading delegates value validation to `packages/schemas`
+- CLI remains responsible for `.clarissimi/config.json`, explicit `--config <path>`, JSON parsing,
+  and invalid-config exit behavior
 
 Validation:
 

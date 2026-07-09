@@ -171,6 +171,25 @@ test("validate-config accepts missing config defaults", async () => {
   });
 });
 
+test("validate-config rejects unsupported provider values", async () => {
+  await withTempDir(async (dir) => {
+    const configDir = join(dir, ".clarissimi");
+    await mkdir(configDir, { recursive: true });
+    await writeFile(
+      join(configDir, "config.json"),
+      `${JSON.stringify({ provider: "ranking-model" })}\n`,
+      "utf8"
+    );
+
+    const result = await run(["validate-config", "--json"], dir);
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(result.exitCode, 2);
+    assert.equal(output.ok, false);
+    assert.match(output.message, /provider has an unsupported value/);
+  });
+});
+
 test("validate-ledger validates approved JSONL records", async () => {
   await withTempDir(async (dir) => {
     const ledger = join(dir, "ledger.jsonl");

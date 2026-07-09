@@ -28,7 +28,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
 
 ## Current Packages
 
-- `packages/schemas`: TypeScript schema vocabulary, assessment draft types, and runtime validation.
+- `packages/schemas`: TypeScript schema vocabulary, config types, assessment draft types, and
+  runtime validation.
 - `packages/core`: Pure policy glue for prepared provider evidence and public approval gates.
 - `packages/redaction`: Deterministic redaction for text and JSON-like evidence values before
   provider boundaries.
@@ -38,7 +39,7 @@ This repository type owns workspace boundaries, package ownership, dependency po
   provider, and SDK-free OpenAI-compatible HTTP adapter.
 - `packages/renderers`: Deterministic JSONL, contributor JSON, Markdown, static-data output, and
   draft review rendering.
-- `packages/cli`: Fixture-first local command orchestration for config validation, ledger
+- `packages/cli`: Fixture-first local command orchestration for config file loading, ledger
   validation, recognition dry runs, agent-assisted draft staging/approval/import, and rebuild
   previews.
 - `packages/action`: GitHub Action entrypoint for dry-run summaries, fixture-first proposal pull

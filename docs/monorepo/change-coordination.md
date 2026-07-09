@@ -19,8 +19,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
 - Monorepo ownership boundary: cross-package work must name the packages whose contracts change.
 - Monorepo public contract: exported types, functions, CLI commands, Action inputs, and output
   files require matching documentation changes.
-- Monorepo validation evidence: use the narrowest relevant targeted tests first, then
-  `docs`, `smoke`, `check`, and `contract` before merge.
+- Monorepo validation evidence: use the narrowest relevant targeted tests first, then `docs`,
+  `release-readiness`, `lint`, `smoke`, `check`, and `contract` before merge.
 - Monorepo release or rollout policy: source-only merges may land after local and hosted
   validation; package publication and versioned Action tags remain blocked by `docs/ops/release.md`.
 - Monorepo compatibility and migration policy: public data, config, ledger, and Action contract

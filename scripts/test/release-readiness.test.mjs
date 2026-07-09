@@ -17,6 +17,7 @@ import {
   validateDogfoodWorkflowContract,
   validateEngineeringValidationDocumentContract,
   validateHostedLiveProviderWorkflowContract,
+  validateMonorepoValidationDocumentContract,
   validateObservabilityDocumentContract,
   validateOpsValidationFooterContract,
   validateOperationalContractDocumentContract,
@@ -406,6 +407,24 @@ test("release readiness rejects engineering validation document drift", () => {
     "docs/engineering/03-performance-budget.md must include Merge-blocking validation: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,.",
     "docs/engineering/04-security-baseline.md must include `pnpm run smoke`, `pnpm run check`, `pnpm run contract`.",
     "docs/engineering/09-data-integrity.md must be readable for engineering validation document contract."
+  ]);
+});
+
+test("release readiness accepts monorepo validation document contracts", () => {
+  assert.deepEqual(validateMonorepoValidationDocumentContract(createMonorepoValidationDocumentTexts()), []);
+});
+
+test("release readiness rejects monorepo validation document drift", () => {
+  const texts = createMonorepoValidationDocumentTexts();
+  texts["docs/monorepo/change-coordination.md"] = texts["docs/monorepo/change-coordination.md"]
+    .replace("`release-readiness`, ", "")
+    .replace("`lint`, ", "");
+  delete texts["docs/monorepo/workspace-boundaries.md"];
+
+  assert.deepEqual(validateMonorepoValidationDocumentContract(texts), [
+    "docs/monorepo/change-coordination.md must include release-readiness.",
+    "docs/monorepo/change-coordination.md must include lint.",
+    "docs/monorepo/workspace-boundaries.md must be readable for monorepo validation document contract."
   ]);
 });
 
@@ -1278,6 +1297,21 @@ function createEngineeringValidationDocumentTexts() {
     "docs/engineering/07-operability-and-failure-standard.md": text,
     "docs/engineering/08-threat-model.md": text,
     "docs/engineering/09-data-integrity.md": text
+  };
+}
+
+function createMonorepoValidationDocumentTexts() {
+  const text = [
+    "- Monorepo validation evidence: implemented packages are covered by `docs`,",
+    "  `release-readiness`, `lint`, `smoke`, `check`, and `contract` before merge.",
+    ""
+  ].join("\n");
+
+  return {
+    "docs/monorepo/README.md": text,
+    "docs/monorepo/change-coordination.md": text,
+    "docs/monorepo/package-ownership.md": text,
+    "docs/monorepo/workspace-boundaries.md": text
   };
 }
 

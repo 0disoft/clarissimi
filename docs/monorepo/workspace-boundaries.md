@@ -35,7 +35,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
 - Monorepo public contract: package exports are allowed only when named by product docs, ADRs, or
   package ownership docs.
 - Monorepo validation evidence: implemented packages are covered by `pnpm run docs`,
-  `pnpm run smoke`, `pnpm run check`, and `pnpm run contract`.
+  `pnpm run release-readiness`, `pnpm run lint`, `pnpm run smoke`, `pnpm run check`, and
+  `pnpm run contract`.
 - Monorepo release or rollout policy: no public package publication or versioned Action tag before
   `docs/ops/release.md` gates pass.
 - Monorepo compatibility and migration policy: schema versions and ledger shape changes require an

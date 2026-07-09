@@ -33,10 +33,11 @@ This repository type owns workspace boundaries, package ownership, dependency po
 - Monorepo ownership boundary: each package owns a narrow boundary from the product and ADR
   documents.
 - Monorepo public contract: packages expose only documented types, functions, and constants.
-- Monorepo validation evidence: implemented packages must pass `typecheck`, `test`, `contract`,
-  and `check`; release-readiness verifies that implemented package directories stay listed in the
-  Package Table, that Package Table entries point at existing package directories, and that
-  workspace package names stay aligned with their `packages/<name>` directories.
+- Monorepo validation evidence: implemented packages must pass `docs`, `release-readiness`, `lint`,
+  `smoke`, `check`, and `contract`; release-readiness verifies that implemented package directories
+  stay listed in the Package Table, that Package Table entries point at existing package
+  directories, and that workspace package names stay aligned with their `packages/<name>`
+  directories.
 - Monorepo package manifest policy: implemented package manifests must keep the common
   `./dist/index.js` and `./dist/index.d.ts` entrypoints, expose only `dist` in `files`, keep
   `tsc -b` build scripts, expose bin entries only from `packages/cli` and `packages/action`, and

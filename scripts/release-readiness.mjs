@@ -236,6 +236,23 @@ export const engineeringValidationDocumentContract = {
   ]
 };
 
+export const monorepoValidationDocumentContract = {
+  documents: [
+    "docs/monorepo/README.md",
+    "docs/monorepo/change-coordination.md",
+    "docs/monorepo/package-ownership.md",
+    "docs/monorepo/workspace-boundaries.md"
+  ],
+  requiredSnippets: [
+    "Monorepo validation evidence:",
+    "release-readiness",
+    "lint",
+    "smoke",
+    "check",
+    "contract"
+  ]
+};
+
 export const packageOwnershipContract = {
   path: "docs/monorepo/package-ownership.md"
 };
@@ -677,6 +694,7 @@ export async function runReleaseReadiness(options = {}) {
   await runBackupRestoreDocumentContractCheck(repoRoot);
   await runOpsValidationFooterContractCheck(repoRoot);
   await runEngineeringValidationDocumentContractCheck(repoRoot);
+  await runMonorepoValidationDocumentContractCheck(repoRoot);
   await runTsconfigBuildGraphCheck(repoRoot);
   await runPackageOwnershipContractCheck(repoRoot);
   await runDryRunDogfoodEvidenceCheck(repoRoot);
@@ -1052,6 +1070,29 @@ export function validateEngineeringValidationDocumentContract(
     const text = textsByPath[documentPath];
     if (typeof text !== "string") {
       issues.push(`${documentPath} must be readable for engineering validation document contract.`);
+      continue;
+    }
+
+    for (const snippet of contract.requiredSnippets) {
+      if (!text.includes(snippet)) {
+        issues.push(`${documentPath} must include ${snippet}.`);
+      }
+    }
+  }
+
+  return issues;
+}
+
+export function validateMonorepoValidationDocumentContract(
+  textsByPath,
+  contract = monorepoValidationDocumentContract
+) {
+  const issues = [];
+
+  for (const documentPath of contract.documents) {
+    const text = textsByPath[documentPath];
+    if (typeof text !== "string") {
+      issues.push(`${documentPath} must be readable for monorepo validation document contract.`);
       continue;
     }
 
@@ -1530,6 +1571,25 @@ async function runEngineeringValidationDocumentContractCheck(repoRoot) {
   }
 
   console.log("engineering validation document contract passed");
+}
+
+async function runMonorepoValidationDocumentContractCheck(repoRoot) {
+  const textsByPath = {};
+
+  for (const documentPath of monorepoValidationDocumentContract.documents) {
+    try {
+      textsByPath[documentPath] = await readFile(join(repoRoot, documentPath), "utf8");
+    } catch (error) {
+      throw new Error(`Unable to read ${documentPath}: ${error.message}`);
+    }
+  }
+
+  const issues = validateMonorepoValidationDocumentContract(textsByPath);
+  if (issues.length > 0) {
+    throw new Error(`monorepo validation document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("monorepo validation document contract passed");
 }
 
 async function runSmokePackCandidateContractCheck(repoRoot) {

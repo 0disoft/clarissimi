@@ -42,6 +42,8 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
   `event-path` inputs
 - `.github/workflows/clarissimi-propose-fixture.yml`: manual-only fixture propose dogfood
+- `.github/workflows/clarissimi-live-provider-smoke.yml`: manual-only credentialed live provider
+  smoke
 - `.github/workflows/ci.yml`: hosted validation for `docs`, `smoke`, `check`, and `contract`
 
 ## Active Work Queue
@@ -269,6 +271,8 @@ Completed deliverables:
 - docs validation checks required documentation targets and local Markdown links
 - smoke validation exercises the built CLI and Action bins without live provider credentials
 - live-provider smoke command is available as a release-only credentialed check
+- manual live-provider smoke workflow is available for maintainer-owned repository secrets and
+  variables
 - rollback instructions cover staging cleanup, proposal pull request closure, proposal branch
   deletion, and post-merge recognition reverts
 

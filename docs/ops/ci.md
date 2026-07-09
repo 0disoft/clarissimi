@@ -19,11 +19,12 @@ The current local CI parity commands are:
   `CLARISSIMI_PROVIDER_THINKING`, and validates those optional inputs before provider calls. This
   command is a release smoke, not a correctness check.
 - `pnpm run release-readiness`: runs non-credentialed release checks for documentation,
-  release-critical package script registration, package and script test-glob registration, release
-  tool availability, `ssealed doctor`, workflow `actionlint`, YAML parsing, `git diff --check`, and
-  high-risk secret patterns. It also verifies that the root Action manifest keeps the expected
-  inputs, outputs, defaults, secret environment boundary, and runtime commands, and that the hosted
-  CI workflow still runs the required local parity commands with read-only contents permission.
+  release-critical package script registration, package and script test-glob registration, the
+  blocked package release policy, release tool availability, `ssealed doctor`, workflow
+  `actionlint`, YAML parsing, `git diff --check`, and high-risk secret patterns. It also verifies
+  that the root Action manifest keeps the expected inputs, outputs, defaults, secret environment
+  boundary, and runtime commands, and that the hosted CI workflow still runs the required local
+  parity commands with read-only contents permission.
   Fixture dogfood workflow contracts are also checked so dry-run stays read-only and propose and
   stage-draft stay manual, fixture-backed, and output-asserting. It is a maintainer release gate,
   not a live-provider check.

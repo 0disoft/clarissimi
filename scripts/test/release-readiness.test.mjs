@@ -4,12 +4,14 @@ import test from "node:test";
 import {
   dogfoodWorkflowContracts,
   findHighRiskSecretLines,
+  packageReleasePolicy,
   requiredPackageScripts,
   requiredTestGlobs,
   validateActionManifestContract,
   validateCiWorkflowContract,
   validateDogfoodWorkflowContract,
   validateHostedLiveProviderWorkflowContract,
+  validatePackageReleasePolicy,
   validatePackageScriptRegistration
 } from "../release-readiness.mjs";
 
@@ -53,6 +55,21 @@ test("release readiness rejects missing package and script test globs", () => {
   assert.deepEqual(issues, [
     "package.json scripts.test must include packages/action/test/*.test.mjs.",
     "package.json scripts.test must include scripts/test/*.test.mjs."
+  ]);
+});
+
+test("release readiness accepts the current package release policy", () => {
+  assert.deepEqual(validatePackageReleasePolicy(createBlockedReleasePackageJson()), []);
+});
+
+test("release readiness rejects accidental public package release drift", () => {
+  const packageJson = createBlockedReleasePackageJson();
+  packageJson.private = false;
+  packageJson.version = "0.1.0";
+
+  assert.deepEqual(validatePackageReleasePolicy(packageJson), [
+    "package.json private must remain true until release blockers are cleared.",
+    "package.json version must remain 0.0.0 until release blockers are cleared."
   ]);
 });
 
@@ -243,6 +260,13 @@ function createValidScripts() {
   scripts.contract = "pnpm run typecheck && pnpm run test";
 
   return scripts;
+}
+
+function createBlockedReleasePackageJson() {
+  return {
+    private: packageReleasePolicy.private,
+    version: packageReleasePolicy.version
+  };
 }
 
 function createActionManifestText() {

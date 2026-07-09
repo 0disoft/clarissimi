@@ -49,6 +49,11 @@ export const requiredTestGlobs = [
   "scripts/test/*.test.mjs"
 ];
 
+export const packageReleasePolicy = {
+  private: true,
+  version: "0.0.0"
+};
+
 export const highRiskSecretEnvNames = [
   "NPM_TOKEN",
   "NODE_AUTH_TOKEN",
@@ -221,6 +226,7 @@ export async function runReleaseReadiness(options = {}) {
   });
 
   await runPackageScriptRegistrationCheck(repoRoot);
+  await runPackageReleasePolicyCheck(repoRoot);
   await runToolAvailabilityCheck(repoRoot);
 
   await runCheck({
@@ -627,6 +633,23 @@ async function runPackageScriptRegistrationCheck(repoRoot) {
   console.log("package script registration passed");
 }
 
+async function runPackageReleasePolicyCheck(repoRoot) {
+  const packageJsonPath = join(repoRoot, "package.json");
+  let packageJson;
+  try {
+    packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
+  } catch (error) {
+    throw new Error(`package.json is not parseable JSON: ${error.message}`);
+  }
+
+  const issues = validatePackageReleasePolicy(packageJson);
+  if (issues.length > 0) {
+    throw new Error(`package.json release policy failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("package release policy passed");
+}
+
 export function validatePackageScriptRegistration(packageJson) {
   const issues = [];
   const scripts = packageJson?.scripts;
@@ -658,6 +681,20 @@ export function validatePackageScriptRegistration(packageJson) {
     if (!testScript.includes(glob)) {
       issues.push(`package.json scripts.test must include ${glob}.`);
     }
+  }
+
+  return issues;
+}
+
+export function validatePackageReleasePolicy(packageJson, policy = packageReleasePolicy) {
+  const issues = [];
+
+  if (packageJson?.private !== policy.private) {
+    issues.push(`package.json private must remain ${String(policy.private)} until release blockers are cleared.`);
+  }
+
+  if (packageJson?.version !== policy.version) {
+    issues.push(`package.json version must remain ${policy.version} until release blockers are cleared.`);
   }
 
   return issues;

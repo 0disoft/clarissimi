@@ -305,22 +305,32 @@ test("release readiness accepts the docs validation script contract", () => {
 
 test("release readiness rejects docs validation script drift", () => {
   const text = createDocsValidationScriptText()
+    .replace("\"action.yml\"", "\"action-renamed.yml\"")
     .replace("\"docs/product/00-product-brief.md\"", "\"docs/product/00-product-brief-renamed.md\"")
     .replace("\"docs/product/02-spec.md\"", "\"docs/product/spec.md\"")
     .replace("\"docs/product/03-risk-register.md\"", "\"docs/product/risk.md\"")
     .replace("\"docs/cli/configuration.md\"", "\"docs/cli/config.md\"")
     .replace("\"docs/cli/ledger-format.md\"", "\"docs/cli/ledger.md\"")
+    .replace("\"docs/github-action/README.md\"", "\"docs/github-action/GUIDE.md\"")
     .replace("\"docs/ops/incident-response.md\"", "\"docs/ops/incidents.md\"")
-    .replace("\"packages/renderers/README.md\"", "\"packages/renderers/README-renamed.md\"");
+    .replace("\"docs/ops/release.md\"", "\"docs/ops/publication.md\"")
+    .replace("\"packages/renderers/README.md\"", "\"packages/renderers/README-renamed.md\"")
+    .replace("\".github/workflows/clarissimi-live-provider-smoke.yml\"", "\".github/workflows/live-provider.yml\"")
+    .replace("\"scripts/hosted-live-provider-smoke.mjs\"", "\"scripts/hosted-provider-smoke.mjs\"");
 
   assert.deepEqual(validateDocsValidationScriptContract(text), [
+    "scripts/validate-docs.mjs must include \"action.yml\".",
     "scripts/validate-docs.mjs must include \"docs/product/00-product-brief.md\".",
     "scripts/validate-docs.mjs must include \"docs/product/02-spec.md\".",
     "scripts/validate-docs.mjs must include \"docs/product/03-risk-register.md\".",
     "scripts/validate-docs.mjs must include \"docs/cli/configuration.md\".",
     "scripts/validate-docs.mjs must include \"docs/cli/ledger-format.md\".",
+    "scripts/validate-docs.mjs must include \"docs/github-action/README.md\".",
     "scripts/validate-docs.mjs must include \"docs/ops/incident-response.md\".",
-    "scripts/validate-docs.mjs must include \"packages/renderers/README.md\"."
+    "scripts/validate-docs.mjs must include \"docs/ops/release.md\".",
+    "scripts/validate-docs.mjs must include \"packages/renderers/README.md\".",
+    "scripts/validate-docs.mjs must include \".github/workflows/clarissimi-live-provider-smoke.yml\".",
+    "scripts/validate-docs.mjs must include \"scripts/hosted-live-provider-smoke.mjs\"."
   ]);
 });
 
@@ -1657,9 +1667,15 @@ function createDocsValidationScriptText() {
     "  \"docs/cli/configuration.md\",",
     "  \"docs/cli/ledger-format.md\",",
     "  \"docs/cli/output-and-exit-codes.md\",",
+    "  \"docs/product/04-implementation-tracker.md\",",
+    "  \"docs/github-action/README.md\",",
+    "  \"docs/github-action/action-contract.md\",",
+    "  \"docs/github-action/permissions.md\",",
+    "  \"docs/ops/ci.md\",",
     "  \"docs/ops/disaster-recovery.md\",",
     "  \"docs/ops/incident-response.md\",",
-    "  \"docs/product/04-implementation-tracker.md\",",
+    "  \"docs/ops/release.md\",",
+    "  \"docs/ops/rollback.md\",",
     "  \"packages/action/README.md\",",
     "  \"packages/cli/README.md\",",
     "  \"packages/core/README.md\",",
@@ -1668,6 +1684,13 @@ function createDocsValidationScriptText() {
     "  \"packages/redaction/README.md\",",
     "  \"packages/renderers/README.md\",",
     "  \"packages/schemas/README.md\",",
+    "  \".github/workflows/ci.yml\",",
+    "  \".github/workflows/clarissimi-dry-run.yml\",",
+    "  \".github/workflows/clarissimi-live-provider-smoke.yml\",",
+    "  \".github/workflows/clarissimi-propose-fixture.yml\",",
+    "  \".github/workflows/clarissimi-stage-draft-fixture.yml\",",
+    "  \"scripts/hosted-live-provider-smoke.mjs\",",
+    "  \"scripts/release-readiness.mjs\",",
     "];",
     ""
   ].join("\n");

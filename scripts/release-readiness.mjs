@@ -182,6 +182,9 @@ export const readmeValidationContract = {
 export const docsValidationScriptContract = {
   path: "scripts/validate-docs.mjs",
   requiredSnippets: [
+    "\"README.md\"",
+    "\"action.yml\"",
+    "\"VALIDATION.md\"",
     "\"docs/product/00-product-brief.md\"",
     "\"docs/product/01-roadmap.md\"",
     "\"docs/product/02-spec.md\"",
@@ -191,9 +194,15 @@ export const docsValidationScriptContract = {
     "\"docs/cli/configuration.md\"",
     "\"docs/cli/ledger-format.md\"",
     "\"docs/cli/output-and-exit-codes.md\"",
+    "\"docs/product/04-implementation-tracker.md\"",
+    "\"docs/github-action/README.md\"",
+    "\"docs/github-action/action-contract.md\"",
+    "\"docs/github-action/permissions.md\"",
+    "\"docs/ops/ci.md\"",
     "\"docs/ops/disaster-recovery.md\"",
     "\"docs/ops/incident-response.md\"",
-    "\"docs/product/04-implementation-tracker.md\"",
+    "\"docs/ops/release.md\"",
+    "\"docs/ops/rollback.md\"",
     "\"packages/action/README.md\"",
     "\"packages/cli/README.md\"",
     "\"packages/core/README.md\"",
@@ -201,7 +210,14 @@ export const docsValidationScriptContract = {
     "\"packages/providers/README.md\"",
     "\"packages/redaction/README.md\"",
     "\"packages/renderers/README.md\"",
-    "\"packages/schemas/README.md\""
+    "\"packages/schemas/README.md\"",
+    "\".github/workflows/ci.yml\"",
+    "\".github/workflows/clarissimi-dry-run.yml\"",
+    "\".github/workflows/clarissimi-live-provider-smoke.yml\"",
+    "\".github/workflows/clarissimi-propose-fixture.yml\"",
+    "\".github/workflows/clarissimi-stage-draft-fixture.yml\"",
+    "\"scripts/hosted-live-provider-smoke.mjs\"",
+    "\"scripts/release-readiness.mjs\""
   ]
 };
 

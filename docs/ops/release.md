@@ -65,17 +65,21 @@ After `CLARISSIMI_PROVIDER_TOKEN` is configured as a repository secret, run the 
 from a maintainer shell without printing the token value:
 
 ```powershell
-gh workflow run clarissimi-live-provider-smoke.yml --repo 0disoft/clarissimi --ref main -f provider-model=gpt-4.1-mini
-gh run list --repo 0disoft/clarissimi --workflow clarissimi-live-provider-smoke.yml --limit 1
-gh run watch <run-id> --repo 0disoft/clarissimi --exit-status
+pnpm run hosted-live-provider-smoke -- --model gpt-4.1-mini
 ```
 
 For OpenAI-compatible gateway providers that need an endpoint or thinking-mode override, pass those
-as dispatch inputs instead of editing repository files:
+as script options instead of editing repository files:
 
 ```powershell
-gh workflow run clarissimi-live-provider-smoke.yml --repo 0disoft/clarissimi --ref main -f provider-model=minimax-m3 -f provider-endpoint=<chat-completions-url> -f provider-thinking=disabled
+pnpm run hosted-live-provider-smoke -- --model minimax-m3 --endpoint <chat-completions-url> --thinking disabled
 ```
+
+The script verifies that the repository secret name exists, dispatches
+`.github/workflows/clarissimi-live-provider-smoke.yml`, finds the matching run for the selected
+ref, and watches it to completion. It never reads or prints the provider token value. If a maintainer
+needs to run the underlying commands manually, use `gh workflow run` followed by `gh run list` and
+`gh run watch` with the same workflow, model, endpoint, and thinking inputs.
 
 Record the passed workflow run id and provider model in this document before public package
 publication or a versioned Action tag.

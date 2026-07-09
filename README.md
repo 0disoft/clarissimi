@@ -169,7 +169,8 @@ provider smoke. Set `CLARISSIMI_PROVIDER_THINKING=disabled` only for compatible 
 that request option to return strict JSON. This command is not part of normal correctness checks and
 is not required for the agent-assisted import workflow. Public package publication and versioned
 Action tags also require the hosted manual live-provider smoke workflow described in
-`docs/ops/release.md`.
+`docs/ops/release.md`; after configuring the repository secret, maintainers can run
+`pnpm run hosted-live-provider-smoke -- --model <provider-model>`.
 
 Workflow examples and permission details live in `docs/github-action/README.md` and
 `docs/github-action/permissions.md`.
@@ -220,6 +221,12 @@ The current executable checks are:
 - `pnpm run smoke`
 - `pnpm run docs`
 - `pnpm run check`
+- `pnpm run release-readiness`
+
+Release-only credentialed checks are:
+
+- `pnpm run live-provider-smoke`
+- `pnpm run hosted-live-provider-smoke -- --model <provider-model>`
 
 Unimplemented validation names intentionally fail until configured.
 

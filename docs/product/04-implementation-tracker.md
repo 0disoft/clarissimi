@@ -43,6 +43,8 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   propose and live-provider credential preflight fail-closed behavior
 - root `package.json`: configured `release-readiness` script for non-credentialed release gate
   checks before live provider smoke
+- root `package.json`: configured `hosted-live-provider-smoke` script for maintainer-triggered
+  hosted workflow dispatch and watch after the repository secret name is configured
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
   `event-path` inputs
 - `.github/workflows/clarissimi-propose-fixture.yml`: manual-only fixture propose dogfood
@@ -286,6 +288,8 @@ Completed deliverables:
   endpoint
 - manual live-provider smoke workflow is available for maintainer-owned repository secrets and
   dispatch-time provider model input
+- hosted live-provider smoke wrapper verifies the repository secret name, dispatches the manual
+  workflow, and watches the matching run without reading or printing the token value
 - rollback instructions cover staging cleanup, proposal pull request closure, proposal branch
   deletion, and post-merge recognition reverts
 - manual-only fixture stage-draft dogfood workflow is available and passed run `28992586329`,

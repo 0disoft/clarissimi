@@ -41,6 +41,11 @@ dispatch input, and the optional provider endpoint and thinking mode may also be
 dispatch inputs. If the repository secret is missing, the workflow fails before checkout,
 dependency installation, build work, or provider calls begin.
 
+`pnpm run hosted-live-provider-smoke -- --model <provider-model>` is the preferred maintainer
+wrapper for the hosted smoke. It checks only that the repository secret name is present, dispatches
+the manual workflow, and watches the matching run. The wrapper must not accept, read, log, or print
+the provider token value.
+
 ## Leak Response
 
 If a token, private key, raw provider output, raw diff, or sensitive evidence appears in a public

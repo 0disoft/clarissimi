@@ -307,6 +307,9 @@ export const hostedLiveProviderWorkflowContract = {
 };
 
 export const workflowTrustBoundaryContract = {
+  requiredSnippets: [
+    "permissions:"
+  ],
   forbiddenSnippets: [
     "pull_request_target:",
     "write-all"
@@ -691,6 +694,12 @@ export function validateWorkflowTrustBoundaryContract(
   contract = workflowTrustBoundaryContract
 ) {
   const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${path} must include ${snippet}.`);
+    }
+  }
 
   for (const snippet of contract.forbiddenSnippets) {
     if (text.includes(snippet)) {

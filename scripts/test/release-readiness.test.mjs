@@ -603,6 +603,22 @@ test("release readiness rejects pull_request_target and broad workflow permissio
   ]);
 });
 
+test("release readiness rejects workflows without explicit permissions", () => {
+  const text = [
+    "name: Missing permissions",
+    "on:",
+    "  workflow_dispatch:",
+    "jobs:",
+    "  validation:",
+    "    runs-on: ubuntu-latest",
+    ""
+  ].join("\n");
+
+  assert.deepEqual(validateWorkflowTrustBoundaryContract(text, ".github/workflows/missing-permissions.yml"), [
+    ".github/workflows/missing-permissions.yml must include permissions:."
+  ]);
+});
+
 test("release readiness rejects CI workflow command drift", () => {
   const text = createCiWorkflowText()
     .replace("pnpm run release-readiness", "pnpm run docs")

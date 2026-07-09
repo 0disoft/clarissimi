@@ -170,6 +170,35 @@ test("hosted live provider smoke validates dispatch inputs before reading secret
   assert.equal(emptyRef.commands.length, 0);
 });
 
+test("hosted live provider smoke fails before watching when the dispatched run id is invalid", async () => {
+  const harness = createHarness({
+    secrets: [{ name: "CLARISSIMI_PROVIDER_TOKEN" }],
+    runs: [{
+      databaseId: null,
+      createdAt: "2026-07-09T00:00:10.000Z",
+      headBranch: "main",
+      headSha: "abc123",
+      status: "queued",
+      conclusion: ""
+    }]
+  });
+
+  const exitCode = await runHostedLiveProviderSmoke([
+    "--model",
+    "gpt-4.1-mini"
+  ], harness.runtime);
+
+  assert.equal(exitCode, 1);
+  assert.equal(
+    harness.errors.includes("Dispatched clarissimi-live-provider-smoke.yml run is missing a valid databaseId."),
+    true
+  );
+  assert.equal(
+    harness.commands.some((command) => command.args[0] === "run" && command.args[1] === "watch"),
+    false
+  );
+});
+
 function createHarness(options) {
   const commands = [];
   const logs = [];

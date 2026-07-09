@@ -143,6 +143,18 @@ function isGitHubRepositoryName(value) {
   return /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value);
 }
 
+function isPositiveRunId(value) {
+  if (typeof value === "number") {
+    return Number.isSafeInteger(value) && value > 0;
+  }
+
+  if (typeof value !== "string" || !/^[1-9][0-9]*$/.test(value)) {
+    return false;
+  }
+
+  return Number.isSafeInteger(Number(value));
+}
+
 class UsageError extends Error {
   constructor() {
     super("Invalid hosted live provider smoke arguments.");
@@ -256,6 +268,10 @@ async function findDispatchedRun(runtime, options) {
       return Number.isFinite(createdAt) && createdAt >= options.dispatchedAfter.getTime();
     });
     if (run !== undefined) {
+      if (!isPositiveRunId(run.databaseId)) {
+        throw new Error(`Dispatched ${workflowFile} run is missing a valid databaseId.`);
+      }
+
       return String(run.databaseId);
     }
 

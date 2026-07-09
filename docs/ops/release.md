@@ -34,6 +34,7 @@ Public package publication and versioned Action tags require:
   of correctness tests
 - `.github/workflows/clarissimi-propose-fixture.yml` or an equivalent public repository scenario
   passes
+- hosted CI workflow `.github/workflows/ci.yml` passes on the release candidate commit
 - `pnpm run check`
 - `pnpm run contract`
 - `pnpm run smoke`
@@ -58,4 +59,5 @@ Public package publication and versioned Action tags require:
 - Current dogfood evidence: `Clarissimi propose fixture` workflow run
   `28984721611` passed on `2026-07-09T00:14:30Z` and created proposal pull request
   `https://github.com/0disoft/clarissimi/pull/1`.
-- Remaining operational risk: credentialed live-provider smoke run evidence is not complete
+- Remaining operational risk: branch protection rules and credentialed live-provider smoke run
+  evidence are not complete

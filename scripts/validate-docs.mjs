@@ -15,6 +15,7 @@ const requiredPaths = [
   "docs/ops/ci.md",
   "docs/ops/release.md",
   "docs/ops/rollback.md",
+  ".github/workflows/ci.yml",
   ".github/workflows/clarissimi-dry-run.yml",
   ".github/workflows/clarissimi-propose-fixture.yml"
 ];

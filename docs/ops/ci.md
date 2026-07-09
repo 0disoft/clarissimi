@@ -20,6 +20,10 @@ The current local CI parity commands are:
 `format`, `lint`, and `migration-check` remain intentionally unconfigured and fail until their
 owners define real checks.
 
+The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and
+manual dispatch. It uses read-only repository permissions and runs `docs`, `smoke`, `check`, and
+`contract` with Node.js 24 and the package-manager version declared by `package.json`.
+
 Repository Actions settings keep default workflow permissions at read-only, with workflow-created
 pull requests enabled so explicit `propose` jobs can open recognition proposal pull requests.
 
@@ -34,5 +38,5 @@ pull requests enabled so explicit `propose` jobs can open recognition proposal p
 - Required validation names: `docs`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
-- Remaining operational risk: branch protection, hosted CI enforcement, and credentialed
-  live-provider smoke run evidence are not complete.
+- Remaining operational risk: branch protection rules and credentialed live-provider smoke run
+  evidence are not complete.

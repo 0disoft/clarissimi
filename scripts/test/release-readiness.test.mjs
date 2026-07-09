@@ -9,6 +9,7 @@ import {
   requiredPackageScripts,
   requiredTestGlobs,
   validateActionManifestContract,
+  validateCiOperationalDocumentContract,
   validateCiWorkflowContract,
   validateCredentialedReleaseEvidence,
   validateDryRunDogfoodEvidence,
@@ -206,6 +207,24 @@ test("release readiness rejects product positioning drift", () => {
     "docs/product/02-spec.md must include Clarissimi must be described as a contribution recognition engine..",
     "docs/product/02-spec.md must include maintainer-only analytics view unless a future ADR accepts a safer public framing..",
     "docs/product/02-spec.md must not include Public output should show contributor scores.."
+  ]);
+});
+
+test("release readiness accepts the CI operational document contract", () => {
+  assert.deepEqual(validateCiOperationalDocumentContract(createCiOperationalDocumentText()), []);
+});
+
+test("release readiness rejects CI operational document drift", () => {
+  const text = createCiOperationalDocumentText()
+    .replace("`lint`, `smoke`, `check`, and `contract` with Node.js 24", "`smoke`, `check`, and `contract` with Node.js 24")
+    .replace(
+      "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
+      "- Required validation names: `docs`, `smoke`, `check`, `contract`"
+    );
+
+  assert.deepEqual(validateCiOperationalDocumentContract(text), [
+    "docs/ops/ci.md must include `lint`, `smoke`, `check`, and `contract` with Node.js 24.",
+    "docs/ops/ci.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
   ]);
 });
 
@@ -938,6 +957,18 @@ function createProductPositioningTexts() {
       ""
     ].join("\n")
   };
+}
+
+function createCiOperationalDocumentText() {
+  return [
+    "The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and",
+    "manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,",
+    "`lint`, `smoke`, `check`, and `contract` with Node.js 24 and the package-manager version declared",
+    "by `package.json`.",
+    "",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
+    ""
+  ].join("\n");
 }
 
 function createWorkspacePackageManifest(packageDir = "schemas") {

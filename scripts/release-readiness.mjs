@@ -140,6 +140,16 @@ export const productPositioningContract = {
   ]
 };
 
+export const ciOperationalDocumentContract = {
+  path: "docs/ops/ci.md",
+  requiredSnippets: [
+    "The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and",
+    "manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,",
+    "`lint`, `smoke`, `check`, and `contract` with Node.js 24",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"
+  ]
+};
+
 export const packageOwnershipContract = {
   path: "docs/monorepo/package-ownership.md"
 };
@@ -571,6 +581,7 @@ export async function runReleaseReadiness(options = {}) {
   await runWorkspacePackageReleasePolicyCheck(repoRoot);
   await runReleasePolicyDocumentContractCheck(repoRoot);
   await runProductPositioningContractCheck(repoRoot);
+  await runCiOperationalDocumentContractCheck(repoRoot);
   await runTsconfigBuildGraphCheck(repoRoot);
   await runPackageOwnershipContractCheck(repoRoot);
   await runDryRunDogfoodEvidenceCheck(repoRoot);
@@ -838,6 +849,18 @@ export function validateProductPositioningContract(textsByPath, contract = produ
       if (text.includes(snippet)) {
         issues.push(`${document.path} must not include ${snippet}.`);
       }
+    }
+  }
+
+  return issues;
+}
+
+export function validateCiOperationalDocumentContract(text, contract = ciOperationalDocumentContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
     }
   }
 
@@ -1169,6 +1192,23 @@ async function runProductPositioningContractCheck(repoRoot) {
   }
 
   console.log("product positioning contract passed");
+}
+
+async function runCiOperationalDocumentContractCheck(repoRoot) {
+  const ciPath = join(repoRoot, ciOperationalDocumentContract.path);
+  let text;
+  try {
+    text = await readFile(ciPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${ciOperationalDocumentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateCiOperationalDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`CI operational document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("CI operational document contract passed");
 }
 
 async function runSmokePackCandidateContractCheck(repoRoot) {

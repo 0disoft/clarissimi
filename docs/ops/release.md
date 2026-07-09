@@ -68,6 +68,20 @@ from a maintainer shell without printing the token value:
 pnpm run hosted-live-provider-smoke -- --model gpt-4.1-mini
 ```
 
+To configure the repository secret from an existing maintainer-owned environment variable without
+printing the token, use standard input rather than putting the secret value in the command text:
+
+```powershell
+$env:OPENAI_API_KEY | gh secret set CLARISSIMI_PROVIDER_TOKEN --repo 0disoft/clarissimi --app actions
+```
+
+Use the same pattern with another maintainer-owned provider environment variable when testing a
+gateway provider. After setting or rotating the secret, confirm only the secret name is visible:
+
+```powershell
+gh secret list --repo 0disoft/clarissimi --app actions --json name,updatedAt
+```
+
 For OpenAI-compatible gateway providers that need an endpoint or thinking-mode override, pass those
 as script options instead of editing repository files:
 

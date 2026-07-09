@@ -46,6 +46,20 @@ wrapper for the hosted smoke. It checks only that the repository secret name is 
 the manual workflow, and watches the matching run. The wrapper must not accept, read, log, or print
 the provider token value.
 
+When a maintainer configures the repository secret, prefer piping an existing local environment
+variable into `gh secret set` instead of writing the token into a command, file, or example:
+
+```powershell
+$env:OPENAI_API_KEY | gh secret set CLARISSIMI_PROVIDER_TOKEN --repo 0disoft/clarissimi --app actions
+```
+
+For non-OpenAI gateway tests, substitute the local maintainer-owned provider environment variable
+that should back `CLARISSIMI_PROVIDER_TOKEN`. Verify only the secret metadata afterward:
+
+```powershell
+gh secret list --repo 0disoft/clarissimi --app actions --json name,updatedAt
+```
+
 ## Leak Response
 
 If a token, private key, raw provider output, raw diff, or sensitive evidence appears in a public

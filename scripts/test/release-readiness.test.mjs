@@ -1133,6 +1133,15 @@ test("release readiness rejects package ownership table drift", () => {
   ]);
 });
 
+test("release readiness rejects package ownership ADR reference drift", () => {
+  const text = createPackageOwnershipText()
+    .replace("  docs/adr/0029-add-explicit-action-config-path.md,\n", "");
+
+  assert.deepEqual(validatePackageOwnershipContract(text, ["cli", "schemas"]), [
+    `${packageOwnershipContract.path} must include related ADR docs/adr/0029-add-explicit-action-config-path.md.`
+  ]);
+});
+
 test("release readiness accepts recorded credentialed release evidence", () => {
   assert.deepEqual(validateCredentialedReleaseEvidence(createReleaseEvidenceText()), []);
 });
@@ -2247,6 +2256,28 @@ function createWorkspacePackageManifest(packageDir = "schemas") {
 function createPackageOwnershipText() {
   return [
     "# Package Ownership",
+    "",
+    "## Source of Truth",
+    "",
+    "- Related ADRs: docs/adr/0009-start-schema-package-implementation.md,",
+    "  docs/adr/0012-add-fake-provider-package.md,",
+    "  docs/adr/0013-add-renderers-package.md,",
+    "  docs/adr/0014-add-fixture-first-cli-package.md,",
+    "  docs/adr/0015-add-fixture-first-github-collector.md,",
+    "  docs/adr/0016-add-dry-run-action-skeleton.md,",
+    "  docs/adr/0017-propose-mode-write-boundary.md,",
+    "  docs/adr/0018-add-live-github-collector-boundary.md,",
+    "  docs/adr/0019-add-openai-compatible-provider-adapter.md,",
+    "  docs/adr/0020-add-agent-assisted-draft-import.md,",
+    "  docs/adr/0021-add-draft-inbox-staging.md,",
+    "  docs/adr/0022-keep-ledger-single-file-with-partition-path.md,",
+    "  docs/adr/0023-add-action-draft-inbox-proposal-mode.md,",
+    "  docs/adr/0024-add-draft-approval-helper.md,",
+    "  docs/adr/0025-centralize-config-schema-validation.md,",
+    "  docs/adr/0026-add-maintainer-recent-share-analytics.md,",
+    "  docs/adr/0028-add-native-typescript-config-loading.md,",
+    "  docs/adr/0029-add-explicit-action-config-path.md,",
+    "  docs/adr/0030-add-action-summary-artifact.md",
     "",
     "## Package Table",
     "",

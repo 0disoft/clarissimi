@@ -120,7 +120,8 @@ derived outputs still use the canonical Clarissimi output paths when `--out-dir`
 
 - `dry-run`: writes no recognition files
 - `propose`: prepares changes for maintainer review
-- `commit`: writes directly only when explicitly configured
+- `commit`: reserved future direct-write mode; current CLI commands do not write recognition files
+  directly to the current branch
 
 ## Exit Codes
 

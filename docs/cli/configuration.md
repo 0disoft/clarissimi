@@ -35,16 +35,18 @@ The current JSON config supports:
 - `providerModel`: model name for `openai-compatible`
 - `providerEndpoint`: optional OpenAI-compatible chat completions endpoint; must be an HTTP(S) URL
 - `providerThinking`: optional OpenAI-compatible thinking mode; currently only `disabled`
-- `mode`: `dry-run`, `propose`, or `commit`
+- `mode`: `dry-run`, `propose`, or `commit` as schema-recognized output mode values
 
-`recognize` currently supports only `dry-run`; a config value such as `mode: "propose"` is parsed
-but rejected by that command before provider calls. Write modes are owned by the GitHub Action path.
+`recognize` currently supports only `dry-run`; a config value such as `mode: "propose"` or
+`mode: "commit"` is parsed but rejected by that command before provider calls. The current
+implemented write paths are owned by the GitHub Action `propose` and `stage-draft` modes. Direct
+`commit` writes remain reserved for a future explicit write-mode decision.
 
 ## Expected Configuration Areas
 
 - provider selection
 - provider model
-- output mode: `dry-run`, `propose`, or `commit`
+- output mode: `dry-run`, `propose`, and future direct-write `commit`
 - confidence threshold
 - contribution type policy
 - impact-level policy

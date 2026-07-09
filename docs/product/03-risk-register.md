@@ -84,5 +84,5 @@
 - Severity: Medium
 - Trigger: proposed recognition PRs are noisy, generic, or too frequent
 - Impact: maintainers disable the Action
-- Mitigation: dry-run, propose, and commit modes; configurable thresholds; concise recognition text;
-  approval workflow
+- Mitigation: dry-run summaries, reviewable proposal pull requests, draft inbox review, configurable
+  thresholds, concise recognition text, and explicit approval workflow

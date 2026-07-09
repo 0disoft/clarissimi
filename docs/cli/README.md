@@ -45,6 +45,10 @@ that file, run `approve-draft` to mark it approved, and then pass it to `import-
 approved assessment, but it does not import the record, rebuild public outputs, call providers, or
 create GitHub pull requests.
 
+The public ledger format is documented in [`ledger-format.md`](ledger-format.md). The ledger stores
+PR numbers in `source.pullRequestNumber`, PR URLs in `evidenceRefs`, and no public contributor
+scores, average scores, ranks, or leaderboard fields.
+
 If the current agent delegates drafting to another LLM, it may wrap the assessment in
 `clarissimi.draft-envelope/v1`. Clarissimi accepts the wrapper but records only the validated
 assessment in public outputs.

@@ -119,6 +119,8 @@ but public outputs record only the validated assessment.
 
 See `docs/cli/agent-assisted-drafts.md` for a complete assessment template, PR source fields, and
 the rule that impact levels and confidence are not public contributor scores.
+See `docs/cli/ledger-format.md` for the public ledger fields, PR number and URL placement, and the
+single-file MVP ledger decision.
 
 To keep an unapproved draft in a reviewable repository inbox first:
 

@@ -122,6 +122,22 @@ test("agent-assisted draft guide JSON examples match the assessment schema", asy
   assert.equal(Object.hasOwn(envelope.assessment, "averageScore"), false);
 });
 
+test("ledger format guide JSON example matches the assessment schema", async () => {
+  const guideText = await readFile(join(process.cwd(), "docs", "cli", "ledger-format.md"), "utf8");
+  const examples = extractJsonCodeBlocks(guideText).map((block) => JSON.parse(block));
+
+  assert.equal(examples.length, 1);
+
+  const ledgerRecord = examples[0];
+  const result = validateContributionAssessment(ledgerRecord);
+  assert.equal(result.ok, true, JSON.stringify(result.issues));
+  assert.equal(ledgerRecord.source.pullRequestNumber, 42);
+  assert.equal(ledgerRecord.evidenceRefs[0].url, "https://github.com/example/project/pull/42");
+  assert.equal(Object.hasOwn(ledgerRecord, "score"), false);
+  assert.equal(Object.hasOwn(ledgerRecord, "averageScore"), false);
+  assert.equal(Object.hasOwn(ledgerRecord, "rank"), false);
+});
+
 async function createDocsFixture(options) {
   const repoRoot = await mkdtemp(join(tmpdir(), "clarissimi-docs-validation-"));
   await writeRequiredFiles(repoRoot);

@@ -44,6 +44,17 @@ async function run(argv, runtime) {
     runtime.log(usageText);
     return 2;
   }
+  if (args.model.trim().length === 0) {
+    return usageFailure(runtime, "--model requires a non-empty value.");
+  }
+
+  if (args.endpoint !== undefined && !isHttpsUrl(args.endpoint)) {
+    return usageFailure(runtime, "--endpoint must be an https URL.");
+  }
+
+  if (args.thinking !== undefined && args.thinking !== "disabled") {
+    return usageFailure(runtime, "--thinking supports only disabled.");
+  }
 
   const repo = args.repo ?? defaults.repo;
   const ref = args.ref ?? defaults.ref;
@@ -110,6 +121,14 @@ function usageFailure(runtime, message) {
   runtime.error(message);
   runtime.log(usageText);
   throw new UsageError();
+}
+
+function isHttpsUrl(value) {
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 class UsageError extends Error {

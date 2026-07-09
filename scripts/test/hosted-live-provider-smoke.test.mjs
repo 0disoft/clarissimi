@@ -100,6 +100,48 @@ test("hosted live provider smoke dispatches and watches the selected workflow", 
   assert.equal(harness.logs.some((line) => line.includes("hosted live provider smoke passed")), true);
 });
 
+test("hosted live provider smoke validates dispatch inputs before reading secrets", async () => {
+  const unsupportedThinking = createHarness({
+    secrets: [{ name: "CLARISSIMI_PROVIDER_TOKEN" }]
+  });
+  const unsupportedThinkingExitCode = await runHostedLiveProviderSmoke([
+    "--model",
+    "minimax-m3",
+    "--thinking",
+    "enabled"
+  ], unsupportedThinking.runtime);
+
+  assert.equal(unsupportedThinkingExitCode, 2);
+  assert.equal(unsupportedThinking.errors.includes("--thinking supports only disabled."), true);
+  assert.equal(unsupportedThinking.commands.length, 0);
+
+  const invalidEndpoint = createHarness({
+    secrets: [{ name: "CLARISSIMI_PROVIDER_TOKEN" }]
+  });
+  const invalidEndpointExitCode = await runHostedLiveProviderSmoke([
+    "--model",
+    "gpt-4.1-mini",
+    "--endpoint",
+    "http://gateway.example/v1/chat/completions"
+  ], invalidEndpoint.runtime);
+
+  assert.equal(invalidEndpointExitCode, 2);
+  assert.equal(invalidEndpoint.errors.includes("--endpoint must be an https URL."), true);
+  assert.equal(invalidEndpoint.commands.length, 0);
+
+  const emptyModel = createHarness({
+    secrets: [{ name: "CLARISSIMI_PROVIDER_TOKEN" }]
+  });
+  const emptyModelExitCode = await runHostedLiveProviderSmoke([
+    "--model",
+    ""
+  ], emptyModel.runtime);
+
+  assert.equal(emptyModelExitCode, 2);
+  assert.equal(emptyModel.errors.includes("--model requires a non-empty value."), true);
+  assert.equal(emptyModel.commands.length, 0);
+});
+
 function createHarness(options) {
   const commands = [];
   const logs = [];

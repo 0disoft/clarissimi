@@ -295,6 +295,8 @@ Completed deliverables:
   workflow, and watches the matching run without reading or printing the token value
 - hosted live-provider smoke wrapper tests cover missing-secret fail-closed behavior and
   dispatch/list/watch argument construction with a fake `gh` command runner
+- hosted live-provider smoke wrapper validates non-empty model, HTTPS endpoint override, and
+  supported thinking mode before reading secret metadata or dispatching a workflow
 - release-readiness verifies that package test globs still include package and script test suites
 - release-readiness verifies that `ssealed`, `actionlint`, and `yq` are available before running
   tool-backed release checks

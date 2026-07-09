@@ -132,10 +132,10 @@ Record the passed workflow run id, source commit, provider model, and refresh co
 document before public package publication or a versioned Action tag.
 
 Recent hosted live-provider evidence: `Clarissimi live provider smoke` workflow run
-`29051720338` passed on `2026-07-09T21:32:35Z` for validated source commit
-`b338b8f7cc06ae81a518e79b1eaf0a941145d768` on `main` using repository secret
+`29052452214` passed on `2026-07-09T21:45:58Z` for validated source commit
+`eaf22e44f5ef87391a16cf5a6597395826f05b7d` on `main` using repository secret
 `CLARISSIMI_PROVIDER_TOKEN` and dispatch input `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.
-Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29051720338`.
+Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29052452214`.
 Refresh this evidence with
 `pnpm run hosted-live-provider-smoke -- --model <provider-model>` for the exact
 release-candidate commit before public package publication or a versioned Action tag.
@@ -150,11 +150,11 @@ release-candidate commit before public package publication or a versioned Action
 
 - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags are blocked
-- Recent hosted CI validation evidence: `CI` workflow run `29051295163` passed on
-  `2026-07-09T21:24:53Z` for validated source commit
-  `e5389d25e3c53e108b052cad4874cd05b1d3b31e` on `main` and validated `docs`,
+- Recent hosted CI validation evidence: `CI` workflow run `29052254866` passed on
+  `2026-07-09T21:42:23Z` for validated source commit
+  `eaf22e44f5ef87391a16cf5a6597395826f05b7d` on `main` and validated `docs`,
   `release-readiness`, `lint`, `smoke`, `check`, and `contract`. Run URL:
-  `https://github.com/0disoft/clarissimi/actions/runs/29051295163`. Refresh this evidence with
+  `https://github.com/0disoft/clarissimi/actions/runs/29052254866`. Refresh this evidence with
   `pnpm run hosted-ci-validation` for the exact release-candidate commit before public package
   publication or a versioned Action tag.
 - Current dry-run dogfood evidence: `Clarissimi dry run` workflow run `29031384775` passed on
@@ -184,9 +184,9 @@ release-candidate commit before public package publication or a versioned Action
   maintainer-owned provider credentials, `CLARISSIMI_PROVIDER_MODEL=umans-glm-5.2`, and the UMANS
   OpenAI-compatible chat completions endpoint.
 - Recent hosted live-provider evidence: `Clarissimi live provider smoke` workflow run
-  `29051720338` passed on `2026-07-09T21:32:35Z` for validated source commit
-  `b338b8f7cc06ae81a518e79b1eaf0a941145d768` on `main` using repository secret
+  `29052452214` passed on `2026-07-09T21:45:58Z` for validated source commit
+  `eaf22e44f5ef87391a16cf5a6597395826f05b7d` on `main` using repository secret
   `CLARISSIMI_PROVIDER_TOKEN` and dispatch input `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.
-  Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29051720338`. Refresh this evidence
+  Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29052452214`. Refresh this evidence
   with `pnpm run hosted-live-provider-smoke -- --model <provider-model>` for the exact
   release-candidate commit before public package publication or a versioned Action tag.

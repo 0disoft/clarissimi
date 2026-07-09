@@ -70,8 +70,8 @@ Before public package publication or a versioned Action tag, release maintainers
 pnpm run hosted-ci-validation
 ```
 
-Use `--sha`, `--ref`, or `--repo` only when validating a release candidate that is not the current
-local `HEAD` on `main`.
+Use `--sha`, `--branch`, or `--repo` only when validating a release candidate that is not the
+current local `HEAD` on `main`.
 
 Hosted CI installs pinned non-credentialed release tooling before `release-readiness`:
 

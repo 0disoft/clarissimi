@@ -3,19 +3,20 @@ import { pathToFileURL } from "node:url";
 
 const defaults = {
   repo: "0disoft/clarissimi",
-  ref: "main",
+  branch: "main",
   workflow: "CI"
 };
 
 const usageText = [
   "Usage:",
-  "  pnpm run hosted-ci-validation -- [--repo <owner/name>] [--ref <git-ref>] [--sha <commit-sha>] [--workflow <workflow-name-or-file>]",
+  "  pnpm run hosted-ci-validation -- [--repo <owner/name>] [--branch <branch-name>] [--sha <commit-sha>] [--workflow <workflow-name-or-file>]",
   "",
   "Examples:",
   "  pnpm run hosted-ci-validation",
   "  pnpm run hosted-ci-validation -- --sha 0123456789abcdef0123456789abcdef01234567",
   "",
-  "The script checks the hosted GitHub Actions workflow result for a commit. It does not read secrets."
+  "The script checks the hosted GitHub Actions workflow result for a commit. It does not read secrets.",
+  "`--ref` is accepted as a compatibility alias for `--branch`."
 ].join("\n");
 
 export async function runHostedCiValidation(argv, runtime = defaultRuntime()) {
@@ -40,15 +41,19 @@ async function run(argv, runtime) {
   }
 
   const repo = args.repo ?? defaults.repo;
-  const ref = args.ref ?? defaults.ref;
+  if (args.branch !== undefined && args.ref !== undefined && args.branch !== args.ref) {
+    return usageFailure(runtime, "--branch and --ref must match when both are provided.");
+  }
+
+  const branch = args.branch ?? args.ref ?? defaults.branch;
   const workflow = args.workflow ?? defaults.workflow;
 
   if (!isGitHubRepositoryName(repo)) {
     return usageFailure(runtime, "--repo must use owner/name format.");
   }
 
-  if (ref.trim().length === 0) {
-    return usageFailure(runtime, "--ref requires a non-empty value.");
+  if (branch.trim().length === 0) {
+    return usageFailure(runtime, "--branch requires a non-empty value.");
   }
 
   if (workflow.trim().length === 0) {
@@ -64,7 +69,7 @@ async function run(argv, runtime) {
 
   const runInfo = await findWorkflowRun(runtime, {
     repo,
-    ref,
+    branch,
     workflow,
     sha
   });
@@ -104,7 +109,7 @@ function parseArgs(argv, runtime) {
       return usageFailure(runtime, `Unexpected positional argument: ${arg}`);
     }
 
-    if (!["repo", "ref", "sha", "workflow"].includes(key)) {
+    if (!["repo", "branch", "ref", "sha", "workflow"].includes(key)) {
       return usageFailure(runtime, `Unsupported option: ${arg}`);
     }
 
@@ -183,7 +188,7 @@ async function findWorkflowRun(runtime, options) {
       "--workflow",
       options.workflow,
       "--branch",
-      options.ref,
+      options.branch,
       "--limit",
       "20",
       "--json",
@@ -213,7 +218,7 @@ async function findWorkflowRun(runtime, options) {
   }
 
   throw new Error(
-    `Unable to find ${options.workflow} workflow run for ${options.repo}@${options.ref} and ${options.sha}.`
+    `Unable to find ${options.workflow} workflow run for ${options.repo}@${options.branch} and ${options.sha}.`
   );
 }
 

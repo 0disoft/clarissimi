@@ -88,7 +88,7 @@ pnpm run hosted-ci-validation
 The hosted CI validation helper uses `gh run list` to find the `CI` workflow run for the selected
 commit and uses `gh run watch` when the run is still queued or in progress. It defaults to the
 current local `HEAD`, `0disoft/clarissimi`, `main`, and workflow `CI`; pass `--sha`, `--repo`,
-`--ref`, or `--workflow` only when validating a different release candidate.
+`--branch`, or `--workflow` only when validating a different release candidate.
 
 After `CLARISSIMI_PROVIDER_TOKEN` is configured as a repository secret, run the manual hosted smoke
 from a maintainer shell without printing the token value:

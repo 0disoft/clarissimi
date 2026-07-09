@@ -22,7 +22,7 @@ test("hosted CI validation passes for a completed successful workflow run", asyn
     "--",
     "--repo",
     "owner/repo",
-    "--ref",
+    "--branch",
     "release-candidate",
     "--sha",
     exampleSha,
@@ -105,6 +105,23 @@ test("hosted CI validation rejects invalid inputs before calling git or gh", asy
   assert.equal(invalidShaExitCode, 2);
   assert.equal(invalidSha.errors.includes("--sha must be a 40-character commit SHA."), true);
   assert.equal(invalidSha.commands.length, 0);
+
+  const conflictingBranchAliases = createHarness({ headSha: exampleSha });
+  const conflictingBranchAliasesExitCode = await runHostedCiValidation([
+    "--branch",
+    "main",
+    "--ref",
+    "release-candidate",
+    "--sha",
+    exampleSha
+  ], conflictingBranchAliases.runtime);
+
+  assert.equal(conflictingBranchAliasesExitCode, 2);
+  assert.equal(
+    conflictingBranchAliases.errors.includes("--branch and --ref must match when both are provided."),
+    true
+  );
+  assert.equal(conflictingBranchAliases.commands.length, 0);
 });
 
 test("hosted CI validation fails for completed unsuccessful workflow runs", async () => {

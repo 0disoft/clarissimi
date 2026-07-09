@@ -8,6 +8,9 @@ import type {
   ProposalStagedFile
 } from "./staging.js";
 
+const proposalCommitAuthorName = "Clarissimi Bot";
+const proposalCommitAuthorEmail = "clarissimi-bot@users.noreply.github.com";
+
 export interface ProposalBranchWriterInput {
   readonly repositoryDir: string;
   readonly stagedOutputDir: string;
@@ -67,6 +70,12 @@ export async function writeProposalBranch(
     const hasChanges = await hasCachedChanges(input.repositoryDir);
     if (hasChanges) {
       await git(input.repositoryDir, [
+        "-c",
+        `user.name=${proposalCommitAuthorName}`,
+        "-c",
+        `user.email=${proposalCommitAuthorEmail}`,
+        "-c",
+        "commit.gpgsign=false",
         "commit",
         "-m",
         input.commitMessage ?? defaultCommitMessage(input.manifest)

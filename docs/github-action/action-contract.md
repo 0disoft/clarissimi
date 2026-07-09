@@ -53,6 +53,10 @@ or update; provider credentials are still not read. Fixture-first `propose` succ
 fixture explicitly carries an approved or auto-approved maintainer approval status. Normal provider
 drafts remain non-public and fail closed before branch mutation.
 
+Proposal branch commits use a Clarissimi-owned bot author instead of relying on runner-global git
+identity. This keeps maintainer workstations and GitHub-hosted runners from becoming part of the
+public recognition commit identity.
+
 ## Outputs
 
 The Action emits a bounded JSON summary with:

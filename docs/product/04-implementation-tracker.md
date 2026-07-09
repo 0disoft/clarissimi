@@ -82,6 +82,7 @@ Completed deliverables:
 - diagnostics for missing base branch, repository directory, staged output directory, staged
   manifest, unsafe output paths, hash mismatches, and existing proposal branches with unowned
   changes
+- proposal commits use a Clarissimi-owned bot author without relying on runner-global git identity
 
 Validation:
 

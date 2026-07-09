@@ -97,6 +97,10 @@ test("writes staged outputs to a deterministic proposal branch without mutating 
       await git(repositoryDir, ["show", `${result.branchName}:CONTRIBUTORS.md`]),
       stagedMarkdown.trim()
     );
+    assert.equal(
+      await git(repositoryDir, ["show", "-s", "--format=%an <%ae>", result.branchName]),
+      "Clarissimi Bot <clarissimi-bot@users.noreply.github.com>"
+    );
   });
 });
 

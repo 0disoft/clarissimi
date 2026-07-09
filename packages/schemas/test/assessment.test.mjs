@@ -134,6 +134,26 @@ test("rejects explicit public score fields in assessment drafts", () => {
   assert.equal(result.issues.every((issue) => issue.code === "public_score_field"), true);
 });
 
+test("rejects public score fields across common field-name variants", () => {
+  const result = validateContributionAssessment({
+    ...validAssessment,
+    total_score: 92,
+    "average-score": 88,
+    LeaderboardPosition: 3,
+    contributor: {
+      ...validAssessment.contributor,
+      contributor_tier: "gold"
+    }
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.issues.some((issue) => issue.path === "$.total_score"), true);
+  assert.equal(result.issues.some((issue) => issue.path === "$.average-score"), true);
+  assert.equal(result.issues.some((issue) => issue.path === "$.LeaderboardPosition"), true);
+  assert.equal(result.issues.some((issue) => issue.path === "$.contributor.contributor_tier"), true);
+  assert.equal(result.issues.every((issue) => issue.code === "public_score_field"), true);
+});
+
 test("exports the product contribution type vocabulary", () => {
   assert.equal(CONTRIBUTION_TYPES.includes("release_validation"), true);
   assert.equal(CONTRIBUTION_TYPES.includes("leaderboard_points"), false);

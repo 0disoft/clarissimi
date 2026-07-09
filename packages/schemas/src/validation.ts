@@ -37,13 +37,13 @@ const RANKING_LANGUAGE_PATTERNS: readonly RegExp[] = [
 
 const PUBLIC_SCORE_FIELD_NAMES = new Set([
   "score",
-  "totalScore",
-  "averageScore",
+  "totalscore",
+  "averagescore",
   "rank",
   "ranking",
   "leaderboard",
-  "leaderboardPosition",
-  "contributorTier",
+  "leaderboardposition",
+  "contributortier",
   "tier",
   "points"
 ]);
@@ -296,7 +296,7 @@ function rejectPublicScoreFields(
 
   for (const [key, nestedValue] of Object.entries(value)) {
     const fieldPath = `${path}.${key}`;
-    if (PUBLIC_SCORE_FIELD_NAMES.has(key)) {
+    if (PUBLIC_SCORE_FIELD_NAMES.has(normalizeFieldName(key))) {
       pushIssue(
         issues,
         fieldPath,
@@ -307,6 +307,10 @@ function rejectPublicScoreFields(
 
     rejectPublicScoreFields(nestedValue, fieldPath, issues);
   }
+}
+
+function normalizeFieldName(value: string): string {
+  return value.replace(/[^A-Za-z0-9]+/g, "").toLowerCase();
 }
 
 function expectEnum(

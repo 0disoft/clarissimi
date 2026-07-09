@@ -10,7 +10,7 @@
 - Impact: community distrust and contributor pushback
 - Mitigation: public output is narrative-first; numeric weight stays internal; ADR records no public
   leaderboard; schema validation rejects explicit public score, rank, leaderboard, point, and
-  contributor-tier fields in assessment drafts
+  contributor-tier field names and common field-name variants in assessment drafts
 
 ## R2: Hallucinated Recognition
 

@@ -23,8 +23,8 @@ The current local CI parity commands are:
   release-critical package script registration, package and script test-glob registration, the
   workspace package glob, workspace package manifest identity, the blocked root and workspace
   package release policy, workspace package publish surface, package ownership table coverage,
-  internal workspace dependency graph, TypeScript project-reference build graph, recorded
-  write-mode dogfood evidence, the intentionally fail-closed `format` placeholder, release tool
+  internal workspace dependency graph, TypeScript project-reference build graph, recorded dry-run
+  and write-mode dogfood evidence, the intentionally fail-closed `format` placeholder, release tool
   availability, CI runtime and release-tool pin drift, `ssealed doctor`, workflow `actionlint`,
   YAML parsing, `git diff --check`, tracked generated-output drift, and high-risk secret patterns.
   It also verifies
@@ -84,6 +84,12 @@ Repository Actions settings keep default workflow permissions at read-only, with
 pull requests enabled so explicit `propose` and `stage-draft` jobs can open proposal pull requests.
 Write-mode dogfood remains manual-only through `.github/workflows/clarissimi-propose-fixture.yml`
 and `.github/workflows/clarissimi-stage-draft-fixture.yml`.
+
+Hosted read-only dogfood evidence:
+
+- `Clarissimi dry run` run `29031384775` passed on `2026-07-09T15:54:58Z` from `main` at
+  `77f3fcbbeb25e3338ee2a4bba3c8efbfc46e5cfb` and exercised the sanitized JSON summary artifact
+  validation path.
 
 Hosted write-mode dogfood evidence:
 

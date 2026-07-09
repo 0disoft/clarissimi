@@ -64,13 +64,13 @@ This command checks documentation links, release-critical package script registr
 script test-glob registration, the workspace package glob, workspace package manifest identity,
 the blocked root and workspace package release policy, workspace package publish surface, release
 tool availability, package ownership table coverage, internal workspace dependency graph,
-TypeScript project-reference build graph, recorded write-mode dogfood evidence, the intentionally
-fail-closed `format` placeholder, CI runtime and release-tool pin drift, `ssealed doctor`, workflow
-`actionlint`, YAML parsing with `yq`, Action manifest contract drift, hosted CI workflow contract
-drift, dogfood workflow contract drift, hosted live-provider workflow trigger, permission,
-preflight, runtime, and command drift, `git diff --check`, tracked generated-output drift, and a
-high-risk secret pattern scan. It does not call live providers and does not replace the credentialed
-smoke gates below.
+TypeScript project-reference build graph, recorded dry-run and write-mode dogfood evidence, the
+intentionally fail-closed `format` placeholder, CI runtime and release-tool pin drift,
+`ssealed doctor`, workflow `actionlint`, YAML parsing with `yq`, Action manifest contract drift,
+hosted CI workflow contract drift, dogfood workflow contract drift, hosted live-provider workflow
+trigger, permission, preflight, runtime, and command drift, `git diff --check`, tracked
+generated-output drift, and a high-risk secret pattern scan. It does not call live providers and
+does not replace the credentialed smoke gates below.
 
 After `CLARISSIMI_PROVIDER_TOKEN` is configured as a repository secret, run the manual hosted smoke
 from a maintainer shell without printing the token value:
@@ -128,6 +128,9 @@ Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow
 
 - Required validation names: `check`, `contract`, `smoke`, `docs`, `release-readiness`
 - Release blocker status: public package publication and versioned Action tags are blocked
+- Current dry-run dogfood evidence: `Clarissimi dry run` workflow run `29031384775` passed on
+  `2026-07-09T15:54:58Z` at `77f3fcbbeb25e3338ee2a4bba3c8efbfc46e5cfb` and exercised the
+  summary artifact validation path.
 - Current dogfood evidence: `Clarissimi propose fixture` workflow run
   `29027800039` passed on `2026-07-09T15:02:15Z` and updated proposal pull request
   `https://github.com/0disoft/clarissimi/pull/1`.

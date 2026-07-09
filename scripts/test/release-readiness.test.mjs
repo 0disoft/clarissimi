@@ -11,6 +11,7 @@ import {
   validateActionManifestContract,
   validateCiWorkflowContract,
   validateCredentialedReleaseEvidence,
+  validateDryRunDogfoodEvidence,
   validateDogfoodWorkflowContract,
   validateHostedLiveProviderWorkflowContract,
   validatePackageOwnershipContract,
@@ -404,6 +405,10 @@ test("release readiness accepts recorded write-mode dogfood evidence", () => {
   assert.deepEqual(validateWriteModeDogfoodEvidence(createReleaseEvidenceText()), []);
 });
 
+test("release readiness accepts recorded dry-run dogfood evidence", () => {
+  assert.deepEqual(validateDryRunDogfoodEvidence(createReleaseEvidenceText()), []);
+});
+
 test("release readiness rejects missing hosted credentialed release evidence", () => {
   const text = createReleaseEvidenceText()
     .replace("Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow run", "")
@@ -427,6 +432,20 @@ test("release readiness rejects missing write-mode dogfood evidence", () => {
     "docs/ops/release.md must include https://github.com/0disoft/clarissimi/pull/2.",
     "docs/ops/release.md must include a numeric propose fixture workflow run id.",
     "docs/ops/release.md must include a propose fixture workflow timestamp."
+  ]);
+});
+
+test("release readiness rejects missing dry-run dogfood evidence", () => {
+  const text = createReleaseEvidenceText()
+    .replace("Current dry-run dogfood evidence: `Clarissimi dry run` workflow run", "")
+    .replace("`29031384775` passed on `2026-07-09T15:54:58Z`", "passed")
+    .replace("summary artifact validation", "summary output check");
+
+  assert.deepEqual(validateDryRunDogfoodEvidence(text), [
+    "docs/ops/release.md must include Current dry-run dogfood evidence: `Clarissimi dry run` workflow run.",
+    "docs/ops/release.md must include summary artifact validation.",
+    "docs/ops/release.md must include a numeric dry-run dogfood workflow run id.",
+    "docs/ops/release.md must include a dry-run dogfood workflow timestamp."
   ]);
 });
 
@@ -717,6 +736,9 @@ function createPackageOwnershipText() {
 
 function createReleaseEvidenceText() {
   return [
+    "Current dry-run dogfood evidence: `Clarissimi dry run` workflow run",
+    "`29031384775` passed on `2026-07-09T15:54:58Z` at",
+    "`77f3fcbbeb25e3338ee2a4bba3c8efbfc46e5cfb` and exercised summary artifact validation.",
     "Current dogfood evidence: `Clarissimi propose fixture` workflow run",
     "`29027800039` passed on `2026-07-09T15:02:15Z` and created proposal pull request",
     "https://github.com/0disoft/clarissimi/pull/1.",

@@ -378,6 +378,8 @@ Completed deliverables:
   deletion, and post-merge recognition reverts
 - manual-only fixture stage-draft dogfood workflow is available and passed run `29027802451`,
   updating `https://github.com/0disoft/clarissimi/pull/2`
+- read-only dry-run dogfood workflow passed run `29031384775`, including sanitized JSON summary
+  artifact validation
 
 Release follow-up:
 

@@ -190,6 +190,25 @@ export const writeModeDogfoodEvidenceContract = {
   ]
 };
 
+export const dryRunDogfoodEvidenceContract = {
+  path: "docs/ops/release.md",
+  requiredSnippets: [
+    "Current dry-run dogfood evidence: `Clarissimi dry run` workflow run",
+    "summary artifact validation",
+    "77f3fcbbeb25e3338ee2a4bba3c8efbfc46e5cfb"
+  ],
+  requiredPatterns: [
+    {
+      description: "a numeric dry-run dogfood workflow run id",
+      pattern: /Current dry-run dogfood evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/
+    },
+    {
+      description: "a dry-run dogfood workflow timestamp",
+      pattern: /Current dry-run dogfood evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/
+    }
+  ]
+};
+
 export const highRiskSecretEnvNames = [
   "NPM_TOKEN",
   "NODE_AUTH_TOKEN",
@@ -418,6 +437,7 @@ export async function runReleaseReadiness(options = {}) {
   await runWorkspacePackageReleasePolicyCheck(repoRoot);
   await runTsconfigBuildGraphCheck(repoRoot);
   await runPackageOwnershipContractCheck(repoRoot);
+  await runDryRunDogfoodEvidenceCheck(repoRoot);
   await runWriteModeDogfoodEvidenceCheck(repoRoot);
   await runCredentialedReleaseEvidenceCheck(repoRoot);
   await runToolAvailabilityCheck(repoRoot);
@@ -474,7 +494,7 @@ export async function runReleaseReadiness(options = {}) {
   await runSecretScan(repoRoot);
 
   console.log("release readiness static gates passed");
-  console.log("credentialed release evidence recorded in docs/ops/release.md");
+  console.log("dry-run, write-mode, and credentialed release evidence recorded in docs/ops/release.md");
   console.log("public package publication and versioned Action tags remain blocked by release policy");
 }
 
@@ -1012,6 +1032,23 @@ async function runWriteModeDogfoodEvidenceCheck(repoRoot) {
   console.log("write-mode dogfood evidence record passed");
 }
 
+async function runDryRunDogfoodEvidenceCheck(repoRoot) {
+  const evidencePath = join(repoRoot, dryRunDogfoodEvidenceContract.path);
+  let text;
+  try {
+    text = await readFile(evidencePath, "utf8");
+  } catch (error) {
+    throw new Error(`${dryRunDogfoodEvidenceContract.path} is not readable: ${error.message}`);
+  }
+
+  const issues = validateDryRunDogfoodEvidence(text);
+  if (issues.length > 0) {
+    throw new Error(`dry-run dogfood evidence record failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("dry-run dogfood evidence record passed");
+}
+
 export function validatePackageScriptRegistration(packageJson) {
   const issues = [];
   const scripts = packageJson?.scripts;
@@ -1334,6 +1371,10 @@ export function validateCredentialedReleaseEvidence(text, contract = credentiale
 }
 
 export function validateWriteModeDogfoodEvidence(text, contract = writeModeDogfoodEvidenceContract) {
+  return validateReleaseEvidenceText(text, contract);
+}
+
+export function validateDryRunDogfoodEvidence(text, contract = dryRunDogfoodEvidenceContract) {
   return validateReleaseEvidenceText(text, contract);
 }
 

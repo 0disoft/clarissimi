@@ -49,6 +49,13 @@ pull requests enabled so explicit `propose` and `stage-draft` jobs can open prop
 Write-mode dogfood remains manual-only through `.github/workflows/clarissimi-propose-fixture.yml`
 and `.github/workflows/clarissimi-stage-draft-fixture.yml`.
 
+Hosted write-mode dogfood evidence:
+
+- `Clarissimi propose fixture` run `28984721611` passed on `2026-07-09T00:14:30Z` and created
+  `https://github.com/0disoft/clarissimi/pull/1`.
+- `Clarissimi stage draft fixture` run `28992586329` passed on `2026-07-09T03:47:20Z` and created
+  `https://github.com/0disoft/clarissimi/pull/2`.
+
 The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`
 to pass with strict up-to-date status checks. Administrator enforcement is disabled so repository
 owners can recover from CI or protection misconfiguration without changing the branch rule first.

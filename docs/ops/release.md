@@ -61,6 +61,9 @@ Public package publication and versioned Action tags require:
 - Current dogfood evidence: `Clarissimi propose fixture` workflow run
   `28984721611` passed on `2026-07-09T00:14:30Z` and created proposal pull request
   `https://github.com/0disoft/clarissimi/pull/1`.
+- Current draft dogfood evidence: `Clarissimi stage draft fixture` workflow run
+  `28992586329` passed on `2026-07-09T03:47:20Z` and created draft review pull request
+  `https://github.com/0disoft/clarissimi/pull/2`.
 - Current live-provider evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09`
   using maintainer-owned provider credentials and `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.
 - Current OpenCode Go evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09`

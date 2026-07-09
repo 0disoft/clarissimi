@@ -119,8 +119,10 @@ Current status: the read-only dry-run workflow remains in
 `.github/workflows/clarissimi-dry-run.yml`, the maintainer-triggered fixture propose workflow is
 available in `.github/workflows/clarissimi-propose-fixture.yml`, and the maintainer-triggered
 fixture stage-draft workflow is available in
-`.github/workflows/clarissimi-stage-draft-fixture.yml`. Passing maintainer-triggered write-mode
-runs are still required before public package publication or a versioned Action tag.
+`.github/workflows/clarissimi-stage-draft-fixture.yml`. Both fixture write-mode workflows have
+passed in this repository: propose run `28984721611` created
+`https://github.com/0disoft/clarissimi/pull/1`, and stage-draft run `28992586329` created
+`https://github.com/0disoft/clarissimi/pull/2`.
 
 ## Rollback Expectations
 

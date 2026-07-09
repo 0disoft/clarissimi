@@ -285,6 +285,8 @@ Completed deliverables:
   dispatch-time provider model input
 - rollback instructions cover staging cleanup, proposal pull request closure, proposal branch
   deletion, and post-merge recognition reverts
+- manual-only fixture stage-draft dogfood workflow is available and passed run `28992586329`,
+  creating `https://github.com/0disoft/clarissimi/pull/2`
 
 Release follow-up:
 

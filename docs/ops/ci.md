@@ -40,6 +40,10 @@ Local OpenCode Go live-provider smoke passed on `2026-07-09` using maintainer-ow
 `CLARISSIMI_PROVIDER_MODEL=minimax-m3`, the OpenCode Go chat completions endpoint, and
 `CLARISSIMI_PROVIDER_THINKING=disabled`.
 
+Local UMANS live-provider smoke passed on `2026-07-09` using maintainer-owned credentials,
+`CLARISSIMI_PROVIDER_MODEL=umans-glm-5.2`, and the UMANS OpenAI-compatible chat completions
+endpoint.
+
 Repository Actions settings keep default workflow permissions at read-only, with workflow-created
 pull requests enabled so explicit `propose` jobs can open recognition proposal pull requests.
 

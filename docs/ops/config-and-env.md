@@ -26,6 +26,9 @@ Current implementation status:
 - Local OpenCode Go live-provider smoke passed on `2026-07-09` with
   `CLARISSIMI_PROVIDER_MODEL=minimax-m3`, the OpenCode Go chat completions endpoint, and
   `CLARISSIMI_PROVIDER_THINKING=disabled`.
+- Local UMANS live-provider smoke passed on `2026-07-09` with
+  `CLARISSIMI_PROVIDER_MODEL=umans-glm-5.2` and the UMANS OpenAI-compatible chat completions
+  endpoint.
 
 ## Owners
 

@@ -276,6 +276,9 @@ Completed deliverables:
 - OpenCode Go live-provider smoke passed locally on `2026-07-09` with maintainer-owned
   credentials, `CLARISSIMI_PROVIDER_MODEL=minimax-m3`, the OpenCode Go chat completions endpoint,
   and `CLARISSIMI_PROVIDER_THINKING=disabled`
+- UMANS live-provider smoke passed locally on `2026-07-09` with maintainer-owned credentials,
+  `CLARISSIMI_PROVIDER_MODEL=umans-glm-5.2`, and the UMANS OpenAI-compatible chat completions
+  endpoint
 - manual live-provider smoke workflow is available for maintainer-owned repository secrets and
   dispatch-time provider model input
 - rollback instructions cover staging cleanup, proposal pull request closure, proposal branch

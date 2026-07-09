@@ -66,5 +66,8 @@ Public package publication and versioned Action tags require:
 - Current OpenCode Go evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09`
   using maintainer-owned provider credentials, `CLARISSIMI_PROVIDER_MODEL=minimax-m3`, the OpenCode
   Go chat completions endpoint, and `CLARISSIMI_PROVIDER_THINKING=disabled`.
+- Current UMANS evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09` using
+  maintainer-owned provider credentials, `CLARISSIMI_PROVIDER_MODEL=umans-glm-5.2`, and the UMANS
+  OpenAI-compatible chat completions endpoint.
 - Remaining operational risk: hosted manual live-provider smoke workflow evidence with repository
   secret configuration is not complete.

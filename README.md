@@ -76,12 +76,13 @@ Implemented MVP slices:
   collection
 - `packages/providers`: provider adapter interface, deterministic fake contribution draft provider
   for tests and fixture-first workflows, and SDK-free OpenAI-compatible HTTP adapter
-- `packages/renderers`: deterministic JSONL, contributor JSON, Markdown, and static-data output
-  rendering
+- `packages/renderers`: deterministic JSONL, contributor JSON, Markdown, static-data output, and
+  draft review rendering
 - `packages/cli`: fixture-first local command orchestration for validation, recognition dry runs,
-  agent-assisted draft import, and rebuild previews
+  agent-assisted draft staging/import, and rebuild previews
 - `packages/action`: GitHub Action entrypoint for dry-run summaries, fixture-first proposal
-  branch/pull-request flows, and event-path live GitHub collection in propose mode
+  branch/pull-request flows, draft review proposals, and event-path live GitHub collection in write
+  modes
 
 Not implemented yet:
 
@@ -141,17 +142,24 @@ The Action also accepts `GITHUB_EVENT_PATH` for a merged pull request event payl
 bounded dry-run summary and does not render public outputs or propose repository changes in
 `dry-run` mode.
 
-The root `action.yml` defaults to `propose` mode and still supports explicit `dry-run` mode.
-Propose mode requires explicit write permissions, an approved or auto-approved fixture, and a
-checked-out repository. It stages public output, publishes
+The root `action.yml` defaults to `propose` mode and still supports explicit `dry-run` and
+`stage-draft` modes. Propose mode requires explicit write permissions, an approved or auto-approved
+fixture, and a checked-out repository. It stages public output, publishes
 `clarissimi/recognition/<source-kind>-<source-id>`, and opens or updates a pull request for
-maintainer review. When `propose` receives `GITHUB_EVENT_PATH`, it routes the merged pull request
-through the live GitHub collector using `GITHUB_TOKEN`; fixture inputs remain the deterministic
-test and local path. Explicit OpenAI-compatible provider selection is available for CLI and Action
-runs, but it requires the caller to provide a model and `CLARISSIMI_PROVIDER_TOKEN`; correctness
-tests continue to use fake providers or injected fetch implementations. Providers that emit hidden
-reasoning in message content can opt into `provider-thinking: disabled` or
-`--provider-thinking disabled`.
+maintainer review.
+
+Stage-draft mode requires the same checked-out repository and write permissions, but it stages only
+`.clarissimi/drafts/*.json`, publishes `clarissimi/drafts/<source-kind>-<source-id>`, and opens or
+updates a draft review pull request. It leaves `.clarissimi/contributions.jsonl`, `CONTRIBUTORS.md`,
+contributor JSON, and static public data untouched.
+
+When `propose` or `stage-draft` receives `GITHUB_EVENT_PATH`, it routes the merged pull request
+through the live GitHub collector using `GITHUB_TOKEN`; fixture inputs remain the deterministic test
+and local path. Explicit OpenAI-compatible provider selection is available for CLI and Action runs,
+but it requires the caller to provide a model and `CLARISSIMI_PROVIDER_TOKEN`; correctness tests
+continue to use fake providers or injected fetch implementations. Providers that emit hidden
+reasoning in message content can opt into `provider-thinking: disabled` or `--provider-thinking
+disabled`.
 
 Release maintainers who want automated provider mode can run `pnpm run live-provider-smoke` with
 `CLARISSIMI_PROVIDER_TOKEN` and `CLARISSIMI_PROVIDER_MODEL` to perform an explicit credentialed

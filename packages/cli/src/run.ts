@@ -4,26 +4,25 @@ import {
   CONTRIBUTORS_JSON_PATH,
   CONTRIBUTORS_MARKDOWN_PATH,
   CONTRIBUTIONS_JSONL_PATH,
+  DRAFTS_DIR_PATH,
   RendererValidationError,
   STATIC_DATA_JSON_PATH,
+  draftReviewFilename,
   parseContributionsJsonl,
-  renderPrettyJson,
   renderContributorsJson,
   renderContributorsMarkdown,
   renderContributionsJsonl,
+  renderDraftReviewJson,
   renderRecognitionOutputs,
-  renderStaticContributionsJson
+  renderStaticContributionsJson,
+  toDraftReviewRecord
 } from "@clarissimi/renderers";
 import {
   createFakeContributionDraftProvider,
   createOpenAiCompatibleContributionDraftProvider,
   type ContributionDraftProvider
 } from "@clarissimi/providers";
-import {
-  validateContributionAssessment,
-  type ContributionAssessment,
-  type ValidationIssue
-} from "@clarissimi/schemas";
+import { validateContributionAssessment, type ValidationIssue } from "@clarissimi/schemas";
 
 import { CliUsageError, getBooleanFlag, getStringFlag, parseArgs, type ParsedArgs } from "./args.js";
 import { validateConfigFile } from "./config.js";
@@ -198,7 +197,7 @@ async function runStageDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> 
 
   const draftsDir = resolveFromCwd(
     io.cwd,
-    getStringFlag(args, "drafts-dir", ".clarissimi/drafts") ?? ".clarissimi/drafts"
+    getStringFlag(args, "drafts-dir", DRAFTS_DIR_PATH) ?? DRAFTS_DIR_PATH
   );
 
   try {
@@ -207,22 +206,9 @@ async function runStageDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> 
       draftPath
     );
     const draftInput = parseDraftImportInput(parsedDraftInput);
-    const validation = validateContributionAssessment(draftInput.assessment);
-    if (!validation.ok) {
-      throw new RendererValidationError("Draft is not a valid contribution assessment.", validation.issues);
-    }
+    const draftReview = toDraftReviewRecord(draftInput.assessment);
 
-    if (validation.value.maintainerApprovalStatus !== "draft") {
-      throw new RendererValidationError("Only draft assessments can be staged for maintainer review.", [
-        {
-          path: "$.maintainerApprovalStatus",
-          code: "invalid_stage_status",
-          message: "Staged drafts must use maintainerApprovalStatus: draft."
-        }
-      ]);
-    }
-
-    const stagedDraftPath = join(draftsDir, draftInboxFilename(validation.value));
+    const stagedDraftPath = join(draftsDir, draftInboxFilename(draftReview));
     if (await fileExists(stagedDraftPath)) {
       throw new RendererValidationError("Draft is already staged for this contribution source.", [
         {
@@ -233,7 +219,7 @@ async function runStageDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> 
       ]);
     }
 
-    await writeTextFile(stagedDraftPath, renderPrettyJson(sanitizeDraftForReview(validation.value)));
+    await writeTextFile(stagedDraftPath, renderDraftReviewJson(draftReview));
 
     writeOutput(io, args, {
       ok: true,
@@ -241,7 +227,7 @@ async function runStageDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> 
       draftFormat: draftInput.format,
       draftPath,
       stagedDraftPath,
-      approvalStatus: validation.value.maintainerApprovalStatus,
+      approvalStatus: draftReview.maintainerApprovalStatus,
       message: "Draft staged for maintainer review; approve it before importing into the ledger."
     });
     return CLI_EXIT_CODES.success;
@@ -331,49 +317,7 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
   }
 }
 
-function sanitizeDraftForReview(assessment: ContributionAssessment): ContributionAssessment {
-  return {
-    schemaVersion: assessment.schemaVersion,
-    contributor: {
-      platform: assessment.contributor.platform,
-      id: assessment.contributor.id,
-      login: assessment.contributor.login,
-      profileUrl: assessment.contributor.profileUrl
-    },
-    contributionType: assessment.contributionType,
-    affectedArea: assessment.affectedArea,
-    impactLevel: assessment.impactLevel,
-    evidenceSummary: assessment.evidenceSummary,
-    evidenceRefs: assessment.evidenceRefs.map((ref) => ({
-      kind: ref.kind,
-      id: ref.id,
-      ...(ref.url === undefined ? {} : { url: ref.url }),
-      ...(ref.title === undefined ? {} : { title: ref.title })
-    })),
-    suggestedBadge: assessment.suggestedBadge,
-    publicRecognitionText: assessment.publicRecognitionText,
-    confidence: assessment.confidence,
-    maintainerApprovalStatus: assessment.maintainerApprovalStatus,
-    source: {
-      repository: assessment.source.repository,
-      event: assessment.source.event,
-      pullRequestNumber: assessment.source.pullRequestNumber,
-      ...(assessment.source.mergedAt === undefined ? {} : { mergedAt: assessment.source.mergedAt })
-    }
-  };
-}
-
-function draftInboxFilename(assessment: ContributionAssessment): string {
-  const repository = sanitizeFilenamePart(assessment.source.repository);
-  const event = sanitizeFilenamePart(assessment.source.event);
-
-  return `${repository}-${event}-${assessment.source.pullRequestNumber}.json`;
-}
-
-function sanitizeFilenamePart(value: string): string {
-  const normalized = value.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
-  return normalized.length === 0 ? "unknown" : normalized;
-}
+const draftInboxFilename = draftReviewFilename;
 
 function parseDraftImportInput(value: unknown): {
   readonly format: "assessment" | "draft-envelope";

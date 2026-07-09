@@ -29,12 +29,13 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
 - `packages/github`: fixture-first and injected-client live merged pull request evidence collection
 - `packages/providers`: provider adapter interface, deterministic fake provider, and SDK-free
   OpenAI-compatible HTTP adapter
-- `packages/renderers`: JSONL, contributor JSON, Markdown, and static-data renderers
+- `packages/renderers`: JSONL, contributor JSON, Markdown, static-data renderers, and draft review
+  JSON rendering
 - `packages/cli`: fixture-first validation, recognition dry-run, agent-assisted draft staging/import,
   rebuild commands, and explicit fake or OpenAI-compatible provider selection
-- `packages/action`: Action runner for dry-run summaries, fixture-first proposal pull requests, and
-  event-path live GitHub collection in propose mode with explicit fake or OpenAI-compatible
-  provider selection
+- `packages/action`: Action runner for dry-run summaries, fixture-first public recognition
+  proposals, fixture-first draft review proposals, and event-path live GitHub collection in write
+  modes with explicit fake or OpenAI-compatible provider selection
 - root `action.yml`: composite Action defaulting to `propose` and exposing explicit `dry-run`
 - root `package.json`: configured `docs`, `smoke`, and release-only `live-provider-smoke` scripts
   for documentation integrity, CLI subprocess smoke coverage, Action dry-run coverage, and default
@@ -364,6 +365,38 @@ Completed deliverables:
 
 Validation:
 
+- `pnpm run docs`
+- `pnpm run smoke`
+- `pnpm run check`
+- `pnpm run contract`
+
+### 13. Action Draft Inbox Proposal Mode
+
+Source: `docs/adr/0023-add-action-draft-inbox-proposal-mode.md`,
+`docs/github-action/action-contract.md`
+
+Status: Completed for fixture-first and event-path Action flows.
+
+Goal: let automated post-merge Action runs open a maintainer-review pull request containing only a
+sanitized draft inbox file when the assessment is still unapproved.
+
+Completed deliverables:
+
+- `mode: stage-draft` routes through the same evidence, redaction, and provider path as dry-run and
+  propose mode
+- `stage-draft` accepts normal `draft` assessments and rejects approved public-output publication
+  paths
+- staged files are limited to `.clarissimi/drafts/*.json`
+- staged draft files omit raw evidence excerpts and provider provenance
+- proposal branches use `clarissimi/drafts/<source-kind>-<source-id>`
+- proposal pull request titles and bodies use draft review language instead of public recognition
+  language
+- Action outputs and step summaries include proposal metadata without raw evidence
+
+Validation:
+
+- renderer draft review tests
+- Action staging, branch writer, pull request, environment, and runner tests
 - `pnpm run docs`
 - `pnpm run smoke`
 - `pnpm run check`

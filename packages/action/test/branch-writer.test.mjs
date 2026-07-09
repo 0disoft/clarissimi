@@ -8,6 +8,7 @@ import test from "node:test";
 import {
   ProposalBranchWriterError,
   proposalBranchName,
+  stageProposalDraftReviewOutput,
   stageProposalRecognitionOutputs,
   writeProposalBranch
 } from "../dist/index.js";
@@ -100,6 +101,33 @@ test("writes staged outputs to a deterministic proposal branch without mutating 
     assert.equal(
       await git(repositoryDir, ["show", "-s", "--format=%an <%ae>", result.branchName]),
       "Clarissimi Bot <clarissimi-bot@users.noreply.github.com>"
+    );
+  });
+});
+
+test("writes staged draft outputs to a distinct draft proposal branch", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const stagedOutputDir = join(dir, "staged");
+    await initRepository(repositoryDir);
+    const staging = await stageProposalDraftReviewOutput({
+      outputDir: stagedOutputDir,
+      assessments: [assessment({ maintainerApprovalStatus: "draft" })],
+      redactionMatchCount: 1
+    });
+
+    const result = await writeProposalBranch({
+      repositoryDir,
+      stagedOutputDir,
+      manifest: staging.manifest,
+      baseBranch: "main"
+    });
+
+    assert.equal(result.branchName, "clarissimi/drafts/merged_pull_request-42");
+    assert.deepEqual(result.changedFiles, [".clarissimi/drafts/sample-project-merged_pull_request-42.json"]);
+    assert.equal(
+      await git(repositoryDir, ["show", "-s", "--format=%s", result.branchName]),
+      "Clarissimi draft review: merged_pull_request #42"
     );
   });
 });

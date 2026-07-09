@@ -25,7 +25,7 @@ import { writeProposalBranch } from "./branch-writer.js";
 import { resolveGitHubEventPayload } from "./event.js";
 import { createGitHubPullRequestClient } from "./github-client.js";
 import { createOrUpdateProposalPullRequest, type ProposalPullRequestClient } from "./pull-request.js";
-import { stageProposalRecognitionOutputs } from "./staging.js";
+import { stageProposalDraftReviewOutput, stageProposalRecognitionOutputs } from "./staging.js";
 import { sanitizeAssessmentForActionSummary } from "./summary.js";
 import type {
   ActionDryRunInput,
@@ -33,7 +33,8 @@ import type {
   ActionInputSource,
   ActionProposeInput,
   ActionProposeSummary,
-  ActionProcessIo
+  ActionProcessIo,
+  ActionStageDraftInput
 } from "./types.js";
 
 export class ActionUsageError extends Error {
@@ -133,6 +134,59 @@ export async function runActionPropose(input: ActionProposeInput): Promise<Actio
   };
 }
 
+export async function runActionStageDraft(input: ActionStageDraftInput): Promise<ActionProposeSummary> {
+  const prepared = await prepareActionAssessment(input);
+  if (prepared.kind === "skipped") {
+    throw new ActionUsageError("Stage-draft mode requires a merged pull request input.");
+  }
+
+  const staging = await stageProposalDraftReviewOutput({
+    outputDir: input.stagingDir,
+    assessments: [prepared.assessment],
+    redactionMatchCount: prepared.redactionMatchCount
+  });
+  const branch = await writeProposalBranch({
+    repositoryDir: input.repositoryDir,
+    stagedOutputDir: input.stagingDir,
+    manifest: staging.manifest,
+    baseBranch: input.baseBranch
+  });
+  const publishInput: Parameters<typeof publishProposalBranch>[0] = {
+    repositoryDir: input.repositoryDir,
+    branch
+  };
+  assignOptional(publishInput, "remoteName", input.remoteName);
+  await publishProposalBranch(publishInput);
+  const pullRequestInput: Parameters<typeof createOrUpdateProposalPullRequest>[0] = {
+    client: input.pullRequestClient,
+    manifest: staging.manifest,
+    branch,
+    maintainerApprovalNote:
+      "This pull request stages an unapproved Clarissimi draft. Review and edit the draft, then approve and import it before public recognition."
+  };
+  assignOptional(pullRequestInput, "targetRepository", input.targetRepository);
+  const pullRequest = await createOrUpdateProposalPullRequest(pullRequestInput);
+
+  return {
+    ok: true,
+    mode: "stage-draft",
+    inputSource: prepared.inputSource,
+    draftCount: 1,
+    proposedEntryCount: 0,
+    skippedEntryCount: 0,
+    publicOutputsRendered: false,
+    approvalStatus: prepared.assessment.maintainerApprovalStatus,
+    redactionChanged: prepared.redactionChanged,
+    redactionMatchCount: prepared.redactionMatchCount,
+    stagedFileCount: staging.manifest.files.length,
+    proposalBranch: branch.branchName,
+    proposalCommitSha: branch.commitSha,
+    proposalPullRequestNumber: pullRequest.pullRequest.number,
+    proposalPullRequestUrl: pullRequest.pullRequest.url,
+    proposalPullRequestAction: pullRequest.action
+  };
+}
+
 export interface ActionEnvironmentRuntime {
   readonly pullRequestClient?: ProposalPullRequestClient;
   readonly liveGitHubClient?: ActionDryRunInput["liveGitHubClient"];
@@ -159,9 +213,7 @@ export async function runActionFromEnvironment(
     assignOptional(input, "liveGitHubClient", runtime.liveGitHubClient);
     assignOptional(input, "provider", runtime.provider ?? resolveActionProvider(env, runtime));
 
-    const summary = input.mode === "propose"
-      ? await runActionPropose(buildActionProposeInput(input, env, runtime))
-      : await runActionDryRun(input);
+    const summary = await runActionMode(input, env, runtime);
     await writeGitHubOutputs(env.GITHUB_OUTPUT, summary);
     await writeGitHubStepSummary(env.GITHUB_STEP_SUMMARY, summary);
     io.stdout(`${JSON.stringify(summary, null, 2)}\n`);
@@ -173,11 +225,40 @@ export async function runActionFromEnvironment(
   }
 }
 
-function buildActionProposeInput(
+async function runActionMode(
   input: ActionDryRunInput,
   env: NodeJS.ProcessEnv,
   runtime: ActionEnvironmentRuntime
-): ActionProposeInput {
+): Promise<ActionDryRunSummary | ActionProposeSummary> {
+  if (input.mode === "propose") {
+    return runActionPropose(buildActionWriteInput(input, env, runtime, "propose"));
+  }
+
+  if (input.mode === "stage-draft") {
+    return runActionStageDraft(buildActionWriteInput(input, env, runtime, "stage-draft"));
+  }
+
+  return runActionDryRun(input);
+}
+
+function buildActionWriteInput(
+  input: ActionDryRunInput,
+  env: NodeJS.ProcessEnv,
+  runtime: ActionEnvironmentRuntime,
+  mode: "propose"
+): ActionProposeInput;
+function buildActionWriteInput(
+  input: ActionDryRunInput,
+  env: NodeJS.ProcessEnv,
+  runtime: ActionEnvironmentRuntime,
+  mode: "stage-draft"
+): ActionStageDraftInput;
+function buildActionWriteInput(
+  input: ActionDryRunInput,
+  env: NodeJS.ProcessEnv,
+  runtime: ActionEnvironmentRuntime,
+  mode: "propose" | "stage-draft"
+): ActionProposeInput | ActionStageDraftInput {
   const clientOptions: Parameters<typeof createGitHubPullRequestClient>[0] = {
     token: requireEnvInput(env.GITHUB_TOKEN, "GITHUB_TOKEN")
   };
@@ -190,20 +271,37 @@ function buildActionProposeInput(
   assignOptional(liveGitHubClientOptions, "apiUrl", clientOptions.apiUrl);
   assignOptional(liveGitHubClientOptions, "fetch", runtime.fetch);
 
-  const proposeInput: ActionProposeInput = {
+  if (mode === "propose") {
+    const proposeInput: ActionProposeInput = {
+      ...input,
+      mode,
+      repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
+      stagingDir: readEnvInput(env.INPUT_STAGING_DIR)
+        ?? join(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-propose"),
+      baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
+      pullRequestClient: runtime.pullRequestClient ?? createGitHubPullRequestClient(clientOptions),
+      liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(liveGitHubClientOptions)
+    };
+    assignOptional(proposeInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
+    assignOptional(proposeInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
+
+    return proposeInput;
+  }
+
+  const stageDraftInput: ActionStageDraftInput = {
     ...input,
-    mode: "propose" as const,
+    mode,
     repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
     stagingDir: readEnvInput(env.INPUT_STAGING_DIR)
-      ?? join(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-propose"),
+      ?? join(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-stage-draft"),
     baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
     pullRequestClient: runtime.pullRequestClient ?? createGitHubPullRequestClient(clientOptions),
     liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(liveGitHubClientOptions)
   };
-  assignOptional(proposeInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
-  assignOptional(proposeInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
+  assignOptional(stageDraftInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
+  assignOptional(stageDraftInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
 
-  return proposeInput;
+  return stageDraftInput;
 }
 
 type PreparedActionAssessment =
@@ -325,7 +423,7 @@ function readEnvInput(value: string | undefined): string | undefined {
 function requireEnvInput(value: string | undefined, name: string): string {
   const normalized = readEnvInput(value);
   if (normalized === undefined) {
-    throw new ActionUsageError(`${name} is required for propose mode.`);
+    throw new ActionUsageError(`${name} is required for write modes.`);
   }
 
   return normalized;
@@ -394,7 +492,7 @@ async function writeGitHubOutputs(
     `redaction-match-count=${summary.redactionMatchCount}`
   ];
 
-  if (summary.mode === "propose") {
+  if (summary.mode === "propose" || summary.mode === "stage-draft") {
     lines.push(
       `staged-file-count=${summary.stagedFileCount}`,
       `proposal-branch=${summary.proposalBranch}`,
@@ -426,7 +524,7 @@ async function writeGitHubStepSummary(
     ["Redaction matches", String(summary.redactionMatchCount)]
   ];
 
-  if (summary.mode === "propose") {
+  if (summary.mode === "propose" || summary.mode === "stage-draft") {
     rows.push(
       ["Staged files", String(summary.stagedFileCount)],
       ["Proposal branch", summary.proposalBranch],

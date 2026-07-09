@@ -34,6 +34,8 @@ engine.
 - `0021-add-draft-inbox-staging.md`: add a review inbox for unapproved drafts
 - `0022-keep-ledger-single-file-with-partition-path.md`: keep MVP ledger single-file with a yearly
   partition migration path
+- `0023-add-action-draft-inbox-proposal-mode.md`: add an Action mode that proposes draft inbox
+  review files
 
 ## Review Blockers
 

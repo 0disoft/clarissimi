@@ -13,15 +13,17 @@
 - Propose write boundary: `docs/adr/0017-propose-mode-write-boundary.md`
 - Live GitHub collector boundary: `docs/adr/0018-add-live-github-collector-boundary.md`
 - Provider boundary: `docs/adr/0019-add-openai-compatible-provider-adapter.md`
+- Draft inbox Action boundary: `docs/adr/0023-add-action-draft-inbox-proposal-mode.md`
 
 ## Inputs
 
-The Action supports dry-run summaries and a fixture-first `propose` write path. It accepts:
+The Action supports dry-run summaries, public recognition proposals, and draft inbox proposals. It
+accepts:
 
 - `GITHUB_EVENT_PATH`: GitHub event payload path
 - `INPUT_EVENT_PATH`: explicit event payload path override for tests and local runs
 - `INPUT_GITHUB_FIXTURE`: explicit GitHub merged pull request fixture path
-- `INPUT_MODE`: `dry-run` or `propose`, default `propose`
+- `INPUT_MODE`: `dry-run`, `propose`, or `stage-draft`, default `propose`
 - `INPUT_BASE_BRANCH`: base branch for proposal pull requests, default `main`
 - `INPUT_REMOTE_NAME`: remote name used to publish proposal branches, default `origin`
 - `INPUT_STAGING_DIR`: optional temporary directory for generated proposal files
@@ -63,6 +65,11 @@ Fixture-first `propose` succeeds only when the fixture explicitly carries an app
 auto-approved maintainer approval status. Normal provider drafts remain non-public and fail closed
 before branch mutation.
 
+`stage-draft` mode reads `GITHUB_TOKEN` for live GitHub collection and proposal pull request
+creation or update. It succeeds only for normal `draft` assessments and stages sanitized
+`.clarissimi/drafts/*.json` review files. It must not write `.clarissimi/contributions.jsonl`,
+`CONTRIBUTORS.md`, contributor JSON, or static public data.
+
 Proposal branch commits use a Clarissimi-owned bot author instead of relying on runner-global git
 identity. This keeps maintainer workstations and GitHub-hosted runners from becoming part of the
 public recognition commit identity.
@@ -87,7 +94,7 @@ The root `action.yml` maps these fields to GitHub Action outputs using the same 
 `draft-count`, `proposed-entry-count`, `skipped-entry-count`, `mode`, `input-source`,
 `approval-status`, and `redaction-match-count`.
 
-In `propose` mode, the Action also emits:
+In `propose` and `stage-draft` modes, the Action also emits:
 
 - `staged-file-count`
 - `proposal-branch`
@@ -121,11 +128,13 @@ The Action uses the following process outcomes:
   empty stdout, usage message on stderr.
 - Draft, rejected, or skipped assessment in `propose` mode: exit `4`, empty stdout, diagnostic on
   stderr before branch mutation.
+- Approved, auto-approved, rejected, or skipped assessment in `stage-draft` mode: exit `4`, empty
+  stdout, diagnostic on stderr before branch mutation.
 
 ## Permissions
 
-Dry-run mode should need read permissions only. Propose mode needs the minimum write permissions
-required to create a proposal branch and pull request. Commit mode is not implemented.
+Dry-run mode should need read permissions only. Propose and stage-draft modes need the minimum write
+permissions required to create a proposal branch and pull request. Commit mode is not implemented.
 
 ## Review Blockers
 
@@ -133,3 +142,4 @@ required to create a proposal branch and pull request. Commit mode is not implem
 - Provider secrets are modeled as plain action inputs.
 - The Action runs untrusted PR head code.
 - Public outputs include raw evidence or raw provider output.
+- `stage-draft` mode writes public recognition outputs or implies maintainer approval.

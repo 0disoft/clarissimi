@@ -6,12 +6,14 @@ import { join } from "node:path";
 import test from "node:test";
 
 import {
+  RendererValidationError,
   RENDERED_OUTPUT_PATHS,
   renderRecognitionOutputs
 } from "@clarissimi/renderers";
 
 import {
   ProposalOutputStagingError,
+  stageProposalDraftReviewOutput,
   stageProposalRecognitionOutputs
 } from "../dist/index.js";
 
@@ -115,6 +117,61 @@ test("rejects draft assessments before staging public files", async () => {
           redactionMatchCount: 0
         }),
       ProposalOutputStagingError
+    );
+
+    assert.deepEqual(await readdir(dir), []);
+  });
+});
+
+test("stages draft review output without public recognition files", async () => {
+  await withTempDir(async (dir) => {
+    const result = await stageProposalDraftReviewOutput({
+      outputDir: dir,
+      assessments: [
+        assessment({
+          maintainerApprovalStatus: "draft",
+          evidenceRefs: [
+            {
+              kind: "pull_request",
+              id: "PR-42",
+              url: "https://github.com/sample/project/pull/42",
+              title: "Add parser regression coverage",
+              excerpt: "PATCH_EXCERPT_SENTINEL"
+            }
+          ],
+          rawProviderOutput: "PROVIDER_RAW_SENTINEL"
+        })
+      ],
+      redactionMatchCount: 4
+    });
+    const filePaths = result.manifest.files.map((file) => file.path);
+    const draftText = await readFile(join(dir, filePaths[0]), "utf8");
+
+    assert.equal(result.manifest.mode, "stage-draft");
+    assert.deepEqual(filePaths, [".clarissimi/drafts/sample-project-merged_pull_request-42.json"]);
+    assert.equal(result.manifest.assessmentCount, 1);
+    assert.deepEqual(result.manifest.approvalSummary, {
+      approved: 0,
+      autoApproved: 0
+    });
+    assert.equal(result.manifest.redactionMatchCount, 4);
+    assert.equal(draftText.includes('"maintainerApprovalStatus": "draft"'), true);
+    assert.equal(draftText.includes("PATCH_EXCERPT_SENTINEL"), false);
+    assert.equal(draftText.includes("PROVIDER_RAW_SENTINEL"), false);
+    assert.deepEqual(await readdir(join(dir, ".clarissimi")), ["drafts"]);
+  });
+});
+
+test("rejects approved assessments before staging draft review output", async () => {
+  await withTempDir(async (dir) => {
+    await assert.rejects(
+      () =>
+        stageProposalDraftReviewOutput({
+          outputDir: dir,
+          assessments: [assessment()],
+          redactionMatchCount: 0
+        }),
+      RendererValidationError
     );
 
     assert.deepEqual(await readdir(dir), []);

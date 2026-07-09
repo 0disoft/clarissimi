@@ -19,8 +19,9 @@ This document breaks `propose` mode into implementation slices so repository mut
 as one large branch-writing and pull-request-opening change. It is an execution plan, not a new
 permission or product decision.
 
-The current root `action.yml` defaults to `propose` mode and supports explicit read-only `dry-run`.
-Live GitHub evidence collection and live provider calls remain separate implementation slices.
+The current root `action.yml` defaults to `propose` mode and supports explicit read-only `dry-run`
+plus `stage-draft` draft review proposals. Live GitHub evidence collection and live provider calls
+remain separate implementation slices.
 
 ## Implementation Slices
 
@@ -52,6 +53,7 @@ The branch writer should:
 - accept only the staged manifest and configured branch/base metadata
 - write only Clarissimi-owned output paths
 - create or update `clarissimi/recognition/<source-kind>-<source-id>`
+- create or update `clarissimi/drafts/<source-kind>-<source-id>` for draft review proposals
 - refuse to write when the base branch, source id, or staged manifest is missing
 - refuse to overwrite maintainer edits unless idempotent ownership can be proven
 - return a structured result with branch name, commit sha, changed files, and rollback hint
@@ -69,6 +71,7 @@ The pull request creator should:
 
 - open or update one pull request for the deterministic branch
 - use a title starting with `Clarissimi recognition:`
+- use a title starting with `Clarissimi draft review:` for draft review proposals
 - include source reference, changed files, approval summary, redaction match count, and maintainer
   approval note
 - avoid raw evidence and provider raw output in the pull request body

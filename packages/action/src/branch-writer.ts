@@ -105,6 +105,10 @@ export async function writeProposalBranch(
 export function proposalBranchName(manifest: ProposalOutputStagingManifest): string {
   const sourceKind = normalizeBranchSegment(manifest.source.event);
   const sourceId = String(manifest.source.pullRequestNumber);
+  if (manifest.mode === "stage-draft") {
+    return `clarissimi/drafts/${sourceKind}-${sourceId}`;
+  }
+
   return `clarissimi/recognition/${sourceKind}-${sourceId}`;
 }
 
@@ -262,6 +266,10 @@ function assertOwnedStagedPath(file: ProposalStagedFile): void {
 }
 
 function defaultCommitMessage(manifest: ProposalOutputStagingManifest): string {
+  if (manifest.mode === "stage-draft") {
+    return `Clarissimi draft review: ${manifest.source.event} #${manifest.source.pullRequestNumber}`;
+  }
+
   return `Clarissimi recognition: ${manifest.source.event} #${manifest.source.pullRequestNumber}`;
 }
 

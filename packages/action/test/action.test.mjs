@@ -559,7 +559,7 @@ test("environment runner requires a GitHub token before propose mode writes outp
 
     assert.equal(exitCode, 1);
     assert.equal(stdout, "");
-    assert.equal(stderr, "GITHUB_TOKEN is required for propose mode.\n");
+    assert.equal(stderr, "GITHUB_TOKEN is required for write modes.\n");
     await assert.rejects(() => readFile(outputPath, "utf8"));
     await assert.rejects(() => readFile(summaryPath, "utf8"));
   });
@@ -590,7 +590,7 @@ test("environment runner defaults to propose mode", async () => {
 
     assert.equal(exitCode, 1);
     assert.equal(stdout, "");
-    assert.equal(stderr, "GITHUB_TOKEN is required for propose mode.\n");
+    assert.equal(stderr, "GITHUB_TOKEN is required for write modes.\n");
     await assert.rejects(() => readFile(outputPath, "utf8"));
     await assert.rejects(() => readFile(summaryPath, "utf8"));
   });

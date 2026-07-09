@@ -5,9 +5,11 @@ import {
   RendererValidationError,
   buildContributorsJsonDocument,
   buildStaticContributionsDocument,
+  draftReviewPathForAssessment,
   parseContributionsJsonl,
   renderContributionsJsonl,
   renderContributorsMarkdown,
+  renderDraftReviewJson,
   renderRecognitionOutputs
 } from "../dist/index.js";
 
@@ -89,6 +91,42 @@ test("renders empty JSONL as an empty file", () => {
 test("rejects draft assessments before rendering public outputs", () => {
   assert.throws(
     () => renderContributionsJsonl([assessment({ maintainerApprovalStatus: "draft" })]),
+    RendererValidationError
+  );
+});
+
+test("renders sanitized draft review JSON for inbox staging", () => {
+  const draft = assessment({
+    maintainerApprovalStatus: "draft",
+    evidenceRefs: [
+      {
+        kind: "pull_request",
+        id: "PR-42",
+        url: "https://github.com/example/project/pull/42",
+        title: "Add parser regression coverage",
+        excerpt: "PATCH_EXCERPT_SENTINEL"
+      }
+    ],
+    rawProviderOutput: "PROVIDER_RAW_SENTINEL",
+    rawEvidence: "RAW_EVIDENCE_SENTINEL"
+  });
+  const rendered = renderDraftReviewJson(draft);
+  const parsed = JSON.parse(rendered);
+
+  assert.equal(parsed.maintainerApprovalStatus, "draft");
+  assert.equal(parsed.evidenceRefs[0].excerpt, undefined);
+  assert.equal(rendered.includes("PATCH_EXCERPT_SENTINEL"), false);
+  assert.equal(rendered.includes("PROVIDER_RAW_SENTINEL"), false);
+  assert.equal(rendered.includes("RAW_EVIDENCE_SENTINEL"), false);
+  assert.equal(
+    draftReviewPathForAssessment(draft),
+    ".clarissimi/drafts/example-project-merged_pull_request-42.json"
+  );
+});
+
+test("rejects approved assessments before rendering draft review JSON", () => {
+  assert.throws(
+    () => renderDraftReviewJson(assessment()),
     RendererValidationError
   );
 });

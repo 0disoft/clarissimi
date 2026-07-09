@@ -45,7 +45,7 @@ Local UMANS live-provider smoke passed on `2026-07-09` using maintainer-owned cr
 endpoint.
 
 Repository Actions settings keep default workflow permissions at read-only, with workflow-created
-pull requests enabled so explicit `propose` jobs can open recognition proposal pull requests.
+pull requests enabled so explicit `propose` and `stage-draft` jobs can open proposal pull requests.
 
 The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`
 to pass with strict up-to-date status checks. Administrator enforcement is disabled so repository

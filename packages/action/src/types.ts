@@ -3,7 +3,7 @@ import type { LiveGitHubClient } from "@clarissimi/github";
 import type { ContributionDraftProvider } from "@clarissimi/providers";
 import type { ProposalPullRequestClient } from "./pull-request.js";
 
-export type ActionMode = "dry-run" | "propose";
+export type ActionMode = "dry-run" | "propose" | "stage-draft";
 
 export type ActionInputSource = "github_event_path" | "github_fixture";
 
@@ -25,6 +25,10 @@ export interface ActionProposeInput extends ActionDryRunInput {
   readonly pullRequestClient: ProposalPullRequestClient;
 }
 
+export interface ActionStageDraftInput extends Omit<ActionProposeInput, "mode"> {
+  readonly mode: "stage-draft";
+}
+
 export interface ActionDryRunSummary {
   readonly ok: true;
   readonly mode: "dry-run";
@@ -42,13 +46,13 @@ export interface ActionDryRunSummary {
 
 export interface ActionProposeSummary {
   readonly ok: true;
-  readonly mode: "propose";
+  readonly mode: "propose" | "stage-draft";
   readonly inputSource: ActionInputSource;
   readonly draftCount: 1;
-  readonly proposedEntryCount: 1;
+  readonly proposedEntryCount: 0 | 1;
   readonly skippedEntryCount: 0;
-  readonly publicOutputsRendered: true;
-  readonly approvalStatus: "approved" | "auto_approved";
+  readonly publicOutputsRendered: boolean;
+  readonly approvalStatus: ContributionAssessment["maintainerApprovalStatus"];
   readonly redactionChanged: boolean;
   readonly redactionMatchCount: number;
   readonly stagedFileCount: number;

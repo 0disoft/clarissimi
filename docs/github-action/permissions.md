@@ -14,6 +14,7 @@ Workflow examples must use explicit `permissions`. A workflow must not use `writ
 | --- | --- | --- | --- | --- | --- |
 | `dry-run` | `read` | `read` | `read` | No | No |
 | `propose` | `write` | `write` | `read` | Proposal branch only | Yes |
+| `stage-draft` | `write` | `write` | `read` | Draft proposal branch only | Yes |
 | `commit` | `write` | `read` | `read` | Current branch | No |
 
 Any permission not listed in a workflow should remain unset, which GitHub treats as `none` when
@@ -54,6 +55,21 @@ The target repository or organization may need to allow GitHub Actions to create
 If that setting blocks pull request creation, Clarissimi should fail with an actionable diagnostic
 instead of falling back to direct commits or broader credentials.
 
+## Stage-Draft Mode
+
+Expected permissions:
+
+- `contents: write`
+- `pull-requests: write`
+- `issues: read`
+
+Stage-draft mode writes only a sanitized draft inbox file to a branch and opens a pull request for
+maintainer review. It must not update public recognition outputs.
+
+The proposal branch name should be deterministic and scoped under
+`clarissimi/drafts/<source-kind>-<source-id>`. The proposal pull request title should start with
+`Clarissimi draft review:`.
+
 ## Commit Mode
 
 Commit mode requires explicit configuration and should not be the default.
@@ -69,8 +85,8 @@ Expected permissions:
 Avoid default `pull_request_target` examples. Do not checkout or execute untrusted pull request head
 code.
 
-`propose` mode should run after safe post-merge events, explicit manual dispatch, or another event
-that does not require running untrusted pull request head code.
+`propose` and `stage-draft` modes should run after safe post-merge events, explicit manual
+dispatch, or another event that does not require running untrusted pull request head code.
 
 ## Review Blockers
 

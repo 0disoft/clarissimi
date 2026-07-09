@@ -109,6 +109,72 @@ await withTempDir("clarissimi-import-draft-smoke-", async (dir) => {
   }
 });
 
+await withTempDir("clarissimi-stage-draft-smoke-", async (dir) => {
+  const draftPath = join(dir, "agent-draft.json");
+  const draftsDir = join(dir, ".clarissimi", "drafts");
+  await writeFile(
+    draftPath,
+    `${JSON.stringify({
+      schemaVersion: "clarissimi.assessment/v1",
+      contributor: {
+        platform: "github",
+        id: "123456",
+        login: "octocat",
+        profileUrl: "https://github.com/octocat"
+      },
+      contributionType: "test",
+      affectedArea: "parser regression coverage",
+      impactLevel: "medium",
+      evidenceSummary: "Added regression coverage for parser behavior.",
+      evidenceRefs: [
+        {
+          kind: "pull_request",
+          id: "PR-42",
+          url: "https://github.com/sample/project/pull/42",
+          title: "Add parser regression coverage",
+          excerpt: "Raw PR body should not be staged."
+        }
+      ],
+      suggestedBadge: "Regression Shield",
+      publicRecognitionText: "Added regression coverage for the parser.",
+      confidence: 0.82,
+      maintainerApprovalStatus: "draft",
+      source: {
+        repository: "sample/project",
+        event: "merged_pull_request",
+        pullRequestNumber: 42,
+        mergedAt: "2026-07-08T00:00:00.000Z"
+      }
+    }, null, 2)}\n`,
+    "utf8"
+  );
+
+  await runJsonCommand({
+    name: "CLI agent draft staging",
+    command: process.execPath,
+    args: [
+      "packages/cli/dist/bin/clarissimi.js",
+      "stage-draft",
+      "--draft",
+      draftPath,
+      "--drafts-dir",
+      draftsDir,
+      "--json"
+    ],
+    expectExitCode: 0,
+    validate(output) {
+      assertEqual(output.ok, true, "stage-draft should succeed.");
+      assertEqual(output.command, "stage-draft", "stage-draft command name should match.");
+      assertEqual(output.approvalStatus, "draft", "stage-draft should keep draft approval status.");
+    }
+  });
+
+  const draftText = await readFile(join(draftsDir, "sample-project-merged_pull_request-42.json"), "utf8");
+  if (draftText.includes("Raw PR body should not be staged.")) {
+    throw new Error("stage-draft smoke leaked raw evidence excerpt into the staged draft.");
+  }
+});
+
 await runJsonCommand({
   name: "Action explicit dry-run",
   command: process.execPath,
@@ -136,7 +202,7 @@ await runCommand({
   expectExitCode: 1,
   validate({ stdout, stderr }) {
     assertEqual(stdout, "", "default propose token failure should not write stdout.");
-    if (!stderr.includes("GITHUB_TOKEN is required for propose mode.")) {
+    if (!stderr.includes("GITHUB_TOKEN is required for write modes.")) {
       throw new Error("default propose token failure should explain the missing GitHub token.");
     }
   }

@@ -1,7 +1,8 @@
 import type { ProposalBranchWriteResult } from "./branch-writer.js";
 import type { ProposalOutputStagingManifest } from "./staging.js";
 
-const TITLE_PREFIX = "Clarissimi recognition:" as const;
+const RECOGNITION_TITLE_PREFIX = "Clarissimi recognition:" as const;
+const DRAFT_TITLE_PREFIX = "Clarissimi draft review:" as const;
 const MAX_TITLE_LENGTH = 120;
 const MAX_BODY_FILES = 25;
 const MAX_BODY_LINE_LENGTH = 180;
@@ -131,8 +132,9 @@ export async function createOrUpdateProposalPullRequest(
 export function buildProposalPullRequestTitle(
   manifest: ProposalOutputStagingManifest
 ): string {
+  const prefix = manifest.mode === "stage-draft" ? DRAFT_TITLE_PREFIX : RECOGNITION_TITLE_PREFIX;
   return truncateLine(
-    `${TITLE_PREFIX} ${manifest.source.repository}#${manifest.source.pullRequestNumber}`,
+    `${prefix} ${manifest.source.repository}#${manifest.source.pullRequestNumber}`,
     MAX_TITLE_LENGTH
   );
 }
@@ -146,9 +148,10 @@ export function buildProposalPullRequestBody(
   const approvalNote =
     normalizeBodyLine(input.maintainerApprovalNote)
     ?? "Maintainers own final approval. Review, edit, or close this pull request according to repository policy.";
+  const isDraftReview = input.manifest.mode === "stage-draft";
 
   return [
-    "## Clarissimi recognition proposal",
+    isDraftReview ? "## Clarissimi draft review proposal" : "## Clarissimi recognition proposal",
     "",
     "### Source",
     "",
@@ -157,7 +160,7 @@ export function buildProposalPullRequestBody(
     `- Pull request: #${source.pullRequestNumber}`,
     ...(source.mergedAt === undefined ? [] : [`- Merged at: ${safeInline(source.mergedAt)}`]),
     "",
-    "### Generated files",
+    isDraftReview ? "### Staged draft files" : "### Generated files",
     "",
     ...stagedFiles,
     "",
@@ -168,11 +171,12 @@ export function buildProposalPullRequestBody(
     `- Commit: ${safeInline(input.branch.commitSha)}`,
     ...changedFiles,
     "",
-    "### Approval summary",
+    isDraftReview ? "### Draft review summary" : "### Approval summary",
     "",
     `- Assessments: ${input.manifest.assessmentCount}`,
     `- Approved: ${input.manifest.approvalSummary.approved}`,
     `- Auto-approved: ${input.manifest.approvalSummary.autoApproved}`,
+    ...(isDraftReview ? ["- Drafts staged: 1"] : []),
     `- Redaction matches: ${input.manifest.redactionMatchCount}`,
     "",
     "### Maintainer approval",

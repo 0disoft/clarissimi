@@ -215,6 +215,10 @@ Default write mode:
 
 - `propose`
 
+The Action may also support `stage-draft` mode. This mode creates a proposal pull request containing
+only sanitized `.clarissimi/drafts/*.json` review files for normal unapproved drafts. It must not
+write public recognition outputs or imply maintainer approval.
+
 Avoid:
 
 - default `pull_request_target`

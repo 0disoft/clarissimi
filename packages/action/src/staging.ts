@@ -5,7 +5,10 @@ import { dirname, isAbsolute, join, normalize, sep } from "node:path";
 import { canPublishAssessment } from "@clarissimi/core";
 import {
   RENDERED_OUTPUT_PATHS,
+  draftReviewPathForAssessment,
+  renderDraftReviewJson,
   renderRecognitionOutputs,
+  toDraftReviewRecord,
   type RenderedRecognitionOutputs
 } from "@clarissimi/renderers";
 import type { ContributionAssessment, RecognitionSource, ValidationIssue } from "@clarissimi/schemas";
@@ -22,7 +25,7 @@ export interface ProposalOutputStagingResult {
 }
 
 export interface ProposalOutputStagingManifest {
-  readonly mode: "propose";
+  readonly mode: "propose" | "stage-draft";
   readonly source: RecognitionSource;
   readonly assessmentCount: number;
   readonly approvalSummary: ProposalApprovalSummary;
@@ -66,6 +69,41 @@ export async function stageProposalRecognitionOutputs(
       source,
       assessmentCount: assessments.length,
       approvalSummary: summarizeApprovals(assessments),
+      redactionMatchCount: input.redactionMatchCount,
+      files
+    }
+  };
+}
+
+export async function stageProposalDraftReviewOutput(
+  input: ProposalOutputStagingInput
+): Promise<ProposalOutputStagingResult> {
+  if (input.assessments.length !== 1) {
+    throw new ProposalOutputStagingError("Draft review staging requires exactly one assessment.", [
+      {
+        path: "$.assessments",
+        code: "invalid_assessment_count",
+        message: "Exactly one draft assessment is required."
+      }
+    ]);
+  }
+
+  const draft = toDraftReviewRecord(input.assessments[0]);
+  const path = draftReviewPathForAssessment(draft);
+  assertClarissimiOutputPath(path);
+  const content = renderDraftReviewJson(draft);
+  const files = await writeStagedFile(input.outputDir, path, content);
+
+  return {
+    outputDir: input.outputDir,
+    manifest: {
+      mode: "stage-draft",
+      source: draft.source,
+      assessmentCount: 1,
+      approvalSummary: {
+        approved: 0,
+        autoApproved: 0
+      },
       redactionMatchCount: input.redactionMatchCount,
       files
     }
@@ -148,17 +186,28 @@ async function writeRenderedOutputs(
   for (const [key, path] of entries) {
     assertClarissimiOutputPath(path);
     const content = outputs[key];
-    const destination = join(outputDir, path);
-    await mkdir(dirname(destination), { recursive: true });
-    await writeFile(destination, content, "utf8");
-    files.push({
-      path,
-      bytes: Buffer.byteLength(content, "utf8"),
-      sha256: createHash("sha256").update(content, "utf8").digest("hex")
-    });
+    files.push(...await writeStagedFile(outputDir, path, content));
   }
 
   return files;
+}
+
+async function writeStagedFile(
+  outputDir: string,
+  path: string,
+  content: string
+): Promise<readonly ProposalStagedFile[]> {
+  const destination = join(outputDir, path);
+  await mkdir(dirname(destination), { recursive: true });
+  await writeFile(destination, content, "utf8");
+
+  return [
+    {
+      path,
+      bytes: Buffer.byteLength(content, "utf8"),
+      sha256: createHash("sha256").update(content, "utf8").digest("hex")
+    }
+  ];
 }
 
 function summarizeApprovals(

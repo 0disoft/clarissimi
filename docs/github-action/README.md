@@ -19,7 +19,8 @@ layer.
 - Collects bounded public GitHub evidence.
 - Runs redaction before provider calls.
 - Validates provider output against schemas.
-- Produces a dry-run summary or proposed recognition pull request.
+- Produces a dry-run summary, proposed recognition pull request, or proposed draft review pull
+  request.
 
 ## Default Write Mode
 
@@ -36,12 +37,14 @@ code.
 ## Action Usage
 
 The current `action.yml` defaults to `propose` mode and also supports explicit read-only `dry-run`
-mode. It builds the local Action package from source at runtime. Dry-run mode emits a bounded
-summary and does not read provider credentials, use GitHub write tokens, create branches, open pull
-requests, or update repository files. Propose mode stages approved recognition output, publishes a
-proposal branch, and opens or updates a pull request. When `propose` receives `GITHUB_EVENT_PATH`,
-it routes the merged pull request through the live GitHub collector using `GITHUB_TOKEN`; fixture
-inputs remain the deterministic local and test path.
+and write-mode `stage-draft`. It builds the local Action package from source at runtime. Dry-run
+mode emits a bounded summary and does not read provider credentials, use GitHub write tokens, create
+branches, open pull requests, or update repository files. Propose mode stages approved recognition
+output, publishes a proposal branch, and opens or updates a pull request. Stage-draft mode stages
+only sanitized `.clarissimi/drafts/*.json` review files and opens or updates a draft review pull
+request. When `propose` or `stage-draft` receives `GITHUB_EVENT_PATH`, it routes the merged pull
+request through the live GitHub collector using `GITHUB_TOKEN`; fixture inputs remain the
+deterministic local and test path.
 
 The Action defaults to the fake provider. To use an OpenAI-compatible provider, pass
 `provider: openai-compatible`, pass `provider-model`, and expose `CLARISSIMI_PROVIDER_TOKEN` from
@@ -156,6 +159,25 @@ steps:
     with:
       mode: propose
       github-fixture: fixtures/github-merged-pr-approved.json
+      base-branch: main
+```
+
+Stage-draft mode proposes an unapproved draft inbox file for maintainer review. It uses the same
+write permissions as propose mode but does not update public recognition outputs:
+
+```yaml
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+steps:
+  - uses: actions/checkout@v7
+    with:
+      fetch-depth: 0
+  - uses: 0disoft/clarissimi@main
+    with:
+      mode: stage-draft
       base-branch: main
 ```
 

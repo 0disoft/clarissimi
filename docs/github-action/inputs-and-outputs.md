@@ -8,12 +8,13 @@
 - Action behavior: `docs/github-action/action-contract.md`
 - Product behavior: `docs/product/02-spec.md`
 - Default mode: `docs/adr/0008-propose-mode-default.md`
+- Draft review mode: `docs/adr/0023-add-action-draft-inbox-proposal-mode.md`
 
 ## Current Inputs
 
-- `event-path`: explicit event payload path for local runs, tests, and propose-mode live collection
+- `event-path`: explicit event payload path for local runs, tests, and write-mode live collection
 - `github-fixture`: explicit GitHub merged pull request fixture path for fixture-first runs
-- `mode`: `dry-run` or `propose`, default `propose`
+- `mode`: `dry-run`, `propose`, or `stage-draft`, default `propose`
 - `base-branch`: base branch for proposal pull requests
 - `remote-name`: Git remote used to publish proposal branches
 - `staging-dir`: optional temporary staging directory for proposal outputs
@@ -30,8 +31,8 @@
 - `min-confidence`: minimum draft confidence for policy consideration
 
 Provider API keys and GitHub tokens are not plain inputs. They must come from secrets or the
-workflow environment. The current Action reads `GITHUB_TOKEN` only in `propose` mode for live
-GitHub collection and proposal pull request creation or update. It reads
+workflow environment. The current Action reads `GITHUB_TOKEN` only in `propose` and `stage-draft`
+modes for live GitHub collection and proposal pull request creation or update. It reads
 `CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.
 
 The current package supports `INPUT_EVENT_PATH`, `GITHUB_EVENT_PATH`, `INPUT_GITHUB_FIXTURE`,
@@ -44,8 +45,8 @@ The root `action.yml` currently exposes `event-path`, `github-fixture`, `mode`, 
 An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`
 fallback. An explicit `event-path` and `github-fixture` must not be provided together.
 In `dry-run`, event payloads are mapped from the local event file without live GitHub API calls.
-In `propose`, event payloads route to the live GitHub collector when no explicit fixture is
-provided.
+In `propose` and `stage-draft`, event payloads route to the live GitHub collector when no explicit
+fixture is provided.
 
 ## Current Outputs
 

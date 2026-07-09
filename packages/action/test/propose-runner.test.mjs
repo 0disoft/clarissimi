@@ -7,7 +7,8 @@ import test from "node:test";
 
 import {
   runActionFromEnvironment,
-  runActionPropose
+  runActionPropose,
+  runActionStageDraft
 } from "../dist/index.js";
 
 function githubFixture(overrides = {}) {
@@ -119,6 +120,55 @@ test("runs fixture-first propose mode through branch publish and pull request cr
   });
 });
 
+test("runs fixture-first stage-draft mode through draft branch and pull request creation", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const remoteDir = join(dir, "remote.git");
+    const stagingDir = join(dir, "staged");
+    const fixturePath = join(dir, "github-fixture.json");
+    const client = new FakePullRequestClient();
+    await initRepositoryWithRemote(repositoryDir, remoteDir);
+    await writeFile(
+      fixturePath,
+      JSON.stringify({
+        ...githubFixture(),
+        maintainerApprovalStatus: "draft"
+      }),
+      "utf8"
+    );
+    const remoteMainSha = await git(repositoryDir, ["ls-remote", "origin", "refs/heads/main"]);
+
+    const summary = await runActionStageDraft({
+      mode: "stage-draft",
+      githubFixturePath: fixturePath,
+      repositoryDir,
+      stagingDir,
+      baseBranch: "main",
+      pullRequestClient: client
+    });
+    const stagedDraftText = await readFile(
+      join(stagingDir, ".clarissimi", "drafts", "sample-project-merged_pull_request-42.json"),
+      "utf8"
+    );
+
+    assert.equal(summary.mode, "stage-draft");
+    assert.equal(summary.inputSource, "github_fixture");
+    assert.equal(summary.proposedEntryCount, 0);
+    assert.equal(summary.publicOutputsRendered, false);
+    assert.equal(summary.approvalStatus, "draft");
+    assert.equal(summary.stagedFileCount, 1);
+    assert.equal(summary.proposalBranch, "clarissimi/drafts/merged_pull_request-42");
+    assert.equal(summary.proposalPullRequestUrl, "https://github.com/sample/project/pull/1");
+    assert.equal(await remoteBranchSha(repositoryDir, summary.proposalBranch), summary.proposalCommitSha);
+    assert.equal(await git(repositoryDir, ["ls-remote", "origin", "refs/heads/main"]), remoteMainSha);
+    assert.equal(client.created.length, 1);
+    assert.equal(client.created[0].title, "Clarissimi draft review: sample/project#42");
+    assert.equal(client.created[0].body.includes("Clarissimi draft review proposal"), true);
+    assert.equal(stagedDraftText.includes('"maintainerApprovalStatus": "draft"'), true);
+    assert.equal(stagedDraftText.includes("PATCH_EXCERPT_SENTINEL"), false);
+  });
+});
+
 test("environment runner writes bounded propose outputs and step summary", async () => {
   await withTempDir(async (dir) => {
     const repositoryDir = join(dir, "repo");
@@ -169,6 +219,69 @@ test("environment runner writes bounded propose outputs and step summary", async
     assert.equal(summaryText.includes("## Clarissimi propose summary"), true);
     assert.equal(summaryText.includes("PATCH_EXCERPT_SENTINEL"), false);
     assert.equal(client.created[0].repository, "0disoft/clarissimi");
+  });
+});
+
+test("environment runner writes bounded stage-draft outputs and step summary", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const remoteDir = join(dir, "remote.git");
+    const stagingDir = join(dir, "staged");
+    const fixturePath = join(dir, "github-fixture.json");
+    const outputPath = join(dir, "github-output.txt");
+    const summaryPath = join(dir, "step-summary.md");
+    const client = new FakePullRequestClient();
+    await initRepositoryWithRemote(repositoryDir, remoteDir);
+    await writeFile(
+      fixturePath,
+      JSON.stringify({
+        ...githubFixture(),
+        maintainerApprovalStatus: "draft"
+      }),
+      "utf8"
+    );
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        GITHUB_OUTPUT: outputPath,
+        GITHUB_STEP_SUMMARY: summaryPath,
+        GITHUB_WORKSPACE: repositoryDir,
+        GITHUB_REPOSITORY: "0disoft/clarissimi",
+        INPUT_BASE_BRANCH: "main",
+        INPUT_GITHUB_FIXTURE: fixturePath,
+        INPUT_MODE: "stage-draft",
+        INPUT_STAGING_DIR: stagingDir,
+        GITHUB_TOKEN: "test-token"
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        }
+      },
+      {
+        pullRequestClient: client
+      }
+    );
+    const parsed = JSON.parse(stdout);
+    const outputText = await readFile(outputPath, "utf8");
+    const summaryText = await readFile(summaryPath, "utf8");
+
+    assert.equal(exitCode, 0);
+    assert.equal(stderr, "");
+    assert.equal(parsed.mode, "stage-draft");
+    assert.equal(parsed.proposedEntryCount, 0);
+    assert.equal(parsed.publicOutputsRendered, false);
+    assert.equal(outputText.includes("mode=stage-draft"), true);
+    assert.equal(outputText.includes("proposal-branch=clarissimi/drafts/merged_pull_request-42"), true);
+    assert.equal(summaryText.includes("## Clarissimi stage-draft summary"), true);
+    assert.equal(summaryText.includes("PATCH_EXCERPT_SENTINEL"), false);
+    assert.equal(client.created[0].repository, "0disoft/clarissimi");
+    assert.equal(client.created[0].body.includes("Drafts staged: 1"), true);
   });
 });
 

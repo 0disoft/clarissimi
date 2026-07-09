@@ -55,6 +55,29 @@ const branch = {
   rollbackHint: "Delete branch clarissimi/recognition/merged_pull_request-42 before merge to discard this proposal."
 };
 
+const draftManifest = {
+  ...manifest,
+  mode: "stage-draft",
+  approvalSummary: {
+    approved: 0,
+    autoApproved: 0
+  },
+  files: [
+    {
+      path: ".clarissimi/drafts/sample-project-merged_pull_request-42.json",
+      bytes: 10,
+      sha256: "d".repeat(64)
+    }
+  ]
+};
+
+const draftBranch = {
+  ...branch,
+  branchName: "clarissimi/drafts/merged_pull_request-42",
+  changedFiles: [".clarissimi/drafts/sample-project-merged_pull_request-42.json"],
+  rollbackHint: "Delete branch clarissimi/drafts/merged_pull_request-42 before merge to discard this proposal."
+};
+
 test("creates a proposal pull request through a fake client", async () => {
   const client = new FakePullRequestClient();
 
@@ -80,6 +103,26 @@ test("creates a proposal pull request through a fake client", async () => {
   assert.equal(result.body.includes("- Pull request: #42"), true);
   assert.equal(result.body.includes("- Redaction matches: 3"), true);
   assert.equal(result.body.includes("Maintainers own final approval"), true);
+});
+
+test("creates a draft review pull request without implying public approval", async () => {
+  const client = new FakePullRequestClient();
+
+  const result = await createOrUpdateProposalPullRequest({
+    client,
+    manifest: draftManifest,
+    branch: draftBranch,
+    maintainerApprovalNote: "Review the staged draft before importing it."
+  });
+
+  assert.equal(result.action, "created");
+  assert.equal(result.title, "Clarissimi draft review: sample/project#42");
+  assert.equal(result.body.includes("## Clarissimi draft review proposal"), true);
+  assert.equal(result.body.includes("### Staged draft files"), true);
+  assert.equal(result.body.includes("- Drafts staged: 1"), true);
+  assert.equal(result.body.includes("- Approved: 0"), true);
+  assert.equal(result.body.includes("Review the staged draft before importing it."), true);
+  assert.equal(client.created[0].headBranch, "clarissimi/drafts/merged_pull_request-42");
 });
 
 test("updates an existing proposal pull request instead of creating a duplicate", async () => {

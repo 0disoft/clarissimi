@@ -51,7 +51,8 @@ The Action defaults to the fake provider. To use an OpenAI-compatible provider, 
 the workflow secret boundary. Do not pass provider tokens as action inputs.
 
 Detailed outputs and failure behavior are defined in `docs/github-action/action-contract.md`. The
-remaining implementation sequence is tracked in `docs/github-action/propose-implementation-plan.md`.
+implemented propose-mode sequencing is recorded in
+`docs/github-action/propose-implementation-plan.md`.
 
 Example read-only workflow:
 

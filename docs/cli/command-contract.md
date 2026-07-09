@@ -34,6 +34,8 @@ deferred until a safe loader decision exists.
 ### `clarissimi validate-ledger`
 
 Validates `.clarissimi/contributions.jsonl` schema versions, required fields, and parseability.
+It also rejects duplicate public records with the same contributor platform, contributor id,
+repository, event, and pull request number.
 
 ### `clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run [--config <path>]`
 
@@ -66,7 +68,8 @@ tokens must not be stored in config files or passed as command-line arguments.
 Rebuilds derived outputs from `.clarissimi/contributions.jsonl`.
 
 The fixture-first implementation previews rebuilds by default and writes files only when `--out-dir`
-is explicit.
+is explicit. Rebuild fails before writing derived outputs when the selected ledger contains
+duplicate contribution identities.
 
 ### `clarissimi analytics recent-share`
 

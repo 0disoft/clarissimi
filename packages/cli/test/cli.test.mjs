@@ -238,6 +238,32 @@ test("validate-ledger rejects draft records", async () => {
   });
 });
 
+test("validate-ledger rejects duplicate contributor source records", async () => {
+  await withTempDir(async (dir) => {
+    const ledger = join(dir, "ledger.jsonl");
+    await writeFile(
+      ledger,
+      [
+        assessment(),
+        assessment({
+          contributionType: "documentation",
+          affectedArea: "setup guide",
+          suggestedBadge: "Docs Pathfinder",
+          publicRecognitionText: "Improved setup documentation for first-time contributors."
+        })
+      ].map((record) => JSON.stringify(record)).join("\n") + "\n",
+      "utf8"
+    );
+
+    const result = await run(["validate-ledger", "--ledger", ledger, "--json"], dir);
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(result.exitCode, 3);
+    assert.equal(output.ok, false);
+    assert.match(output.message, /duplicate contribution records/);
+  });
+});
+
 test("analytics recent-share reports maintainer-only recognition share without writing files", async () => {
   await withTempDir(async (dir) => {
     const ledgerDir = join(dir, ".clarissimi");
@@ -312,6 +338,36 @@ test("analytics recent-share reports maintainer-only recognition share without w
     assert.equal(output.analytics.contributors[0].recognitionShare, 0.75);
     await assert.rejects(readFile(join(dir, ".clarissimi", "contributors.json"), "utf8"));
     await assert.rejects(readFile(join(dir, "CONTRIBUTORS.md"), "utf8"));
+  });
+});
+
+test("rebuild rejects duplicate ledger records before writing derived outputs", async () => {
+  await withTempDir(async (dir) => {
+    const ledgerDir = join(dir, ".clarissimi");
+    const ledger = join(ledgerDir, "contributions.jsonl");
+    const outDir = join(dir, "out");
+    await mkdir(ledgerDir, { recursive: true });
+    await writeFile(
+      ledger,
+      [
+        assessment(),
+        assessment({
+          contributionType: "maintenance",
+          affectedArea: "release notes",
+          suggestedBadge: "Release Steward",
+          publicRecognitionText: "Helped keep release notes accurate."
+        })
+      ].map((record) => JSON.stringify(record)).join("\n") + "\n",
+      "utf8"
+    );
+
+    const result = await run(["rebuild", "--ledger", ledger, "--out-dir", outDir, "--json"], dir);
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(result.exitCode, 3);
+    assert.equal(output.ok, false);
+    assert.match(output.message, /duplicate contribution records/);
+    await assert.rejects(readFile(join(outDir, "CONTRIBUTORS.md"), "utf8"));
   });
 });
 

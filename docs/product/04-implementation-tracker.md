@@ -357,6 +357,7 @@ Completed deliverables:
 - `clarissimi.draft-envelope/v1` wrappers are accepted for delegated LLM workflows
 - approved and auto-approved drafts can be imported into the JSONL ledger
 - draft, rejected, skipped, invalid, and duplicate contributor/source records are rejected
+- `validate-ledger` and `rebuild` reject duplicate contributor/source records in an existing ledger
 - derived contributors JSON, Markdown, and static JSON can be rebuilt through `--out-dir`
 - public ledger records continue to omit raw evidence excerpts and AI/provider provenance
 

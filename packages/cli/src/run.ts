@@ -111,6 +111,7 @@ async function runValidateLedger(args: ParsedArgs, io: CliIo): Promise<CliExitCo
     );
     const text = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
     const records = parseContributionsJsonl(text);
+    assertUniqueContributionRecords(records);
 
     writeOutput(io, args, {
       ok: true,
@@ -319,6 +320,7 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
 
     const existingLedgerText = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
     const existingRecords = parseContributionsJsonl(existingLedgerText);
+    assertUniqueContributionRecords(existingRecords);
     const duplicate = existingRecords.find((record) => hasSameContributionIdentity(record, validation.value));
     if (duplicate !== undefined) {
       throw new RendererValidationError("Draft already exists in the selected ledger.", [
@@ -440,6 +442,60 @@ function hasSameContributionIdentity(
     left.source.pullRequestNumber === right.source.pullRequestNumber;
 }
 
+function assertUniqueContributionRecords(
+  records: readonly {
+    readonly contributor: { readonly platform: string; readonly id: string };
+    readonly source: {
+      readonly repository: string;
+      readonly event: string;
+      readonly pullRequestNumber: number;
+    };
+  }[]
+): void {
+  const seen = new Map<string, number>();
+
+  records.forEach((record, index) => {
+    const key = contributionIdentityKey(record);
+    const firstIndex = seen.get(key);
+    if (firstIndex !== undefined) {
+      throw new RendererValidationError("Ledger contains duplicate contribution records.", [
+        {
+          path: `$[${index}].source`,
+          code: "duplicate_source",
+          message:
+            "Ledger records must be unique for contributor platform, contributor id, repository, event, and pull request number."
+        },
+        {
+          path: `$[${firstIndex}].source`,
+          code: "duplicate_source_original",
+          message: "This earlier ledger record has the same contribution identity."
+        }
+      ]);
+    }
+
+    seen.set(key, index);
+  });
+}
+
+function contributionIdentityKey(
+  record: {
+    readonly contributor: { readonly platform: string; readonly id: string };
+    readonly source: {
+      readonly repository: string;
+      readonly event: string;
+      readonly pullRequestNumber: number;
+    };
+  }
+): string {
+  return [
+    record.contributor.platform,
+    record.contributor.id,
+    record.source.repository,
+    record.source.event,
+    String(record.source.pullRequestNumber)
+  ].join("\0");
+}
+
 async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const ledgerPath = resolveFromCwd(
     io.cwd,
@@ -450,6 +506,7 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   try {
     const ledgerText = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
     const records = parseContributionsJsonl(ledgerText);
+    assertUniqueContributionRecords(records);
     const outputs = renderRecognitionOutputs(records);
 
     if (outDir !== undefined) {
@@ -497,6 +554,7 @@ async function runAnalytics(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   try {
     const ledgerText = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
     const records = parseContributionsJsonl(ledgerText);
+    assertUniqueContributionRecords(records);
     const analyticsOptions: Parameters<typeof buildMaintainerRecentRecognitionShareDocument>[1] = {};
     assignOptional(analyticsOptions, "asOf", getStringFlag(args, "as-of"));
     assignOptional(analyticsOptions, "windowDays", parsePositiveIntegerFlag(args, "window-days"));

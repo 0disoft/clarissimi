@@ -88,6 +88,10 @@ Merged pull request identity is split across two fields:
 The MVP schema does not store a separate top-level ledger `id` or `source.url`. Consumers should
 derive a stable identity from `source.repository`, `source.event`, and `source.pullRequestNumber`.
 
+Within a ledger, public records must be unique for contributor platform, contributor id, repository,
+event, and pull request number. `validate-ledger`, `import-draft`, and `rebuild` reject duplicate
+contribution identities so derived outputs do not double-count recognition.
+
 ## No Public Scores
 
 Ledger records must not contain public contributor scores, average scores, ranks, leaderboard

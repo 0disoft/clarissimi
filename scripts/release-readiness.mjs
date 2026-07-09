@@ -91,6 +91,8 @@ export const releasePolicyDocumentContract = {
     "The current root package stays private at `0.0.0`.",
     "Do not bump versions, publish packages, or create",
     "release tags as part of ordinary implementation work",
+    "Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,",
+    "`pnpm run lint`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and repository hygiene",
     "- Public package publication: blocked.",
     "- Versioned GitHub Action tag: blocked.",
     "Public package publication and versioned Action tags require:",
@@ -167,6 +169,14 @@ export const observabilityDocumentContract = {
     "hosted CI run status for `docs`, `release-readiness`, `lint`, `smoke`, `check`, and `contract`",
     "- `pnpm run release-readiness`",
     "- `pnpm run lint`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"
+  ]
+};
+
+export const serviceLevelsDocumentContract = {
+  path: "docs/ops/service-levels.md",
+  requiredSnippets: [
+    "Source-only merge readiness | Local `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`, and hygiene checks pass before push.",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"
   ]
 };
@@ -605,6 +615,7 @@ export async function runReleaseReadiness(options = {}) {
   await runCiOperationalDocumentContractCheck(repoRoot);
   await runOperationalContractDocumentContractCheck(repoRoot);
   await runObservabilityDocumentContractCheck(repoRoot);
+  await runServiceLevelsDocumentContractCheck(repoRoot);
   await runTsconfigBuildGraphCheck(repoRoot);
   await runPackageOwnershipContractCheck(repoRoot);
   await runDryRunDogfoodEvidenceCheck(repoRoot);
@@ -903,6 +914,18 @@ export function validateOperationalContractDocumentContract(text, contract = ope
 }
 
 export function validateObservabilityDocumentContract(text, contract = observabilityDocumentContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateServiceLevelsDocumentContract(text, contract = serviceLevelsDocumentContract) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1290,6 +1313,23 @@ async function runObservabilityDocumentContractCheck(repoRoot) {
   }
 
   console.log("observability document contract passed");
+}
+
+async function runServiceLevelsDocumentContractCheck(repoRoot) {
+  const serviceLevelsPath = join(repoRoot, serviceLevelsDocumentContract.path);
+  let text;
+  try {
+    text = await readFile(serviceLevelsPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${serviceLevelsDocumentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateServiceLevelsDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`service levels document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("service levels document contract passed");
 }
 
 async function runSmokePackCandidateContractCheck(repoRoot) {

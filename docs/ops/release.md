@@ -19,8 +19,9 @@ update this operational contract.
 
 ## Release Types
 
-- Source-only merge: allowed after `pnpm run lint`, `pnpm run check`, `pnpm run contract`, and
-  repository hygiene checks pass.
+- Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,
+  `pnpm run lint`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and repository hygiene
+  checks pass.
 - Dogfood workflow update: allowed when Action examples, permissions, `actionlint`, and root
   `action.yml` parsing pass.
 - Public package publication: blocked.

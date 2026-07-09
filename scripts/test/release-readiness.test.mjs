@@ -25,6 +25,7 @@ import {
   validateRootTsconfigReferences,
   validateRollbackProcedureContract,
   validateSmokePackCandidateContract,
+  validateServiceLevelsDocumentContract,
   validateTrackedGeneratedOutputPaths,
   validateWorkspaceContract,
   validateWorkspaceInternalDependencies,
@@ -173,12 +174,16 @@ test("release readiness rejects release policy document drift", () => {
     .replace("- Public package publication: blocked.", "- Public package publication: allowed.")
     .replace("- Versioned GitHub Action tag: blocked.", "- Versioned GitHub Action tag: allowed.")
     .replace("Do not bump versions, publish packages, or create", "Bump versions and publish packages.")
+    .replace("Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,", "Source-only merge: allowed after `pnpm run lint`,")
+    .replace("`pnpm run lint`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and repository hygiene", "`pnpm run check`, `pnpm run contract`, and repository hygiene")
     .replace("public product-positioning guardrails", "public docs")
     .replace("intentionally fail-closed `format` and `migration-check`", "format and migration checks");
 
   assert.deepEqual(validateReleasePolicyDocumentContract(text), [
     "docs/ops/release.md must include Clarissimi is not ready for public package publication..",
     "docs/ops/release.md must include Do not bump versions, publish packages, or create.",
+    "docs/ops/release.md must include Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,.",
+    "docs/ops/release.md must include `pnpm run lint`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and repository hygiene.",
     "docs/ops/release.md must include - Public package publication: blocked..",
     "docs/ops/release.md must include - Versioned GitHub Action tag: blocked..",
     "docs/ops/release.md must include public product-positioning guardrails.",
@@ -282,6 +287,27 @@ test("release readiness rejects observability document drift", () => {
     "docs/ops/observability.md must include - `pnpm run release-readiness`.",
     "docs/ops/observability.md must include - `pnpm run lint`.",
     "docs/ops/observability.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
+  ]);
+});
+
+test("release readiness accepts the service levels document contract", () => {
+  assert.deepEqual(validateServiceLevelsDocumentContract(createServiceLevelsDocumentText()), []);
+});
+
+test("release readiness rejects service levels document drift", () => {
+  const text = createServiceLevelsDocumentText()
+    .replace(
+      "Source-only merge readiness | Local `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`, and hygiene checks pass before push.",
+      "Source-only merge readiness | Local `docs`, `smoke`, `check`, `contract`, and hygiene checks pass before push."
+    )
+    .replace(
+      "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
+      "- Required validation names: `docs`, `smoke`, `check`, `contract`"
+    );
+
+  assert.deepEqual(validateServiceLevelsDocumentContract(text), [
+    "docs/ops/service-levels.md must include Source-only merge readiness | Local `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`, and hygiene checks pass before push..",
+    "docs/ops/service-levels.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
   ]);
 });
 
@@ -980,6 +1006,9 @@ function createReleasePolicyText() {
     "Do not bump versions, publish packages, or create",
     "release tags as part of ordinary implementation work.",
     "",
+    "Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,",
+    "`pnpm run lint`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and repository hygiene",
+    "",
     "- Public package publication: blocked.",
     "- Versioned GitHub Action tag: blocked.",
     "",
@@ -1056,6 +1085,19 @@ function createObservabilityDocumentText() {
     "- `pnpm run smoke`",
     "- `pnpm run check`",
     "- `pnpm run contract`",
+    "",
+    "## Validation",
+    "",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
+    ""
+  ].join("\n");
+}
+
+function createServiceLevelsDocumentText() {
+  return [
+    "| Area | Target |",
+    "| --- | --- |",
+    "| Source-only merge readiness | Local `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`, and hygiene checks pass before push. |",
     "",
     "## Validation",
     "",

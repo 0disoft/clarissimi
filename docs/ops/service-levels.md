@@ -14,7 +14,7 @@ Service levels:
 
 | Area | Target |
 | --- | --- |
-| Source-only merge readiness | Local `docs`, `lint`, `smoke`, `check`, `contract`, and hygiene checks pass before push. |
+| Source-only merge readiness | Local `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`, and hygiene checks pass before push. |
 | Hosted validation | `Validation` check passes on `main` after push. |
 | Write-mode dogfood | Manual propose and stage-draft workflows pass before release evidence claims support. |
 | Live provider release gate | Local live-provider smoke plus hosted manual live-provider smoke pass with maintainer-owned credentials. |
@@ -32,7 +32,7 @@ Severity and response are owned by `docs/ops/incident-response.md`. Rollback pro
 
 ## Validation
 
-- Required validation names: `docs`, `smoke`, `check`, `contract`
+- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
 - Current hosted live-provider evidence: workflow run `29018826925` passed on

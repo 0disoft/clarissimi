@@ -171,6 +171,82 @@ test("validate-config accepts missing config defaults", async () => {
   });
 });
 
+test("validate-config loads clarissimi.config.ts by default", async () => {
+  await withTempDir(async (dir) => {
+    await writeFile(
+      join(dir, "clarissimi.config.ts"),
+      [
+        "import type { ClarissimiConfig } from \"@clarissimi/schemas\";",
+        "const config = {",
+        "  provider: \"openai-compatible\",",
+        "  providerModel: \"config-model\",",
+        "  providerThinking: \"disabled\",",
+        "} satisfies ClarissimiConfig;",
+        "export default config;",
+        ""
+      ].join("\n"),
+      "utf8"
+    );
+
+    const result = await run(["validate-config", "--json"], dir);
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(output.ok, true);
+    assert.equal(output.configPath, "clarissimi.config.ts");
+  });
+});
+
+test("validate-config rejects ambiguous default config files", async () => {
+  await withTempDir(async (dir) => {
+    const configDir = join(dir, ".clarissimi");
+    await mkdir(configDir, { recursive: true });
+    await writeFile(join(dir, "clarissimi.config.ts"), "export default { provider: \"fake\" };\n", "utf8");
+    await writeFile(join(configDir, "config.json"), `${JSON.stringify({ provider: "fake" })}\n`, "utf8");
+
+    const result = await run(["validate-config", "--json"], dir);
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(result.exitCode, 2);
+    assert.equal(output.ok, false);
+    assert.match(output.message, /Multiple Clarissimi config files found/);
+  });
+});
+
+test("validate-config accepts explicit JSON config when TypeScript config also exists", async () => {
+  await withTempDir(async (dir) => {
+    const configDir = join(dir, ".clarissimi");
+    const jsonConfigPath = join(configDir, "config.json");
+    await mkdir(configDir, { recursive: true });
+    await writeFile(join(dir, "clarissimi.config.ts"), "export default { provider: \"fake\" };\n", "utf8");
+    await writeFile(
+      jsonConfigPath,
+      `${JSON.stringify({ provider: "openai-compatible", providerModel: "json-model" })}\n`,
+      "utf8"
+    );
+
+    const result = await run(["validate-config", "--config", jsonConfigPath, "--json"], dir);
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(output.ok, true);
+    assert.equal(output.configPath, jsonConfigPath);
+  });
+});
+
+test("validate-config rejects TypeScript config without a default export", async () => {
+  await withTempDir(async (dir) => {
+    await writeFile(join(dir, "clarissimi.config.ts"), "export const config = { provider: \"fake\" };\n", "utf8");
+
+    const result = await run(["validate-config", "--json"], dir);
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(result.exitCode, 2);
+    assert.equal(output.ok, false);
+    assert.match(output.message, /must export a default config object/);
+  });
+});
+
 test("flag-only commands reject unexpected positional arguments", async () => {
   await withTempDir(async (dir) => {
     const commands = [
@@ -993,6 +1069,67 @@ test("recognize uses JSON config provider values when flags are omitted", async 
     assert.equal(output.mode, "dry-run");
     assert.equal(requests.length, 1);
     assert.equal(requests[0].body.model, "config-model");
+    assert.deepEqual(requests[0].body.thinking, { type: "disabled" });
+  });
+});
+
+test("recognize uses TypeScript config provider values when flags are omitted", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "fixture.json");
+    const requests = [];
+    await writeFile(fixturePath, JSON.stringify(fixture()), "utf8");
+    await writeFile(
+      join(dir, "clarissimi.config.ts"),
+      [
+        "import type { ClarissimiConfig } from \"@clarissimi/schemas\";",
+        "const config = {",
+        "  provider: \"openai-compatible\",",
+        "  providerModel: \"ts-config-model\",",
+        "  providerThinking: \"disabled\",",
+        "  mode: \"dry-run\",",
+        "} satisfies ClarissimiConfig;",
+        "export default config;",
+        ""
+      ].join("\n"),
+      "utf8"
+    );
+
+    const result = await run(
+      ["recognize", "--fixture", fixturePath, "--json"],
+      dir,
+      {
+        env: {
+          CLARISSIMI_PROVIDER_TOKEN: "unit-token"
+        },
+        fetch: async (url, init) => {
+          requests.push({
+            url: String(url),
+            body: JSON.parse(init.body)
+          });
+          return jsonResponse({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    contributionType: "test",
+                    affectedArea: "parser regression coverage",
+                    impactLevel: "medium",
+                    evidenceSummary: "Added regression coverage based on test evidence.",
+                    suggestedBadge: "Regression Shield",
+                    publicRecognitionText: "Added regression coverage for the parser.",
+                    confidence: 0.8
+                  })
+                }
+              }
+            ]
+          });
+        }
+      }
+    );
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].body.model, "ts-config-model");
     assert.deepEqual(requests[0].body.thinking, { type: "disabled" });
   });
 });

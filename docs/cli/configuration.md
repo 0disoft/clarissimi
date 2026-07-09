@@ -10,6 +10,7 @@
 - Redaction boundary: `docs/adr/0006-redaction-before-provider.md`
 - Provider boundary: `docs/adr/0007-provider-adapter-boundary.md`
 - Config schema boundary: `docs/adr/0025-centralize-config-schema-validation.md`
+- TypeScript config loader boundary: `docs/adr/0028-add-native-typescript-config-loading.md`
 
 ## Supported Config Files
 
@@ -18,24 +19,28 @@ Clarissimi should support:
 - `clarissimi.config.ts`
 - `.clarissimi/config.json`
 
-The current implementation loads `.clarissimi/config.json`. TypeScript config loading remains
-deferred until a safe loader decision exists.
+The current implementation loads either supported file. Default discovery checks
+`clarissimi.config.ts` and `.clarissimi/config.json`; if both exist, the CLI fails closed and
+requires `--config <path>` so migration between formats is explicit.
 
 `packages/schemas` validates supported config values. The CLI owns file loading and precedence.
 
 Current precedence is:
 
 1. explicit CLI flags
-2. `.clarissimi/config.json`
+2. explicit `--config <path>` or the single discovered config file
 3. package defaults
 
-The current JSON config supports:
+The current config object supports:
 
 - `provider`: `fake` or `openai-compatible`
 - `providerModel`: model name for `openai-compatible`
 - `providerEndpoint`: optional OpenAI-compatible chat completions endpoint; must be an HTTP(S) URL
 - `providerThinking`: optional OpenAI-compatible thinking mode; currently only `disabled`
 - `mode`: `dry-run`, `propose`, or `commit` as schema-recognized output mode values
+
+TypeScript config files must be named `clarissimi.config.ts` and must export a default config
+object. They are loaded through the Node.js 24 runtime rather than a third-party loader dependency.
 
 `recognize` currently supports only `dry-run`; a config value such as `mode: "propose"` or
 `mode: "commit"` is parsed but rejected by that command before provider calls. The current

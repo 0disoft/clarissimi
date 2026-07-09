@@ -58,8 +58,9 @@ for `recognize`. `rebuild` returns a preview by default and writes files only wh
 The CLI can be smoke-tested locally without secrets, network access, or untrusted PR code
 execution.
 
-`clarissimi.config.ts` support remains deferred because loading TypeScript config safely requires a
-separate loader decision. The fixture-first CLI validates `.clarissimi/config.json`.
+`clarissimi.config.ts` support remains deferred in this first CLI slice because loading TypeScript
+config safely requires a separate loader decision. ADR 0028 later accepts dependency-free native
+TypeScript config loading. The fixture-first CLI validates `.clarissimi/config.json`.
 
 Future GitHub collection, live provider adapters, and Action entrypoints should call the same
 package boundaries instead of duplicating policy or rendering logic.

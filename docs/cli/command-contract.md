@@ -16,6 +16,7 @@
 - Draft approval helper: `docs/adr/0024-add-draft-approval-helper.md`
 - Config schema boundary: `docs/adr/0025-centralize-config-schema-validation.md`
 - Maintainer analytics boundary: `docs/adr/0026-add-maintainer-recent-share-analytics.md`
+- TypeScript config loader boundary: `docs/adr/0028-add-native-typescript-config-loading.md`
 
 ## MVP Commands
 
@@ -28,8 +29,9 @@ configuration files, ledger files, provider credentials, GitHub tokens, or repos
 
 Validates Clarissimi configuration without collecting GitHub evidence or calling a provider.
 
-The fixture-first implementation validates `.clarissimi/config.json`. TypeScript config loading is
-deferred until a safe loader decision exists.
+The current implementation validates `clarissimi.config.ts` or `.clarissimi/config.json`. If both
+default config files exist, the command fails closed and requires `--config <path>` to choose one.
+TypeScript config files must be named `clarissimi.config.ts` and export a default config object.
 
 ### `clarissimi validate-ledger`
 

@@ -38,8 +38,9 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   JSON rendering, and maintainer-only recent-share analytics
 - `packages/cli`: fixture-first validation, recognition dry-run, agent-assisted draft staging,
   approval, import, rebuild, maintainer-only analytics commands, help output, and explicit fake or
-  OpenAI-compatible provider selection; flag-only commands reject unexpected positional arguments
-  before reading configs, ledgers, providers, or draft files
+  OpenAI-compatible provider selection; config loading supports `clarissimi.config.ts` and
+  `.clarissimi/config.json`; flag-only commands reject unexpected positional arguments before
+  reading configs, ledgers, providers, or draft files
 - `packages/action`: Action runner for dry-run summaries, fixture-first public recognition
   proposals, fixture-first draft review proposals, and event-path live GitHub collection in write
   modes with explicit fake or OpenAI-compatible provider selection
@@ -554,7 +555,8 @@ Validation:
 ### 16. Shared Config Schema Validation
 
 Source: `docs/adr/0025-centralize-config-schema-validation.md`,
-`docs/cli/configuration.md`, `docs/monorepo/package-ownership.md`
+`docs/adr/0028-add-native-typescript-config-loading.md`, `docs/cli/configuration.md`,
+`docs/monorepo/package-ownership.md`
 
 Status: Completed in `packages/schemas/src/validation.ts` and `packages/cli/src/config.ts`.
 
@@ -568,10 +570,14 @@ Completed deliverables:
 - `validateClarissimiConfig` validates config object values, including HTTP(S) provider endpoints,
   without reading files or secrets
 - CLI config loading delegates value validation to `packages/schemas`
+- CLI loads `clarissimi.config.ts` through the Node.js 24 runtime without adding a third-party
+  loader dependency
+- CLI fails closed when both `clarissimi.config.ts` and `.clarissimi/config.json` exist by default,
+  requiring explicit `--config <path>` selection
 - CLI flags and Action inputs reuse schema guards for provider identifiers and provider thinking
   values
-- CLI remains responsible for `.clarissimi/config.json`, explicit `--config <path>`, JSON parsing,
-  and invalid-config exit behavior
+- CLI remains responsible for supported config-file discovery, explicit `--config <path>`, JSON and
+  TypeScript config loading, and invalid-config exit behavior
 
 Validation:
 

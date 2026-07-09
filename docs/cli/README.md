@@ -73,8 +73,10 @@ The CLI should support:
 
 Config precedence, defaults, and schema versioning are owned by `packages/schemas`.
 
-The first CLI package validates `.clarissimi/config.json`. TypeScript config loading is deferred
-until a safe loader decision exists.
+The current CLI validates either `clarissimi.config.ts` or `.clarissimi/config.json`. If both
+default config files exist, the CLI fails closed and requires `--config <path>` so maintainers do
+not accidentally switch provider or mode settings during migration. TypeScript config files must
+export a default config object and still must not contain provider tokens or GitHub tokens.
 
 ## Review Blockers
 

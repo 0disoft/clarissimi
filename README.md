@@ -80,7 +80,7 @@ Implemented MVP slices:
   draft review rendering
 - `packages/cli`: fixture-first local command orchestration for validation, recognition dry runs,
   agent-assisted draft staging, approval, import, rebuild previews, maintainer-only analytics, and
-  help output
+  help output; config loading supports `clarissimi.config.ts` and `.clarissimi/config.json`
 - `packages/action`: GitHub Action entrypoint for dry-run summaries, fixture-first proposal
   branch/pull-request flows, draft review proposals, and event-path live GitHub collection in write
   modes

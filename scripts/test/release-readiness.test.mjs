@@ -19,6 +19,7 @@ import {
   validateCredentialedReleaseEvidence,
   validateDryRunDogfoodEvidence,
   validateDogfoodWorkflowContract,
+  validateDocsValidationScriptContract,
   validateEngineeringValidationDocumentContract,
   validateHostedLiveProviderWorkflowContract,
   validateLedgerFormatDocumentContract,
@@ -276,6 +277,23 @@ test("release readiness rejects README validation drift", () => {
     "README.md must include `format` intentionally fails closed.",
     "README.md must include `oxlint` is.",
     "README.md must include the current lint gate; `oxfmt` is not wired into the repository formatter surface yet."
+  ]);
+});
+
+test("release readiness accepts the docs validation script contract", () => {
+  assert.deepEqual(validateDocsValidationScriptContract(createDocsValidationScriptText()), []);
+});
+
+test("release readiness rejects docs validation script drift", () => {
+  const text = createDocsValidationScriptText()
+    .replace("\"docs/product/00-product-brief.md\"", "\"docs/product/00-product-brief-renamed.md\"")
+    .replace("\"docs/product/02-spec.md\"", "\"docs/product/spec.md\"")
+    .replace("\"docs/product/03-risk-register.md\"", "\"docs/product/risk.md\"");
+
+  assert.deepEqual(validateDocsValidationScriptContract(text), [
+    "scripts/validate-docs.mjs must include \"docs/product/00-product-brief.md\".",
+    "scripts/validate-docs.mjs must include \"docs/product/02-spec.md\".",
+    "scripts/validate-docs.mjs must include \"docs/product/03-risk-register.md\"."
   ]);
 });
 
@@ -1421,6 +1439,22 @@ function createReadmeValidationText() {
     "`format` intentionally fails closed until maintainers accept a formatter baseline ADR. `oxlint` is",
     "the current lint gate; `oxfmt` is not wired into the repository formatter surface yet.",
     "`migration-check` intentionally fails until configured.",
+    ""
+  ].join("\n");
+}
+
+function createDocsValidationScriptText() {
+  return [
+    "export const requiredDocumentationPaths = [",
+    "  \"README.md\",",
+    "  \"action.yml\",",
+    "  \"VALIDATION.md\",",
+    "  \"docs/product/00-product-brief.md\",",
+    "  \"docs/product/01-roadmap.md\",",
+    "  \"docs/product/02-spec.md\",",
+    "  \"docs/product/03-risk-register.md\",",
+    "  \"docs/product/04-implementation-tracker.md\",",
+    "];",
     ""
   ].join("\n");
 }

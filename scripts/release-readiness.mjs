@@ -168,6 +168,17 @@ export const readmeValidationContract = {
   ]
 };
 
+export const docsValidationScriptContract = {
+  path: "scripts/validate-docs.mjs",
+  requiredSnippets: [
+    "\"docs/product/00-product-brief.md\"",
+    "\"docs/product/01-roadmap.md\"",
+    "\"docs/product/02-spec.md\"",
+    "\"docs/product/03-risk-register.md\"",
+    "\"docs/product/04-implementation-tracker.md\""
+  ]
+};
+
 export const lintAndFormatDecisionDocumentContract = {
   path: "docs/adr/0027-add-lint-gate-and-defer-format-baseline.md",
   requiredSnippets: [
@@ -868,6 +879,7 @@ export async function runReleaseReadiness(options = {}) {
   await runReleasePolicyDocumentContractCheck(repoRoot);
   await runProductPositioningContractCheck(repoRoot);
   await runReadmeValidationContractCheck(repoRoot);
+  await runDocsValidationScriptContractCheck(repoRoot);
   await runLintAndFormatDecisionDocumentContractCheck(repoRoot);
   await runLedgerFormatDocumentContractCheck(repoRoot);
   await runCliCommandContractCheck(repoRoot);
@@ -1157,6 +1169,18 @@ export function validateProductPositioningContract(textsByPath, contract = produ
 }
 
 export function validateReadmeValidationContract(text, contract = readmeValidationContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateDocsValidationScriptContract(text, contract = docsValidationScriptContract) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1740,6 +1764,23 @@ async function runReadmeValidationContractCheck(repoRoot) {
   }
 
   console.log("README validation contract passed");
+}
+
+async function runDocsValidationScriptContractCheck(repoRoot) {
+  const docsValidationPath = join(repoRoot, docsValidationScriptContract.path);
+  let text;
+  try {
+    text = await readFile(docsValidationPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${docsValidationScriptContract.path}: ${error.message}`);
+  }
+
+  const issues = validateDocsValidationScriptContract(text);
+  if (issues.length > 0) {
+    throw new Error(`docs validation script contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("docs validation script contract passed");
 }
 
 async function runLintAndFormatDecisionDocumentContractCheck(repoRoot) {

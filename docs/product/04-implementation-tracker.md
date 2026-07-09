@@ -394,6 +394,8 @@ Completed deliverables:
 - release-readiness verifies that `pnpm run smoke` still covers workspace package pack dry-runs,
   required public package files, CLI/Action bin files, and non-public file rejection
 - docs validation treats workspace package README files as required documentation targets
+- docs validation treats product brief, roadmap, product spec, risk register, and implementation
+  tracker as required documentation targets
 - release-readiness verifies that implemented workspace packages and the Package Table in
   `docs/monorepo/package-ownership.md` stay in sync
 - release-readiness verifies that internal workspace dependencies follow the documented package

@@ -162,6 +162,34 @@ export const credentialedReleaseEvidenceContract = {
   ]
 };
 
+export const writeModeDogfoodEvidenceContract = {
+  path: "docs/ops/release.md",
+  requiredSnippets: [
+    "Current dogfood evidence: `Clarissimi propose fixture` workflow run",
+    "Current draft dogfood evidence: `Clarissimi stage draft fixture` workflow run",
+    "https://github.com/0disoft/clarissimi/pull/1",
+    "https://github.com/0disoft/clarissimi/pull/2"
+  ],
+  requiredPatterns: [
+    {
+      description: "a numeric propose fixture workflow run id",
+      pattern: /Current dogfood evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/
+    },
+    {
+      description: "a propose fixture workflow timestamp",
+      pattern: /Current dogfood evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/
+    },
+    {
+      description: "a numeric stage-draft fixture workflow run id",
+      pattern: /Current draft dogfood evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/
+    },
+    {
+      description: "a stage-draft fixture workflow timestamp",
+      pattern: /Current draft dogfood evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/
+    }
+  ]
+};
+
 export const highRiskSecretEnvNames = [
   "NPM_TOKEN",
   "NODE_AUTH_TOKEN",
@@ -381,6 +409,7 @@ export async function runReleaseReadiness(options = {}) {
   await runWorkspacePackageReleasePolicyCheck(repoRoot);
   await runTsconfigBuildGraphCheck(repoRoot);
   await runPackageOwnershipContractCheck(repoRoot);
+  await runWriteModeDogfoodEvidenceCheck(repoRoot);
   await runCredentialedReleaseEvidenceCheck(repoRoot);
   await runToolAvailabilityCheck(repoRoot);
 
@@ -957,6 +986,23 @@ async function runCredentialedReleaseEvidenceCheck(repoRoot) {
   console.log("credentialed release evidence record passed");
 }
 
+async function runWriteModeDogfoodEvidenceCheck(repoRoot) {
+  const evidencePath = join(repoRoot, writeModeDogfoodEvidenceContract.path);
+  let text;
+  try {
+    text = await readFile(evidencePath, "utf8");
+  } catch (error) {
+    throw new Error(`${writeModeDogfoodEvidenceContract.path} is not readable: ${error.message}`);
+  }
+
+  const issues = validateWriteModeDogfoodEvidence(text);
+  if (issues.length > 0) {
+    throw new Error(`write-mode dogfood evidence record failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("write-mode dogfood evidence record passed");
+}
+
 export function validatePackageScriptRegistration(packageJson) {
   const issues = [];
   const scripts = packageJson?.scripts;
@@ -1275,6 +1321,14 @@ export function validatePackageOwnershipContract(
 }
 
 export function validateCredentialedReleaseEvidence(text, contract = credentialedReleaseEvidenceContract) {
+  return validateReleaseEvidenceText(text, contract);
+}
+
+export function validateWriteModeDogfoodEvidence(text, contract = writeModeDogfoodEvidenceContract) {
+  return validateReleaseEvidenceText(text, contract);
+}
+
+function validateReleaseEvidenceText(text, contract) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {

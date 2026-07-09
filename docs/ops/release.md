@@ -64,12 +64,13 @@ This command checks documentation links, release-critical package script registr
 script test-glob registration, the workspace package glob, workspace package manifest identity,
 the blocked root and workspace package release policy, workspace package publish surface, release
 tool availability, package ownership table coverage, internal workspace dependency graph,
-TypeScript project-reference build graph, the intentionally fail-closed `format` placeholder, CI
-runtime and release-tool pin drift, `ssealed doctor`, workflow `actionlint`, YAML parsing with
-`yq`, Action manifest contract drift, hosted CI workflow contract drift, dogfood workflow contract
-drift, hosted live-provider workflow trigger, permission, preflight, runtime, and command drift,
-`git diff --check`, tracked generated-output drift, and a high-risk secret pattern scan. It does
-not call live providers and does not replace the credentialed smoke gates below.
+TypeScript project-reference build graph, recorded write-mode dogfood evidence, the intentionally
+fail-closed `format` placeholder, CI runtime and release-tool pin drift, `ssealed doctor`, workflow
+`actionlint`, YAML parsing with `yq`, Action manifest contract drift, hosted CI workflow contract
+drift, dogfood workflow contract drift, hosted live-provider workflow trigger, permission,
+preflight, runtime, and command drift, `git diff --check`, tracked generated-output drift, and a
+high-risk secret pattern scan. It does not call live providers and does not replace the credentialed
+smoke gates below.
 
 After `CLARISSIMI_PROVIDER_TOKEN` is configured as a repository secret, run the manual hosted smoke
 from a maintainer shell without printing the token value:
@@ -128,10 +129,10 @@ Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow
 - Required validation names: `check`, `contract`, `smoke`, `docs`, `release-readiness`
 - Release blocker status: public package publication and versioned Action tags are blocked
 - Current dogfood evidence: `Clarissimi propose fixture` workflow run
-  `28984721611` passed on `2026-07-09T00:14:30Z` and created proposal pull request
+  `29027800039` passed on `2026-07-09T15:02:15Z` and updated proposal pull request
   `https://github.com/0disoft/clarissimi/pull/1`.
 - Current draft dogfood evidence: `Clarissimi stage draft fixture` workflow run
-  `28992586329` passed on `2026-07-09T03:47:20Z` and created draft review pull request
+  `29027802451` passed on `2026-07-09T15:02:10Z` and updated draft review pull request
   `https://github.com/0disoft/clarissimi/pull/2`.
 - Current live-provider evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09`
   using maintainer-owned provider credentials and `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.

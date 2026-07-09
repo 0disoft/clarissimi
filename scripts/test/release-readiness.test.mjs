@@ -22,7 +22,8 @@ import {
   validateWorkspaceInternalDependencies,
   validateWorkspacePackageManifest,
   validateWorkspacePackageManifestSurface,
-  validateWorkspacePackageTsconfigReferences
+  validateWorkspacePackageTsconfigReferences,
+  validateWriteModeDogfoodEvidence
 } from "../release-readiness.mjs";
 
 test("release readiness accepts the current package script registration", () => {
@@ -399,6 +400,10 @@ test("release readiness accepts recorded credentialed release evidence", () => {
   assert.deepEqual(validateCredentialedReleaseEvidence(createReleaseEvidenceText()), []);
 });
 
+test("release readiness accepts recorded write-mode dogfood evidence", () => {
+  assert.deepEqual(validateWriteModeDogfoodEvidence(createReleaseEvidenceText()), []);
+});
+
 test("release readiness rejects missing hosted credentialed release evidence", () => {
   const text = createReleaseEvidenceText()
     .replace("Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow run", "")
@@ -408,6 +413,20 @@ test("release readiness rejects missing hosted credentialed release evidence", (
     "docs/ops/release.md must include Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow run.",
     "docs/ops/release.md must include a numeric hosted live-provider workflow run id.",
     "docs/ops/release.md must include a hosted live-provider workflow timestamp."
+  ]);
+});
+
+test("release readiness rejects missing write-mode dogfood evidence", () => {
+  const text = createReleaseEvidenceText()
+    .replace("Current dogfood evidence: `Clarissimi propose fixture` workflow run", "")
+    .replace("`29027800039` passed on `2026-07-09T15:02:15Z`", "passed")
+    .replace("https://github.com/0disoft/clarissimi/pull/2", "");
+
+  assert.deepEqual(validateWriteModeDogfoodEvidence(text), [
+    "docs/ops/release.md must include Current dogfood evidence: `Clarissimi propose fixture` workflow run.",
+    "docs/ops/release.md must include https://github.com/0disoft/clarissimi/pull/2.",
+    "docs/ops/release.md must include a numeric propose fixture workflow run id.",
+    "docs/ops/release.md must include a propose fixture workflow timestamp."
   ]);
 });
 
@@ -698,6 +717,12 @@ function createPackageOwnershipText() {
 
 function createReleaseEvidenceText() {
   return [
+    "Current dogfood evidence: `Clarissimi propose fixture` workflow run",
+    "`29027800039` passed on `2026-07-09T15:02:15Z` and created proposal pull request",
+    "https://github.com/0disoft/clarissimi/pull/1.",
+    "Current draft dogfood evidence: `Clarissimi stage draft fixture` workflow run",
+    "`29027802451` passed on `2026-07-09T15:02:10Z` and created draft review pull request",
+    "https://github.com/0disoft/clarissimi/pull/2.",
     "Current live-provider evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09`",
     "using maintainer-owned provider credentials and `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.",
     "Current OpenCode Go evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09`",

@@ -182,7 +182,7 @@ Validation:
 
 - end-to-end fixture tests
 - read-only dry-run dogfood remains unchanged
-- maintainer-triggered propose dogfood passed run `28984721611`, creating
+- maintainer-triggered propose dogfood passed run `29027800039`, updating
   `https://github.com/0disoft/clarissimi/pull/1`
 
 ### 6. Live GitHub Collection
@@ -280,7 +280,7 @@ Completed deliverables:
 - installation and dry-run examples match the root Action contract
 - propose mode docs are added only when implementation exists
 - release or versioning policy blocks package publication until release gates are satisfied
-- manual-only fixture propose dogfood workflow is available and passed run `28984721611`, creating
+- manual-only fixture propose dogfood workflow is available and passed run `29027800039`, updating
   `https://github.com/0disoft/clarissimi/pull/1`
 - hosted CI workflow exists for push, pull request, and manual validation
 - hosted CI installs pinned non-credentialed release tooling and runs `release-readiness`
@@ -292,6 +292,8 @@ Completed deliverables:
   command contract before reporting static release gates as passed
 - release-readiness validates the fixture dogfood workflow permission, mode, fixture, and output
   assertion contracts before reporting static release gates as passed
+- release-readiness validates that current write-mode dogfood evidence remains recorded in
+  `docs/ops/release.md`
 - smoke validation exercises the built CLI and Action bins without live provider credentials
 - live-provider smoke command is available as a release-only credentialed check and passed locally
   on `2026-07-09` with maintainer-owned credentials and
@@ -371,8 +373,8 @@ Completed deliverables:
 - script tests validate the ledger format guide's JSON example against `clarissimi.assessment/v1`
 - rollback instructions cover staging cleanup, proposal pull request closure, proposal branch
   deletion, and post-merge recognition reverts
-- manual-only fixture stage-draft dogfood workflow is available and passed run `28992586329`,
-  creating `https://github.com/0disoft/clarissimi/pull/2`
+- manual-only fixture stage-draft dogfood workflow is available and passed run `29027802451`,
+  updating `https://github.com/0disoft/clarissimi/pull/2`
 
 Release follow-up:
 

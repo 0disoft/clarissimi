@@ -23,10 +23,11 @@ The current local CI parity commands are:
   release-critical package script registration, package and script test-glob registration, the
   workspace package glob, workspace package manifest identity, the blocked root and workspace
   package release policy, workspace package publish surface, package ownership table coverage,
-  internal workspace dependency graph, TypeScript project-reference build graph, the intentionally
-  fail-closed `format` placeholder, release tool availability, CI runtime and release-tool pin
-  drift, `ssealed doctor`, workflow `actionlint`, YAML parsing, `git diff --check`, tracked
-  generated-output drift, and high-risk secret patterns. It also verifies
+  internal workspace dependency graph, TypeScript project-reference build graph, recorded
+  write-mode dogfood evidence, the intentionally fail-closed `format` placeholder, release tool
+  availability, CI runtime and release-tool pin drift, `ssealed doctor`, workflow `actionlint`,
+  YAML parsing, `git diff --check`, tracked generated-output drift, and high-risk secret patterns.
+  It also verifies
   that the root Action manifest keeps the expected inputs, outputs, defaults, secret environment
   boundary, and runtime commands, and that the hosted CI workflow still runs the required local
   parity commands with read-only contents permission.
@@ -86,9 +87,9 @@ and `.github/workflows/clarissimi-stage-draft-fixture.yml`.
 
 Hosted write-mode dogfood evidence:
 
-- `Clarissimi propose fixture` run `28984721611` passed on `2026-07-09T00:14:30Z` and created
+- `Clarissimi propose fixture` run `29027800039` passed on `2026-07-09T15:02:15Z` and updated
   `https://github.com/0disoft/clarissimi/pull/1`.
-- `Clarissimi stage draft fixture` run `28992586329` passed on `2026-07-09T03:47:20Z` and created
+- `Clarissimi stage draft fixture` run `29027802451` passed on `2026-07-09T15:02:10Z` and updated
   `https://github.com/0disoft/clarissimi/pull/2`.
 
 The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`

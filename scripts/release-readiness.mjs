@@ -152,6 +152,15 @@ export const ciOperationalDocumentContract = {
   ]
 };
 
+export const operationalContractDocumentContract = {
+  path: "docs/ops/00-operational-contract.md",
+  requiredSnippets: [
+    "Correctness gate: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
+    "`pnpm run smoke`, `pnpm run check`, and `pnpm run contract` must pass before source-only merges.",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"
+  ]
+};
+
 export const observabilityDocumentContract = {
   path: "docs/ops/observability.md",
   requiredSnippets: [
@@ -594,6 +603,7 @@ export async function runReleaseReadiness(options = {}) {
   await runReleasePolicyDocumentContractCheck(repoRoot);
   await runProductPositioningContractCheck(repoRoot);
   await runCiOperationalDocumentContractCheck(repoRoot);
+  await runOperationalContractDocumentContractCheck(repoRoot);
   await runObservabilityDocumentContractCheck(repoRoot);
   await runTsconfigBuildGraphCheck(repoRoot);
   await runPackageOwnershipContractCheck(repoRoot);
@@ -869,6 +879,18 @@ export function validateProductPositioningContract(textsByPath, contract = produ
 }
 
 export function validateCiOperationalDocumentContract(text, contract = ciOperationalDocumentContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateOperationalContractDocumentContract(text, contract = operationalContractDocumentContract) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1234,6 +1256,23 @@ async function runCiOperationalDocumentContractCheck(repoRoot) {
   }
 
   console.log("CI operational document contract passed");
+}
+
+async function runOperationalContractDocumentContractCheck(repoRoot) {
+  const operationalContractPath = join(repoRoot, operationalContractDocumentContract.path);
+  let text;
+  try {
+    text = await readFile(operationalContractPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${operationalContractDocumentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateOperationalContractDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`operational contract document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("operational contract document contract passed");
 }
 
 async function runObservabilityDocumentContractCheck(repoRoot) {

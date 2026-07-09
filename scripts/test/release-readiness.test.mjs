@@ -16,6 +16,7 @@ import {
   validateDogfoodWorkflowContract,
   validateHostedLiveProviderWorkflowContract,
   validateObservabilityDocumentContract,
+  validateOperationalContractDocumentContract,
   validatePackageOwnershipContract,
   validatePackageReleasePolicy,
   validatePackageScriptRegistration,
@@ -230,6 +231,32 @@ test("release readiness rejects CI operational document drift", () => {
     "docs/ops/ci.md must include The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`.",
     "docs/ops/ci.md must include to pass with strict up-to-date status checks. Administrator enforcement is disabled.",
     "docs/ops/ci.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
+  ]);
+});
+
+test("release readiness accepts the operational contract document contract", () => {
+  assert.deepEqual(validateOperationalContractDocumentContract(createOperationalContractDocumentText()), []);
+});
+
+test("release readiness rejects operational contract document drift", () => {
+  const text = createOperationalContractDocumentText()
+    .replace(
+      "Correctness gate: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
+      "Correctness gate: `pnpm run docs`,"
+    )
+    .replace(
+      "`pnpm run smoke`, `pnpm run check`, and `pnpm run contract` must pass before source-only merges.",
+      "`pnpm run smoke`, `pnpm run check`, and `pnpm run contract` should usually pass."
+    )
+    .replace(
+      "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
+      "- Required validation names: `docs`, `smoke`, `check`, `contract`"
+    );
+
+  assert.deepEqual(validateOperationalContractDocumentContract(text), [
+    "docs/ops/00-operational-contract.md must include Correctness gate: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,.",
+    "docs/ops/00-operational-contract.md must include `pnpm run smoke`, `pnpm run check`, and `pnpm run contract` must pass before source-only merges..",
+    "docs/ops/00-operational-contract.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
   ]);
 });
 
@@ -999,6 +1026,18 @@ function createCiOperationalDocumentText() {
     "The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`",
     "to pass with strict up-to-date status checks. Administrator enforcement is disabled so repository",
     "owners can recover from CI or protection misconfiguration without changing the branch rule first.",
+    "",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
+    ""
+  ].join("\n");
+}
+
+function createOperationalContractDocumentText() {
+  return [
+    "- Correctness gate: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
+    "  `pnpm run smoke`, `pnpm run check`, and `pnpm run contract` must pass before source-only merges.",
+    "",
+    "## Validation",
     "",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
     ""

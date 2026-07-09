@@ -28,8 +28,8 @@ Operational priorities:
 
 SLOs are local and repository-scoped:
 
-- Correctness gate: `pnpm run docs`, `pnpm run lint`, `pnpm run smoke`, `pnpm run check`, and
-  `pnpm run contract` must pass before source-only merges.
+- Correctness gate: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,
+  `pnpm run smoke`, `pnpm run check`, and `pnpm run contract` must pass before source-only merges.
 - Recovery target: unsafe proposal branches or pull requests should be closed or deleted before
   further dogfood runs continue.
 - Data durability target: approved recognition can be restored from Git history plus the canonical
@@ -52,7 +52,7 @@ Dependency tiers:
 
 ## Validation
 
-- Required validation names: `docs`, `smoke`, `check`, `contract`
+- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
 - Current hosted live-provider evidence: workflow run `29018826925` passed on

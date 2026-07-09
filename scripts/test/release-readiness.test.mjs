@@ -15,6 +15,7 @@ import {
   validateDryRunDogfoodEvidence,
   validateDogfoodWorkflowContract,
   validateHostedLiveProviderWorkflowContract,
+  validateObservabilityDocumentContract,
   validatePackageOwnershipContract,
   validatePackageReleasePolicy,
   validatePackageScriptRegistration,
@@ -229,6 +230,31 @@ test("release readiness rejects CI operational document drift", () => {
     "docs/ops/ci.md must include The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`.",
     "docs/ops/ci.md must include to pass with strict up-to-date status checks. Administrator enforcement is disabled.",
     "docs/ops/ci.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
+  ]);
+});
+
+test("release readiness accepts the observability document contract", () => {
+  assert.deepEqual(validateObservabilityDocumentContract(createObservabilityDocumentText()), []);
+});
+
+test("release readiness rejects observability document drift", () => {
+  const text = createObservabilityDocumentText()
+    .replace(
+      "hosted CI run status for `docs`, `release-readiness`, `lint`, `smoke`, `check`, and `contract`",
+      "hosted CI run status for `docs`, `smoke`, `check`, and `contract`"
+    )
+    .replace("- `pnpm run release-readiness`", "")
+    .replace("- `pnpm run lint`", "")
+    .replace(
+      "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
+      "- Required validation names: `docs`, `smoke`, `check`, `contract`"
+    );
+
+  assert.deepEqual(validateObservabilityDocumentContract(text), [
+    "docs/ops/observability.md must include hosted CI run status for `docs`, `release-readiness`, `lint`, `smoke`, `check`, and `contract`.",
+    "docs/ops/observability.md must include - `pnpm run release-readiness`.",
+    "docs/ops/observability.md must include - `pnpm run lint`.",
+    "docs/ops/observability.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
   ]);
 });
 
@@ -973,6 +999,26 @@ function createCiOperationalDocumentText() {
     "The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`",
     "to pass with strict up-to-date status checks. Administrator enforcement is disabled so repository",
     "owners can recover from CI or protection misconfiguration without changing the branch rule first.",
+    "",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
+    ""
+  ].join("\n");
+}
+
+function createObservabilityDocumentText() {
+  return [
+    "- hosted CI run status for `docs`, `release-readiness`, `lint`, `smoke`, `check`, and `contract`",
+    "",
+    "Health checks:",
+    "",
+    "- `pnpm run docs`",
+    "- `pnpm run release-readiness`",
+    "- `pnpm run lint`",
+    "- `pnpm run smoke`",
+    "- `pnpm run check`",
+    "- `pnpm run contract`",
+    "",
+    "## Validation",
     "",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
     ""

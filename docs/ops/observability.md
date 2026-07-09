@@ -16,7 +16,7 @@ Observable surfaces:
   `validate-config`, and `validate-ledger`
 - GitHub Action outputs and step summaries for `dry-run`, `propose`, and `stage-draft`
 - proposal pull request title, body, branch name, changed file list, and commit SHA
-- hosted CI run status for `docs`, `smoke`, `check`, and `contract`
+- hosted CI run status for `docs`, `release-readiness`, `lint`, `smoke`, `check`, and `contract`
 - manual dogfood workflow run URLs for propose, stage-draft, and live-provider smoke
 
 Sensitive data rules:
@@ -30,6 +30,8 @@ Sensitive data rules:
 Health checks:
 
 - `pnpm run docs`
+- `pnpm run release-readiness`
+- `pnpm run lint`
 - `pnpm run smoke`
 - `pnpm run check`
 - `pnpm run contract`
@@ -48,7 +50,7 @@ release evidence when a manual dogfood run proves a gate.
 
 ## Validation
 
-- Required validation names: `docs`, `smoke`, `check`, `contract`
+- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
 - Current hosted live-provider evidence: workflow run `29018826925` passed on

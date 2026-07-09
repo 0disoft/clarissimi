@@ -152,6 +152,16 @@ export const ciOperationalDocumentContract = {
   ]
 };
 
+export const observabilityDocumentContract = {
+  path: "docs/ops/observability.md",
+  requiredSnippets: [
+    "hosted CI run status for `docs`, `release-readiness`, `lint`, `smoke`, `check`, and `contract`",
+    "- `pnpm run release-readiness`",
+    "- `pnpm run lint`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"
+  ]
+};
+
 export const packageOwnershipContract = {
   path: "docs/monorepo/package-ownership.md"
 };
@@ -584,6 +594,7 @@ export async function runReleaseReadiness(options = {}) {
   await runReleasePolicyDocumentContractCheck(repoRoot);
   await runProductPositioningContractCheck(repoRoot);
   await runCiOperationalDocumentContractCheck(repoRoot);
+  await runObservabilityDocumentContractCheck(repoRoot);
   await runTsconfigBuildGraphCheck(repoRoot);
   await runPackageOwnershipContractCheck(repoRoot);
   await runDryRunDogfoodEvidenceCheck(repoRoot);
@@ -858,6 +869,18 @@ export function validateProductPositioningContract(textsByPath, contract = produ
 }
 
 export function validateCiOperationalDocumentContract(text, contract = ciOperationalDocumentContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateObservabilityDocumentContract(text, contract = observabilityDocumentContract) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1211,6 +1234,23 @@ async function runCiOperationalDocumentContractCheck(repoRoot) {
   }
 
   console.log("CI operational document contract passed");
+}
+
+async function runObservabilityDocumentContractCheck(repoRoot) {
+  const observabilityPath = join(repoRoot, observabilityDocumentContract.path);
+  let text;
+  try {
+    text = await readFile(observabilityPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${observabilityDocumentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateObservabilityDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`observability document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("observability document contract passed");
 }
 
 async function runSmokePackCandidateContractCheck(repoRoot) {

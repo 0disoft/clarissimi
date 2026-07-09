@@ -114,6 +114,36 @@ export const workspacePackageManifestSurfaceContract = {
   }
 };
 
+export const smokePackCandidateContract = {
+  path: "scripts/smoke.mjs",
+  requiredSnippets: [
+    "assertWorkspacePackagePackDryRuns",
+    "validatePackagePackDryRun",
+    "pnpm",
+    "pack",
+    "--dry-run",
+    "--json",
+    "{ dir: \"schemas\" }",
+    "{ dir: \"redaction\" }",
+    "{ dir: \"core\" }",
+    "{ dir: \"github\" }",
+    "{ dir: \"providers\" }",
+    "{ dir: \"renderers\" }",
+    "{ dir: \"cli\", requiredFiles: [\"dist/bin/clarissimi.js\"] }",
+    "{ dir: \"action\", requiredFiles: [\"dist/bin/clarissimi-action.js\"] }",
+    "package.json",
+    "README.md",
+    "LICENSE",
+    "dist/index.js",
+    "dist/index.d.ts",
+    "src/",
+    "test/",
+    "tsconfig.json",
+    "node_modules/",
+    ".tsbuildinfo"
+  ]
+};
+
 export const workspaceInternalDependencyContract = {
   internalScope: "@clarissimi/",
   workspaceRange: "workspace:*",
@@ -444,6 +474,7 @@ export async function runReleaseReadiness(options = {}) {
   });
 
   await runPackageScriptRegistrationCheck(repoRoot);
+  await runSmokePackCandidateContractCheck(repoRoot);
   await runWorkspaceContractCheck(repoRoot);
   await runPackageReleasePolicyCheck(repoRoot);
   await runWorkspacePackageReleasePolicyCheck(repoRoot);
@@ -897,6 +928,23 @@ async function runPackageReleasePolicyCheck(repoRoot) {
   console.log("package release policy passed");
 }
 
+async function runSmokePackCandidateContractCheck(repoRoot) {
+  const smokePath = join(repoRoot, smokePackCandidateContract.path);
+  let text;
+  try {
+    text = await readFile(smokePath, "utf8");
+  } catch (error) {
+    throw new Error(`${smokePackCandidateContract.path} is not readable: ${error.message}`);
+  }
+
+  const issues = validateSmokePackCandidateContract(text);
+  if (issues.length > 0) {
+    throw new Error(`smoke package pack candidate contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("smoke package pack candidate contract passed");
+}
+
 async function runWorkspacePackageReleasePolicyCheck(repoRoot) {
   const packageManifestPaths = await listWorkspacePackageManifests(repoRoot);
   const issues = [];
@@ -1130,6 +1178,18 @@ export function validatePackageReleasePolicy(
 
   if (packageJson?.version !== policy.version) {
     issues.push(`${manifestPath} version must remain ${policy.version} until release blockers are cleared.`);
+  }
+
+  return issues;
+}
+
+export function validateSmokePackCandidateContract(text, contract = smokePackCandidateContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
   }
 
   return issues;

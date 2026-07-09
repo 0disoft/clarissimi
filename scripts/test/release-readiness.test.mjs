@@ -18,6 +18,7 @@ import {
   validatePackageReleasePolicy,
   validatePackageScriptRegistration,
   validateRootTsconfigReferences,
+  validateSmokePackCandidateContract,
   validateTrackedGeneratedOutputPaths,
   validateWorkspaceContract,
   validateWorkspaceInternalDependencies,
@@ -94,6 +95,28 @@ test("release readiness rejects missing package and script test globs", () => {
   assert.deepEqual(issues, [
     "package.json scripts.test must include packages/action/test/*.test.mjs.",
     "package.json scripts.test must include scripts/test/*.test.mjs."
+  ]);
+});
+
+test("release readiness accepts smoke package pack candidate coverage", () => {
+  assert.deepEqual(validateSmokePackCandidateContract(createSmokeScriptText()), []);
+});
+
+test("release readiness rejects missing smoke package pack candidate coverage", () => {
+  const text = createSmokeScriptText()
+    .replace("assertWorkspacePackagePackDryRuns", "assertWorkspacePackages")
+    .replace("\"README.md\",", "")
+    .replace("path.startsWith(\"src/\")", "false")
+    .replace(
+      "{ dir: \"action\", requiredFiles: [\"dist/bin/clarissimi-action.js\"] }",
+      "{ dir: \"action\" }"
+    );
+
+  assert.deepEqual(validateSmokePackCandidateContract(text), [
+    "scripts/smoke.mjs must include assertWorkspacePackagePackDryRuns.",
+    "scripts/smoke.mjs must include { dir: \"action\", requiredFiles: [\"dist/bin/clarissimi-action.js\"] }.",
+    "scripts/smoke.mjs must include README.md.",
+    "scripts/smoke.mjs must include src/."
   ]);
 });
 
@@ -703,6 +726,46 @@ function createValidScripts() {
   scripts.contract = "pnpm run typecheck && pnpm run test";
 
   return scripts;
+}
+
+function createSmokeScriptText() {
+  return [
+    "async function assertWorkspacePackagePackDryRuns() {",
+    "  const packages = [",
+    "    { dir: \"schemas\" },",
+    "    { dir: \"redaction\" },",
+    "    { dir: \"core\" },",
+    "    { dir: \"github\" },",
+    "    { dir: \"providers\" },",
+    "    { dir: \"renderers\" },",
+    "    { dir: \"cli\", requiredFiles: [\"dist/bin/clarissimi.js\"] },",
+    "    { dir: \"action\", requiredFiles: [\"dist/bin/clarissimi-action.js\"] }",
+    "  ];",
+    "  await runJsonCommand({",
+    "    command: \"pnpm\",",
+    "    args: [\"--filter\", \"@clarissimi/schemas\", \"pack\", \"--dry-run\", \"--json\"]",
+    "  });",
+    "}",
+    "function validatePackagePackDryRun(output, packageInfo) {",
+    "  const requiredFiles = [",
+    "    \"package.json\",",
+    "    \"README.md\",",
+    "    \"LICENSE\",",
+    "    \"dist/index.js\",",
+    "    \"dist/index.d.ts\"",
+    "  ];",
+    "  if (",
+    "    path === \"tsconfig.json\"",
+    "    || path.startsWith(\"src/\")",
+    "    || path.startsWith(\"test/\")",
+    "    || path.includes(\"node_modules/\")",
+    "    || path.endsWith(\".tsbuildinfo\")",
+    "  ) {",
+    "    throw new Error(\"bad pack file\");",
+    "  }",
+    "}",
+    ""
+  ].join("\n");
 }
 
 function createBlockedReleasePackageJson() {

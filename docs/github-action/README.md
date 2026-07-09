@@ -15,7 +15,7 @@ layer.
 ## Default Behavior
 
 - Runs after merge or default-branch update.
-- Loads Clarissimi config from the target repository.
+- Reads explicit Action inputs and workflow environment values.
 - Collects bounded public GitHub evidence.
 - Runs redaction before provider calls.
 - Validates provider output against schemas.
@@ -49,6 +49,9 @@ deterministic local and test path.
 The Action defaults to the fake provider. To use an OpenAI-compatible provider, pass
 `provider: openai-compatible`, pass `provider-model`, and expose `CLARISSIMI_PROVIDER_TOKEN` from
 the workflow secret boundary. Do not pass provider tokens as action inputs.
+
+Repository config-file loading through a `config-path` input remains a future Action contract. The
+current Action configuration surface is `action.yml` inputs plus workflow environment variables.
 
 Detailed outputs and failure behavior are defined in `docs/github-action/action-contract.md`. The
 implemented propose-mode sequencing is recorded in

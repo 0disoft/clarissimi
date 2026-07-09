@@ -33,7 +33,9 @@ This repository type owns workspace boundaries, package ownership, dependency po
 - Monorepo public contract: packages expose only documented types, functions, and constants.
 - Monorepo validation evidence: implemented packages must pass `typecheck`, `test`, `contract`,
   and `check`.
-- Monorepo release or rollout policy: UNDECIDED.
+- Monorepo release or rollout policy: source-only merges may continue after local and hosted
+  validation, but public package publication and versioned Action tags remain blocked by
+  `docs/ops/release.md`.
 - Monorepo compatibility and migration policy: schema versions must be explicit and migration work
   must be documented before changing accepted public data shapes.
 

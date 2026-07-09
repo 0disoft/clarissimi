@@ -52,8 +52,8 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   smoke coverage, Action dry-run coverage, and default propose and live-provider credential
   preflight fail-closed behavior
 - root `package.json`: configured `release-readiness` script for non-credentialed release gate
-  checks, including package test-registration drift and release tool availability, before live
-  provider smoke
+  checks, including package test-registration drift, public product-positioning guardrails, and
+  release tool availability, before live provider smoke
 - root `package.json`: configured `hosted-live-provider-smoke` script for maintainer-triggered
   hosted workflow dispatch and watch after the repository secret name is configured
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and

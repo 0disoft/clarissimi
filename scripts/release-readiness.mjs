@@ -90,6 +90,46 @@ export const releasePolicyDocumentContract = {
   ]
 };
 
+export const productPositioningContract = {
+  documents: [
+    {
+      path: "README.md",
+      requiredSnippets: [
+        "Clarissimi is a maintainer-approved contribution recognition engine for open-source repositories.",
+        "Clarissimi is not a contributor scoring leaderboard, an HR scorecard, or an AI code review tool.",
+        "AI is used as a drafter that reads repository evidence and prepares a structured recognition draft.",
+        "Maintainers remain the approval authority.",
+        "Public output should read like contribution history, not a scoreboard."
+      ],
+      forbiddenSnippets: [
+        "Clarissimi is a contributor scoring tool",
+        "Clarissimi is a public leaderboard",
+        "Clarissimi ranks contributors",
+        "Clarissimi scores contributors"
+      ]
+    },
+    {
+      path: "docs/product/02-spec.md",
+      requiredSnippets: [
+        "Clarissimi must be described as a contribution recognition engine.",
+        "Do not describe it as:",
+        "- contributor scoring",
+        "- contributor ranking",
+        "- a public leaderboard",
+        "Public output must not show a contributor's percentage share of recent total impact weight, score,",
+        "Clarissimi may expose this kind of metric only through a",
+        "maintainer-only analytics view unless a future ADR accepts a safer public framing."
+      ],
+      forbiddenSnippets: [
+        "Clarissimi must be described as a contributor scoring tool.",
+        "Clarissimi must be described as a public leaderboard.",
+        "Public output should show contributor scores.",
+        "Public output should show contributor ranks."
+      ]
+    }
+  ]
+};
+
 export const packageOwnershipContract = {
   path: "docs/monorepo/package-ownership.md"
 };
@@ -520,6 +560,7 @@ export async function runReleaseReadiness(options = {}) {
   await runPackageReleasePolicyCheck(repoRoot);
   await runWorkspacePackageReleasePolicyCheck(repoRoot);
   await runReleasePolicyDocumentContractCheck(repoRoot);
+  await runProductPositioningContractCheck(repoRoot);
   await runTsconfigBuildGraphCheck(repoRoot);
   await runPackageOwnershipContractCheck(repoRoot);
   await runDryRunDogfoodEvidenceCheck(repoRoot);
@@ -761,6 +802,32 @@ export function validateReleasePolicyDocumentContract(text, contract = releasePo
   for (const snippet of contract.requiredSnippets) {
     if (!text.includes(snippet)) {
       issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateProductPositioningContract(textsByPath, contract = productPositioningContract) {
+  const issues = [];
+
+  for (const document of contract.documents) {
+    const text = textsByPath[document.path];
+    if (typeof text !== "string") {
+      issues.push(`${document.path} must be readable for product positioning contract.`);
+      continue;
+    }
+
+    for (const snippet of document.requiredSnippets) {
+      if (!text.includes(snippet)) {
+        issues.push(`${document.path} must include ${snippet}.`);
+      }
+    }
+
+    for (const snippet of document.forbiddenSnippets) {
+      if (text.includes(snippet)) {
+        issues.push(`${document.path} must not include ${snippet}.`);
+      }
     }
   }
 
@@ -1072,6 +1139,26 @@ async function runReleasePolicyDocumentContractCheck(repoRoot) {
   }
 
   console.log("release policy document contract passed");
+}
+
+async function runProductPositioningContractCheck(repoRoot) {
+  const textsByPath = {};
+
+  for (const document of productPositioningContract.documents) {
+    const documentPath = join(repoRoot, document.path);
+    try {
+      textsByPath[document.path] = await readFile(documentPath, "utf8");
+    } catch (error) {
+      throw new Error(`Unable to read ${document.path}: ${error.message}`);
+    }
+  }
+
+  const issues = validateProductPositioningContract(textsByPath);
+  if (issues.length > 0) {
+    throw new Error(`product positioning contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("product positioning contract passed");
 }
 
 async function runSmokePackCandidateContractCheck(repoRoot) {

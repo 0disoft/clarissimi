@@ -17,6 +17,7 @@ import {
   validatePackageOwnershipContract,
   validatePackageReleasePolicy,
   validatePackageScriptRegistration,
+  validateProductPositioningContract,
   validateReleasePolicyDocumentContract,
   validateRootTsconfigReferences,
   validateRollbackProcedureContract,
@@ -165,6 +166,32 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include Do not bump versions, publish packages, or create.",
     "docs/ops/release.md must include - Public package publication: blocked..",
     "docs/ops/release.md must include - Versioned GitHub Action tag: blocked.."
+  ]);
+});
+
+test("release readiness accepts the product positioning contract", () => {
+  assert.deepEqual(validateProductPositioningContract(createProductPositioningTexts()), []);
+});
+
+test("release readiness rejects product positioning drift", () => {
+  const texts = createProductPositioningTexts();
+  texts["README.md"] = texts["README.md"]
+    .replace(
+      "Clarissimi is a maintainer-approved contribution recognition engine for open-source repositories.",
+      "Clarissimi is a contribution automation tool for open-source repositories."
+    )
+    .replace("Public output should read like contribution history, not a scoreboard.", "");
+  texts["docs/product/02-spec.md"] = texts["docs/product/02-spec.md"]
+    .replace("Clarissimi must be described as a contribution recognition engine.", "Clarissimi is flexible.")
+    .replace("maintainer-only analytics view unless a future ADR accepts a safer public framing.", "")
+    + "\nPublic output should show contributor scores.\n";
+
+  assert.deepEqual(validateProductPositioningContract(texts), [
+    "README.md must include Clarissimi is a maintainer-approved contribution recognition engine for open-source repositories..",
+    "README.md must include Public output should read like contribution history, not a scoreboard..",
+    "docs/product/02-spec.md must include Clarissimi must be described as a contribution recognition engine..",
+    "docs/product/02-spec.md must include maintainer-only analytics view unless a future ADR accepts a safer public framing..",
+    "docs/product/02-spec.md must not include Public output should show contributor scores.."
   ]);
 });
 
@@ -870,6 +897,30 @@ function createReleasePolicyText() {
     "- Release blocker status: public package publication and versioned Action tags are blocked",
     ""
   ].join("\n");
+}
+
+function createProductPositioningTexts() {
+  return {
+    "README.md": [
+      "Clarissimi is a maintainer-approved contribution recognition engine for open-source repositories.",
+      "Clarissimi is not a contributor scoring leaderboard, an HR scorecard, or an AI code review tool.",
+      "AI is used as a drafter that reads repository evidence and prepares a structured recognition draft.",
+      "Maintainers remain the approval authority.",
+      "Public output should read like contribution history, not a scoreboard.",
+      ""
+    ].join("\n"),
+    "docs/product/02-spec.md": [
+      "Clarissimi must be described as a contribution recognition engine.",
+      "Do not describe it as:",
+      "- contributor scoring",
+      "- contributor ranking",
+      "- a public leaderboard",
+      "Public output must not show a contributor's percentage share of recent total impact weight, score,",
+      "Clarissimi may expose this kind of metric only through a",
+      "maintainer-only analytics view unless a future ADR accepts a safer public framing.",
+      ""
+    ].join("\n")
+  };
 }
 
 function createWorkspacePackageManifest(packageDir = "schemas") {

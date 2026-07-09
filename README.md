@@ -85,7 +85,7 @@ Implemented MVP slices:
 
 Not implemented yet:
 
-- credentialed live-provider smoke in release automation
+- credentialed live-provider smoke evidence for public release
 - repository write modes such as direct `commit`
 - comment updates or default-branch mutation
 
@@ -127,6 +127,10 @@ through the live GitHub collector using `GITHUB_TOKEN`; fixture inputs remain th
 test and local path. Explicit OpenAI-compatible provider selection is available for CLI and Action
 runs, but it requires the caller to provide a model and `CLARISSIMI_PROVIDER_TOKEN`; correctness
 tests continue to use fake providers or injected fetch implementations.
+
+Release maintainers can run `pnpm run live-provider-smoke` with `CLARISSIMI_PROVIDER_TOKEN` and
+`CLARISSIMI_PROVIDER_MODEL` to perform an explicit credentialed provider smoke. This command is not
+part of normal correctness checks.
 
 Workflow examples and permission details live in `docs/github-action/README.md` and
 `docs/github-action/permissions.md`.

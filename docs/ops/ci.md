@@ -11,6 +11,9 @@ The current local CI parity commands are:
 - `pnpm run docs`: verifies required documentation targets and local Markdown links.
 - `pnpm run smoke`: builds the workspace, runs the CLI through real subprocesses, runs the Action
   dry-run fixture path, and verifies default `propose` mode fails closed without `GITHUB_TOKEN`.
+- `pnpm run live-provider-smoke`: builds the workspace and runs the CLI against the explicit
+  OpenAI-compatible provider using maintainer-provided `CLARISSIMI_PROVIDER_TOKEN` and
+  `CLARISSIMI_PROVIDER_MODEL`. This command is a release smoke, not a correctness check.
 - `pnpm run check`: runs typecheck and the package test suite.
 - `pnpm run contract`: runs typecheck and tests as the current contract gate.
 
@@ -32,4 +35,4 @@ pull requests enabled so explicit `propose` jobs can open recognition proposal p
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
 - Remaining operational risk: branch protection, hosted CI enforcement, and credentialed
-  live-provider smoke coverage are not complete.
+  live-provider smoke run evidence are not complete.

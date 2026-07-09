@@ -36,9 +36,9 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   event-path live GitHub collection in propose mode with explicit fake or OpenAI-compatible
   provider selection
 - root `action.yml`: composite Action defaulting to `propose` and exposing explicit `dry-run`
-- root `package.json`: configured `docs` and `smoke` validation scripts for documentation
-  integrity, CLI subprocess smoke coverage, Action dry-run coverage, and default propose
-  fail-closed behavior
+- root `package.json`: configured `docs`, `smoke`, and release-only `live-provider-smoke` scripts
+  for documentation integrity, CLI subprocess smoke coverage, Action dry-run coverage, and default
+  propose fail-closed behavior
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
   `event-path` inputs
 - `.github/workflows/clarissimi-propose-fixture.yml`: manual-only fixture propose dogfood
@@ -237,13 +237,14 @@ Completed deliverables:
 - model output cannot approve contributions or alter contributor identity, evidence refs, or source
 - CLI and Action provider selection use fake by default and support explicit `openai-compatible`
   selection with caller-owned token loading
+- release-only live provider smoke harness exists without joining normal correctness tests
 
 Validation:
 
 - OpenAI-compatible provider fake-fetch tests
 - CLI and Action provider-selection tests with injected fetch
 - fake-provider core tests continue to pass
-- live-provider smoke tests are explicit and optional
+- live-provider smoke is explicit, credentialed, and release-only
 
 ### 9. Documentation And Release Readiness
 
@@ -264,12 +265,13 @@ Completed deliverables:
   `https://github.com/0disoft/clarissimi/pull/1`
 - docs validation checks required documentation targets and local Markdown links
 - smoke validation exercises the built CLI and Action bins without live provider credentials
+- live-provider smoke command is available as a release-only credentialed check
 - rollback instructions cover staging cleanup, proposal pull request closure, proposal branch
   deletion, and post-merge recognition reverts
 
 Release follow-up:
 
-- Credentialed live-provider smoke remains optional and is not part of correctness tests.
+- Credentialed live-provider smoke run evidence remains required before public release.
 
 Validation:
 

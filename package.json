@@ -13,6 +13,7 @@
     "contract": "pnpm run typecheck && pnpm run test",
     "migration-check": "node -e \"console.error('migration-check is not configured. Configure this validation before relying on pnpm run migration-check.'); process.exit(1)\"",
     "smoke": "pnpm run build && node scripts/smoke.mjs",
+    "live-provider-smoke": "pnpm run build && node scripts/live-provider-smoke.mjs",
     "docs": "node scripts/validate-docs.mjs",
     "check": "pnpm run typecheck && pnpm run test"
   },

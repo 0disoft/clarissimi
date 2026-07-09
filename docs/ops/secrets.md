@@ -26,6 +26,10 @@ CLI and GitHub Action live-provider wiring load provider tokens only from the bo
 execution secrets. The current shared token name is `CLARISSIMI_PROVIDER_TOKEN`. Config files and
 action inputs may name a provider, endpoint, and model, but must not store token values.
 
+The release-only live provider smoke uses `CLARISSIMI_PROVIDER_TOKEN`,
+`CLARISSIMI_PROVIDER_MODEL`, and optional `CLARISSIMI_PROVIDER_ENDPOINT`. It must run only in a
+maintainer-controlled environment that owns those values.
+
 ## Leak Response
 
 If a token, private key, raw provider output, raw diff, or sensitive evidence appears in a public
@@ -48,4 +52,4 @@ output, Action summary, CLI JSON, pull request body, or repository file:
 - Required validation names: `docs`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
-- Remaining operational risk: credentialed live-provider smoke is not complete.
+- Remaining operational risk: credentialed live-provider smoke run evidence is not complete.

@@ -17,6 +17,8 @@ Current implementation status:
   HTTP adapter.
 - CLI and Action provider selection default to the fake provider and support explicit
   `openai-compatible` selection when a model and `CLARISSIMI_PROVIDER_TOKEN` are provided.
+- `pnpm run live-provider-smoke` uses `CLARISSIMI_PROVIDER_TOKEN`,
+  `CLARISSIMI_PROVIDER_MODEL`, and optional `CLARISSIMI_PROVIDER_ENDPOINT`.
 
 ## Owners
 
@@ -29,4 +31,4 @@ Current implementation status:
 - Required validation names: `docs`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
-- Remaining operational risk: credentialed live-provider smoke is not complete.
+- Remaining operational risk: credentialed live-provider smoke run evidence is not complete.

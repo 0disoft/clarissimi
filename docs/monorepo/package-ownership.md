@@ -41,7 +41,7 @@ This repository type owns workspace boundaries, package ownership, dependency po
   `./dist/index.js` and `./dist/index.d.ts` entrypoints, expose only `dist` in `files`, keep
   `tsc -b` build scripts, expose bin entries only from `packages/cli` and `packages/action`, and
   carry package-level publication metadata for license, repository directory, homepage, issue
-  tracker, and Node.js runtime support even while publication remains blocked.
+  tracker, Node.js runtime support, and a package README even while publication remains blocked.
 - Monorepo internal dependency policy: internal package dependencies must use `workspace:*` in
   `dependencies`, not dev, peer, or optional dependency sections. TypeScript project references
   must also follow the dependency graph below so package manifests and `tsconfig` build order do

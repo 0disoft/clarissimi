@@ -17,6 +17,14 @@ export const requiredDocumentationPaths = [
   "docs/ops/ci.md",
   "docs/ops/release.md",
   "docs/ops/rollback.md",
+  "packages/action/README.md",
+  "packages/cli/README.md",
+  "packages/core/README.md",
+  "packages/github/README.md",
+  "packages/providers/README.md",
+  "packages/redaction/README.md",
+  "packages/renderers/README.md",
+  "packages/schemas/README.md",
   ".github/workflows/ci.yml",
   ".github/workflows/clarissimi-dry-run.yml",
   ".github/workflows/clarissimi-live-provider-smoke.yml",
@@ -32,6 +40,7 @@ export async function validateDocs(options = {}) {
   const markdownFiles = [
     ...await listMarkdownFiles(repoRoot, false),
     ...await listMarkdownFiles(join(repoRoot, "docs"), true),
+    ...await listMarkdownFiles(join(repoRoot, "packages"), true),
     ...await listMarkdownFiles(join(repoRoot, ".agents"), true)
   ];
   const issues = [];

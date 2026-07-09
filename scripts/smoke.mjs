@@ -318,6 +318,7 @@ function validatePackagePackDryRun(output, packageInfo) {
   const pathSet = new Set(paths);
   const requiredFiles = [
     "package.json",
+    "README.md",
     "LICENSE",
     "dist/index.js",
     "dist/index.d.ts",

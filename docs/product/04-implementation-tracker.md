@@ -299,8 +299,8 @@ Completed deliverables:
   `docs/ops/release.md`
 - smoke validation exercises the built CLI and Action bins without live provider credentials
 - smoke validation runs workspace package pack dry-runs after build and rejects package candidates
-  that omit required public files or include source, test, tsconfig, node_modules, or build-info
-  artifacts
+  that omit required public files, including package README files, or include source, test,
+  tsconfig, node_modules, or build-info artifacts
 - live-provider smoke command is available as a release-only credentialed check and passed locally
   on `2026-07-09` with maintainer-owned credentials and
   `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`
@@ -348,6 +348,7 @@ Completed deliverables:
 - release-readiness verifies that workspace package manifests carry package-level license,
   repository directory, homepage, issue tracker, and Node.js runtime metadata before publication is
   unblocked
+- docs validation treats workspace package README files as required documentation targets
 - release-readiness verifies that implemented workspace packages and the Package Table in
   `docs/monorepo/package-ownership.md` stay in sync
 - release-readiness verifies that internal workspace dependencies follow the documented package

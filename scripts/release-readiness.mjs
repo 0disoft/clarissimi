@@ -291,6 +291,44 @@ export const actionInputsOutputsDocumentContract = {
   ]
 };
 
+export const actionContractDocumentContract = {
+  path: "docs/github-action/action-contract.md",
+  requiredSnippets: [
+    "The Action supports dry-run summaries, public recognition proposals, and draft inbox proposals.",
+    "- `INPUT_MODE`: `dry-run`, `propose`, or `stage-draft`, default `propose`",
+    "- `INPUT_SUMMARY_PATH`: optional workspace-relative path for a sanitized JSON summary artifact",
+    "- `INPUT_PROVIDER`: `fake` or `openai-compatible`, default `fake`",
+    "- `CLARISSIMI_PROVIDER_TOKEN`: provider token required only for `openai-compatible`",
+    "- `GITHUB_TOKEN`: token used only by `propose` mode for live GitHub collection and proposal pull",
+    "Secret values must be read from GitHub Actions secrets or environment variables, not action inputs.",
+    "Unsupported `INPUT_MODE` values must fail",
+    "`config-path` is explicit and optional. The Action does not automatically discover repository config",
+    "Invalid summary paths fail before provider",
+    "Fixture-first `propose` succeeds only when the fixture explicitly carries an approved or",
+    "Normal provider drafts remain non-public and fail closed",
+    "`stage-draft` mode reads `GITHUB_TOKEN`",
+    "It succeeds only for normal `draft` assessments and stages sanitized",
+    "It must not write `.clarissimi/contributions.jsonl`,",
+    "Proposal branch commits use a Clarissimi-owned bot author",
+    "The source repository in collected evidence remains part of the public recognition context.",
+    "- `summary-json-path` when `summary-path` is set",
+    "The step summary must not include raw pull request bodies, raw patch",
+    "Outputs must not include raw provider responses, raw diffs, secrets, or sensitive security details.",
+    "- Missing input source: exit `1`, empty stdout, usage message on stderr.",
+    "- Unsupported mode: exit `1`, empty stdout, usage message on stderr.",
+    "- Explicit `event-path` and `github-fixture` together: exit `1`, empty stdout, usage message on",
+    "- Missing `CLARISSIMI_PROVIDER_TOKEN` or `INPUT_PROVIDER_MODEL` for `openai-compatible`: exit `1`,",
+    "- Draft, rejected, or skipped assessment in `propose` mode: exit `4`, empty stdout, diagnostic on",
+    "- Approved, auto-approved, rejected, or skipped assessment in `stage-draft` mode: exit `4`, empty",
+    "Dry-run mode should need read permissions only.",
+    "Commit mode is not implemented.",
+    "- Default behavior requires broad write permissions.",
+    "- Provider secrets are modeled as plain action inputs.",
+    "- The Action runs untrusted PR head code.",
+    "- `stage-draft` mode writes public recognition outputs or implies maintainer approval."
+  ]
+};
+
 export const opsValidationFooterContract = {
   documents: [
     "docs/ops/config-and-env.md",
@@ -782,6 +820,7 @@ export async function runReleaseReadiness(options = {}) {
   await runSecretsDocumentContractCheck(repoRoot);
   await runBackupRestoreDocumentContractCheck(repoRoot);
   await runActionInputsOutputsDocumentContractCheck(repoRoot);
+  await runActionContractDocumentContractCheck(repoRoot);
   await runOpsValidationFooterContractCheck(repoRoot);
   await runEngineeringValidationDocumentContractCheck(repoRoot);
   await runMonorepoValidationDocumentContractCheck(repoRoot);
@@ -1167,6 +1206,18 @@ export function validateBackupRestoreDocumentContract(text, contract = backupRes
 }
 
 export function validateActionInputsOutputsDocumentContract(text, contract = actionInputsOutputsDocumentContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateActionContractDocumentContract(text, contract = actionContractDocumentContract) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1739,6 +1790,23 @@ async function runActionInputsOutputsDocumentContractCheck(repoRoot) {
   }
 
   console.log("Action inputs and outputs document contract passed");
+}
+
+async function runActionContractDocumentContractCheck(repoRoot) {
+  const actionContractPath = join(repoRoot, actionContractDocumentContract.path);
+  let text;
+  try {
+    text = await readFile(actionContractPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${actionContractDocumentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateActionContractDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`Action contract document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("Action contract document contract passed");
 }
 
 async function runOpsValidationFooterContractCheck(repoRoot) {

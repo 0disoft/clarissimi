@@ -8,6 +8,7 @@ import {
   packageReleasePolicy,
   requiredPackageScripts,
   requiredTestGlobs,
+  validateActionContractDocumentContract,
   validateActionInputsOutputsDocumentContract,
   validateActionManifestContract,
   validateBackupRestoreDocumentContract,
@@ -478,6 +479,39 @@ test("release readiness rejects Action inputs and outputs document drift", () =>
     "docs/github-action/inputs-and-outputs.md must include An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`.",
     "docs/github-action/inputs-and-outputs.md must include Outputs must not include raw provider output, raw diff text, raw issue text, tokens, private keys.",
     "docs/github-action/inputs-and-outputs.md must include raw-evidence exclusion rules as action outputs.."
+  ]);
+});
+
+test("release readiness accepts the Action contract document contract", () => {
+  assert.deepEqual(validateActionContractDocumentContract(createActionContractDocumentText()), []);
+});
+
+test("release readiness rejects Action contract document drift", () => {
+  const text = createActionContractDocumentText()
+    .replace("The Action supports dry-run summaries, public recognition proposals, and draft inbox proposals.", "The Action supports recognition automation.")
+    .replace("Secret values must be read from GitHub Actions secrets or environment variables, not action inputs.", "Secret values may be action inputs.")
+    .replace("Unsupported `INPUT_MODE` values must fail", "Unsupported `INPUT_MODE` values are ignored")
+    .replace("Invalid summary paths fail before provider", "Invalid summary paths are normalized after provider")
+    .replace("Normal provider drafts remain non-public and fail closed", "Normal provider drafts can be proposed")
+    .replace("It must not write `.clarissimi/contributions.jsonl`,", "It may write `.clarissimi/contributions.jsonl`,")
+    .replace("Proposal branch commits use a Clarissimi-owned bot author", "Proposal branch commits use runner identity")
+    .replace("Outputs must not include raw provider responses, raw diffs, secrets, or sensitive security details.", "Outputs may include raw provider responses.")
+    .replace("- Missing input source: exit `1`, empty stdout, usage message on stderr.", "- Missing input source: exit `0`.")
+    .replace("Dry-run mode should need read permissions only.", "Dry-run mode needs write permissions.")
+    .replace("- Provider secrets are modeled as plain action inputs.", "- Secrets are accepted as action inputs.");
+
+  assert.deepEqual(validateActionContractDocumentContract(text), [
+    "docs/github-action/action-contract.md must include The Action supports dry-run summaries, public recognition proposals, and draft inbox proposals..",
+    "docs/github-action/action-contract.md must include Secret values must be read from GitHub Actions secrets or environment variables, not action inputs..",
+    "docs/github-action/action-contract.md must include Unsupported `INPUT_MODE` values must fail.",
+    "docs/github-action/action-contract.md must include Invalid summary paths fail before provider.",
+    "docs/github-action/action-contract.md must include Normal provider drafts remain non-public and fail closed.",
+    "docs/github-action/action-contract.md must include It must not write `.clarissimi/contributions.jsonl`,.",
+    "docs/github-action/action-contract.md must include Proposal branch commits use a Clarissimi-owned bot author.",
+    "docs/github-action/action-contract.md must include Outputs must not include raw provider responses, raw diffs, secrets, or sensitive security details..",
+    "docs/github-action/action-contract.md must include - Missing input source: exit `1`, empty stdout, usage message on stderr..",
+    "docs/github-action/action-contract.md must include Dry-run mode should need read permissions only..",
+    "docs/github-action/action-contract.md must include - Provider secrets are modeled as plain action inputs.."
   ]);
 });
 
@@ -1499,6 +1533,66 @@ function createActionInputsOutputsDocumentText() {
     "raw pull request bodies, raw patch excerpts, or sensitive security details.",
     "Step summary content follows the same",
     "raw-evidence exclusion rules as action outputs.",
+    ""
+  ].join("\n");
+}
+
+function createActionContractDocumentText() {
+  return [
+    "The Action supports dry-run summaries, public recognition proposals, and draft inbox proposals.",
+    "",
+    "- `INPUT_MODE`: `dry-run`, `propose`, or `stage-draft`, default `propose`",
+    "- `INPUT_SUMMARY_PATH`: optional workspace-relative path for a sanitized JSON summary artifact",
+    "- `INPUT_PROVIDER`: `fake` or `openai-compatible`, default `fake`",
+    "- `CLARISSIMI_PROVIDER_TOKEN`: provider token required only for `openai-compatible`",
+    "- `GITHUB_TOKEN`: token used only by `propose` mode for live GitHub collection and proposal pull",
+    "  request creation or update",
+    "",
+    "Secret values must be read from GitHub Actions secrets or environment variables, not action inputs.",
+    "Unsupported `INPUT_MODE` values must fail as usage errors before collection, provider, staging,",
+    "branch, or pull request work begins.",
+    "",
+    "`config-path` is explicit and optional. The Action does not automatically discover repository config",
+    "files.",
+    "Invalid summary paths fail before provider calls or write-mode mutation.",
+    "",
+    "Fixture-first `propose` succeeds only when the fixture explicitly carries an approved or",
+    "auto-approved maintainer approval status. Normal provider drafts remain non-public and fail closed",
+    "before branch mutation.",
+    "",
+    "`stage-draft` mode reads `GITHUB_TOKEN` for live GitHub collection and proposal pull request",
+    "creation or update. It succeeds only for normal `draft` assessments and stages sanitized",
+    "`.clarissimi/drafts/*.json` review files. It must not write `.clarissimi/contributions.jsonl`,",
+    "`CONTRIBUTORS.md`, contributor JSON, or static public data.",
+    "",
+    "Proposal branch commits use a Clarissimi-owned bot author instead of relying on runner-global git",
+    "identity.",
+    "The source repository in collected evidence remains part of the public recognition context.",
+    "",
+    "- `summary-json-path` when `summary-path` is set",
+    "",
+    "The step summary must not include raw pull request bodies, raw patch",
+    "excerpts, raw diffs, provider raw output, tokens, or secrets.",
+    "Outputs must not include raw provider responses, raw diffs, secrets, or sensitive security details.",
+    "",
+    "- Missing input source: exit `1`, empty stdout, usage message on stderr.",
+    "- Unsupported mode: exit `1`, empty stdout, usage message on stderr.",
+    "- Explicit `event-path` and `github-fixture` together: exit `1`, empty stdout, usage message on",
+    "  stderr.",
+    "- Missing `CLARISSIMI_PROVIDER_TOKEN` or `INPUT_PROVIDER_MODEL` for `openai-compatible`: exit `1`,",
+    "  empty stdout, usage message on stderr.",
+    "- Draft, rejected, or skipped assessment in `propose` mode: exit `4`, empty stdout, diagnostic on",
+    "  stderr before branch mutation.",
+    "- Approved, auto-approved, rejected, or skipped assessment in `stage-draft` mode: exit `4`, empty",
+    "  stdout, diagnostic on stderr before branch mutation.",
+    "",
+    "Dry-run mode should need read permissions only.",
+    "Commit mode is not implemented.",
+    "",
+    "- Default behavior requires broad write permissions.",
+    "- Provider secrets are modeled as plain action inputs.",
+    "- The Action runs untrusted PR head code.",
+    "- `stage-draft` mode writes public recognition outputs or implies maintainer approval.",
     ""
   ].join("\n");
 }

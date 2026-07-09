@@ -1216,13 +1216,21 @@ test("release readiness rejects missing write-mode dogfood evidence", () => {
     .replace("`29027800039` passed on `2026-07-09T15:02:15Z`", "passed")
     .replace("https://github.com/0disoft/clarissimi/actions/runs/29027800039", "")
     .replace("https://github.com/0disoft/clarissimi/actions/runs/29027802451", "")
-    .replace("https://github.com/0disoft/clarissimi/pull/2", "");
+    .replace("https://github.com/0disoft/clarissimi/pull/2", "")
+    .replace("pull request `#1` was closed after evidence capture", "")
+    .replace("pull request `#2` was closed after evidence capture", "")
+    .replace("clarissimi/recognition/merged_pull_request-42", "")
+    .replace("not intended to merge into the real repository ledger", "");
 
   assert.deepEqual(validateWriteModeDogfoodEvidence(text), [
     "docs/ops/release.md must include Current dogfood evidence: `Clarissimi propose fixture` workflow run.",
     "docs/ops/release.md must include https://github.com/0disoft/clarissimi/actions/runs/29027800039.",
     "docs/ops/release.md must include https://github.com/0disoft/clarissimi/actions/runs/29027802451.",
     "docs/ops/release.md must include https://github.com/0disoft/clarissimi/pull/2.",
+    "docs/ops/release.md must include pull request `#1` was closed after evidence capture.",
+    "docs/ops/release.md must include pull request `#2` was closed after evidence capture.",
+    "docs/ops/release.md must include clarissimi/recognition/merged_pull_request-42.",
+    "docs/ops/release.md must include not intended to merge into the real repository ledger.",
     "docs/ops/release.md must include a numeric propose fixture workflow run id.",
     "docs/ops/release.md must include a propose fixture workflow timestamp."
   ]);
@@ -2371,10 +2379,16 @@ function createReleaseEvidenceText() {
     "`29027800039` passed on `2026-07-09T15:02:15Z` and created proposal pull request",
     "https://github.com/0disoft/clarissimi/pull/1.",
     "Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29027800039`.",
+    "Fixture-only cleanup: pull request `#1` was closed after evidence capture, and branch",
+    "`clarissimi/recognition/merged_pull_request-42` was deleted because sample data is",
+    "not intended to merge into the real repository ledger.",
     "Current draft dogfood evidence: `Clarissimi stage draft fixture` workflow run",
     "`29027802451` passed on `2026-07-09T15:02:10Z` and created draft review pull request",
     "https://github.com/0disoft/clarissimi/pull/2.",
     "Run URL: `https://github.com/0disoft/clarissimi/actions/runs/29027802451`.",
+    "Fixture-only cleanup: pull request `#2` was closed after evidence capture, and branch",
+    "`clarissimi/drafts/merged_pull_request-42` was deleted because staged sample data is",
+    "not intended to merge into the real repository draft inbox.",
     "Current live-provider evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09`",
     "using maintainer-owned provider credentials and `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.",
     "Current OpenCode Go evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09`",

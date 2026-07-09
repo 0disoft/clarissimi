@@ -775,7 +775,14 @@ export const writeModeDogfoodEvidenceContract = {
     "https://github.com/0disoft/clarissimi/actions/runs/29027800039",
     "https://github.com/0disoft/clarissimi/actions/runs/29027802451",
     "https://github.com/0disoft/clarissimi/pull/1",
-    "https://github.com/0disoft/clarissimi/pull/2"
+    "https://github.com/0disoft/clarissimi/pull/2",
+    "Fixture-only cleanup:",
+    "pull request `#1` was closed after evidence capture",
+    "pull request `#2` was closed after evidence capture",
+    "clarissimi/recognition/merged_pull_request-42",
+    "clarissimi/drafts/merged_pull_request-42",
+    "not intended to merge into the real repository ledger",
+    "not intended to merge into the real repository draft inbox"
   ],
   requiredPatterns: [
     {

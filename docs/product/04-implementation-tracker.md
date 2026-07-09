@@ -461,6 +461,9 @@ Completed deliverables:
   updating `https://github.com/0disoft/clarissimi/pull/2`
 - read-only dry-run dogfood workflow passed run `29031384775`, including sanitized JSON summary
   artifact validation
+- fixture-only proposal PR `#1` and draft PR `#2` were closed after release evidence capture, and
+  their deterministic branches were deleted so sample fixture recognition data cannot be
+  accidentally merged into the real repository ledger or draft inbox
 - release-readiness requires direct GitHub Actions run URLs for dry-run, propose, stage-draft, and
   hosted live-provider release evidence
 - hosted CI validation evidence records run `29050441506` on `2026-07-09T21:09:52Z` for

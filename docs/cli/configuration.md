@@ -33,7 +33,7 @@ The current JSON config supports:
 
 - `provider`: `fake` or `openai-compatible`
 - `providerModel`: model name for `openai-compatible`
-- `providerEndpoint`: optional OpenAI-compatible chat completions endpoint
+- `providerEndpoint`: optional OpenAI-compatible chat completions endpoint; must be an HTTP(S) URL
 - `providerThinking`: optional OpenAI-compatible thinking mode; currently only `disabled`
 - `mode`: `dry-run`, `propose`, or `commit`
 

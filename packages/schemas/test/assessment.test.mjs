@@ -182,6 +182,20 @@ test("accepts supported Clarissimi config values", () => {
   assert.equal(result.value.provider, "openai-compatible");
 });
 
+test("rejects unsupported provider endpoint config values", () => {
+  const invalidUrl = validateClarissimiConfig({
+    providerEndpoint: "not a url"
+  });
+  assert.equal(invalidUrl.ok, false);
+  assert.equal(invalidUrl.issues.some((issue) => issue.code === "invalid_url"), true);
+
+  const unsupportedProtocol = validateClarissimiConfig({
+    providerEndpoint: "file:///tmp/provider.sock"
+  });
+  assert.equal(unsupportedProtocol.ok, false);
+  assert.equal(unsupportedProtocol.issues.some((issue) => issue.code === "invalid_url_protocol"), true);
+});
+
 test("rejects unsupported Clarissimi config values", () => {
   const result = validateClarissimiConfig({
     provider: "leaderboard-provider"

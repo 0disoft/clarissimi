@@ -504,7 +504,8 @@ Completed deliverables:
 
 - `packages/schemas` exports supported config providers, modes, provider thinking values, and
   `ClarissimiConfig`
-- `validateClarissimiConfig` validates config object values without reading files or secrets
+- `validateClarissimiConfig` validates config object values, including HTTP(S) provider endpoints,
+  without reading files or secrets
 - CLI config loading delegates value validation to `packages/schemas`
 - CLI flags and Action inputs reuse schema guards for provider identifiers and provider thinking
   values

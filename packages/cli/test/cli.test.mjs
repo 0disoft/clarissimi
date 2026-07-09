@@ -190,6 +190,25 @@ test("validate-config rejects unsupported provider values", async () => {
   });
 });
 
+test("validate-config rejects invalid provider endpoint values", async () => {
+  await withTempDir(async (dir) => {
+    const configDir = join(dir, ".clarissimi");
+    await mkdir(configDir, { recursive: true });
+    await writeFile(
+      join(configDir, "config.json"),
+      `${JSON.stringify({ providerEndpoint: "not a url" })}\n`,
+      "utf8"
+    );
+
+    const result = await run(["validate-config", "--json"], dir);
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(result.exitCode, 2);
+    assert.equal(output.ok, false);
+    assert.match(output.message, /valid HTTP\(S\) URL/);
+  });
+});
+
 test("validate-ledger validates approved JSONL records", async () => {
   await withTempDir(async (dir) => {
     const ledger = join(dir, "ledger.jsonl");

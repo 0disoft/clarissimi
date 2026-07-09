@@ -134,7 +134,7 @@ export function validateClarissimiConfig(value: unknown): ValidationResult<Clari
   }
 
   const provider = expectOptionalEnum(value.provider, isConfigProvider, "$.provider", issues);
-  const providerEndpoint = expectOptionalNonEmptyString(
+  const providerEndpoint = expectOptionalHttpUrl(
     value.providerEndpoint,
     "$.providerEndpoint",
     issues
@@ -356,6 +356,30 @@ function expectOptionalNonEmptyString(
   }
 
   return value;
+}
+
+function expectOptionalHttpUrl(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[]
+): string | undefined {
+  const normalized = expectOptionalNonEmptyString(value, path, issues);
+  if (normalized === undefined) {
+    return undefined;
+  }
+
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      pushIssue(issues, path, "invalid_url_protocol", "Value must be an HTTP(S) URL.");
+      return undefined;
+    }
+  } catch {
+    pushIssue(issues, path, "invalid_url", "Value must be a valid HTTP(S) URL.");
+    return undefined;
+  }
+
+  return normalized;
 }
 
 function expectOptionalEnum<T extends string>(

@@ -16,5 +16,5 @@ Source-of-truth drift, missing validation, missing tests, rollback gaps, and own
 
 ## Validation
 
-- Required validation names: test, docs, check
+- Required validation names: docs, smoke, check, release-readiness
 - Skipped validation must include a reason and remaining risk.

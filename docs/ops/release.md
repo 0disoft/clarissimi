@@ -88,7 +88,7 @@ publication or a versioned Action tag.
 
 ## Validation
 
-- Required validation names: `check`, `contract`, `smoke`, `docs`
+- Required validation names: `check`, `contract`, `smoke`, `docs`, `release-readiness`
 - Release blocker status: public package publication and versioned Action tags are blocked
 - Current dogfood evidence: `Clarissimi propose fixture` workflow run
   `28984721611` passed on `2026-07-09T00:14:30Z` and created proposal pull request

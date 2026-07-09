@@ -76,6 +76,17 @@ test("release readiness rejects accidental public package release drift", () => 
   ]);
 });
 
+test("release readiness reports workspace package release policy drift with manifest paths", () => {
+  const packageJson = createBlockedReleasePackageJson();
+  packageJson.private = false;
+  packageJson.version = "0.2.0";
+
+  assert.deepEqual(validatePackageReleasePolicy(packageJson, packageReleasePolicy, "packages/cli/package.json"), [
+    "packages/cli/package.json private must remain true until release blockers are cleared.",
+    "packages/cli/package.json version must remain 0.0.0 until release blockers are cleared."
+  ]);
+});
+
 test("release readiness accepts recorded credentialed release evidence", () => {
   assert.deepEqual(validateCredentialedReleaseEvidence(createReleaseEvidenceText()), []);
 });

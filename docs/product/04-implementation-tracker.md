@@ -328,8 +328,8 @@ Completed deliverables:
 - release-readiness verifies that release-critical package scripts remain registered
 - release-readiness verifies that `pnpm run lint` remains backed by `oxlint . --deny-warnings`
 - release-readiness verifies that package test globs still include package and script test suites
-- release-readiness verifies that the root package remains private at `0.0.0` while public package
-  publication and versioned Action tags are blocked
+- release-readiness verifies that root and workspace package manifests remain private at `0.0.0`
+  while public package publication and versioned Action tags are blocked
 - release-readiness verifies hosted CI Node.js runtime, release-tool versions, and release-tool
   checksum verification snippets before reporting static release gates as passed
 - release-readiness verifies that `ssealed`, `actionlint`, and `yq` are available before running

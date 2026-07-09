@@ -298,6 +298,7 @@ export async function runReleaseReadiness(options = {}) {
 
   await runPackageScriptRegistrationCheck(repoRoot);
   await runPackageReleasePolicyCheck(repoRoot);
+  await runWorkspacePackageReleasePolicyCheck(repoRoot);
   await runCredentialedReleaseEvidenceCheck(repoRoot);
   await runToolAvailabilityCheck(repoRoot);
 
@@ -743,6 +744,34 @@ async function runPackageReleasePolicyCheck(repoRoot) {
   console.log("package release policy passed");
 }
 
+async function runWorkspacePackageReleasePolicyCheck(repoRoot) {
+  const packageManifestPaths = await listFiles(
+    join(repoRoot, "packages"),
+    (name) => name === "package.json",
+    repoRoot
+  );
+  const issues = [];
+
+  for (const packageJsonPath of packageManifestPaths) {
+    let packageJson;
+    const repoPath = toRepoPath(repoRoot, packageJsonPath);
+    try {
+      packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
+    } catch (error) {
+      issues.push(`${repoPath} is not parseable JSON: ${error.message}`);
+      continue;
+    }
+
+    issues.push(...validatePackageReleasePolicy(packageJson, packageReleasePolicy, repoPath));
+  }
+
+  if (issues.length > 0) {
+    throw new Error(`workspace package release policy failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("workspace package release policy passed");
+}
+
 async function runCredentialedReleaseEvidenceCheck(repoRoot) {
   const evidencePath = join(repoRoot, credentialedReleaseEvidenceContract.path);
   let text;
@@ -796,15 +825,19 @@ export function validatePackageScriptRegistration(packageJson) {
   return issues;
 }
 
-export function validatePackageReleasePolicy(packageJson, policy = packageReleasePolicy) {
+export function validatePackageReleasePolicy(
+  packageJson,
+  policy = packageReleasePolicy,
+  manifestPath = "package.json"
+) {
   const issues = [];
 
   if (packageJson?.private !== policy.private) {
-    issues.push(`package.json private must remain ${String(policy.private)} until release blockers are cleared.`);
+    issues.push(`${manifestPath} private must remain ${String(policy.private)} until release blockers are cleared.`);
   }
 
   if (packageJson?.version !== policy.version) {
-    issues.push(`package.json version must remain ${policy.version} until release blockers are cleared.`);
+    issues.push(`${manifestPath} version must remain ${policy.version} until release blockers are cleared.`);
   }
 
   return issues;

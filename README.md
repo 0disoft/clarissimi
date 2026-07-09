@@ -234,10 +234,13 @@ The current executable checks are:
 - `pnpm run check`
 - `pnpm run release-readiness`
 
+Release-only hosted checks are:
+
+- `pnpm run hosted-ci-validation`
+
 Release-only credentialed checks are:
 
 - `pnpm run live-provider-smoke`
-- `pnpm run hosted-ci-validation`
 - `pnpm run hosted-live-provider-smoke -- --model <provider-model>`
 
 `format` intentionally fails closed until maintainers accept a formatter baseline ADR. `oxlint` is

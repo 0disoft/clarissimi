@@ -271,9 +271,11 @@ test("release readiness rejects README validation drift", () => {
     .replace("repository write modes such as direct `commit`", "repository direct commit mode")
     .replace("comment updates or default-branch mutation", "comment and default branch updates")
     .replace("Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,", "Source-only merges require `pnpm run docs`,")
+    .replace("Release-only hosted checks are:", "Release-only checks are:")
     .replace("- `pnpm run release-readiness`", "")
     .replace("- `pnpm run live-provider-smoke`", "")
     .replace("- `pnpm run hosted-ci-validation`", "")
+    .replace("Release-only credentialed checks are:", "Credential checks are:")
     .replace("`format` intentionally fails closed", "`format` is optional")
     .replace("`oxlint` is", "`eslint` is")
     .replace(
@@ -287,8 +289,10 @@ test("release readiness rejects README validation drift", () => {
     "README.md must include comment updates or default-branch mutation.",
     "README.md must include Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,.",
     "README.md must include - `pnpm run release-readiness`.",
+    "README.md must include Release-only hosted checks are:.",
     "README.md must include - `pnpm run live-provider-smoke`.",
     "README.md must include - `pnpm run hosted-ci-validation`.",
+    "README.md must include Release-only credentialed checks are:.",
     "README.md must include `format` intentionally fails closed.",
     "README.md must include `oxlint` is.",
     "README.md must include the current lint gate; `oxfmt` is not wired into the repository formatter surface yet."
@@ -1609,8 +1613,13 @@ function createReadmeValidationText() {
     "- `pnpm run smoke`",
     "- `pnpm run check`",
     "- `pnpm run contract`",
-    "- `pnpm run live-provider-smoke`",
+    "Release-only hosted checks are:",
+    "",
     "- `pnpm run hosted-ci-validation`",
+    "",
+    "Release-only credentialed checks are:",
+    "",
+    "- `pnpm run live-provider-smoke`",
     "- `pnpm run hosted-live-provider-smoke -- --model <provider-model>`",
     "",
     "`format` intentionally fails closed until maintainers accept a formatter baseline ADR. `oxlint` is",

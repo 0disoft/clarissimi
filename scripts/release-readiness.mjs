@@ -392,8 +392,16 @@ export function validateActionManifestContract(text, contract = actionManifestCo
   }
 
   for (const output of contract.requiredOutputs) {
-    if (outputsBlock === undefined || findYamlMappingBlock(outputsBlock, output) === undefined) {
+    const block = outputsBlock === undefined ? undefined : findYamlMappingBlock(outputsBlock, output);
+    if (block === undefined) {
       issues.push(`${contract.path} must define output ${output}.`);
+      continue;
+    }
+
+    const expectedValue = `\${{ steps.clarissimi.outputs.${output} }}`;
+    const value = findYamlScalarValue(block, "value");
+    if (value !== expectedValue) {
+      issues.push(`${contract.path} output ${output} must map to ${expectedValue}.`);
     }
   }
 
@@ -598,7 +606,7 @@ function findYamlMappingBlock(text, key) {
 }
 
 function findYamlScalarValue(block, key) {
-  const pattern = new RegExp(`^\\s+${escapeRegExp(key)}:\\s*(\\S+)\\s*$`);
+  const pattern = new RegExp(`^\\s+${escapeRegExp(key)}:\\s*(.*?)\\s*$`);
   for (const line of block) {
     const match = pattern.exec(line);
     if (match !== null) {

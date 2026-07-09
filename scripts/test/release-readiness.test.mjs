@@ -129,6 +129,18 @@ test("release readiness scopes Action manifest input and output checks to their 
   ]);
 });
 
+test("release readiness rejects Action manifest output value drift", () => {
+  const text = createActionManifestText()
+    .replace(
+      "value: ${{ steps.clarissimi.outputs.proposal-pull-request-url }}",
+      "value: ${{ steps.clarissimi.outputs.proposal-url }}"
+    );
+
+  assert.deepEqual(validateActionManifestContract(text), [
+    "action.yml output proposal-pull-request-url must map to ${{ steps.clarissimi.outputs.proposal-pull-request-url }}."
+  ]);
+});
+
 test("release readiness accepts the CI workflow contract", () => {
   assert.deepEqual(validateCiWorkflowContract(createCiWorkflowText()), []);
 });

@@ -19,6 +19,9 @@ Current implementation status:
   `openai-compatible` selection when a model and `CLARISSIMI_PROVIDER_TOKEN` are provided.
 - `pnpm run live-provider-smoke` uses `CLARISSIMI_PROVIDER_TOKEN`,
   `CLARISSIMI_PROVIDER_MODEL`, and optional `CLARISSIMI_PROVIDER_ENDPOINT`.
+- Local credentialed live-provider smoke passed on `2026-07-09` with
+  `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini` and a maintainer-owned provider token supplied only
+  through the process environment.
 
 ## Owners
 
@@ -31,4 +34,5 @@ Current implementation status:
 - Required validation names: `docs`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
-- Remaining operational risk: credentialed live-provider smoke run evidence is not complete.
+- Remaining operational risk: hosted manual live-provider smoke workflow evidence with repository
+  secret configuration is not complete.

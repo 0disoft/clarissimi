@@ -270,7 +270,9 @@ Completed deliverables:
 - `main` branch protection requires the hosted `Validation` check with strict status checks
 - docs validation checks required documentation targets and local Markdown links
 - smoke validation exercises the built CLI and Action bins without live provider credentials
-- live-provider smoke command is available as a release-only credentialed check
+- live-provider smoke command is available as a release-only credentialed check and passed locally
+  on `2026-07-09` with maintainer-owned credentials and
+  `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`
 - manual live-provider smoke workflow is available for maintainer-owned repository secrets and
   dispatch-time provider model input
 - rollback instructions cover staging cleanup, proposal pull request closure, proposal branch
@@ -278,8 +280,8 @@ Completed deliverables:
 
 Release follow-up:
 
-- Credentialed live-provider smoke run evidence remains required only before automated
-  provider-mode public release.
+- Hosted manual live-provider smoke workflow evidence with repository secret configuration remains
+  required before automated provider-mode public release.
 
 ### 10. Agent-Assisted Draft Import
 

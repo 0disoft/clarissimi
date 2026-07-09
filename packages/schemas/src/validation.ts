@@ -99,12 +99,12 @@ export function validateContributionAssessment(
   rejectPublicScoreFields(value, "$", issues);
   validateContributor(value.contributor, "$.contributor", issues);
   expectEnum(value.contributionType, isContributionType, "$.contributionType", issues);
-  expectNonEmptyString(value.affectedArea, "$.affectedArea", issues);
+  expectPublicNarrativeText(value.affectedArea, "$.affectedArea", issues);
   expectEnum(value.impactLevel, isImpactLevel, "$.impactLevel", issues);
-  expectNonEmptyString(value.evidenceSummary, "$.evidenceSummary", issues);
+  expectPublicNarrativeText(value.evidenceSummary, "$.evidenceSummary", issues);
   validateEvidenceRefs(value.evidenceRefs, "$.evidenceRefs", issues);
-  expectNonEmptyString(value.suggestedBadge, "$.suggestedBadge", issues);
-  expectPublicRecognitionText(value.publicRecognitionText, "$.publicRecognitionText", issues);
+  expectPublicNarrativeText(value.suggestedBadge, "$.suggestedBadge", issues);
+  expectPublicNarrativeText(value.publicRecognitionText, "$.publicRecognitionText", issues);
   expectConfidence(value.confidence, "$.confidence", issues);
   expectEnum(value.maintainerApprovalStatus, isApprovalStatus, "$.maintainerApprovalStatus", issues);
   validateSource(value.source, "$.source", issues);
@@ -250,7 +250,7 @@ function validateSource(value: unknown, path: string, issues: ValidationIssue[])
   }
 }
 
-function expectPublicRecognitionText(
+function expectPublicNarrativeText(
   value: unknown,
   path: string,
   issues: ValidationIssue[]
@@ -262,7 +262,7 @@ function expectPublicRecognitionText(
       issues,
       path,
       "public_ranking_language",
-      "Public recognition text must not contain contributor scoring or ranking language."
+      "Public recognition fields must not contain contributor scoring or ranking language."
     );
   }
 }

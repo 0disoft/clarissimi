@@ -54,19 +54,24 @@ export function createFakeAssessment(
   const hints = input.hints ?? {};
   const contributionType =
     hints.contributionType ?? defaults.contributionType ?? inferContributionType(input.preparedEvidence);
-  const affectedArea = firstNonEmpty(
-    hints.affectedArea,
-    defaults.affectedArea,
-    inferAffectedArea(input.preparedEvidence)
+  const affectedArea = safePublicNarrative(
+    firstNonEmpty(
+      hints.affectedArea,
+      defaults.affectedArea,
+      inferAffectedArea(input.preparedEvidence)
+    ),
+    DEFAULT_AFFECTED_AREA
   );
   const impactLevel = hints.impactLevel ?? defaults.impactLevel ?? inferImpactLevel(input.preparedEvidence);
-  const suggestedBadge = firstNonEmpty(
-    hints.suggestedBadge,
-    defaults.suggestedBadge,
+  const suggestedBadge = safePublicNarrative(
+    firstNonEmpty(
+      hints.suggestedBadge,
+      defaults.suggestedBadge,
+      inferSuggestedBadge(contributionType)
+    ),
     inferSuggestedBadge(contributionType)
   );
   const confidence = clampConfidence(hints.confidence ?? defaults.confidence ?? DEFAULT_CONFIDENCE);
-  const publicArea = hasPublicRankingLanguage(affectedArea) ? DEFAULT_AFFECTED_AREA : affectedArea;
   const assessment = {
     schemaVersion: ASSESSMENT_SCHEMA_VERSION,
     contributor: input.contributor,
@@ -76,7 +81,7 @@ export function createFakeAssessment(
     evidenceSummary: buildEvidenceSummary(input.preparedEvidence, contributionType, affectedArea),
     evidenceRefs: input.preparedEvidence.evidenceRefs,
     suggestedBadge,
-    publicRecognitionText: buildPublicRecognitionText(contributionType, publicArea),
+    publicRecognitionText: buildPublicRecognitionText(contributionType, affectedArea),
     confidence,
     maintainerApprovalStatus: "draft",
     source: input.preparedEvidence.source
@@ -182,6 +187,10 @@ function firstNonEmpty(...values: readonly (string | undefined)[]): string {
   }
 
   return DEFAULT_AFFECTED_AREA;
+}
+
+function safePublicNarrative(value: string, fallback: string): string {
+  return hasPublicRankingLanguage(value) ? fallback : value;
 }
 
 function normalizeText(value: string | undefined): string | undefined {

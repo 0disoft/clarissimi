@@ -86,7 +86,7 @@ test("honors safe maintainer hints without changing source or evidence refs", ()
   assert.deepEqual(assessment.evidenceRefs, evidence.evidenceRefs);
 });
 
-test("keeps ranking language out of public recognition text", () => {
+test("keeps ranking language out of generated public narrative fields", () => {
   const evidence = preparedEvidence([
     {
       kind: "file",
@@ -99,15 +99,15 @@ test("keeps ranking language out of public recognition text", () => {
     contributor,
     preparedEvidence: evidence,
     hints: {
-      affectedArea: "top 3 contributor scoreboard"
+      affectedArea: "top 3 contributor scoreboard",
+      suggestedBadge: "Gold Contributor"
     }
   });
 
-  assert.equal(assessment.affectedArea, "top 3 contributor scoreboard");
-  assert.equal(
-    assessment.publicRecognitionText.includes("top 3 contributor scoreboard"),
-    false
-  );
+  assert.equal(assessment.affectedArea, "repository maintenance");
+  assert.equal(assessment.suggestedBadge, "Maintenance Steward");
+  assert.equal(assessment.evidenceSummary.includes("top 3 contributor scoreboard"), false);
+  assert.equal(assessment.publicRecognitionText.includes("top 3 contributor scoreboard"), false);
   assert.equal(validateContributionAssessment(assessment).ok, true);
 });
 

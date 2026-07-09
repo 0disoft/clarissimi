@@ -24,13 +24,14 @@ documents into one operational view so the next work item is not hidden across s
 The repository currently has a fixture-first MVP skeleton with a live GitHub collector boundary:
 
 - `packages/schemas`: config and contribution assessment vocabulary plus runtime validation,
-  including rejection of public score, rank, leaderboard, point, and contributor-tier fields in
-  assessment drafts
+  including rejection of public score, rank, leaderboard, point, and contributor-tier fields and
+  generated public narrative text in assessment drafts
 - `packages/core`: prepared-evidence policy glue and approval gates
 - `packages/redaction`: deterministic string and JSON-like redaction
 - `packages/github`: fixture-first and injected-client live merged pull request evidence collection
 - `packages/providers`: provider adapter interface, deterministic fake provider, and SDK-free
-  OpenAI-compatible HTTP adapter
+  OpenAI-compatible HTTP adapter; deterministic fake provider falls back to safe narrative values
+  when maintainer hints would introduce public scoring or ranking language
 - `packages/renderers`: JSONL, contributor JSON, Markdown, static-data renderers, and draft review
   JSON rendering
 - `packages/cli`: fixture-first validation, recognition dry-run, agent-assisted draft staging,

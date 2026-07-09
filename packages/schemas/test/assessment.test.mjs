@@ -80,6 +80,35 @@ test("rejects public ranking language in recognition text", () => {
   assert.equal(result.issues.some((issue) => issue.code === "public_ranking_language"), true);
 });
 
+test("rejects public ranking language in generated public narrative fields", () => {
+  const result = validateContributionAssessment({
+    ...validAssessment,
+    affectedArea: "top 3 contributor scoreboard",
+    evidenceSummary: "Earned leaderboard points for the project.",
+    suggestedBadge: "Gold Contributor"
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.issues.some((issue) => issue.path === "$.affectedArea"), true);
+  assert.equal(result.issues.some((issue) => issue.path === "$.evidenceSummary"), true);
+  assert.equal(result.issues.some((issue) => issue.path === "$.suggestedBadge"), true);
+  assert.equal(result.issues.every((issue) => issue.code === "public_ranking_language"), true);
+});
+
+test("allows source evidence titles to mention project leaderboard features", () => {
+  const result = validateContributionAssessment({
+    ...validAssessment,
+    evidenceRefs: [
+      {
+        ...validAssessment.evidenceRefs[0],
+        title: "Remove broken leaderboard widget"
+      }
+    ]
+  });
+
+  assert.equal(result.ok, true);
+});
+
 test("rejects explicit public score fields in assessment drafts", () => {
   const result = validateContributionAssessment({
     ...validAssessment,

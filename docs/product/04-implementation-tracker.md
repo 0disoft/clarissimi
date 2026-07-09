@@ -177,8 +177,8 @@ Validation:
 Source: `docs/product/01-roadmap.md`
 
 Status: Completed for the `packages/github` collector boundary in `packages/github/src/live.ts`
-and `packages/github/src/api-client.ts`. Action live-event wiring remains a future integration
-slice.
+and `packages/github/src/api-client.ts`. Action live-event wiring is tracked separately in the next
+completed slice.
 
 Goal: move beyond fixture-first GitHub evidence collection while preserving the no-untrusted-head-code
 boundary.

@@ -431,6 +431,35 @@ Validation:
 - `pnpm run check`
 - `pnpm run contract`
 
+### 15. Architecture Quality Attributes
+
+Source: `docs/architecture/03-quality-attributes.md`,
+`docs/engineering/03-performance-budget.md`, `docs/engineering/08-threat-model.md`,
+`docs/engineering/09-data-integrity.md`
+
+Status: Completed as an architecture contract alignment.
+
+Goal: remove the remaining undecided architecture placeholder and make quality requirements
+traceable to the implemented MVP flows.
+
+Completed deliverables:
+
+- quality attributes are tied to recognize, draft staging, approval, import, rebuild, and Action
+  runner flows
+- fail-closed behavior is documented for invalid config, evidence mismatch, redaction failure,
+  provider failure, schema failure, duplicate records, and renderer rebuilds
+- trust, privacy, security, integrity, maintainability, operability, performance, and portability
+  expectations are named
+- review blockers cover public scores, unredacted provider input, pre-approval writes,
+  non-deterministic ledger rendering, and package boundary drift
+
+Validation:
+
+- `pnpm run docs`
+- `pnpm run smoke`
+- `pnpm run check`
+- `pnpm run contract`
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

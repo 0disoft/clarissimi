@@ -42,7 +42,7 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   for documentation integrity, CLI subprocess smoke coverage, Action dry-run coverage, and default
   propose and live-provider credential preflight fail-closed behavior
 - root `package.json`: configured `release-readiness` script for non-credentialed release gate
-  checks before live provider smoke
+  checks, including package test-registration drift, before live provider smoke
 - root `package.json`: configured `hosted-live-provider-smoke` script for maintainer-triggered
   hosted workflow dispatch and watch after the repository secret name is configured
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
@@ -292,6 +292,7 @@ Completed deliverables:
   workflow, and watches the matching run without reading or printing the token value
 - hosted live-provider smoke wrapper tests cover missing-secret fail-closed behavior and
   dispatch/list/watch argument construction with a fake `gh` command runner
+- release-readiness verifies that package test globs still include package and script test suites
 - rollback instructions cover staging cleanup, proposal pull request closure, proposal branch
   deletion, and post-merge recognition reverts
 - manual-only fixture stage-draft dogfood workflow is available and passed run `28992586329`,

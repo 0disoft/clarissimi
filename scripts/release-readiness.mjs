@@ -15,6 +15,8 @@ await runCheck({
   args: ["scripts/validate-docs.mjs"]
 });
 
+await runTestRegistrationCheck();
+
 await runCheck({
   name: "ssealed doctor",
   command: "ssealed",
@@ -144,6 +146,39 @@ async function runSecretScan() {
   }
 
   console.log("secret scan passed");
+}
+
+async function runTestRegistrationCheck() {
+  const packageJsonPath = join(repoRoot, "package.json");
+  let packageJson;
+  try {
+    packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
+  } catch (error) {
+    throw new Error(`package.json is not parseable JSON: ${error.message}`);
+  }
+
+  const testScript = packageJson?.scripts?.test;
+  if (typeof testScript !== "string") {
+    throw new Error("package.json scripts.test must be configured.");
+  }
+
+  const requiredTestGlobs = [
+    "packages/schemas/test/*.test.mjs",
+    "packages/redaction/test/*.test.mjs",
+    "packages/core/test/*.test.mjs",
+    "packages/github/test/*.test.mjs",
+    "packages/providers/test/*.test.mjs",
+    "packages/renderers/test/*.test.mjs",
+    "packages/cli/test/*.test.mjs",
+    "packages/action/test/*.test.mjs",
+    "scripts/test/*.test.mjs"
+  ];
+  const missing = requiredTestGlobs.filter((glob) => !testScript.includes(glob));
+  if (missing.length > 0) {
+    throw new Error(`package.json scripts.test is missing test globs:\n${missing.join("\n")}`);
+  }
+
+  console.log("test registration passed");
 }
 
 function escapeRegExp(value) {

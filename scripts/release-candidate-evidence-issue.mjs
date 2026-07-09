@@ -1,0 +1,359 @@
+import { spawn } from "node:child_process";
+import { pathToFileURL } from "node:url";
+
+const defaults = {
+  repo: "0disoft/clarissimi",
+  branch: "main",
+  ciWorkflowName: "CI",
+  liveWorkflowName: "Clarissimi live provider smoke",
+  secretName: "CLARISSIMI_PROVIDER_TOKEN"
+};
+
+const usageText = [
+  "Usage:",
+  "  pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --provider-model <model> [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch-name>] [--title <issue-title>] [--print]",
+  "",
+  "Examples:",
+  "  pnpm run release-candidate-evidence-issue -- --ci-run 12345 --live-run 67890 --provider-model gpt-4.1-mini",
+  "  pnpm run release-candidate-evidence-issue -- --sha 0123456789abcdef0123456789abcdef01234567 --ci-run 12345 --live-run 67890 --provider-model gpt-4.1-mini --print",
+  "",
+  "The script validates hosted CI and hosted live-provider run metadata before creating the release evidence issue.",
+  "It records secret names only and never reads or prints provider token values."
+].join("\n");
+
+export async function runReleaseCandidateEvidenceIssue(argv, runtime = defaultRuntime()) {
+  try {
+    return await run(argv, runtime);
+  } catch (error) {
+    if (error instanceof UsageError) {
+      return error.exitCode;
+    }
+
+    runtime.error(error instanceof Error ? error.message : String(error));
+    return 1;
+  }
+}
+
+async function run(argv, runtime) {
+  const args = parseArgs(argv, runtime);
+
+  if (args.help) {
+    runtime.log(usageText);
+    return 0;
+  }
+
+  const repo = args.repo ?? defaults.repo;
+  const branch = args.branch ?? defaults.branch;
+
+  if (!isGitHubRepositoryName(repo)) {
+    return usageFailure(runtime, "--repo must use owner/name format.");
+  }
+
+  if (branch.trim().length === 0) {
+    return usageFailure(runtime, "--branch requires a non-empty value.");
+  }
+
+  if (!isPositiveRunId(args.ciRun)) {
+    return usageFailure(runtime, "--ci-run requires a positive numeric workflow run id.");
+  }
+
+  if (!isPositiveRunId(args.liveRun)) {
+    return usageFailure(runtime, "--live-run requires a positive numeric workflow run id.");
+  }
+
+  if (args.providerModel === undefined || args.providerModel.trim().length === 0) {
+    return usageFailure(runtime, "--provider-model requires a non-empty value.");
+  }
+
+  if (args.title !== undefined && args.title.trim().length === 0) {
+    return usageFailure(runtime, "--title requires a non-empty value.");
+  }
+
+  const sha = args.sha ?? await readCurrentHeadSha(runtime);
+  if (!isCommitSha(sha)) {
+    return usageFailure(runtime, "--sha must be a 40-character commit SHA.");
+  }
+
+  await requireGh(runtime);
+
+  const ciRun = await readRun(runtime, repo, args.ciRun);
+  validateRun(ciRun, {
+    label: "hosted CI",
+    runId: args.ciRun,
+    sha,
+    branch,
+    workflowName: defaults.ciWorkflowName
+  });
+
+  const liveRun = await readRun(runtime, repo, args.liveRun);
+  validateRun(liveRun, {
+    label: "hosted live provider smoke",
+    runId: args.liveRun,
+    sha,
+    branch,
+    workflowName: defaults.liveWorkflowName
+  });
+
+  const title = args.title ?? `Release candidate evidence for ${sha.slice(0, 7)}`;
+  const body = renderIssueBody({
+    repo,
+    branch,
+    sha,
+    ciRun,
+    liveRun,
+    providerModel: args.providerModel
+  });
+
+  if (args.print) {
+    runtime.log(body);
+    return 0;
+  }
+
+  const result = await runtime.runCommand("gh", [
+    "issue",
+    "create",
+    "--repo",
+    repo,
+    "--title",
+    title,
+    "--body-file",
+    "-"
+  ], {
+    input: body
+  });
+
+  if (result.exitCode !== 0) {
+    throw new Error(`Unable to create release candidate evidence issue.\n${boundedOutput(result.stderr)}`);
+  }
+
+  runtime.log(`release candidate evidence issue created: ${result.stdout.trim()}`);
+  return 0;
+}
+
+function parseArgs(argv, runtime) {
+  const parsed = {};
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--") {
+      continue;
+    }
+
+    if (arg === "--help" || arg === "-h") {
+      parsed.help = true;
+      continue;
+    }
+
+    if (arg === "--print" || arg === "--dry-run") {
+      parsed.print = true;
+      continue;
+    }
+
+    const key = arg.startsWith("--") ? arg.slice(2) : undefined;
+    if (key === undefined) {
+      return usageFailure(runtime, `Unexpected positional argument: ${arg}`);
+    }
+
+    if (!["repo", "branch", "sha", "ci-run", "live-run", "provider-model", "title"].includes(key)) {
+      return usageFailure(runtime, `Unsupported option: ${arg}`);
+    }
+
+    const value = argv[index + 1];
+    if (value === undefined || value.startsWith("--")) {
+      return usageFailure(runtime, `${arg} requires a value.`);
+    }
+
+    parsed[toCamelCase(key)] = value;
+    index += 1;
+  }
+
+  return parsed;
+}
+
+function toCamelCase(value) {
+  return value.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+function usageFailure(runtime, message) {
+  runtime.error(message);
+  runtime.log(usageText);
+  throw new UsageError();
+}
+
+function isGitHubRepositoryName(value) {
+  return /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value);
+}
+
+function isCommitSha(value) {
+  return typeof value === "string" && /^[a-fA-F0-9]{40}$/.test(value);
+}
+
+function isPositiveRunId(value) {
+  if (typeof value !== "string" || !/^[1-9][0-9]*$/.test(value)) {
+    return false;
+  }
+
+  return Number.isSafeInteger(Number(value));
+}
+
+class UsageError extends Error {
+  constructor() {
+    super("Invalid release candidate evidence issue arguments.");
+    this.exitCode = 2;
+  }
+}
+
+async function readCurrentHeadSha(runtime) {
+  const result = await runtime.runCommand("git", ["rev-parse", "HEAD"]);
+  if (result.exitCode !== 0) {
+    throw new Error(`Unable to resolve current HEAD SHA.\n${boundedOutput(result.stderr)}`);
+  }
+
+  return result.stdout.trim();
+}
+
+async function requireGh(runtime) {
+  const result = await runtime.runCommand("gh", ["--version"]);
+  if (result.exitCode !== 0) {
+    throw new Error("GitHub CLI is required to create release candidate evidence issues.");
+  }
+}
+
+async function readRun(runtime, repo, runId) {
+  const result = await runtime.runCommand("gh", [
+    "run",
+    "view",
+    String(runId),
+    "--repo",
+    repo,
+    "--json",
+    "databaseId,createdAt,headSha,headBranch,url,status,conclusion,workflowName,event"
+  ]);
+
+  if (result.exitCode !== 0) {
+    throw new Error(`Unable to inspect workflow run ${runId}.\n${boundedOutput(result.stderr)}`);
+  }
+
+  try {
+    return JSON.parse(result.stdout);
+  } catch (error) {
+    throw new Error(`Unable to parse workflow run ${runId} metadata: ${error.message}`);
+  }
+}
+
+function validateRun(run, options) {
+  if (String(run?.databaseId) !== String(options.runId)) {
+    throw new Error(`${options.label} run ${options.runId} metadata has mismatched databaseId.`);
+  }
+
+  if (run.workflowName !== options.workflowName) {
+    throw new Error(`${options.label} run ${options.runId} must be workflow ${options.workflowName}.`);
+  }
+
+  if (run.headSha !== options.sha) {
+    throw new Error(`${options.label} run ${options.runId} validates ${run.headSha ?? "unknown"}, not ${options.sha}.`);
+  }
+
+  if (run.headBranch !== options.branch) {
+    throw new Error(`${options.label} run ${options.runId} must be on branch ${options.branch}.`);
+  }
+
+  if (run.status !== "completed" || run.conclusion !== "success") {
+    throw new Error(
+      `${options.label} run ${options.runId} must be completed successfully; ` +
+      `status=${run.status ?? "unknown"} conclusion=${run.conclusion ?? "unknown"}.`
+    );
+  }
+
+  if (typeof run.createdAt !== "string" || Number.isNaN(Date.parse(run.createdAt))) {
+    throw new Error(`${options.label} run ${options.runId} is missing a valid createdAt timestamp.`);
+  }
+
+  if (typeof run.url !== "string" || !run.url.startsWith("https://github.com/")) {
+    throw new Error(`${options.label} run ${options.runId} is missing a GitHub Actions run URL.`);
+  }
+}
+
+function renderIssueBody(options) {
+  return [
+    `Release candidate evidence for \`${options.sha}\` on \`${options.branch}\`.`,
+    "",
+    "## Candidate",
+    "",
+    `- Repository: \`${options.repo}\``,
+    `- Branch: \`${options.branch}\``,
+    `- Candidate SHA: \`${options.sha}\``,
+    "- Release type: evidence capture only; public package publication and versioned Action tags remain blocked by `docs/ops/release.md` until a maintainer release decision changes the policy.",
+    "",
+    "## Hosted CI Evidence",
+    "",
+    `- Command: \`pnpm run hosted-ci-validation -- --sha ${options.sha}\``,
+    "- Result: passed",
+    `- Workflow: \`${defaults.ciWorkflowName}\``,
+    `- Run: ${options.ciRun.url}`,
+    `- Run id: \`${options.ciRun.databaseId}\``,
+    `- Created at: \`${options.ciRun.createdAt}\``,
+    `- Validated SHA: \`${options.ciRun.headSha}\``,
+    "",
+    "## Hosted Live Provider Evidence",
+    "",
+    `- Command: \`pnpm run hosted-live-provider-smoke -- --model ${options.providerModel} --ref ${options.branch}\``,
+    "- Result: passed",
+    `- Workflow: \`${defaults.liveWorkflowName}\``,
+    `- Run: ${options.liveRun.url}`,
+    `- Run id: \`${options.liveRun.databaseId}\``,
+    `- Created at: \`${options.liveRun.createdAt}\``,
+    `- Validated SHA: \`${options.liveRun.headSha}\``,
+    `- Repository secret used by workflow: \`${defaults.secretName}\``,
+    `- Dispatch model input: \`${options.providerModel}\``,
+    "",
+    "## Decision Needed Before Publication",
+    "",
+    "A maintainer still needs to accept a release ADR or update `docs/ops/release.md` before package publication, version bumping, release tags, marketplace release notes, or versioned Action tags.",
+    ""
+  ].join("\n");
+}
+
+function defaultRuntime() {
+  return {
+    log: (message) => console.log(message),
+    error: (message) => console.error(message),
+    runCommand
+  };
+}
+
+function runCommand(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      stdio: options.input === undefined ? ["ignore", "pipe", "pipe"] : ["pipe", "pipe", "pipe"]
+    });
+    let stdout = "";
+    let stderr = "";
+
+    if (options.input !== undefined) {
+      child.stdin.end(options.input);
+    }
+
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+
+    child.on("error", reject);
+    child.on("close", (exitCode) => {
+      resolve({ exitCode, stdout, stderr });
+    });
+  });
+}
+
+function boundedOutput(value) {
+  return value.trim().slice(0, 2000);
+}
+
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const exitCode = await runReleaseCandidateEvidenceIssue(process.argv.slice(2));
+  process.exit(exitCode);
+}

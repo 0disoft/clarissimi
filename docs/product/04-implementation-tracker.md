@@ -58,6 +58,9 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   hosted workflow dispatch and watch after the repository secret name is configured
 - root `package.json`: configured `hosted-ci-validation` script for release maintainers to verify
   that the hosted `CI` workflow passed for the selected release candidate commit
+- root `package.json`: configured `release-candidate-evidence-issue` script for release
+  maintainers to validate hosted CI and hosted live-provider run metadata before creating an
+  external release evidence issue
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
   `event-path` inputs, including the sanitized JSON summary artifact path
 - `.github/workflows/clarissimi-propose-fixture.yml`: manual-only fixture propose dogfood
@@ -475,6 +478,8 @@ Completed deliverables:
   so maintainers can attach exact hosted CI and hosted live-provider run URLs to a release PR,
   release issue, or GitHub release notes without creating an evidence-only commit that changes the
   candidate SHA
+- `pnpm run release-candidate-evidence-issue` validates candidate run metadata and creates or
+  previews the external release evidence issue without reading provider token values
 
 Release follow-up:
 

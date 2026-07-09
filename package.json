@@ -16,6 +16,7 @@
     "live-provider-smoke": "pnpm run build && node scripts/live-provider-smoke.mjs",
     "hosted-ci-validation": "node scripts/hosted-ci-validation.mjs",
     "hosted-live-provider-smoke": "node scripts/hosted-live-provider-smoke.mjs",
+    "release-candidate-evidence-issue": "node scripts/release-candidate-evidence-issue.mjs",
     "release-readiness": "node scripts/release-readiness.mjs",
     "docs": "node scripts/validate-docs.mjs",
     "check": "pnpm run typecheck && pnpm run test"

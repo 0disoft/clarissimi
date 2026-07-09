@@ -42,6 +42,10 @@ export const requiredPackageScripts = [
   {
     name: "hosted-live-provider-smoke",
     includes: ["scripts/hosted-live-provider-smoke.mjs"]
+  },
+  {
+    name: "release-candidate-evidence-issue",
+    includes: ["scripts/release-candidate-evidence-issue.mjs"]
   }
 ];
 
@@ -221,6 +225,7 @@ export const docsValidationScriptContract = {
     "\".github/workflows/clarissimi-propose-fixture.yml\"",
     "\".github/workflows/clarissimi-stage-draft-fixture.yml\"",
     "\"scripts/hosted-live-provider-smoke.mjs\"",
+    "\"scripts/release-candidate-evidence-issue.mjs\"",
     "\"scripts/release-readiness.mjs\""
   ]
 };

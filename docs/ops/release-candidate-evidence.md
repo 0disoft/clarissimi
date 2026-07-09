@@ -73,6 +73,19 @@ Record:
 - Provider endpoint override, if any:
 - Provider thinking mode, if any:
 
+## Evidence Issue Helper
+
+After hosted CI and hosted live-provider smoke pass for the same candidate SHA, create or preview a
+release evidence issue from the run metadata:
+
+```powershell
+pnpm run release-candidate-evidence-issue -- --sha <candidate-sha> --ci-run <ci-run-id> --live-run <live-run-id> --provider-model <provider-model>
+```
+
+Use `--print` to preview the issue body without creating a public GitHub issue. The helper validates
+that both run IDs completed successfully, match the selected branch, and validate the same candidate
+SHA. It records only the secret name `CLARISSIMI_PROVIDER_TOKEN`, never the secret value.
+
 ## Publication Decision
 
 Before publication or a versioned Action tag, confirm:

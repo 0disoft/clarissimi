@@ -237,6 +237,7 @@ The current executable checks are:
 Release-only hosted checks are:
 
 - `pnpm run hosted-ci-validation`
+- `pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --provider-model <provider-model>`
 
 Release-only credentialed checks are:
 

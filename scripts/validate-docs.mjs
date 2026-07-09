@@ -146,6 +146,24 @@ async function validateAdrIndex(repoRoot, issues) {
       issues.push(`docs/adr/README.md missing ADR index entry for docs/adr/${adrFile}`);
     }
   }
+
+  const adrFileNames = new Set(adrFiles);
+  for (const adrFile of extractAdrIndexEntries(indexText)) {
+    if (!adrFileNames.has(adrFile)) {
+      issues.push(`docs/adr/README.md references missing ADR file docs/adr/${adrFile}`);
+    }
+  }
+}
+
+function extractAdrIndexEntries(text) {
+  const entries = [];
+  const pattern = /`(\d{4}-[^`]+\.md)`/g;
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    entries.push(match[1]);
+  }
+
+  return entries;
 }
 
 function extractMarkdownLinks(text) {

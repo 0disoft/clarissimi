@@ -128,6 +128,35 @@ test("validateDocs rejects ADR documents missing from the ADR index", async (t) 
   );
 });
 
+test("validateDocs rejects stale ADR index entries", async (t) => {
+  const repoRoot = await createDocsFixture({
+    readme: "# Fixture\n",
+    adrIndex: [
+      "# Architecture Decisions",
+      "",
+      "## Accepted ADRs",
+      "",
+      "- `0001-recorded-decision.md`: recorded decision",
+      "- `0002-stale-decision.md`: stale decision",
+      ""
+    ].join("\n"),
+    adrFiles: {
+      "0001-recorded-decision.md": "# Recorded Decision\n"
+    }
+  });
+  t.after(async () => {
+    await rm(repoRoot, { recursive: true, force: true });
+  });
+
+  const result = await validateDocs({ repoRoot });
+
+  assert.equal(result.ok, false);
+  assert.equal(
+    result.issues.includes("docs/adr/README.md references missing ADR file docs/adr/0002-stale-decision.md"),
+    true
+  );
+});
+
 test("agent-assisted draft guide JSON examples match the assessment schema", async () => {
   const guideText = await readFile(join(process.cwd(), "docs", "cli", "agent-assisted-drafts.md"), "utf8");
   const examples = extractJsonCodeBlocks(guideText).map((block) => JSON.parse(block));

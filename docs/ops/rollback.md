@@ -93,5 +93,5 @@ Resume the release or dogfood run only after:
 - Required validation names: `docs`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
-- Remaining operational risk: hosted manual live-provider smoke workflow evidence with repository
-  secret configuration is not complete.
+- Current hosted live-provider evidence: workflow run `29018826925` passed on
+  `2026-07-09T12:39:17Z` using repository secret `CLARISSIMI_PROVIDER_TOKEN`.

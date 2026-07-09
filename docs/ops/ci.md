@@ -68,6 +68,10 @@ Local UMANS live-provider smoke passed on `2026-07-09` using maintainer-owned cr
 `CLARISSIMI_PROVIDER_MODEL=umans-glm-5.2`, and the UMANS OpenAI-compatible chat completions
 endpoint.
 
+Hosted live-provider smoke passed on `2026-07-09T12:39:17Z` as workflow run `29018826925` from
+`main` at `799119fd146bb6e62bf0413caf0773559aee63ee` using repository secret
+`CLARISSIMI_PROVIDER_TOKEN` and dispatch input `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.
+
 Repository Actions settings keep default workflow permissions at read-only, with workflow-created
 pull requests enabled so explicit `propose` and `stage-draft` jobs can open proposal pull requests.
 Write-mode dogfood remains manual-only through `.github/workflows/clarissimi-propose-fixture.yml`
@@ -95,5 +99,5 @@ owners can recover from CI or protection misconfiguration without changing the b
 - Required validation names: `docs`, `smoke`, `check`, `contract`
 - Release blocker status: public package publication and versioned Action tags remain blocked by
   `docs/ops/release.md`.
-- Remaining operational risk: hosted manual live-provider smoke workflow evidence with repository
-  secret configuration is not complete.
+- Current hosted live-provider evidence: workflow run `29018826925` passed on
+  `2026-07-09T12:39:17Z` using repository secret `CLARISSIMI_PROVIDER_TOKEN`.

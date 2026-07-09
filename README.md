@@ -87,7 +87,6 @@ Implemented MVP slices:
 
 Not implemented yet:
 
-- hosted manual live-provider smoke workflow evidence for automated provider-mode public release
 - repository write modes such as direct `commit`
 - comment updates or default-branch mutation
 

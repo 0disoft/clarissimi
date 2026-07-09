@@ -10,7 +10,8 @@ Cover release types, versioning, pre-release checklist, deployment flow, post-de
 
 Clarissimi is not ready for public package publication. The repository may continue to merge and
 dogfood source changes on `main`, but npm package publication, marketplace release notes, or a
-versioned Action tag must wait until the pre-release gates below are satisfied.
+versioned Action tag remain blocked until maintainers accept a release ADR or update this
+operational contract. The pre-release evidence below records the current technical readiness gates.
 
 The current root package stays private at `0.0.0`. Do not bump versions, publish packages, or create
 release tags as part of ordinary implementation work until maintainers accept a release ADR or
@@ -107,6 +108,11 @@ endpoint, and thinking inputs.
 Record the passed workflow run id and provider model in this document before public package
 publication or a versioned Action tag.
 
+Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow run
+`29018826925` passed on `2026-07-09T12:39:17Z` from `main` at
+`799119fd146bb6e62bf0413caf0773559aee63ee` using repository secret
+`CLARISSIMI_PROVIDER_TOKEN` and dispatch input `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.
+
 ## Owners
 
 - Primary owner: Repository maintainers
@@ -131,5 +137,6 @@ publication or a versioned Action tag.
 - Current UMANS evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09` using
   maintainer-owned provider credentials, `CLARISSIMI_PROVIDER_MODEL=umans-glm-5.2`, and the UMANS
   OpenAI-compatible chat completions endpoint.
-- Remaining operational risk: hosted manual live-provider smoke workflow evidence with repository
-  secret configuration is not complete.
+- Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow run
+  `29018826925` passed on `2026-07-09T12:39:17Z` using repository secret
+  `CLARISSIMI_PROVIDER_TOKEN` and dispatch input `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.

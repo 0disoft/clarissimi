@@ -9,6 +9,7 @@ import {
   requiredTestGlobs,
   validateActionManifestContract,
   validateCiWorkflowContract,
+  validateCredentialedReleaseEvidence,
   validateDogfoodWorkflowContract,
   validateHostedLiveProviderWorkflowContract,
   validatePackageReleasePolicy,
@@ -70,6 +71,22 @@ test("release readiness rejects accidental public package release drift", () => 
   assert.deepEqual(validatePackageReleasePolicy(packageJson), [
     "package.json private must remain true until release blockers are cleared.",
     "package.json version must remain 0.0.0 until release blockers are cleared."
+  ]);
+});
+
+test("release readiness accepts recorded credentialed release evidence", () => {
+  assert.deepEqual(validateCredentialedReleaseEvidence(createReleaseEvidenceText()), []);
+});
+
+test("release readiness rejects missing hosted credentialed release evidence", () => {
+  const text = createReleaseEvidenceText()
+    .replace("Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow run", "")
+    .replace("`29018826925` passed on `2026-07-09T12:39:17Z`", "passed");
+
+  assert.deepEqual(validateCredentialedReleaseEvidence(text), [
+    "docs/ops/release.md must include Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow run.",
+    "docs/ops/release.md must include a numeric hosted live-provider workflow run id.",
+    "docs/ops/release.md must include a hosted live-provider workflow timestamp."
   ]);
 });
 
@@ -314,6 +331,20 @@ function createBlockedReleasePackageJson() {
     private: packageReleasePolicy.private,
     version: packageReleasePolicy.version
   };
+}
+
+function createReleaseEvidenceText() {
+  return [
+    "Current live-provider evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09`",
+    "using maintainer-owned provider credentials and `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`.",
+    "Current OpenCode Go evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09`",
+    "using maintainer-owned provider credentials, `CLARISSIMI_PROVIDER_MODEL=minimax-m3`.",
+    "Current UMANS evidence: local `pnpm run live-provider-smoke` passed on `2026-07-09`",
+    "using maintainer-owned provider credentials, `CLARISSIMI_PROVIDER_MODEL=umans-glm-5.2`.",
+    "Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow run",
+    "`29018826925` passed on `2026-07-09T12:39:17Z` using repository secret `CLARISSIMI_PROVIDER_TOKEN`",
+    "and dispatch input `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`."
+  ].join("\n");
 }
 
 function createActionManifestText() {

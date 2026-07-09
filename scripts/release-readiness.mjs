@@ -54,6 +54,31 @@ export const packageReleasePolicy = {
   version: "0.0.0"
 };
 
+export const credentialedReleaseEvidenceContract = {
+  path: "docs/ops/release.md",
+  requiredSnippets: [
+    "Current live-provider evidence: local `pnpm run live-provider-smoke` passed",
+    "CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini",
+    "Current OpenCode Go evidence: local `pnpm run live-provider-smoke` passed",
+    "CLARISSIMI_PROVIDER_MODEL=minimax-m3",
+    "Current UMANS evidence: local `pnpm run live-provider-smoke` passed",
+    "CLARISSIMI_PROVIDER_MODEL=umans-glm-5.2",
+    "Current hosted live-provider evidence: `Clarissimi live provider smoke` workflow run",
+    "CLARISSIMI_PROVIDER_TOKEN",
+    "CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini"
+  ],
+  requiredPatterns: [
+    {
+      description: "a numeric hosted live-provider workflow run id",
+      pattern: /Current hosted live-provider evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/
+    },
+    {
+      description: "a hosted live-provider workflow timestamp",
+      pattern: /Current hosted live-provider evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/
+    }
+  ]
+};
+
 export const highRiskSecretEnvNames = [
   "NPM_TOKEN",
   "NODE_AUTH_TOKEN",
@@ -268,6 +293,7 @@ export async function runReleaseReadiness(options = {}) {
 
   await runPackageScriptRegistrationCheck(repoRoot);
   await runPackageReleasePolicyCheck(repoRoot);
+  await runCredentialedReleaseEvidenceCheck(repoRoot);
   await runToolAvailabilityCheck(repoRoot);
 
   await runCheck({
@@ -321,7 +347,8 @@ export async function runReleaseReadiness(options = {}) {
   await runSecretScan(repoRoot);
 
   console.log("release readiness static gates passed");
-  console.log("credentialed gates still required: pnpm run live-provider-smoke and hosted clarissimi-live-provider-smoke.yml");
+  console.log("credentialed release evidence recorded in docs/ops/release.md");
+  console.log("public package publication and versioned Action tags remain blocked by release policy");
 }
 
 if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) {
@@ -711,6 +738,23 @@ async function runPackageReleasePolicyCheck(repoRoot) {
   console.log("package release policy passed");
 }
 
+async function runCredentialedReleaseEvidenceCheck(repoRoot) {
+  const evidencePath = join(repoRoot, credentialedReleaseEvidenceContract.path);
+  let text;
+  try {
+    text = await readFile(evidencePath, "utf8");
+  } catch (error) {
+    throw new Error(`${credentialedReleaseEvidenceContract.path} is not readable: ${error.message}`);
+  }
+
+  const issues = validateCredentialedReleaseEvidence(text);
+  if (issues.length > 0) {
+    throw new Error(`credentialed release evidence record failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("credentialed release evidence record passed");
+}
+
 export function validatePackageScriptRegistration(packageJson) {
   const issues = [];
   const scripts = packageJson?.scripts;
@@ -756,6 +800,24 @@ export function validatePackageReleasePolicy(packageJson, policy = packageReleas
 
   if (packageJson?.version !== policy.version) {
     issues.push(`package.json version must remain ${policy.version} until release blockers are cleared.`);
+  }
+
+  return issues;
+}
+
+export function validateCredentialedReleaseEvidence(text, contract = credentialedReleaseEvidenceContract) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  for (const requirement of contract.requiredPatterns) {
+    if (!requirement.pattern.test(text)) {
+      issues.push(`${contract.path} must include ${requirement.description}.`);
+    }
   }
 
   return issues;

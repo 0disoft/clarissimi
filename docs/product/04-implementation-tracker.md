@@ -318,6 +318,9 @@ Completed deliverables:
 - hosted live-provider smoke wrapper validates repository and ref arguments before calling `gh`
 - hosted live-provider smoke wrapper rejects malformed dispatched run metadata before invoking
   `gh run watch`
+- hosted manual live-provider smoke passed run `29018826925` on `2026-07-09T12:39:17Z` using
+  repository secret `CLARISSIMI_PROVIDER_TOKEN` and dispatch input
+  `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`
 - release-readiness validates the hosted live-provider workflow manual trigger, read-only
   permission, input and secret preflight ordering, Node.js runtime setup, and run-command contract
   before reporting static release gates as passed
@@ -351,8 +354,8 @@ Completed deliverables:
 
 Release follow-up:
 
-- Hosted manual live-provider smoke workflow evidence with repository secret configuration remains
-  required before automated provider-mode public release.
+- Public package publication and versioned Action tags remain blocked until maintainers accept a
+  release ADR or update `docs/ops/release.md`.
 
 ### 10. Agent-Assisted Draft Import
 

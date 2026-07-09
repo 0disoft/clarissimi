@@ -41,6 +41,7 @@ Public package publication and versioned Action tags require:
 - `pnpm run check`
 - `pnpm run contract`
 - `pnpm run smoke`
+- package pack dry-run coverage for every workspace package through `pnpm run smoke`
 - `pnpm run live-provider-smoke` with maintainer-owned live provider credentials
 - `.github/workflows/clarissimi-live-provider-smoke.yml` passes when using maintainer-owned
   repository secret configuration and a dispatch-time provider model

@@ -277,7 +277,72 @@ await runCommand({
   }
 });
 
+await assertWorkspacePackagePackDryRuns();
+
 console.log("smoke validation passed");
+
+async function assertWorkspacePackagePackDryRuns() {
+  const packages = [
+    { dir: "schemas" },
+    { dir: "redaction" },
+    { dir: "core" },
+    { dir: "github" },
+    { dir: "providers" },
+    { dir: "renderers" },
+    { dir: "cli", requiredFiles: ["dist/bin/clarissimi.js"] },
+    { dir: "action", requiredFiles: ["dist/bin/clarissimi-action.js"] }
+  ];
+
+  for (const packageInfo of packages) {
+    await runJsonCommand({
+      name: `Package pack dry-run ${packageInfo.dir}`,
+      command: "pnpm",
+      args: ["--filter", `@clarissimi/${packageInfo.dir}`, "pack", "--dry-run", "--json"],
+      expectExitCode: 0,
+      validate(output) {
+        validatePackagePackDryRun(output, packageInfo);
+      }
+    });
+  }
+}
+
+function validatePackagePackDryRun(output, packageInfo) {
+  assertEqual(output.name, `@clarissimi/${packageInfo.dir}`, `${packageInfo.dir} pack name should match.`);
+  assertEqual(output.version, "0.0.0", `${packageInfo.dir} pack version should remain blocked at 0.0.0.`);
+
+  if (!Array.isArray(output.files)) {
+    throw new Error(`${packageInfo.dir} pack dry-run did not report a files array.`);
+  }
+
+  const paths = output.files.map((file) => file?.path).filter((path) => typeof path === "string");
+  const pathSet = new Set(paths);
+  const requiredFiles = [
+    "package.json",
+    "LICENSE",
+    "dist/index.js",
+    "dist/index.d.ts",
+    ...(packageInfo.requiredFiles ?? [])
+  ];
+
+  for (const requiredFile of requiredFiles) {
+    if (!pathSet.has(requiredFile)) {
+      throw new Error(`${packageInfo.dir} pack dry-run is missing ${requiredFile}.`);
+    }
+  }
+
+  for (const path of paths) {
+    if (
+      path === "tsconfig.json"
+      || path.startsWith("src/")
+      || path.startsWith("test/")
+      || path.includes("/test/")
+      || path.includes("node_modules/")
+      || path.endsWith(".tsbuildinfo")
+    ) {
+      throw new Error(`${packageInfo.dir} pack dry-run includes non-public file ${path}.`);
+    }
+  }
+}
 
 async function runJsonCommand(options) {
   const result = await runCommand({

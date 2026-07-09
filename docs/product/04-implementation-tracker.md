@@ -298,6 +298,9 @@ Completed deliverables:
 - release-readiness validates that current write-mode dogfood evidence remains recorded in
   `docs/ops/release.md`
 - smoke validation exercises the built CLI and Action bins without live provider credentials
+- smoke validation runs workspace package pack dry-runs after build and rejects package candidates
+  that omit required public files or include source, test, tsconfig, node_modules, or build-info
+  artifacts
 - live-provider smoke command is available as a release-only credentialed check and passed locally
   on `2026-07-09` with maintainer-owned credentials and
   `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini`

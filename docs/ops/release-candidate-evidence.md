@@ -96,21 +96,27 @@ Record:
 
 ## Evidence Issue Helper
 
-After hosted CI and hosted live-provider smoke pass for the same candidate SHA, create or preview a
-release evidence issue from the run metadata:
+After hosted CI and hosted live-provider smoke pass for the same candidate SHA, and external
+consumer smoke passes for the corresponding immutable Clarissimi ref, create or preview a release
+evidence issue from the run metadata:
 
 ```powershell
-pnpm run release-candidate-evidence-issue -- --sha <candidate-sha> --ci-run <ci-run-id> --live-run <live-run-id> --provider-model <provider-model>
+pnpm run release-candidate-evidence-issue -- --sha <candidate-sha> --ci-run <ci-run-id> --live-run <live-run-id> --external-run <external-run-id> --provider-model <provider-model>
 ```
 
 Use `--print` to preview the issue body without creating a public GitHub issue. The helper validates
-that both run IDs completed successfully, match the selected branch, and validate the same candidate
-SHA. It records only the secret name `CLARISSIMI_PROVIDER_TOKEN`, never the secret value.
+that hosted CI and live-provider runs completed successfully, match the selected branch, and
+validate the same candidate SHA. It also inspects the external run in `0disoft/integration-lab`,
+requires workflow `Clarissimi external consumer` on `main`, and checks that its display title names
+the exact immutable Clarissimi ref. Source-only evidence defaults that ref to the candidate SHA;
+versioned Action evidence defaults it to the release version. Use `--external-ref` only to state the
+same expected value explicitly. The helper records only the secret name
+`CLARISSIMI_PROVIDER_TOKEN`, never the secret value.
 
 For the Action release authorized by ADR 0031, identify the immutable tag explicitly:
 
 ```powershell
-pnpm run release-candidate-evidence-issue -- --release-type versioned-action-tag --release-version v0.1.0 --sha <candidate-sha> --ci-run <ci-run-id> --live-run <live-run-id> --provider-model <provider-model>
+pnpm run release-candidate-evidence-issue -- --release-type versioned-action-tag --release-version v0.1.0 --sha <candidate-sha> --ci-run <ci-run-id> --live-run <live-run-id> --external-run <external-run-id> --provider-model <provider-model>
 ```
 
 The helper rejects package-publication evidence while public packages remain blocked. A
@@ -119,7 +125,7 @@ source-only evidence issue may omit both release options.
 For gateway providers, pass the same non-secret provider options used by hosted live-provider smoke:
 
 ```powershell
-pnpm run release-candidate-evidence-issue -- --sha <candidate-sha> --ci-run <ci-run-id> --live-run <live-run-id> --provider-model minimax-m3 --provider-endpoint <chat-completions-url> --provider-thinking disabled
+pnpm run release-candidate-evidence-issue -- --sha <candidate-sha> --ci-run <ci-run-id> --live-run <live-run-id> --external-run <external-run-id> --provider-model minimax-m3 --provider-endpoint <chat-completions-url> --provider-thinking disabled
 ```
 
 ## Publication Decision

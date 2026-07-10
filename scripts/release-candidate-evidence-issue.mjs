@@ -6,19 +6,22 @@ const defaults = {
   branch: "main",
   releaseType: "source-only",
   ciWorkflowName: "CI",
+  externalRepo: "0disoft/integration-lab",
+  externalBranch: "main",
+  externalWorkflowName: "Clarissimi external consumer",
   liveWorkflowName: "Clarissimi live provider smoke",
   secretName: "CLARISSIMI_PROVIDER_TOKEN"
 };
 
 const usageText = [
   "Usage:",
-  "  pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --provider-model <model> [--release-type <source-only|versioned-action-tag>] [--release-version <v0.1.x>] [--provider-endpoint <chat-completions-url>] [--provider-thinking <mode>] [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch-name>] [--title <issue-title>] [--print]",
+  "  pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --external-run <run-id> --provider-model <model> [--external-ref <immutable-tag-or-sha>] [--external-repo <owner/name>] [--release-type <source-only|versioned-action-tag>] [--release-version <v0.1.x>] [--provider-endpoint <chat-completions-url>] [--provider-thinking <mode>] [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch-name>] [--title <issue-title>] [--print]",
   "",
   "Examples:",
-  "  pnpm run release-candidate-evidence-issue -- --ci-run 12345 --live-run 67890 --provider-model gpt-4.1-mini",
-  "  pnpm run release-candidate-evidence-issue -- --release-type versioned-action-tag --release-version v0.1.0 --sha 0123456789abcdef0123456789abcdef01234567 --ci-run 12345 --live-run 67890 --provider-model minimax-m3 --provider-endpoint https://example.com/v1/chat/completions --provider-thinking disabled --print",
+  "  pnpm run release-candidate-evidence-issue -- --ci-run 12345 --live-run 67890 --external-run 24680 --provider-model gpt-4.1-mini",
+  "  pnpm run release-candidate-evidence-issue -- --release-type versioned-action-tag --release-version v0.1.0 --sha 0123456789abcdef0123456789abcdef01234567 --ci-run 12345 --live-run 67890 --external-run 24680 --provider-model minimax-m3 --provider-endpoint https://example.com/v1/chat/completions --provider-thinking disabled --print",
   "",
-  "The script validates hosted CI and hosted live-provider run metadata before creating the release evidence issue.",
+  "The script validates hosted CI, hosted live-provider, and external consumer run metadata before creating the release evidence issue.",
   "It records secret names only and never reads or prints provider token values."
 ].join("\n");
 
@@ -45,6 +48,7 @@ async function run(argv, runtime) {
 
   const repo = args.repo ?? defaults.repo;
   const branch = args.branch ?? defaults.branch;
+  const externalRepo = args.externalRepo ?? defaults.externalRepo;
 
   if (!isGitHubRepositoryName(repo)) {
     return usageFailure(runtime, "--repo must use owner/name format.");
@@ -52,6 +56,10 @@ async function run(argv, runtime) {
 
   if (branch.trim().length === 0) {
     return usageFailure(runtime, "--branch requires a non-empty value.");
+  }
+
+  if (!isGitHubRepositoryName(externalRepo)) {
+    return usageFailure(runtime, "--external-repo must use owner/name format.");
   }
 
   if (!isPositiveRunId(args.ciRun)) {
@@ -91,9 +99,29 @@ async function run(argv, runtime) {
     return usageFailure(runtime, "--title requires a non-empty value.");
   }
 
+  if (!isPositiveRunId(args.externalRun)) {
+    return usageFailure(runtime, "--external-run requires a positive numeric workflow run id.");
+  }
+
   const sha = args.sha ?? await readCurrentHeadSha(runtime);
   if (!isCommitSha(sha)) {
     return usageFailure(runtime, "--sha must be a 40-character commit SHA.");
+  }
+
+  const externalRef = args.externalRef ?? (releaseType === "versioned-action-tag"
+    ? args.releaseVersion
+    : sha);
+  if (!isImmutableClarissimiRef(externalRef)) {
+    return usageFailure(
+      runtime,
+      "--external-ref must be a semantic version tag or 40-character commit SHA."
+    );
+  }
+  if (releaseType === "source-only" && externalRef !== sha) {
+    return usageFailure(runtime, "source-only evidence requires --external-ref to equal --sha.");
+  }
+  if (releaseType === "versioned-action-tag" && externalRef !== args.releaseVersion) {
+    return usageFailure(runtime, "versioned Action evidence requires --external-ref to equal --release-version.");
   }
 
   await requireGh(runtime);
@@ -116,6 +144,12 @@ async function run(argv, runtime) {
     workflowName: defaults.liveWorkflowName
   });
 
+  const externalRun = await readRun(runtime, externalRepo, args.externalRun);
+  validateExternalRun(externalRun, {
+    runId: args.externalRun,
+    externalRef
+  });
+
   const title = args.title ?? (releaseType === "versioned-action-tag"
     ? `Release candidate evidence for ${args.releaseVersion} at ${sha.slice(0, 7)}`
     : `Release candidate evidence for ${sha.slice(0, 7)}`);
@@ -124,6 +158,9 @@ async function run(argv, runtime) {
     branch,
     sha,
     ciRun,
+    externalRef,
+    externalRepo,
+    externalRun,
     liveRun,
     releaseType,
     releaseVersion: args.releaseVersion,
@@ -186,6 +223,9 @@ function parseArgs(argv, runtime) {
       "branch",
       "sha",
       "ci-run",
+      "external-ref",
+      "external-repo",
+      "external-run",
       "live-run",
       "provider-model",
       "provider-endpoint",
@@ -240,6 +280,11 @@ function isVersionTag(value) {
     && /^v0\.1\.(?:0|[1-9][0-9]*)$/.test(value);
 }
 
+function isImmutableClarissimiRef(value) {
+  return isCommitSha(value)
+    || (typeof value === "string" && /^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/.test(value));
+}
+
 function isPositiveRunId(value) {
   if (typeof value !== "string" || !/^[1-9][0-9]*$/.test(value)) {
     return false;
@@ -279,7 +324,7 @@ async function readRun(runtime, repo, runId) {
     "--repo",
     repo,
     "--json",
-    "databaseId,createdAt,headSha,headBranch,url,status,conclusion,workflowName,event"
+    "databaseId,createdAt,displayTitle,headSha,headBranch,url,status,conclusion,workflowName,event"
   ]);
 
   if (result.exitCode !== 0) {
@@ -326,6 +371,50 @@ function validateRun(run, options) {
   }
 }
 
+function validateExternalRun(run, options) {
+  const label = "external consumer smoke";
+  if (String(run?.databaseId) !== String(options.runId)) {
+    throw new Error(`${label} run ${options.runId} metadata has mismatched databaseId.`);
+  }
+
+  if (run.workflowName !== defaults.externalWorkflowName) {
+    throw new Error(
+      `${label} run ${options.runId} must be workflow ${defaults.externalWorkflowName}.`
+    );
+  }
+
+  if (run.headBranch !== defaults.externalBranch) {
+    throw new Error(`${label} run ${options.runId} must be on branch ${defaults.externalBranch}.`);
+  }
+
+  if (run.event !== "workflow_dispatch") {
+    throw new Error(`${label} run ${options.runId} must use workflow_dispatch.`);
+  }
+
+  const expectedTitle = `${defaults.externalWorkflowName} · ${options.externalRef}`;
+  if (run.displayTitle !== expectedTitle) {
+    throw new Error(
+      `${label} run ${options.runId} must validate Clarissimi ${options.externalRef}; `
+      + `displayTitle=${run.displayTitle ?? "unknown"}.`
+    );
+  }
+
+  if (run.status !== "completed" || run.conclusion !== "success") {
+    throw new Error(
+      `${label} run ${options.runId} must be completed successfully; `
+      + `status=${run.status ?? "unknown"} conclusion=${run.conclusion ?? "unknown"}.`
+    );
+  }
+
+  if (typeof run.createdAt !== "string" || Number.isNaN(Date.parse(run.createdAt))) {
+    throw new Error(`${label} run ${options.runId} is missing a valid createdAt timestamp.`);
+  }
+
+  if (typeof run.url !== "string" || !run.url.startsWith("https://github.com/")) {
+    throw new Error(`${label} run ${options.runId} is missing a GitHub Actions run URL.`);
+  }
+}
+
 function renderIssueBody(options) {
   const liveProviderCommand = [
     "pnpm run hosted-live-provider-smoke --",
@@ -333,6 +422,11 @@ function renderIssueBody(options) {
     `--ref ${options.branch}`,
     options.providerEndpoint === undefined ? undefined : `--endpoint ${options.providerEndpoint}`,
     options.providerThinking === undefined ? undefined : `--thinking ${options.providerThinking}`
+  ].filter(Boolean).join(" ");
+  const externalConsumerCommand = [
+    "pnpm run hosted-external-consumer-smoke --",
+    `--clarissimi-ref ${options.externalRef}`,
+    options.externalRepo === defaults.externalRepo ? undefined : `--repo ${options.externalRepo}`
   ].filter(Boolean).join(" ");
   const releaseType = options.releaseType === "versioned-action-tag"
     ? `versioned Action tag \`${options.releaseVersion}\` under ADR 0031`
@@ -380,6 +474,18 @@ function renderIssueBody(options) {
     `- Dispatch model input: \`${options.providerModel}\``,
     `- Provider endpoint override: ${options.providerEndpoint === undefined ? "not used" : `\`${options.providerEndpoint}\``}`,
     `- Provider thinking mode: ${options.providerThinking === undefined ? "not used" : `\`${options.providerThinking}\``}`,
+    "",
+    "## External Consumer Evidence",
+    "",
+    `- Command: \`${externalConsumerCommand}\``,
+    "- Result: passed",
+    `- Repository: \`${options.externalRepo}\``,
+    `- Workflow: \`${defaults.externalWorkflowName}\``,
+    `- Run: ${options.externalRun.url}`,
+    `- Run id: \`${options.externalRun.databaseId}\``,
+    `- Created at: \`${options.externalRun.createdAt}\``,
+    `- Clarissimi ref: \`${options.externalRef}\``,
+    `- Consumer workflow SHA: \`${options.externalRun.headSha}\``,
     "",
     "## Release Policy",
     "",

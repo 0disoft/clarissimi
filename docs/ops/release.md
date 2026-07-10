@@ -70,9 +70,10 @@ workspace publication scope, and package rollback.
 
 1. Run the local validation and hygiene gates against the final candidate checkout.
 2. Push the candidate commit to `main` and confirm hosted CI for that exact SHA.
-3. Run hosted live-provider smoke for the same SHA.
+3. Run hosted live-provider smoke for the same SHA and external consumer smoke for the exact
+   candidate SHA or release tag.
 4. Create an external release evidence issue that identifies release type `versioned-action-tag`,
-   release version `v0.1.0`, ADR 0031, both hosted run URLs, and the candidate SHA.
+   release version `v0.1.0`, ADR 0031, all three run URLs, and the candidate SHA.
 5. Create immutable tag `v0.1.0` at that SHA and create a GitHub pre-release linked to the evidence
    issue. Do not create or move a `v0` alias.
 6. Verify the remote tag target, GitHub Release metadata, and a hosted live-provider smoke run using
@@ -194,16 +195,20 @@ release-candidate commit before public package publication or a versioned Action
 the final run URL outside the repository commit if updating this document would change the
 candidate SHA.
 
-Recent external consumer evidence: `Clarissimi external consumer` workflow run `29081007872`
-passed in `0disoft/integration-lab` for immutable tag `v0.1.1`. The full stage, approve, promote,
-and Markdown summary table path subsequently passed in workflow run `29081250915` and merged
-recognition pull request `https://github.com/0disoft/integration-lab/pull/9`.
-Run URLs: `https://github.com/0disoft/integration-lab/actions/runs/29081007872` and
-`https://github.com/0disoft/integration-lab/actions/runs/29081250915`.
+Recent external consumer evidence: `Clarissimi external consumer` workflow run `29083278366`
+passed in `0disoft/integration-lab` for immutable tag `v0.1.1` on Ubuntu, macOS, and Windows. Manual
+full-write workflow run `29083329160` then staged draft pull request `#10` against an ephemeral base,
+approved and merged it, promoted recognition pull request `#11`, verified the ledger and Markdown
+summary table, closed the recognition pull request, and deleted every run-specific branch without
+mutating `main`.
+Run URLs: `https://github.com/0disoft/integration-lab/actions/runs/29083278366` and
+`https://github.com/0disoft/integration-lab/actions/runs/29083329160`.
 Refresh this evidence with
 `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>` for the exact immutable
 release candidate, then attach the final run URL outside the repository commit if updating this
 document would change the candidate SHA.
+`pnpm run release-candidate-evidence-issue` requires `--external-run <run-id>` and verifies that the
+external workflow display title names that exact ref before it creates or prints evidence.
 
 ## Owners
 

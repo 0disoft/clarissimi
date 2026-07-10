@@ -19,7 +19,8 @@ test("release candidate evidence issue prints a validated evidence body", async 
         workflowName: "Clarissimi live provider smoke",
         url: "https://github.com/owner/repo/actions/runs/67890",
         event: "workflow_dispatch"
-      })
+      }),
+      "24680": createExternalRun("v0.1.0")
     }
   });
 
@@ -39,6 +40,8 @@ test("release candidate evidence issue prints a validated evidence body", async 
     "12345",
     "--live-run",
     "67890",
+    "--external-run",
+    "24680",
     "--provider-model",
     "minimax-m3",
     "--provider-endpoint",
@@ -52,11 +55,14 @@ test("release candidate evidence issue prints a validated evidence body", async 
   assert.deepEqual(harness.commands.map((command) => [command.command, ...command.args.slice(0, 2)]), [
     ["gh", "--version"],
     ["gh", "run", "view"],
+    ["gh", "run", "view"],
     ["gh", "run", "view"]
   ]);
   assert.equal(harness.logs.join("\n").includes("Release candidate evidence for `0123456789abcdef0123456789abcdef01234567`"), true);
   assert.equal(harness.logs.join("\n").includes("https://github.com/owner/repo/actions/runs/12345"), true);
   assert.equal(harness.logs.join("\n").includes("Repository secret used by workflow: `CLARISSIMI_PROVIDER_TOKEN`"), true);
+  assert.equal(harness.logs.join("\n").includes("https://github.com/0disoft/integration-lab/actions/runs/24680"), true);
+  assert.equal(harness.logs.join("\n").includes("Clarissimi ref: `v0.1.0`"), true);
   assert.equal(harness.logs.join("\n").includes("minimax-m3"), true);
   assert.equal(harness.logs.join("\n").includes("--endpoint https://gateway.example/v1/chat/completions"), true);
   assert.equal(harness.logs.join("\n").includes("Provider endpoint override: `https://gateway.example/v1/chat/completions`"), true);
@@ -81,7 +87,8 @@ test("release candidate evidence issue resolves HEAD and creates an issue with b
         databaseId: 67890,
         workflowName: "Clarissimi live provider smoke",
         url: "https://github.com/0disoft/clarissimi/actions/runs/67890"
-      })
+      }),
+      "24680": createExternalRun(exampleSha)
     }
   });
 
@@ -90,6 +97,8 @@ test("release candidate evidence issue resolves HEAD and creates an issue with b
     "12345",
     "--live-run",
     "67890",
+    "--external-run",
+    "24680",
     "--provider-model",
     "gpt-4.1-mini",
     "--title",
@@ -100,6 +109,7 @@ test("release candidate evidence issue resolves HEAD and creates an issue with b
   assert.deepEqual(harness.commands.map((command) => [command.command, ...command.args.slice(0, 2)]), [
     ["git", "rev-parse", "HEAD"],
     ["gh", "--version"],
+    ["gh", "run", "view"],
     ["gh", "run", "view"],
     ["gh", "run", "view"],
     ["gh", "issue", "create"]
@@ -120,6 +130,7 @@ test("release candidate evidence issue resolves HEAD and creates an issue with b
   ]);
   assert.equal(issueCreate.options.input.includes("Run id: `12345`"), true);
   assert.equal(issueCreate.options.input.includes("Run id: `67890`"), true);
+  assert.equal(issueCreate.options.input.includes("Run id: `24680`"), true);
   assert.equal(harness.logs.includes("release candidate evidence issue created: https://github.com/0disoft/clarissimi/issues/12"), true);
 });
 
@@ -132,6 +143,8 @@ test("release candidate evidence issue rejects invalid inputs before calling git
     "12345",
     "--live-run",
     "67890",
+    "--external-run",
+    "24680",
     "--provider-model",
     "gpt-4.1-mini"
   ], invalidRepo.runtime);
@@ -146,6 +159,8 @@ test("release candidate evidence issue rejects invalid inputs before calling git
     "0",
     "--live-run",
     "67890",
+    "--external-run",
+    "24680",
     "--provider-model",
     "gpt-4.1-mini"
   ], invalidRun.runtime);
@@ -154,12 +169,31 @@ test("release candidate evidence issue rejects invalid inputs before calling git
   assert.equal(invalidRun.errors.includes("--ci-run requires a positive numeric workflow run id."), true);
   assert.equal(invalidRun.commands.length, 0);
 
+  const missingExternalRun = createHarness({ headSha: exampleSha });
+  const missingExternalRunExitCode = await runReleaseCandidateEvidenceIssue([
+    "--ci-run",
+    "12345",
+    "--live-run",
+    "67890",
+    "--provider-model",
+    "gpt-4.1-mini"
+  ], missingExternalRun.runtime);
+
+  assert.equal(missingExternalRunExitCode, 2);
+  assert.equal(
+    missingExternalRun.errors.includes("--external-run requires a positive numeric workflow run id."),
+    true
+  );
+  assert.equal(missingExternalRun.commands.length, 0);
+
   const emptyModel = createHarness({ headSha: exampleSha });
   const emptyModelExitCode = await runReleaseCandidateEvidenceIssue([
     "--ci-run",
     "12345",
     "--live-run",
     "67890",
+    "--external-run",
+    "24680",
     "--provider-model",
     ""
   ], emptyModel.runtime);
@@ -174,6 +208,8 @@ test("release candidate evidence issue rejects invalid inputs before calling git
     "12345",
     "--live-run",
     "67890",
+    "--external-run",
+    "24680",
     "--provider-model",
     "minimax-m3",
     "--provider-endpoint",
@@ -261,6 +297,8 @@ test("release candidate evidence issue rejects workflow run mismatch before issu
     "12345",
     "--live-run",
     "67890",
+    "--external-run",
+    "24680",
     "--provider-model",
     "gpt-4.1-mini"
   ], wrongSha.runtime);
@@ -294,6 +332,8 @@ test("release candidate evidence issue rejects workflow run mismatch before issu
     "12345",
     "--live-run",
     "67890",
+    "--external-run",
+    "24680",
     "--provider-model",
     "gpt-4.1-mini"
   ], failedRun.runtime);
@@ -302,6 +342,51 @@ test("release candidate evidence issue rejects workflow run mismatch before issu
   assert.equal(
     failedRun.errors.includes("hosted CI run 12345 must be completed successfully; status=completed conclusion=failure."),
     true
+  );
+});
+
+test("release candidate evidence issue rejects an external run for another Clarissimi ref", async () => {
+  const harness = createHarness({
+    headSha: exampleSha,
+    runs: {
+      "12345": createRun({
+        databaseId: 12345,
+        workflowName: "CI",
+        url: "https://github.com/0disoft/clarissimi/actions/runs/12345"
+      }),
+      "67890": createRun({
+        databaseId: 67890,
+        workflowName: "Clarissimi live provider smoke",
+        url: "https://github.com/0disoft/clarissimi/actions/runs/67890"
+      }),
+      "24680": createExternalRun("v0.1.0")
+    }
+  });
+
+  const exitCode = await runReleaseCandidateEvidenceIssue([
+    "--sha",
+    exampleSha,
+    "--ci-run",
+    "12345",
+    "--live-run",
+    "67890",
+    "--external-run",
+    "24680",
+    "--provider-model",
+    "gpt-4.1-mini"
+  ], harness.runtime);
+
+  assert.equal(exitCode, 1);
+  assert.equal(
+    harness.errors.includes(
+      `external consumer smoke run 24680 must validate Clarissimi ${exampleSha}; `
+      + "displayTitle=Clarissimi external consumer · v0.1.0."
+    ),
+    true
+  );
+  assert.equal(
+    harness.commands.some((command) => command.command === "gh" && command.args[0] === "issue"),
+    false
   );
 });
 
@@ -318,6 +403,19 @@ function createRun(overrides = {}) {
     event: "push",
     ...overrides
   };
+}
+
+function createExternalRun(ref, overrides = {}) {
+  return createRun({
+    databaseId: 24680,
+    displayTitle: `Clarissimi external consumer · ${ref}`,
+    event: "workflow_dispatch",
+    headBranch: "main",
+    headSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    url: "https://github.com/0disoft/integration-lab/actions/runs/24680",
+    workflowName: "Clarissimi external consumer",
+    ...overrides
+  });
 }
 
 function createHarness(options) {

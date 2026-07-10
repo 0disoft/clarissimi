@@ -41,6 +41,7 @@ export const requiredDocumentationPaths = [
   ".github/workflows/clarissimi-promote-draft-fixture.yml",
   ".github/workflows/clarissimi-propose-fixture.yml",
   ".github/workflows/clarissimi-stage-draft-fixture.yml",
+  "scripts/hosted-external-consumer-smoke.mjs",
   "scripts/hosted-live-provider-smoke.mjs",
   "scripts/release-candidate-evidence-issue.mjs",
   "scripts/release-readiness.mjs"

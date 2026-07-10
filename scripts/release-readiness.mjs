@@ -48,6 +48,10 @@ export const requiredPackageScripts = [
     includes: ["scripts/hosted-ci-validation.mjs"]
   },
   {
+    name: "hosted-external-consumer-smoke",
+    includes: ["scripts/hosted-external-consumer-smoke.mjs"]
+  },
+  {
     name: "hosted-live-provider-smoke",
     includes: ["scripts/hosted-live-provider-smoke.mjs"]
   },
@@ -124,6 +128,7 @@ export const releasePolicyDocumentContract = {
     "Do not create or move a `v0` alias.",
     "publish a corrective patch tag such as `v0.1.1`",
     "`pnpm run hosted-ci-validation`",
+    "`pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
     "release PR, release issue, or GitHub release notes",
     "Do not make an evidence-only commit after final candidate validation",
     "docs/ops/release-candidate-evidence.md",
@@ -192,6 +197,7 @@ export const readmeValidationContract = {
     "Release-only hosted checks are:",
     "- `pnpm run live-provider-smoke`",
     "- `pnpm run hosted-ci-validation`",
+    "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
     "Release-only credentialed checks are:",
     "- `pnpm run hosted-live-provider-smoke -- --model <provider-model>`",
     "`format` intentionally fails closed",
@@ -239,6 +245,7 @@ export const docsValidationScriptContract = {
     "\".github/workflows/clarissimi-live-provider-smoke.yml\"",
     "\".github/workflows/clarissimi-propose-fixture.yml\"",
     "\".github/workflows/clarissimi-stage-draft-fixture.yml\"",
+    "\"scripts/hosted-external-consumer-smoke.mjs\"",
     "\"scripts/hosted-live-provider-smoke.mjs\"",
     "\"scripts/release-candidate-evidence-issue.mjs\"",
     "\"scripts/release-readiness.mjs\""

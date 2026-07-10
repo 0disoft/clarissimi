@@ -1,0 +1,61 @@
+name: Clarissimi promote draft fixture
+
+on:
+  workflow_dispatch:
+    inputs:
+      base-branch:
+        description: Base branch for the recognition proposal pull request.
+        required: false
+        default: main
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+concurrency:
+  group: clarissimi-promote-draft-fixture-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  dogfood-promote-draft:
+    name: Fixture promote-draft dogfood
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Prepare approved draft inbox fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .clarissimi/drafts
+          cp fixtures/approved-draft.json .clarissimi/drafts/sample-project-merged_pull_request-42.json
+
+      - name: Run fixture promote-draft action
+        id: promote
+        uses: ./
+        with:
+          mode: promote-draft
+          draft-path: .clarissimi/drafts/sample-project-merged_pull_request-42.json
+          base-branch: ${{ inputs.base-branch }}
+
+      - name: Verify fixture promote-draft outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.promote.outputs.draft-count }}" = "1"
+          test "${{ steps.promote.outputs.proposed-entry-count }}" = "1"
+          test "${{ steps.promote.outputs.skipped-entry-count }}" = "0"
+          test "${{ steps.promote.outputs.mode }}" = "promote-draft"
+          test "${{ steps.promote.outputs.input-source }}" = "approved_draft"
+          test "${{ steps.promote.outputs.approval-status }}" = "approved"
+          test "${{ steps.promote.outputs.staged-file-count }}" = "4"
+          test -n "${{ steps.promote.outputs.proposal-branch }}"
+          test -n "${{ steps.promote.outputs.proposal-commit-sha }}"
+          test -n "${{ steps.promote.outputs.proposal-pull-request-number }}"
+          test -n "${{ steps.promote.outputs.proposal-pull-request-url }}"
+          test -n "${{ steps.promote.outputs.proposal-pull-request-action }}"

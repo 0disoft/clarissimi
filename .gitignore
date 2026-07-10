@@ -21,3 +21,7 @@ coverage/
 tmp/
 *.tsbuildinfo
 # <<< ssealed ignore patterns <<<
+
+# Reviewed GitHub Action release artifact generated from source.
+!action-dist/
+!action-dist/index.js

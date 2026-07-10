@@ -227,6 +227,21 @@ The Action may also support `stage-draft` mode. This mode creates a proposal pul
 only sanitized `.clarissimi/drafts/*.json` review files for normal unapproved drafts. It must not
 write public recognition outputs or imply maintainer approval.
 
+The Action may support `promote-draft` for a checked-in draft that already carries explicit
+maintainer approval. Promotion must not call a provider or infer approval. It creates a normal
+public recognition proposal pull request and leaves the default branch unchanged until a maintainer
+merges that proposal.
+
+Both `propose` and `promote-draft` must preserve the append-only ledger. They parse and validate the
+checked-out canonical JSONL, reject malformed or duplicate existing identities, reject a new
+contributor/source identity that is already present, append the new approved record, and rebuild
+derived outputs from the complete ledger before any branch mutation.
+
+All Action write modes must reject repository output paths that resolve through symbolic links,
+junctions, hard-linked files, or outside the checked-out repository. This validation happens before
+copying staged output so repository-controlled filesystem links cannot redirect writes outside the
+workspace.
+
 Avoid:
 
 - default `pull_request_target`

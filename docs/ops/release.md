@@ -37,6 +37,8 @@ The versioned Action tag requires:
   of correctness tests
 - `.github/workflows/clarissimi-propose-fixture.yml` or an equivalent public repository scenario
   passes
+- `.github/workflows/clarissimi-promote-draft-fixture.yml` passes before a release claims the
+  approved-draft promotion flow
 - hosted CI workflow `.github/workflows/ci.yml`, including its non-credentialed
   `release-readiness` step, passes on the release candidate commit
 - `pnpm run hosted-ci-validation` confirms the hosted `CI` workflow passed for the release
@@ -54,6 +56,7 @@ The versioned Action tag requires:
 - `ssealed doctor . --json`
 - `actionlint` for workflow examples
 - root `action.yml` parses with `yq`
+- `pnpm run bundle:action:check` proves the committed `action-dist/index.js` matches Action source
 - secret scan shows no committed provider tokens, GitHub tokens, private keys, or environment files
 - rollback instructions cover closing proposal pull requests and deleting proposal branches
 
@@ -77,6 +80,10 @@ If validation fails before publication, do not create the tag. If a defect is fo
 publication, keep `v0.1.0` immutable and publish a corrective patch tag such as `v0.1.1`. Delete or
 replace the published tag only for an urgent security or supply-chain incident, after documenting
 the old SHA, replacement SHA, user impact, and recovery path in a public issue.
+
+For releases after `v0.1.0`, regenerate `action-dist/index.js` before candidate validation and
+verify it with `pnpm run bundle:action:check`. The immutable `v0.1.0` tag keeps its original
+consumer-time install and build behavior; do not move it to adopt the bundle.
 
 ## Hosted Live Provider Smoke
 

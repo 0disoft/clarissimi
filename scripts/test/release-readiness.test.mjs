@@ -696,9 +696,9 @@ test("release readiness accepts the Action inputs and outputs document contract"
 
 test("release readiness rejects Action inputs and outputs document drift", () => {
   const text = createActionInputsOutputsDocumentText()
-    .replace("- `mode`: `dry-run`, `propose`, or `stage-draft`, default `propose`", "- `mode`: `dry-run`")
+    .replace("- `mode`: `dry-run`, `propose`, `stage-draft`, or `promote-draft`, default `propose`", "- `mode`: `dry-run`")
     .replace("Provider API keys and GitHub tokens are not plain inputs.", "Provider API keys can be inputs.")
-    .replace("reads `GITHUB_TOKEN` only in `propose` and `stage-draft`", "reads `GITHUB_TOKEN` in all modes")
+    .replace("reads `GITHUB_TOKEN` only in `propose`, `stage-draft`, and", "reads `GITHUB_TOKEN` in all modes")
     .replace(
       "`config-path` is explicit-only; the Action does not automatically discover repository config files.",
       "`config-path` can be discovered."
@@ -718,9 +718,9 @@ test("release readiness rejects Action inputs and outputs document drift", () =>
     .replace("raw-evidence exclusion rules as action outputs.", "summary rules.");
 
   assert.deepEqual(validateActionInputsOutputsDocumentContract(text), [
-    "docs/github-action/inputs-and-outputs.md must include - `mode`: `dry-run`, `propose`, or `stage-draft`, default `propose`.",
+    "docs/github-action/inputs-and-outputs.md must include - `mode`: `dry-run`, `propose`, `stage-draft`, or `promote-draft`, default `propose`.",
     "docs/github-action/inputs-and-outputs.md must include Provider API keys and GitHub tokens are not plain inputs..",
-    "docs/github-action/inputs-and-outputs.md must include reads `GITHUB_TOKEN` only in `propose` and `stage-draft`.",
+    "docs/github-action/inputs-and-outputs.md must include reads `GITHUB_TOKEN` only in `propose`, `stage-draft`, and.",
     "docs/github-action/inputs-and-outputs.md must include `config-path` is explicit-only; the Action does not automatically discover repository config files..",
     "docs/github-action/inputs-and-outputs.md must include `summary-path` is explicit-only, must be relative, and must stay inside `GITHUB_WORKSPACE`..",
     "docs/github-action/inputs-and-outputs.md must include An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`.",
@@ -853,7 +853,7 @@ test("release readiness rejects monorepo validation document drift", () => {
 });
 
 test("release readiness accepts workspace contract and package manifest identity", () => {
-  assert.deepEqual(validateWorkspaceContract('packages:\n  - "packages/*"\n'), []);
+  assert.deepEqual(validateWorkspaceContract('packages:\n  - "packages/*"\nallowBuilds:\n  esbuild: true\n'), []);
   assert.deepEqual(
     validateWorkspacePackageManifest(
       {
@@ -869,7 +869,8 @@ test("release readiness accepts workspace contract and package manifest identity
 
 test("release readiness rejects workspace and package manifest identity drift", () => {
   assert.deepEqual(validateWorkspaceContract("packages:\n  - apps/*\n"), [
-    'pnpm-workspace.yaml must include workspace package glob "packages/*".'
+    'pnpm-workspace.yaml must include workspace package glob "packages/*".',
+    "pnpm-workspace.yaml must explicitly allow the pinned esbuild install script."
   ]);
 
   assert.deepEqual(
@@ -1332,11 +1333,12 @@ test("release readiness rejects Action manifest input default drift and secret i
 test("release readiness rejects Action manifest env and command drift", () => {
   const text = createActionManifestText()
     .replace("CLARISSIMI_PROVIDER_TOKEN: ${{ env.CLARISSIMI_PROVIDER_TOKEN }}", "CLARISSIMI_PROVIDER_TOKEN: ${{ inputs.provider-token }}")
-    .replace("pnpm --dir \"$GITHUB_ACTION_PATH\" --filter @clarissimi/action build", "pnpm --dir \"$GITHUB_ACTION_PATH\" build");
+    .replace("node \"$GITHUB_ACTION_PATH/action-dist/index.js\"", "node \"$GITHUB_ACTION_PATH/packages/action/dist/bin/clarissimi-action.js\"");
 
   assert.deepEqual(validateActionManifestContract(text), [
     "action.yml must include env mapping CLARISSIMI_PROVIDER_TOKEN: ${{ env.CLARISSIMI_PROVIDER_TOKEN }}.",
-    "action.yml must run pnpm --dir \"$GITHUB_ACTION_PATH\" --filter @clarissimi/action build."
+    "action.yml must run node \"$GITHUB_ACTION_PATH/action-dist/index.js\".",
+    "action.yml must not run node \"$GITHUB_ACTION_PATH/packages/action/dist/bin/clarissimi-action.js\"."
   ]);
 });
 
@@ -2121,20 +2123,22 @@ function createDisasterRecoveryDocumentText() {
 
 function createActionInputsOutputsDocumentText() {
   return [
-    "- `mode`: `dry-run`, `propose`, or `stage-draft`, default `propose`",
+    "- `mode`: `dry-run`, `propose`, `stage-draft`, or `promote-draft`, default `propose`",
+    "- `draft-path`: approved `.clarissimi/drafts/*.json` path required by `promote-draft`",
     "- `summary-path`: optional workspace-relative path for a sanitized JSON summary artifact",
     "- `provider`: `fake` or `openai-compatible`; omitted values fall back to config, then `fake`",
     "- `provider-thinking`: optional OpenAI-compatible thinking mode; currently only `disabled`",
     "",
     "Provider API keys and GitHub tokens are not plain inputs. They must come from secrets or the",
-    "workflow environment. The current Action reads `GITHUB_TOKEN` only in `propose` and `stage-draft`",
-    "modes for live GitHub collection and proposal pull request creation or update. It reads",
+    "workflow environment. The current Action reads `GITHUB_TOKEN` only in `propose`, `stage-draft`, and",
+    "`promote-draft` modes for proposal branch and pull request creation or update. It reads",
     "`CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.",
     "",
+    "`INPUT_CONFIG_PATH`, `INPUT_DRAFT_PATH`, `INPUT_MODE`, `INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`,",
     "`INPUT_SUMMARY_PATH`, `INPUT_PROVIDER`, `INPUT_PROVIDER_MODEL`, `INPUT_PROVIDER_ENDPOINT`, and",
     "`INPUT_PROVIDER_THINKING`.",
     "",
-    "The root `action.yml` currently exposes `event-path`, `github-fixture`, `mode`, `base-branch`,",
+    "The root `action.yml` currently exposes `event-path`, `github-fixture`, `draft-path`, `mode`,",
     "`remote-name`, `staging-dir`, `summary-path`, `config-path`, `provider`, `provider-model`,",
     "`provider-endpoint`, and `provider-thinking`.",
     "",
@@ -2144,6 +2148,8 @@ function createActionInputsOutputsDocumentText() {
     "fallback.",
     "In `propose` and `stage-draft`, event payloads route to the live GitHub collector when no explicit",
     "fixture is provided.",
+    "In `promote-draft`, event, fixture, config, and provider inputs are ignored or rejected as",
+    "inapplicable; the approved draft file is the only assessment input.",
     "",
     "- `summary-json-path` when `summary-path` is set",
     "",
@@ -2159,7 +2165,8 @@ function createActionContractDocumentText() {
   return [
     "The Action supports dry-run summaries, public recognition proposals, and draft inbox proposals.",
     "",
-    "- `INPUT_MODE`: `dry-run`, `propose`, or `stage-draft`, default `propose`",
+    "- `INPUT_MODE`: `dry-run`, `propose`, `stage-draft`, or `promote-draft`, default `propose`",
+    "- `INPUT_DRAFT_PATH`: approved `.clarissimi/drafts/*.json` path required by `promote-draft`",
     "- `INPUT_SUMMARY_PATH`: optional workspace-relative path for a sanitized JSON summary artifact",
     "- `INPUT_PROVIDER`: `fake` or `openai-compatible`, default `fake`",
     "- `CLARISSIMI_PROVIDER_TOKEN`: provider token required only for `openai-compatible`",
@@ -2183,6 +2190,11 @@ function createActionContractDocumentText() {
     "`.clarissimi/drafts/*.json` review files. It must not write `.clarissimi/contributions.jsonl`,",
     "`CONTRIBUTORS.md`, contributor JSON, or static public data.",
     "",
+    "`promote-draft` reads `GITHUB_TOKEN` only for proposal branch publication and pull request",
+    "creation or update. It accepts one approved JSON file under `.clarissimi/drafts/`, performs no provider or",
+    "event collection work, renders public recognition outputs, and uses the normal recognition branch",
+    "and pull request boundary. Draft, rejected, or skipped assessments fail before branch mutation.",
+    "",
     "Proposal branch commits use a Clarissimi-owned bot author instead of relying on runner-global git",
     "identity.",
     "The source repository in collected evidence remains part of the public recognition context.",
@@ -2203,6 +2215,10 @@ function createActionContractDocumentText() {
     "  stderr before branch mutation.",
     "- Approved, auto-approved, rejected, or skipped assessment in `stage-draft` mode: exit `4`, empty",
     "  stdout, diagnostic on stderr before branch mutation.",
+    "- Missing or out-of-inbox `draft-path` in `promote-draft`: exit `1`, empty stdout, diagnostic on",
+    "  stderr before file reads or branch mutation.",
+    "- Invalid, draft, rejected, or skipped assessment in `promote-draft`: exit `4`, empty stdout,",
+    "  diagnostic on stderr before branch mutation.",
     "",
     "Dry-run mode should need read permissions only.",
     "Commit mode is not implemented.",
@@ -2225,6 +2241,7 @@ function createActionPermissionsDocumentText() {
     "| `dry-run` | `read` | `read` | `read` | No | No |",
     "| `propose` | `write` | `write` | `read` | Proposal branch only | Yes |",
     "| `stage-draft` | `write` | `write` | `read` | Draft proposal branch only | Yes |",
+    "| `promote-draft` | `write` | `write` | `read` | Recognition proposal branch only | Yes |",
     "",
     "Any permission not listed in a workflow should remain unset, which GitHub treats as `none` when",
     "the workflow uses an explicit `permissions` block.",
@@ -2247,6 +2264,7 @@ function createActionPermissionsDocumentText() {
     "Stage-draft mode writes only a sanitized draft inbox file to a branch and opens a pull request for",
     "maintainer review.",
     "`clarissimi/drafts/<source-kind>-<source-id>`.",
+    "Promotion reads one approved draft under `.clarissimi/drafts/`, writes only Clarissimi recognition",
     "",
     "Commit mode requires explicit configuration and should not be the default.",
     "",
@@ -2478,6 +2496,8 @@ function createActionManifestText() {
     "    required: false",
     "  config-path:",
     "    required: false",
+    "  draft-path:",
+    "    required: false",
     "  base-branch:",
     "    required: false",
     "    default: main",
@@ -2530,11 +2550,12 @@ function createActionManifestText() {
     "  steps:",
     "    - name: Run Clarissimi",
     "      env:",
-    "        GITHUB_TOKEN: ${{ (inputs.mode == 'propose' || inputs.mode == 'stage-draft') && github.token || '' }}",
+    "        GITHUB_TOKEN: ${{ (inputs.mode == 'propose' || inputs.mode == 'stage-draft' || inputs.mode == 'promote-draft') && github.token || '' }}",
     "        INPUT_MODE: ${{ inputs.mode }}",
     "        INPUT_EVENT_PATH: ${{ inputs.event-path }}",
     "        INPUT_GITHUB_FIXTURE: ${{ inputs.github-fixture }}",
     "        INPUT_CONFIG_PATH: ${{ inputs.config-path }}",
+    "        INPUT_DRAFT_PATH: ${{ inputs.draft-path }}",
     "        INPUT_BASE_BRANCH: ${{ inputs.base-branch }}",
     "        INPUT_REMOTE_NAME: ${{ inputs.remote-name }}",
     "        INPUT_STAGING_DIR: ${{ inputs.staging-dir }}",
@@ -2545,9 +2566,7 @@ function createActionManifestText() {
     "        INPUT_PROVIDER_THINKING: ${{ inputs.provider-thinking }}",
     "        CLARISSIMI_PROVIDER_TOKEN: ${{ env.CLARISSIMI_PROVIDER_TOKEN }}",
     "      run: |",
-    "        pnpm --dir \"$GITHUB_ACTION_PATH\" install --frozen-lockfile",
-    "        pnpm --dir \"$GITHUB_ACTION_PATH\" --filter @clarissimi/action build",
-    "        node \"$GITHUB_ACTION_PATH/packages/action/dist/bin/clarissimi-action.js\""
+    "        node \"$GITHUB_ACTION_PATH/action-dist/index.js\""
   ].join("\n");
 }
 

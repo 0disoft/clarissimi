@@ -14,7 +14,8 @@ Observable surfaces:
 
 - CLI JSON output for `recognize`, `stage-draft`, `approve-draft`, `import-draft`, `rebuild`,
   `validate-config`, and `validate-ledger`
-- GitHub Action outputs and step summaries for `dry-run`, `propose`, and `stage-draft`
+- GitHub Action outputs and step summaries for `dry-run`, `propose`, `stage-draft`, and
+  `promote-draft`
 - proposal pull request title, body, branch name, changed file list, and commit SHA
 - hosted CI run status for `docs`, `release-readiness`, `lint`, `smoke`, `check`, and `contract`
 - manual dogfood workflow run URLs for propose, stage-draft, and live-provider smoke

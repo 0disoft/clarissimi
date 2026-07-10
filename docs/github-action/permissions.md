@@ -15,6 +15,7 @@ Workflow examples must use explicit `permissions`. A workflow must not use `writ
 | `dry-run` | `read` | `read` | `read` | No | No |
 | `propose` | `write` | `write` | `read` | Proposal branch only | Yes |
 | `stage-draft` | `write` | `write` | `read` | Draft proposal branch only | Yes |
+| `promote-draft` | `write` | `write` | `read` | Recognition proposal branch only | Yes |
 | `commit` | `write` | `read` | `read` | Current branch | No |
 
 Any permission not listed in a workflow should remain unset, which GitHub treats as `none` when
@@ -79,6 +80,18 @@ Expected permissions:
 - `contents: write`
 - `pull-requests: read`
 - `issues: read`
+
+## Promote-Draft Mode
+
+Expected permissions:
+
+- `contents: write`
+- `pull-requests: write`
+- `issues: read`
+
+Promotion reads one approved draft under `.clarissimi/drafts/`, writes only Clarissimi recognition
+outputs to a proposal branch, and opens or updates the normal recognition pull request. It does not
+call a provider or write directly to the default branch.
 
 ## Event Safety
 

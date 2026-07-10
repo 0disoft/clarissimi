@@ -14,6 +14,7 @@
 - Live GitHub collector boundary: `docs/adr/0018-add-live-github-collector-boundary.md`
 - Provider boundary: `docs/adr/0019-add-openai-compatible-provider-adapter.md`
 - Draft inbox Action boundary: `docs/adr/0023-add-action-draft-inbox-proposal-mode.md`
+- Approved draft promotion boundary: `docs/adr/0033-promote-approved-drafts.md`
 - Explicit Action config path: `docs/adr/0029-add-explicit-action-config-path.md`
 - Action summary artifact: `docs/adr/0030-add-action-summary-artifact.md`
 
@@ -25,7 +26,8 @@ accepts:
 - `GITHUB_EVENT_PATH`: GitHub event payload path
 - `INPUT_EVENT_PATH`: explicit event payload path override for tests and local runs
 - `INPUT_GITHUB_FIXTURE`: explicit GitHub merged pull request fixture path
-- `INPUT_MODE`: `dry-run`, `propose`, or `stage-draft`, default `propose`
+- `INPUT_MODE`: `dry-run`, `propose`, `stage-draft`, or `promote-draft`, default `propose`
+- `INPUT_DRAFT_PATH`: approved `.clarissimi/drafts/*.json` path required by `promote-draft`
 - `INPUT_CONFIG_PATH`: optional explicit path to a Clarissimi config file
 - `INPUT_BASE_BRANCH`: base branch for proposal pull requests, default `main`
 - `INPUT_REMOTE_NAME`: remote name used to publish proposal branches, default `origin`
@@ -55,6 +57,12 @@ The root `action.yml` exposes the same surface as a composite action:
 - `provider-model`: provider model required for `openai-compatible`
 - `provider-endpoint`: optional OpenAI-compatible endpoint
 - `provider-thinking`: optional OpenAI-compatible thinking mode, currently only `disabled`
+- `draft-path`: approved draft inbox path required by `promote-draft`
+
+The composite Action executes `action-dist/index.js`. Consumer runs must not install repository
+dependencies or compile workspace TypeScript. The tracked bundle is derived from the Action source
+and must match `pnpm run bundle:action:check` before merge or release. The composite launcher uses
+Bash, and Ubuntu is the only currently claimed consumer runner.
 
 The future expanded action contract should include:
 
@@ -83,16 +91,31 @@ Dry-run mode reads provider credentials only when `provider` is explicitly set t
 reads `GITHUB_TOKEN` for live GitHub collection and proposal pull request creation or update.
 Fixture-first `propose` succeeds only when the fixture explicitly carries an approved or
 auto-approved maintainer approval status. Normal provider drafts remain non-public and fail closed
-before branch mutation.
+before branch mutation. Before rendering, propose mode parses the checked-out
+`.clarissimi/contributions.jsonl` when present, rejects malformed or duplicate existing records,
+and appends the new contribution identity. It rebuilds all derived outputs from that complete
+ledger; it must never replace prior recognition history with only the new assessment.
 
 `stage-draft` mode reads `GITHUB_TOKEN` for live GitHub collection and proposal pull request
 creation or update. It succeeds only for normal `draft` assessments and stages sanitized
 `.clarissimi/drafts/*.json` review files. It must not write `.clarissimi/contributions.jsonl`,
 `CONTRIBUTORS.md`, contributor JSON, or static public data.
 
+`promote-draft` reads `GITHUB_TOKEN` only for proposal branch publication and pull request creation
+or update. It accepts one approved JSON file under `.clarissimi/drafts/`, performs no provider or
+event collection work, renders public recognition outputs, and uses the normal recognition branch
+and pull request boundary. It follows the same existing-ledger validation, duplicate rejection,
+append, and full derived-output rebuild contract as propose mode. Draft, rejected, or skipped assessments fail before branch mutation. Malformed or internally duplicated ledgers and
+already-recorded contribution identities also fail before branch mutation.
+
 Proposal branch commits use a Clarissimi-owned bot author instead of relying on runner-global git
 identity. This keeps maintainer workstations and GitHub-hosted runners from becoming part of the
 public recognition commit identity.
+
+Before copying staged files into the checked-out repository, the branch writer validates every
+existing output path component. Symbolic links, junctions, hard-linked files, and resolved paths
+outside `GITHUB_WORKSPACE` fail closed before a file write, commit, push, or pull request mutation.
+This applies to `CONTRIBUTORS.md`, canonical ledger and derived data, and draft inbox outputs.
 
 The source repository in collected evidence remains part of the public recognition context. The
 pull request target repository comes from `GITHUB_REPOSITORY` when the Action runs in GitHub Actions,
@@ -149,11 +172,16 @@ The Action uses the following process outcomes:
   stderr before branch mutation.
 - Approved, auto-approved, rejected, or skipped assessment in `stage-draft` mode: exit `4`, empty
   stdout, diagnostic on stderr before branch mutation.
+- Missing or out-of-inbox `draft-path` in `promote-draft`: exit `1`, empty stdout, diagnostic on
+  stderr before file reads or branch mutation.
+- Invalid, draft, rejected, or skipped assessment in `promote-draft`: exit `4`, empty stdout,
+  diagnostic on stderr before branch mutation.
 
 ## Permissions
 
-Dry-run mode should need read permissions only. Propose and stage-draft modes need the minimum write
-permissions required to create a proposal branch and pull request. Commit mode is not implemented.
+Dry-run mode should need read permissions only. Propose, stage-draft, and promote-draft modes need
+the minimum write permissions required to create a proposal branch and pull request.
+Commit mode is not implemented.
 
 ## Review Blockers
 

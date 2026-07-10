@@ -30,6 +30,8 @@ Clarissimi quality attributes apply to these MVP flows:
 - `clarissimi rebuild`: parse the canonical ledger and regenerate derived outputs deterministically.
 - GitHub Action `dry-run`, `propose`, and `stage-draft`: run the same evidence, provider,
   validation, approval, and rendering boundaries through runner-safe orchestration.
+- GitHub Action `promote-draft`: validate one checked-in approved draft and render the same
+  deterministic recognition outputs without evidence collection or provider calls.
 
 Failure behavior is fail-closed:
 

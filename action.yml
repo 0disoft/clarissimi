@@ -4,7 +4,7 @@ author: 0disoft
 
 inputs:
   mode:
-    description: Action mode. Use dry-run for summaries, propose for public recognition PRs, or stage-draft for draft review PRs.
+    description: Action mode. Use dry-run for summaries, propose for approved event drafts, stage-draft for draft review PRs, or promote-draft for an approved draft file.
     required: false
     default: propose
   event-path:
@@ -16,8 +16,11 @@ inputs:
   config-path:
     description: Optional Clarissimi config file path. Supports explicit JSON config files or clarissimi.config.ts.
     required: false
+  draft-path:
+    description: Approved .clarissimi/drafts/*.json path required by promote-draft mode.
+    required: false
   base-branch:
-    description: Base branch for propose and stage-draft mode pull requests.
+    description: Base branch for propose, stage-draft, and promote-draft mode pull requests.
     required: false
     default: main
   remote-name:
@@ -94,11 +97,12 @@ runs:
       id: clarissimi
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ (inputs.mode == 'propose' || inputs.mode == 'stage-draft') && github.token || '' }}
+        GITHUB_TOKEN: ${{ (inputs.mode == 'propose' || inputs.mode == 'stage-draft' || inputs.mode == 'promote-draft') && github.token || '' }}
         INPUT_MODE: ${{ inputs.mode }}
         INPUT_EVENT_PATH: ${{ inputs.event-path }}
         INPUT_GITHUB_FIXTURE: ${{ inputs.github-fixture }}
         INPUT_CONFIG_PATH: ${{ inputs.config-path }}
+        INPUT_DRAFT_PATH: ${{ inputs.draft-path }}
         INPUT_BASE_BRANCH: ${{ inputs.base-branch }}
         INPUT_REMOTE_NAME: ${{ inputs.remote-name }}
         INPUT_STAGING_DIR: ${{ inputs.staging-dir }}
@@ -110,7 +114,4 @@ runs:
         CLARISSIMI_PROVIDER_TOKEN: ${{ env.CLARISSIMI_PROVIDER_TOKEN }}
       run: |
         set -euo pipefail
-        corepack enable
-        pnpm --dir "$GITHUB_ACTION_PATH" install --frozen-lockfile
-        pnpm --dir "$GITHUB_ACTION_PATH" --filter @clarissimi/action build
-        node "$GITHUB_ACTION_PATH/packages/action/dist/bin/clarissimi-action.js"
+        node "$GITHUB_ACTION_PATH/action-dist/index.js"

@@ -15,7 +15,8 @@
 - `event-path`: explicit event payload path for local runs, tests, and write-mode live collection
 - `github-fixture`: explicit GitHub merged pull request fixture path for fixture-first runs
 - `config-path`: optional explicit path to a JSON Clarissimi config file or `clarissimi.config.ts`
-- `mode`: `dry-run`, `propose`, or `stage-draft`, default `propose`
+- `mode`: `dry-run`, `propose`, `stage-draft`, or `promote-draft`, default `propose`
+- `draft-path`: approved `.clarissimi/drafts/*.json` path required by `promote-draft`
 - `base-branch`: base branch for proposal pull requests
 - `remote-name`: Git remote used to publish proposal branches
 - `staging-dir`: optional temporary staging directory for proposal outputs
@@ -32,17 +33,17 @@
 - `min-confidence`: minimum draft confidence for policy consideration
 
 Provider API keys and GitHub tokens are not plain inputs. They must come from secrets or the
-workflow environment. The current Action reads `GITHUB_TOKEN` only in `propose` and `stage-draft`
-modes for live GitHub collection and proposal pull request creation or update. It reads
+workflow environment. The current Action reads `GITHUB_TOKEN` only in `propose`, `stage-draft`, and
+`promote-draft` modes for proposal branch and pull request creation or update. It reads
 `CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.
 
 The current package supports `INPUT_EVENT_PATH`, `GITHUB_EVENT_PATH`, `INPUT_GITHUB_FIXTURE`,
-`INPUT_CONFIG_PATH`, `INPUT_MODE`, `INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`, `INPUT_STAGING_DIR`,
+`INPUT_CONFIG_PATH`, `INPUT_DRAFT_PATH`, `INPUT_MODE`, `INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`, `INPUT_STAGING_DIR`,
 `INPUT_SUMMARY_PATH`, `INPUT_PROVIDER`, `INPUT_PROVIDER_MODEL`, `INPUT_PROVIDER_ENDPOINT`, and
 `INPUT_PROVIDER_THINKING`.
 
-The root `action.yml` currently exposes `event-path`, `github-fixture`, `mode`, `base-branch`,
-`remote-name`, `staging-dir`, `summary-path`, `config-path`, `provider`, `provider-model`,
+The root `action.yml` currently exposes `event-path`, `github-fixture`, `draft-path`, `mode`,
+`base-branch`, `remote-name`, `staging-dir`, `summary-path`, `config-path`, `provider`, `provider-model`,
 `provider-endpoint`, and `provider-thinking`.
 `config-path` is explicit-only; the Action does not automatically discover repository config files.
 Action inputs and workflow environment values take precedence over config values. Omitted provider
@@ -54,6 +55,8 @@ fallback. An explicit `event-path` and `github-fixture` must not be provided tog
 In `dry-run`, event payloads are mapped from the local event file without live GitHub API calls.
 In `propose` and `stage-draft`, event payloads route to the live GitHub collector when no explicit
 fixture is provided.
+In `promote-draft`, event, fixture, config, and provider inputs are ignored or rejected as
+inapplicable; the approved draft file is the only assessment input.
 
 ## Current Outputs
 

@@ -192,6 +192,23 @@ await runJsonCommand({
   }
 });
 
+await runJsonCommand({
+  name: "Bundled Action explicit dry-run",
+  command: process.execPath,
+  args: ["action-dist/index.js"],
+  env: {
+    INPUT_MODE: "dry-run",
+    INPUT_GITHUB_FIXTURE: "fixtures/github-merged-pr-basic.json"
+  },
+  expectExitCode: 0,
+  validate(output) {
+    assertEqual(output.ok, true, "bundled Action dry-run should succeed.");
+    assertEqual(output.mode, "dry-run", "bundled Action should preserve dry-run mode.");
+    assertEqual(output.inputSource, "github_fixture", "bundled Action should use the fixture source.");
+    assertEqual(output.proposedEntryCount, 0, "bundled dry-run must not propose public entries.");
+  }
+});
+
 await runCommand({
   name: "Action default propose requires token",
   command: process.execPath,

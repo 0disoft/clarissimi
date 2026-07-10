@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, join, normalize, sep } from "node:path";
+import { lstat, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute, join, normalize, relative, sep } from "node:path";
 
 import type {
   ProposalOutputStagingManifest,
@@ -170,6 +170,7 @@ async function assertExistingProposalBranchIsOwned(
 async function writeStagedFilesToRepository(input: ProposalBranchWriterInput): Promise<void> {
   for (const file of input.manifest.files) {
     assertOwnedStagedPath(file);
+    await assertSafeRepositoryOutputPath(input.repositoryDir, file.path);
     const content = await readFile(join(input.stagedOutputDir, file.path));
     const sha256 = createHash("sha256").update(content).digest("hex");
 
@@ -191,6 +192,52 @@ async function writeStagedFilesToRepository(input: ProposalBranchWriterInput): P
     await mkdir(dirname(destination), { recursive: true });
     await writeFile(destination, content);
   }
+}
+
+async function assertSafeRepositoryOutputPath(
+  repositoryDir: string,
+  path: string
+): Promise<void> {
+  const repositoryRoot = await realpath(repositoryDir);
+  let currentPath = repositoryRoot;
+
+  for (const segment of normalize(path).split(sep)) {
+    currentPath = join(currentPath, segment);
+
+    try {
+      const stats = await lstat(currentPath);
+      if (stats.isSymbolicLink() || (stats.isFile() && stats.nlink > 1)) {
+        throw unsafeRepositoryOutputPathError();
+      }
+
+      const resolvedPath = await realpath(currentPath);
+      const relativePath = relative(repositoryRoot, resolvedPath);
+      if (
+        relativePath === ".."
+        || relativePath.startsWith(`..${sep}`)
+        || isAbsolute(relativePath)
+      ) {
+        throw unsafeRepositoryOutputPathError();
+      }
+    } catch (error) {
+      if (isNodeError(error) && error.code === "ENOENT") {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+}
+
+function unsafeRepositoryOutputPathError(): ProposalBranchWriterError {
+  return new ProposalBranchWriterError(
+    "unsafe_repository_output_path",
+    "Proposal output paths must not traverse symbolic links, junctions, hard links, or the repository boundary."
+  );
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && "code" in error;
 }
 
 async function changedFilesFromBase(

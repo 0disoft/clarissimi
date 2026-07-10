@@ -3,7 +3,7 @@ import type { LiveGitHubClient } from "@clarissimi/github";
 import type { ContributionDraftProvider } from "@clarissimi/providers";
 import type { ProposalPullRequestClient } from "./pull-request.js";
 
-export const ACTION_MODES = ["dry-run", "propose", "stage-draft"] as const;
+export const ACTION_MODES = ["dry-run", "propose", "stage-draft", "promote-draft"] as const;
 
 export type ActionMode = (typeof ACTION_MODES)[number];
 
@@ -11,7 +11,7 @@ export function isActionMode(value: string): value is ActionMode {
   return (ACTION_MODES as readonly string[]).includes(value);
 }
 
-export type ActionInputSource = "github_event_path" | "github_fixture";
+export type ActionInputSource = "github_event_path" | "github_fixture" | "approved_draft";
 
 export interface ActionDryRunInput {
   readonly mode?: ActionMode | string;
@@ -35,6 +35,14 @@ export interface ActionStageDraftInput extends Omit<ActionProposeInput, "mode"> 
   readonly mode: "stage-draft";
 }
 
+export interface ActionPromoteDraftInput extends Omit<
+  ActionProposeInput,
+  "eventPath" | "githubFixturePath" | "liveGitHubClient" | "mode" | "provider"
+> {
+  readonly mode: "promote-draft";
+  readonly draftPath: string;
+}
+
 export interface ActionDryRunSummary {
   readonly ok: true;
   readonly mode: "dry-run";
@@ -52,7 +60,7 @@ export interface ActionDryRunSummary {
 
 export interface ActionProposeSummary {
   readonly ok: true;
-  readonly mode: "propose" | "stage-draft";
+  readonly mode: "propose" | "stage-draft" | "promote-draft";
   readonly inputSource: ActionInputSource;
   readonly draftCount: 1;
   readonly proposedEntryCount: 0 | 1;

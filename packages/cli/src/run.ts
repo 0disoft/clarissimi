@@ -7,6 +7,8 @@ import {
   DRAFTS_DIR_PATH,
   RendererValidationError,
   STATIC_DATA_JSON_PATH,
+  appendPublicContributionRecord,
+  assertUniqueContributionRecords,
   draftReviewFilename,
   parseContributionsJsonl,
   buildMaintainerRecentRecognitionShareDocument,
@@ -356,19 +358,7 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
 
     const existingLedgerText = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
     const existingRecords = parseContributionsJsonl(existingLedgerText);
-    assertUniqueContributionRecords(existingRecords);
-    const duplicate = existingRecords.find((record) => hasSameContributionIdentity(record, validation.value));
-    if (duplicate !== undefined) {
-      throw new RendererValidationError("Draft already exists in the selected ledger.", [
-        {
-          path: "$.source",
-          code: "duplicate_source",
-          message: "A contribution from this contributor and merged pull request is already recorded."
-        }
-      ]);
-    }
-
-    const nextRecords = [...existingRecords, validation.value];
+    const nextRecords = appendPublicContributionRecord(existingRecords, validation.value);
     const outputs = renderRecognitionOutputs(nextRecords);
 
     await writeTextFile(ledgerPath, outputs.contributionsJsonl);
@@ -451,85 +441,6 @@ function parseDraftImportInput(value: unknown): {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function hasSameContributionIdentity(
-  left: {
-    readonly contributor: { readonly platform: string; readonly id: string };
-    readonly source: {
-      readonly repository: string;
-      readonly event: string;
-      readonly pullRequestNumber: number;
-    };
-  },
-  right: {
-    readonly contributor: { readonly platform: string; readonly id: string };
-    readonly source: {
-      readonly repository: string;
-      readonly event: string;
-      readonly pullRequestNumber: number;
-    };
-  }
-): boolean {
-  return left.contributor.platform === right.contributor.platform &&
-    left.contributor.id === right.contributor.id &&
-    left.source.repository === right.source.repository &&
-    left.source.event === right.source.event &&
-    left.source.pullRequestNumber === right.source.pullRequestNumber;
-}
-
-function assertUniqueContributionRecords(
-  records: readonly {
-    readonly contributor: { readonly platform: string; readonly id: string };
-    readonly source: {
-      readonly repository: string;
-      readonly event: string;
-      readonly pullRequestNumber: number;
-    };
-  }[]
-): void {
-  const seen = new Map<string, number>();
-
-  records.forEach((record, index) => {
-    const key = contributionIdentityKey(record);
-    const firstIndex = seen.get(key);
-    if (firstIndex !== undefined) {
-      throw new RendererValidationError("Ledger contains duplicate contribution records.", [
-        {
-          path: `$[${index}].source`,
-          code: "duplicate_source",
-          message:
-            "Ledger records must be unique for contributor platform, contributor id, repository, event, and pull request number."
-        },
-        {
-          path: `$[${firstIndex}].source`,
-          code: "duplicate_source_original",
-          message: "This earlier ledger record has the same contribution identity."
-        }
-      ]);
-    }
-
-    seen.set(key, index);
-  });
-}
-
-function contributionIdentityKey(
-  record: {
-    readonly contributor: { readonly platform: string; readonly id: string };
-    readonly source: {
-      readonly repository: string;
-      readonly event: string;
-      readonly pullRequestNumber: number;
-    };
-  }
-): string {
-  return [
-    record.contributor.platform,
-    record.contributor.id,
-    record.source.repository,
-    record.source.event,
-    String(record.source.pullRequestNumber)
-  ].join("\0");
 }
 
 async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {

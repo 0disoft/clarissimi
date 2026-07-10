@@ -13,7 +13,7 @@ GitHub Action behavior, and maintainer-controlled provider credentials.
 Critical user journeys:
 
 - A maintainer runs the CLI locally to stage, approve, import, or rebuild recognition records.
-- A maintainer runs the Action in `dry-run`, `propose`, or `stage-draft` mode after safe
+- A maintainer runs the Action in `dry-run`, `propose`, `stage-draft`, or `promote-draft` mode after safe
   post-merge events.
 - A maintainer reviews generated proposal pull requests before public recognition lands.
 - A maintainer runs release-only live provider smoke with their own provider credentials.

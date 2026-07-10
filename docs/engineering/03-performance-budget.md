@@ -25,7 +25,7 @@ Hot paths:
 - `clarissimi approve-draft`
 - `clarissimi import-draft`
 - `clarissimi rebuild`
-- GitHub Action `dry-run`, `propose`, and `stage-draft`
+- GitHub Action `dry-run`, `propose`, `stage-draft`, and `promote-draft`
 
 ## Required Evidence
 

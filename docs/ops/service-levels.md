@@ -16,7 +16,7 @@ Service levels:
 | --- | --- |
 | Source-only merge readiness | Local `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`, and hygiene checks pass before push. |
 | Hosted validation | `Validation` check passes on `main` after push. |
-| Write-mode dogfood | Manual propose and stage-draft workflows pass before release evidence claims support. |
+| Write-mode dogfood | Manual propose, stage-draft, and promote-draft workflows pass before release evidence claims support. |
 | Live provider release gate | Local live-provider smoke plus hosted manual live-provider smoke pass with maintainer-owned credentials. |
 | Versioned Action release | Immutable tag points to the exact validated SHA and its GitHub pre-release links the evidence issue. |
 | Unsafe output response | Stop release or dogfood immediately and follow rollback or incident-response docs. |

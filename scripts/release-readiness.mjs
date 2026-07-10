@@ -8,6 +8,14 @@ const defaultRepoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 export const requiredPackageScripts = [
   {
+    name: "bundle:action",
+    includes: ["pnpm run build", "scripts/bundle-action.mjs"]
+  },
+  {
+    name: "bundle:action:check",
+    includes: ["pnpm run build", "scripts/bundle-action.mjs --check"]
+  },
+  {
     name: "docs",
     includes: ["scripts/validate-docs.mjs"]
   },
@@ -492,22 +500,24 @@ export const disasterRecoveryDocumentContract = {
 export const actionInputsOutputsDocumentContract = {
   path: "docs/github-action/inputs-and-outputs.md",
   requiredSnippets: [
-    "- `mode`: `dry-run`, `propose`, or `stage-draft`, default `propose`",
+    "- `mode`: `dry-run`, `propose`, `stage-draft`, or `promote-draft`, default `propose`",
+    "- `draft-path`: approved `.clarissimi/drafts/*.json` path required by `promote-draft`",
     "- `summary-path`: optional workspace-relative path for a sanitized JSON summary artifact",
     "- `provider`: `fake` or `openai-compatible`; omitted values fall back to config, then `fake`",
     "- `provider-thinking`: optional OpenAI-compatible thinking mode; currently only `disabled`",
     "Provider API keys and GitHub tokens are not plain inputs.",
-    "reads `GITHUB_TOKEN` only in `propose` and `stage-draft`",
+    "reads `GITHUB_TOKEN` only in `propose`, `stage-draft`, and",
     "`CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`",
-    "`INPUT_SUMMARY_PATH`, `INPUT_PROVIDER`, `INPUT_PROVIDER_MODEL`, `INPUT_PROVIDER_ENDPOINT`, and",
+    "`INPUT_CONFIG_PATH`, `INPUT_DRAFT_PATH`, `INPUT_MODE`",
     "`INPUT_PROVIDER_THINKING`.",
-    "The root `action.yml` currently exposes `event-path`, `github-fixture`, `mode`, `base-branch`,",
+    "The root `action.yml` currently exposes `event-path`, `github-fixture`, `draft-path`, `mode`,",
     "`remote-name`, `staging-dir`, `summary-path`, `config-path`, `provider`, `provider-model`,",
     "`provider-endpoint`, and `provider-thinking`.",
     "`config-path` is explicit-only; the Action does not automatically discover repository config files.",
     "`summary-path` is explicit-only, must be relative, and must stay inside `GITHUB_WORKSPACE`.",
     "An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`",
     "In `propose` and `stage-draft`, event payloads route to the live GitHub collector",
+    "In `promote-draft`, event, fixture, config, and provider inputs are ignored or rejected",
     "- `summary-json-path` when `summary-path` is set",
     "Outputs must not include raw provider output, raw diff text, raw issue text, tokens, private keys",
     "Step summary content follows the same",
@@ -519,7 +529,8 @@ export const actionContractDocumentContract = {
   path: "docs/github-action/action-contract.md",
   requiredSnippets: [
     "The Action supports dry-run summaries, public recognition proposals, and draft inbox proposals.",
-    "- `INPUT_MODE`: `dry-run`, `propose`, or `stage-draft`, default `propose`",
+    "- `INPUT_MODE`: `dry-run`, `propose`, `stage-draft`, or `promote-draft`, default `propose`",
+    "- `INPUT_DRAFT_PATH`: approved `.clarissimi/drafts/*.json` path required by `promote-draft`",
     "- `INPUT_SUMMARY_PATH`: optional workspace-relative path for a sanitized JSON summary artifact",
     "- `INPUT_PROVIDER`: `fake` or `openai-compatible`, default `fake`",
     "- `CLARISSIMI_PROVIDER_TOKEN`: provider token required only for `openai-compatible`",
@@ -533,6 +544,9 @@ export const actionContractDocumentContract = {
     "`stage-draft` mode reads `GITHUB_TOKEN`",
     "It succeeds only for normal `draft` assessments and stages sanitized",
     "It must not write `.clarissimi/contributions.jsonl`,",
+    "`promote-draft` reads `GITHUB_TOKEN` only for proposal branch publication",
+    "performs no provider or",
+    "Draft, rejected, or skipped assessments fail before branch mutation.",
     "Proposal branch commits use a Clarissimi-owned bot author",
     "The source repository in collected evidence remains part of the public recognition context.",
     "- `summary-json-path` when `summary-path` is set",
@@ -544,6 +558,8 @@ export const actionContractDocumentContract = {
     "- Missing `CLARISSIMI_PROVIDER_TOKEN` or `INPUT_PROVIDER_MODEL` for `openai-compatible`: exit `1`,",
     "- Draft, rejected, or skipped assessment in `propose` mode: exit `4`, empty stdout, diagnostic on",
     "- Approved, auto-approved, rejected, or skipped assessment in `stage-draft` mode: exit `4`, empty",
+    "- Missing or out-of-inbox `draft-path` in `promote-draft`: exit `1`, empty stdout, diagnostic on",
+    "- Invalid, draft, rejected, or skipped assessment in `promote-draft`: exit `4`, empty stdout,",
     "Dry-run mode should need read permissions only.",
     "Commit mode is not implemented.",
     "- Default behavior requires broad write permissions.",
@@ -562,6 +578,7 @@ export const actionPermissionsDocumentContract = {
     "| `dry-run` | `read` | `read` | `read` | No | No |",
     "| `propose` | `write` | `write` | `read` | Proposal branch only | Yes |",
     "| `stage-draft` | `write` | `write` | `read` | Draft proposal branch only | Yes |",
+    "| `promote-draft` | `write` | `write` | `read` | Recognition proposal branch only | Yes |",
     "Any permission not listed in a workflow should remain unset",
     "- `contents: read`",
     "Dry-run mode should not write recognition files, branches, comments, or pull requests.",
@@ -575,6 +592,7 @@ export const actionPermissionsDocumentContract = {
     "instead of falling back to direct commits or broader credentials.",
     "Stage-draft mode writes only a sanitized draft inbox file",
     "`clarissimi/drafts/<source-kind>-<source-id>`",
+    "Promotion reads one approved draft under `.clarissimi/drafts/`",
     "Commit mode requires explicit configuration and should not be the default.",
     "Avoid default `pull_request_target` examples.",
     "Do not checkout or execute untrusted pull request head",
@@ -659,6 +677,7 @@ export const packageOwnershipContract = {
 export const workspaceContract = {
   path: "pnpm-workspace.yaml",
   requiredPackageGlob: '"packages/*"',
+  requiredBuildAllow: "  esbuild: true",
   packageNameScope: "@clarissimi"
 };
 
@@ -1007,6 +1026,7 @@ export const actionManifestContract = {
     { name: "event-path" },
     { name: "github-fixture" },
     { name: "config-path" },
+    { name: "draft-path" },
     { name: "base-branch", default: "main" },
     { name: "remote-name", default: "origin" },
     { name: "staging-dir" },
@@ -1038,11 +1058,12 @@ export const actionManifestContract = {
     "summary-json-path"
   ],
   requiredEnvMappings: [
-    "GITHUB_TOKEN: ${{ (inputs.mode == 'propose' || inputs.mode == 'stage-draft') && github.token || '' }}",
+    "GITHUB_TOKEN: ${{ (inputs.mode == 'propose' || inputs.mode == 'stage-draft' || inputs.mode == 'promote-draft') && github.token || '' }}",
     "INPUT_MODE: ${{ inputs.mode }}",
     "INPUT_EVENT_PATH: ${{ inputs.event-path }}",
     "INPUT_GITHUB_FIXTURE: ${{ inputs.github-fixture }}",
     "INPUT_CONFIG_PATH: ${{ inputs.config-path }}",
+    "INPUT_DRAFT_PATH: ${{ inputs.draft-path }}",
     "INPUT_BASE_BRANCH: ${{ inputs.base-branch }}",
     "INPUT_REMOTE_NAME: ${{ inputs.remote-name }}",
     "INPUT_STAGING_DIR: ${{ inputs.staging-dir }}",
@@ -1054,7 +1075,11 @@ export const actionManifestContract = {
     "CLARISSIMI_PROVIDER_TOKEN: ${{ env.CLARISSIMI_PROVIDER_TOKEN }}"
   ],
   requiredCommands: [
-    "pnpm --dir \"$GITHUB_ACTION_PATH\" install --frozen-lockfile",
+    "node \"$GITHUB_ACTION_PATH/action-dist/index.js\""
+  ],
+  forbiddenCommands: [
+    "corepack enable",
+    "pnpm --dir \"$GITHUB_ACTION_PATH\" install",
     "pnpm --dir \"$GITHUB_ACTION_PATH\" --filter @clarissimi/action build",
     "node \"$GITHUB_ACTION_PATH/packages/action/dist/bin/clarissimi-action.js\""
   ]
@@ -1099,6 +1124,10 @@ export const dogfoodWorkflowContracts = [
       "test \"${{ steps.propose.outputs.approval-status }}\" = \"approved\"",
       "test \"${{ steps.propose.outputs.staged-file-count }}\" = \"4\"",
       "test -n \"${{ steps.propose.outputs.proposal-pull-request-url }}\""
+    ],
+    forbiddenSnippets: [
+      "push:",
+      "pull_request:"
     ]
   },
   {
@@ -1117,6 +1146,33 @@ export const dogfoodWorkflowContracts = [
       "test \"${{ steps.stage.outputs.approval-status }}\" = \"draft\"",
       "test \"${{ steps.stage.outputs.staged-file-count }}\" = \"1\"",
       "test -n \"${{ steps.stage.outputs.proposal-pull-request-url }}\""
+    ],
+    forbiddenSnippets: [
+      "push:",
+      "pull_request:"
+    ]
+  },
+  {
+    path: ".github/workflows/clarissimi-promote-draft-fixture.yml",
+    requiredSnippets: [
+      "workflow_dispatch:",
+      "contents: write",
+      "pull-requests: write",
+      "issues: read",
+      "fetch-depth: 0",
+      "mode: promote-draft",
+      "draft-path: .clarissimi/drafts/sample-project-merged_pull_request-42.json",
+      "base-branch: ${{ inputs.base-branch }}",
+      "test \"${{ steps.promote.outputs.proposed-entry-count }}\" = \"1\"",
+      "test \"${{ steps.promote.outputs.mode }}\" = \"promote-draft\"",
+      "test \"${{ steps.promote.outputs.input-source }}\" = \"approved_draft\"",
+      "test \"${{ steps.promote.outputs.approval-status }}\" = \"approved\"",
+      "test \"${{ steps.promote.outputs.staged-file-count }}\" = \"4\"",
+      "test -n \"${{ steps.promote.outputs.proposal-pull-request-url }}\""
+    ],
+    forbiddenSnippets: [
+      "push:",
+      "pull_request:"
     ]
   }
 ];
@@ -1214,6 +1270,13 @@ export async function runReleaseReadiness(options = {}) {
   await runCiWorkflowContractCheck(repoRoot);
   await runDogfoodWorkflowContractChecks(repoRoot);
   await runHostedLiveProviderWorkflowContractCheck(repoRoot);
+
+  await runCheck({
+    repoRoot,
+    name: "Action bundle freshness",
+    command: "pnpm",
+    args: ["run", "bundle:action:check"]
+  });
 
   await runCheck({
     repoRoot,
@@ -1830,6 +1893,12 @@ export function validateActionManifestContract(text, contract = actionManifestCo
   for (const command of contract.requiredCommands) {
     if (!text.includes(command)) {
       issues.push(`${contract.path} must run ${command}.`);
+    }
+  }
+
+  for (const command of contract.forbiddenCommands ?? []) {
+    if (text.includes(command)) {
+      issues.push(`${contract.path} must not run ${command}.`);
     }
   }
 
@@ -2774,6 +2843,10 @@ export function validateWorkspaceContract(text, contract = workspaceContract) {
 
   if (!text.includes(contract.requiredPackageGlob)) {
     issues.push(`${contract.path} must include workspace package glob ${contract.requiredPackageGlob}.`);
+  }
+
+  if (!text.includes(contract.requiredBuildAllow)) {
+    issues.push(`${contract.path} must explicitly allow the pinned esbuild install script.`);
   }
 
   return issues;

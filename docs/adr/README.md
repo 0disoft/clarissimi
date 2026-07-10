@@ -48,6 +48,10 @@ engine.
 - `0030-add-action-summary-artifact.md`: add a workspace-bounded Action JSON summary artifact
 - `0031-first-public-action-release.md`: distribute the first public Action at immutable tag
   `v0.1.0` while package publication remains blocked
+- `0032-bundle-action-runtime.md`: keep the composite security boundary while executing a checked,
+  committed JavaScript bundle without consumer-time dependency installation or compilation
+- `0033-promote-approved-drafts.md`: turn an explicitly approved draft inbox file into a normal
+  public recognition proposal without provider calls or direct default-branch writes
 
 ## Review Blockers
 

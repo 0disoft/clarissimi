@@ -1,9 +1,10 @@
-import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 
 import { prepareEvidenceForProvider } from "@clarissimi/core";
+import { CONTRIBUTIONS_JSONL_PATH, parseContributionsJsonl } from "@clarissimi/renderers";
 import {
   collectMergedPullRequestEvidence,
   collectLiveMergedPullRequestEvidence,
@@ -24,7 +25,8 @@ import {
   type ConfigProviderThinking,
   type ContributionAssessment,
   type ValidationIssue,
-  validateClarissimiConfig
+  validateClarissimiConfig,
+  validateContributionAssessment
 } from "@clarissimi/schemas";
 
 import { publishProposalBranch } from "./branch-publisher.js";
@@ -39,6 +41,7 @@ import type {
   ActionDryRunInput,
   ActionDryRunSummary,
   ActionInputSource,
+  ActionPromoteDraftInput,
   ActionProposeInput,
   ActionProposeSummary,
   ActionProcessIo,
@@ -101,6 +104,7 @@ export async function runActionPropose(input: ActionProposeInput): Promise<Actio
   const staging = await stageProposalRecognitionOutputs({
     outputDir: input.stagingDir,
     assessments: [prepared.assessment],
+    existingRecords: await readExistingRecognitionRecords(input.repositoryDir),
     redactionMatchCount: prepared.redactionMatchCount
   });
   const branch = await writeProposalBranch({
@@ -196,6 +200,76 @@ export async function runActionStageDraft(input: ActionStageDraftInput): Promise
   };
 }
 
+export async function runActionPromoteDraft(
+  input: ActionPromoteDraftInput
+): Promise<ActionProposeSummary> {
+  const assessment = await readApprovedDraft(input.draftPath, input.repositoryDir);
+  const staging = await stageProposalRecognitionOutputs({
+    outputDir: input.stagingDir,
+    assessments: [assessment],
+    existingRecords: await readExistingRecognitionRecords(input.repositoryDir),
+    redactionMatchCount: 0
+  });
+  const branch = await writeProposalBranch({
+    repositoryDir: input.repositoryDir,
+    stagedOutputDir: input.stagingDir,
+    manifest: staging.manifest,
+    baseBranch: input.baseBranch
+  });
+  const publishInput: Parameters<typeof publishProposalBranch>[0] = {
+    repositoryDir: input.repositoryDir,
+    branch
+  };
+  assignOptional(publishInput, "remoteName", input.remoteName);
+  await publishProposalBranch(publishInput);
+  const pullRequestInput: Parameters<typeof createOrUpdateProposalPullRequest>[0] = {
+    client: input.pullRequestClient,
+    manifest: staging.manifest,
+    branch,
+    maintainerApprovalNote:
+      "This recognition proposal was rendered from an explicitly approved Clarissimi draft. Maintainers still own the final merge decision."
+  };
+  assignOptional(pullRequestInput, "targetRepository", input.targetRepository);
+  const pullRequest = await createOrUpdateProposalPullRequest(pullRequestInput);
+
+  return {
+    ok: true,
+    mode: "promote-draft",
+    inputSource: "approved_draft",
+    draftCount: 1,
+    proposedEntryCount: 1,
+    skippedEntryCount: 0,
+    publicOutputsRendered: true,
+    approvalStatus: assessment.maintainerApprovalStatus,
+    redactionChanged: false,
+    redactionMatchCount: 0,
+    stagedFileCount: staging.manifest.files.length,
+    proposalBranch: branch.branchName,
+    proposalCommitSha: branch.commitSha,
+    proposalPullRequestNumber: pullRequest.pullRequest.number,
+    proposalPullRequestUrl: pullRequest.pullRequest.url,
+    proposalPullRequestAction: pullRequest.action
+  };
+}
+
+async function readExistingRecognitionRecords(repositoryDir: string): Promise<readonly unknown[]> {
+  const ledgerPath = join(repositoryDir, CONTRIBUTIONS_JSONL_PATH);
+
+  try {
+    return parseContributionsJsonl(await readFile(ledgerPath, "utf8"));
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      return [];
+    }
+
+    throw error;
+  }
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && "code" in error;
+}
+
 export interface ActionEnvironmentRuntime {
   readonly pullRequestClient?: ProposalPullRequestClient;
   readonly liveGitHubClient?: ActionDryRunInput["liveGitHubClient"];
@@ -211,24 +285,30 @@ export async function runActionFromEnvironment(
   try {
     const explicitEventPath = readEnvInput(env.INPUT_EVENT_PATH);
     const githubFixturePath = readEnvInput(env.INPUT_GITHUB_FIXTURE);
-    const fallbackEventPath = githubFixturePath === undefined
+    const modeInput = readEnvInput(env.INPUT_MODE);
+    const explicitMode = modeInput === undefined ? undefined : normalizeActionMode(modeInput);
+    const fallbackEventPath = githubFixturePath === undefined && explicitMode !== "promote-draft"
       ? readEnvInput(env.GITHUB_EVENT_PATH)
       : undefined;
-    const modeInput = readEnvInput(env.INPUT_MODE);
-    if (modeInput !== undefined) {
-      normalizeActionMode(modeInput);
-    }
     const summaryJsonPath = resolveActionSummaryPath(env);
 
-    const config = await loadActionConfigFromEnvironment(env);
-    const mode = normalizeActionMode(modeInput ?? config.mode ?? "propose");
+    const config = explicitMode === "promote-draft"
+      ? {}
+      : await loadActionConfigFromEnvironment(env);
+    const mode = explicitMode ?? normalizeActionMode(config.mode ?? "propose");
     const input: ActionDryRunInput = {
       mode
     };
-    assignOptional(input, "eventPath", explicitEventPath ?? fallbackEventPath);
-    assignOptional(input, "githubFixturePath", githubFixturePath);
-    assignOptional(input, "liveGitHubClient", runtime.liveGitHubClient);
-    assignOptional(input, "provider", runtime.provider ?? resolveActionProvider(env, runtime, config));
+    if (mode === "promote-draft") {
+      if (explicitEventPath !== undefined || githubFixturePath !== undefined) {
+        throw new ActionUsageError("promote-draft accepts draft-path instead of event-path or github-fixture.");
+      }
+    } else {
+      assignOptional(input, "eventPath", explicitEventPath ?? fallbackEventPath);
+      assignOptional(input, "githubFixturePath", githubFixturePath);
+      assignOptional(input, "liveGitHubClient", runtime.liveGitHubClient);
+      assignOptional(input, "provider", runtime.provider ?? resolveActionProvider(env, runtime, config));
+    }
 
     const summary = await runActionMode(input, env, runtime);
     await writeActionSummaryJson(summaryJsonPath, summary);
@@ -283,6 +363,10 @@ async function runActionMode(
     return runActionStageDraft(buildActionWriteInput(input, env, runtime, "stage-draft"));
   }
 
+  if (mode === "promote-draft") {
+    return runActionPromoteDraft(buildActionWriteInput(input, env, runtime, "promote-draft"));
+  }
+
   return runActionDryRun({
     ...input,
     mode
@@ -313,21 +397,22 @@ function buildActionWriteInput(
   input: ActionDryRunInput,
   env: NodeJS.ProcessEnv,
   runtime: ActionEnvironmentRuntime,
-  mode: "propose" | "stage-draft"
-): ActionProposeInput | ActionStageDraftInput {
+  mode: "promote-draft"
+): ActionPromoteDraftInput;
+function buildActionWriteInput(
+  input: ActionDryRunInput,
+  env: NodeJS.ProcessEnv,
+  runtime: ActionEnvironmentRuntime,
+  mode: "propose" | "stage-draft" | "promote-draft"
+): ActionProposeInput | ActionStageDraftInput | ActionPromoteDraftInput {
   const clientOptions: Parameters<typeof createGitHubPullRequestClient>[0] = {
     token: requireEnvInput(env.GITHUB_TOKEN, "GITHUB_TOKEN")
   };
   assignOptional(clientOptions, "apiUrl", readEnvInput(env.GITHUB_API_URL));
   assignOptional(clientOptions, "fetch", runtime.fetch);
 
-  const liveGitHubClientOptions: Parameters<typeof createGitHubApiClient>[0] = {
-    token: clientOptions.token
-  };
-  assignOptional(liveGitHubClientOptions, "apiUrl", clientOptions.apiUrl);
-  assignOptional(liveGitHubClientOptions, "fetch", runtime.fetch);
-
   if (mode === "propose") {
+    const liveGitHubClientOptions = buildLiveGitHubClientOptions(clientOptions, runtime);
     const proposeInput: ActionProposeInput = {
       ...input,
       mode,
@@ -344,6 +429,24 @@ function buildActionWriteInput(
     return proposeInput;
   }
 
+  if (mode === "promote-draft") {
+    const promoteDraftInput: ActionPromoteDraftInput = {
+      mode,
+      draftPath: resolvePromoteDraftPath(env),
+      repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
+      stagingDir: readEnvInput(env.INPUT_STAGING_DIR)
+        ?? join(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-promote-draft"),
+      baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
+      pullRequestClient: runtime.pullRequestClient ?? createGitHubPullRequestClient(clientOptions)
+    };
+    assignOptional(promoteDraftInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
+    assignOptional(promoteDraftInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
+
+    return promoteDraftInput;
+  }
+
+  const liveGitHubClientOptions = buildLiveGitHubClientOptions(clientOptions, runtime);
+
   const stageDraftInput: ActionStageDraftInput = {
     ...input,
     mode,
@@ -358,6 +461,96 @@ function buildActionWriteInput(
   assignOptional(stageDraftInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
 
   return stageDraftInput;
+}
+
+function buildLiveGitHubClientOptions(
+  clientOptions: Parameters<typeof createGitHubPullRequestClient>[0],
+  runtime: ActionEnvironmentRuntime
+): Parameters<typeof createGitHubApiClient>[0] {
+  const options: Parameters<typeof createGitHubApiClient>[0] = {
+    token: clientOptions.token
+  };
+  assignOptional(options, "apiUrl", clientOptions.apiUrl);
+  assignOptional(options, "fetch", runtime.fetch);
+  return options;
+}
+
+function resolvePromoteDraftPath(env: NodeJS.ProcessEnv): string {
+  const inputPath = readEnvInput(env.INPUT_DRAFT_PATH);
+  if (inputPath === undefined) {
+    throw new ActionUsageError("INPUT_DRAFT_PATH is required for promote-draft mode.");
+  }
+
+  if (isAbsolute(inputPath)) {
+    throw new ActionUsageError("INPUT_DRAFT_PATH must be relative to GITHUB_WORKSPACE.");
+  }
+
+  const workspace = resolve(readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd());
+  const draftsRoot = resolve(workspace, ".clarissimi", "drafts");
+  const resolvedPath = resolve(workspace, inputPath);
+  if (!isPathInside(draftsRoot, resolvedPath) || resolvedPath === draftsRoot) {
+    throw new ActionUsageError("INPUT_DRAFT_PATH must point inside .clarissimi/drafts/.");
+  }
+
+  if (!resolvedPath.toLowerCase().endsWith(".json")) {
+    throw new ActionUsageError("INPUT_DRAFT_PATH must point to a JSON draft file.");
+  }
+
+  return resolvedPath;
+}
+
+async function readApprovedDraft(
+  path: string,
+  repositoryDir: string
+): Promise<ContributionAssessment> {
+  let realDraftPath: string;
+  let realDraftsRoot: string;
+  let realRepositoryDir: string;
+  try {
+    [realDraftPath, realDraftsRoot, realRepositoryDir] = await Promise.all([
+      realpath(path),
+      realpath(join(repositoryDir, ".clarissimi", "drafts")),
+      realpath(repositoryDir)
+    ]);
+  } catch {
+    throw new Error("Unable to resolve the approved Clarissimi draft path.");
+  }
+
+  if (
+    !isPathInside(realRepositoryDir, realDraftsRoot)
+    || !isPathInside(realDraftsRoot, realDraftPath)
+    || realDraftPath === realDraftsRoot
+  ) {
+    throw new Error("Approved Clarissimi draft resolves outside .clarissimi/drafts/.");
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(realDraftPath, "utf8")) as unknown;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error("Approved Clarissimi draft contains invalid JSON.");
+    }
+
+    throw new Error("Unable to read the approved Clarissimi draft.");
+  }
+
+  const result = validateContributionAssessment(parsed);
+  if (!result.ok) {
+    const issue = result.issues[0];
+    throw new Error(issue === undefined
+      ? "Approved Clarissimi draft is invalid."
+      : `Approved Clarissimi draft is invalid at ${issue.path}: ${issue.message}`);
+  }
+
+  if (
+    result.value.maintainerApprovalStatus !== "approved"
+    && result.value.maintainerApprovalStatus !== "auto_approved"
+  ) {
+    throw new Error("promote-draft requires maintainerApprovalStatus approved or auto_approved.");
+  }
+
+  return result.value;
 }
 
 type PreparedActionAssessment =

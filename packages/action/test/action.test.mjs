@@ -886,6 +886,65 @@ test("environment runner validates unsupported mode before loading config-path",
   });
 });
 
+test("promote-draft skips provider config and rejects draft paths outside the inbox", async () => {
+  await withTempDir(async (dir) => {
+    await writeFile(
+      join(dir, "clarissimi.config.ts"),
+      "throw new Error(\"CONFIG_SHOULD_NOT_LOAD\");\nexport default { provider: \"fake\" };\n",
+      "utf8"
+    );
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        GITHUB_TOKEN: "test-token",
+        GITHUB_WORKSPACE: dir,
+        INPUT_CONFIG_PATH: "clarissimi.config.ts",
+        INPUT_DRAFT_PATH: "../approved.json",
+        INPUT_MODE: "promote-draft"
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        }
+      }
+    );
+
+    assert.equal(exitCode, 1);
+    assert.equal(stdout, "");
+    assert.equal(stderr, "INPUT_DRAFT_PATH must point inside .clarissimi/drafts/.\n");
+  });
+});
+
+test("promote-draft rejects event and fixture inputs", async () => {
+  let stdout = "";
+  let stderr = "";
+
+  const exitCode = await runActionFromEnvironment(
+    {
+      INPUT_DRAFT_PATH: ".clarissimi/drafts/approved.json",
+      INPUT_GITHUB_FIXTURE: "fixture.json",
+      INPUT_MODE: "promote-draft"
+    },
+    {
+      stdout: (value) => {
+        stdout += value;
+      },
+      stderr: (value) => {
+        stderr += value;
+      }
+    }
+  );
+
+  assert.equal(exitCode, 1);
+  assert.equal(stdout, "");
+  assert.equal(stderr, "promote-draft accepts draft-path instead of event-path or github-fixture.\n");
+});
+
 test("environment runner requires a GitHub token before propose mode writes outputs", async () => {
   await withTempDir(async (dir) => {
     const outputPath = join(dir, "github-output.txt");

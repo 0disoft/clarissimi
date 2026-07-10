@@ -36,7 +36,8 @@ records the old SHA, replacement SHA, affected users, and recovery instructions.
 ## Consequences
 
 Repositories can pin the Action to a reviewable version without depending on npm publication. The
-Action continues to build its private workspace packages from the tagged source at runtime.
+`v0.1.0` release builds its private workspace packages from tagged source at runtime. ADR 0032
+replaces that runtime-build approach for later releases with a committed, freshness-checked bundle.
 
 The first release does not claim package stability, Marketplace availability, a stable `1.x`
 support policy, or compatibility for direct imports from workspace packages.

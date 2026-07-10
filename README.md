@@ -140,6 +140,12 @@ The first public Action release is pinned as `0disoft/clarissimi@v0.1.0`. Consum
 use that immutable tag instead of the moving `main` branch. npm packages and GitHub Marketplace
 publication remain intentionally unavailable.
 
+The current development branch prepares later releases to execute a committed Action bundle rather
+than installing pnpm dependencies and compiling TypeScript in each consumer run. `v0.1.0` keeps its
+published runtime behavior unchanged; use the next immutable patch tag after it is released to get
+the bundled startup path. Ubuntu is the currently supported consumer runner. macOS and Windows
+support remain unclaimed until consumer-level smoke coverage exists.
+
 The Action package runs dry-run summaries without GitHub API writes, live provider credentials, or
 repository file changes:
 
@@ -159,10 +165,21 @@ fixture, and a checked-out repository. It stages public output, publishes
 `clarissimi/recognition/<source-kind>-<source-id>`, and opens or updates a pull request for
 maintainer review.
 
+Propose and promote-draft modes preserve the checked-out append-only ledger: they validate existing
+records, reject duplicate contribution identities, append the new approved record, and rebuild all
+derived outputs from the complete ledger before creating a branch. Invalid or duplicate ledger
+state fails before Git or pull request mutation.
+
 Stage-draft mode requires the same checked-out repository and write permissions, but it stages only
 `.clarissimi/drafts/*.json`, publishes `clarissimi/drafts/<source-kind>-<source-id>`, and opens or
 updates a draft review pull request. It leaves `.clarissimi/contributions.jsonl`, `CONTRIBUTORS.md`,
 contributor JSON, and static public data untouched.
+
+The development branch also closes the approval loop with `promote-draft`: after a maintainer edits
+an inbox draft to `approved` or `auto_approved` and merges that review PR, a manual Action run can
+promote the checked-in draft into the normal recognition proposal. Promotion does not call a
+provider or infer approval. This mode is not present in immutable tag `v0.1.0`; wait for a later
+immutable release tag before using it from another repository.
 
 When `propose` or `stage-draft` receives `GITHUB_EVENT_PATH`, it routes the merged pull request
 through the live GitHub collector using `GITHUB_TOKEN`; fixture inputs remain the deterministic test
@@ -182,6 +199,10 @@ is not required for the agent-assisted import workflow. Public package publicati
 Action tags also require the hosted manual live-provider smoke workflow described in
 `docs/ops/release.md`; after configuring the repository secret, maintainers can run
 `pnpm run hosted-live-provider-smoke -- --model <provider-model>`.
+
+Release maintainers regenerate `action-dist/index.js` with `pnpm run bundle:action` and verify it
+against the current Action source with `pnpm run bundle:action:check`. Consumers do not run those
+commands.
 
 Workflow examples and permission details live in `docs/github-action/README.md` and
 `docs/github-action/permissions.md`.

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "clarissimi.assessment/v1",
+  "contributor": {
+    "platform": "github",
+    "id": "123456",
+    "login": "octocat",
+    "profileUrl": "https://github.com/octocat"
+  },
+  "contributionType": "test",
+  "affectedArea": "parser regression coverage",
+  "impactLevel": "medium",
+  "evidenceSummary": "Added regression coverage for parser behavior.",
+  "evidenceRefs": [
+    {
+      "kind": "pull_request",
+      "id": "PR-42",
+      "url": "https://github.com/sample/project/pull/42",
+      "title": "Add parser regression coverage"
+    }
+  ],
+  "suggestedBadge": "Regression Shield",
+  "publicRecognitionText": "Added regression coverage for the parser.",
+  "confidence": 0.82,
+  "maintainerApprovalStatus": "approved",
+  "source": {
+    "repository": "sample/project",
+    "event": "merged_pull_request",
+    "pullRequestNumber": 42,
+    "mergedAt": "2026-07-08T00:00:00.000Z"
+  }
+}

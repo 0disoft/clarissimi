@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
@@ -7,6 +7,7 @@ import test from "node:test";
 
 import {
   runActionFromEnvironment,
+  runActionPromoteDraft,
   runActionPropose,
   runActionStageDraft
 } from "../dist/index.js";
@@ -76,6 +77,41 @@ function pullRequestEvent(overrides = {}) {
   };
 }
 
+function approvedDraftAssessment(overrides = {}) {
+  return {
+    schemaVersion: "clarissimi.assessment/v1",
+    contributor: {
+      platform: "github",
+      id: "123456",
+      login: "octocat",
+      profileUrl: "https://github.com/octocat"
+    },
+    contributionType: "test",
+    affectedArea: "parser regression coverage",
+    impactLevel: "medium",
+    evidenceSummary: "Added a regression test for a parser crash.",
+    evidenceRefs: [
+      {
+        kind: "pull_request",
+        id: "PR-42",
+        url: "https://github.com/sample/project/pull/42",
+        title: "Add parser regression coverage"
+      }
+    ],
+    suggestedBadge: "Regression Shield",
+    publicRecognitionText: "Added regression coverage for the parser crash.",
+    confidence: 0.82,
+    maintainerApprovalStatus: "approved",
+    source: {
+      repository: "sample/project",
+      event: "merged_pull_request",
+      pullRequestNumber: 42,
+      mergedAt: "2026-07-08T00:00:00.000Z"
+    },
+    ...overrides
+  };
+}
+
 async function withTempDir(callback) {
   const dir = await mkdtemp(join(tmpdir(), "clarissimi-propose-runner-"));
   try {
@@ -117,6 +153,49 @@ test("runs fixture-first propose mode through branch publish and pull request cr
     assert.equal(await git(repositoryDir, ["ls-remote", "origin", "refs/heads/main"]), remoteMainSha);
     assert.equal(client.created.length, 1);
     assert.equal(client.created[0].body.includes("PATCH_EXCERPT_SENTINEL"), false);
+  });
+});
+
+test("propose mode preserves existing ledger records when rendering a new contribution", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const remoteDir = join(dir, "remote.git");
+    const stagingDir = join(dir, "staged");
+    const fixturePath = join(dir, "github-fixture.json");
+    const client = new FakePullRequestClient();
+    await initRepositoryWithRemote(repositoryDir, remoteDir);
+    await commitExistingLedger(repositoryDir, approvedDraftAssessment({
+      contributor: {
+        platform: "github",
+        id: "654321",
+        login: "hubot",
+        profileUrl: "https://github.com/hubot"
+      },
+      source: {
+        repository: "sample/project",
+        event: "merged_pull_request",
+        pullRequestNumber: 41,
+        mergedAt: "2026-07-07T00:00:00.000Z"
+      }
+    }));
+    await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+
+    await runActionPropose({
+      mode: "propose",
+      githubFixturePath: fixturePath,
+      repositoryDir,
+      stagingDir,
+      baseBranch: "main",
+      pullRequestClient: client
+    });
+    const records = (await readFile(
+      join(stagingDir, ".clarissimi", "contributions.jsonl"),
+      "utf8"
+    )).trim().split("\n").map((line) => JSON.parse(line));
+
+    assert.equal(records.length, 2);
+    assert.equal(records[0].contributor.login, "hubot");
+    assert.equal(records[1].contributor.login, "octocat");
   });
 });
 
@@ -166,6 +245,132 @@ test("runs fixture-first stage-draft mode through draft branch and pull request 
     assert.equal(client.created[0].body.includes("Clarissimi draft review proposal"), true);
     assert.equal(stagedDraftText.includes('"maintainerApprovalStatus": "draft"'), true);
     assert.equal(stagedDraftText.includes("PATCH_EXCERPT_SENTINEL"), false);
+  });
+});
+
+test("promotes an approved draft through a public recognition proposal", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const remoteDir = join(dir, "remote.git");
+    const stagingDir = join(dir, "staged");
+    const draftPath = join(repositoryDir, ".clarissimi", "drafts", "sample-project-42.json");
+    const client = new FakePullRequestClient();
+    await initRepositoryWithRemote(repositoryDir, remoteDir);
+    await mkdir(join(repositoryDir, ".clarissimi", "drafts"), { recursive: true });
+    await writeFile(draftPath, JSON.stringify(approvedDraftAssessment()), "utf8");
+    const remoteMainSha = await git(repositoryDir, ["ls-remote", "origin", "refs/heads/main"]);
+
+    const summary = await runActionPromoteDraft({
+      mode: "promote-draft",
+      draftPath,
+      repositoryDir,
+      stagingDir,
+      baseBranch: "main",
+      pullRequestClient: client
+    });
+
+    assert.equal(summary.mode, "promote-draft");
+    assert.equal(summary.inputSource, "approved_draft");
+    assert.equal(summary.proposedEntryCount, 1);
+    assert.equal(summary.publicOutputsRendered, true);
+    assert.equal(summary.approvalStatus, "approved");
+    assert.equal(summary.stagedFileCount, 4);
+    assert.equal(summary.proposalBranch, "clarissimi/recognition/merged_pull_request-42");
+    assert.equal(await remoteBranchSha(repositoryDir, summary.proposalBranch), summary.proposalCommitSha);
+    assert.equal(await git(repositoryDir, ["ls-remote", "origin", "refs/heads/main"]), remoteMainSha);
+    assert.equal(client.created.length, 1);
+    assert.equal(client.created[0].title, "Clarissimi recognition: sample/project#42");
+  });
+});
+
+test("promote-draft rejects a contribution already present in the ledger before branch mutation", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const remoteDir = join(dir, "remote.git");
+    const stagingDir = join(dir, "staged");
+    const draftPath = join(repositoryDir, ".clarissimi", "drafts", "sample-project-42.json");
+    const client = new FakePullRequestClient();
+    await initRepositoryWithRemote(repositoryDir, remoteDir);
+    await commitExistingLedger(repositoryDir, approvedDraftAssessment());
+    await mkdir(join(repositoryDir, ".clarissimi", "drafts"), { recursive: true });
+    await writeFile(draftPath, JSON.stringify(approvedDraftAssessment()), "utf8");
+
+    await assert.rejects(
+      () => runActionPromoteDraft({
+        mode: "promote-draft",
+        draftPath,
+        repositoryDir,
+        stagingDir,
+        baseBranch: "main",
+        pullRequestClient: client
+      }),
+      /already exists in the selected ledger/
+    );
+
+    assert.equal(client.created.length, 0);
+    assert.equal(await git(repositoryDir, ["branch", "--list", "clarissimi/recognition/*"]), "");
+  });
+});
+
+test("promote-draft rejects an unapproved draft before branch mutation", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const remoteDir = join(dir, "remote.git");
+    const stagingDir = join(dir, "staged");
+    const draftPath = join(repositoryDir, ".clarissimi", "drafts", "sample-project-42.json");
+    await initRepositoryWithRemote(repositoryDir, remoteDir);
+    await mkdir(join(repositoryDir, ".clarissimi", "drafts"), { recursive: true });
+    await writeFile(
+      draftPath,
+      JSON.stringify(approvedDraftAssessment({ maintainerApprovalStatus: "draft" })),
+      "utf8"
+    );
+
+    await assert.rejects(
+      () => runActionPromoteDraft({
+        mode: "promote-draft",
+        draftPath,
+        repositoryDir,
+        stagingDir,
+        baseBranch: "main",
+        pullRequestClient: new FakePullRequestClient()
+      }),
+      /requires maintainerApprovalStatus approved or auto_approved/
+    );
+    assert.equal(
+      await git(repositoryDir, ["branch", "--list", "clarissimi/recognition/merged_pull_request-42"]),
+      ""
+    );
+  });
+});
+
+test("promote-draft rejects a draft inbox symlink that resolves outside the repository", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const remoteDir = join(dir, "remote.git");
+    const externalDraftsDir = join(dir, "external-drafts");
+    const draftPath = join(repositoryDir, ".clarissimi", "drafts", "approved.json");
+    await initRepositoryWithRemote(repositoryDir, remoteDir);
+    await mkdir(join(repositoryDir, ".clarissimi"), { recursive: true });
+    await mkdir(externalDraftsDir);
+    await writeFile(
+      join(externalDraftsDir, "approved.json"),
+      JSON.stringify(approvedDraftAssessment()),
+      "utf8"
+    );
+    await symlink(externalDraftsDir, join(repositoryDir, ".clarissimi", "drafts"), "junction");
+
+    await assert.rejects(
+      () => runActionPromoteDraft({
+        mode: "promote-draft",
+        draftPath,
+        repositoryDir,
+        stagingDir: join(dir, "staged"),
+        baseBranch: "main",
+        pullRequestClient: new FakePullRequestClient()
+      }),
+      /resolves outside \.clarissimi\/drafts/
+    );
   });
 });
 
@@ -399,6 +604,19 @@ async function initRepositoryWithRemote(repositoryDir, remoteDir) {
   await git(repositoryDir, ["commit", "-m", "Initial commit"]);
   await git(repositoryDir, ["init", "--bare", remoteDir]);
   await git(repositoryDir, ["remote", "add", "origin", remoteDir]);
+  await git(repositoryDir, ["push", "origin", "main"]);
+}
+
+async function commitExistingLedger(repositoryDir, record) {
+  const ledgerDir = join(repositoryDir, ".clarissimi");
+  await mkdir(ledgerDir, { recursive: true });
+  await writeFile(
+    join(ledgerDir, "contributions.jsonl"),
+    `${JSON.stringify(record)}\n`,
+    "utf8"
+  );
+  await git(repositoryDir, ["add", ".clarissimi/contributions.jsonl"]);
+  await git(repositoryDir, ["commit", "-m", "Add existing recognition ledger"]);
   await git(repositoryDir, ["push", "origin", "main"]);
 }
 

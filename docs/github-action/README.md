@@ -40,14 +40,19 @@ Pin public workflows to `0disoft/clarissimi@v0.1.0`. The moving `main` ref is re
 repository's development and dogfood workflows.
 
 The current `action.yml` defaults to `propose` mode and also supports explicit read-only `dry-run`
-and write-mode `stage-draft`. It builds the local Action package from source at runtime. Dry-run
-mode emits a bounded summary and does not read provider credentials, use GitHub write tokens, create
-branches, open pull requests, or update repository files. Propose mode stages approved recognition
-output, publishes a proposal branch, and opens or updates a pull request. Stage-draft mode stages
-only sanitized `.clarissimi/drafts/*.json` review files and opens or updates a draft review pull
-request. When `propose` or `stage-draft` receives `GITHUB_EVENT_PATH`, it routes the merged pull
-request through the live GitHub collector using `GITHUB_TOKEN`; fixture inputs remain the
-deterministic local and test path.
+and write-mode `stage-draft`. Development builds execute the committed `action-dist/index.js`
+bundle without consumer-time package installation or TypeScript compilation. `v0.1.0` remains
+immutable and retains its published source-build behavior; the bundled runtime starts with the next
+patch release. Dry-run mode emits a bounded summary and does not read provider credentials, use
+GitHub write tokens, create branches, open pull requests, or update repository files. Propose mode
+stages approved recognition output, publishes a proposal branch, and opens or updates a pull
+request. Stage-draft mode stages only sanitized `.clarissimi/drafts/*.json` review files and opens
+or updates a draft review pull request. When `propose` or `stage-draft` receives
+`GITHUB_EVENT_PATH`, it routes the merged pull request through the live GitHub collector using
+`GITHUB_TOKEN`; fixture inputs remain the deterministic local and test path.
+
+Ubuntu is the currently supported consumer runner. The composite launcher uses Bash. macOS and
+Windows support require separate consumer-level smoke evidence before they can be claimed.
 
 The Action defaults to the fake provider when no provider input or config value is set. To use an
 OpenAI-compatible provider, pass `provider: openai-compatible` and `provider-model`, or provide
@@ -222,13 +227,53 @@ steps:
       base-branch: main
 ```
 
+After the staged draft pull request is reviewed, its `maintainerApprovalStatus` is changed to
+`approved` or `auto_approved`, and that pull request is merged, `promote-draft` can render a normal
+public recognition proposal without another provider call. Use a manual workflow input so the
+maintainer chooses the exact checked-in draft:
+
+```yaml
+name: Clarissimi promote approved draft
+
+on:
+  workflow_dispatch:
+    inputs:
+      draft-path:
+        description: Approved draft path under .clarissimi/drafts/
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: 0disoft/clarissimi@<immutable-tag-with-promote-draft>
+        with:
+          mode: promote-draft
+          draft-path: ${{ inputs.draft-path }}
+          base-branch: main
+```
+
+`promote-draft` is implemented on the development branch but is not available in immutable tag
+`v0.1.0`. Replace the placeholder only after a later immutable tag has passed external consumer
+smoke. Do not point production consumer workflows at `main` to get the feature early.
+
 This repository keeps write-mode dogfood manual-only in
 `.github/workflows/clarissimi-propose-fixture.yml` and
-`.github/workflows/clarissimi-stage-draft-fixture.yml`. Maintainers can trigger them with
-`workflow_dispatch` to open or update deterministic proposal pull requests from fixture inputs.
-The propose workflow uses the approved fixture and the stage-draft workflow uses the unapproved
-draft fixture. Do not replace the read-only dry-run dogfood workflow with these write-mode
-workflows.
+`.github/workflows/clarissimi-stage-draft-fixture.yml`. Approved-draft promotion dogfood is
+manual-only in `.github/workflows/clarissimi-promote-draft-fixture.yml`. Maintainers can trigger
+them with `workflow_dispatch` to open or update deterministic proposal pull requests from fixture
+inputs. The propose and promote workflows use approved fixtures, while the stage-draft workflow
+uses an unapproved draft fixture. Do not replace the read-only dry-run dogfood workflow with these
+write-mode workflows.
 
 ## Review Blockers
 

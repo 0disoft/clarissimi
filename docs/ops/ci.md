@@ -37,6 +37,8 @@ The current local CI parity commands are:
   and `migration-check` placeholders, release tool availability, CI runtime and release-tool pin
   drift, `ssealed doctor`, workflow `actionlint`, YAML parsing, `git diff --check`, tracked
   generated-output drift, high-risk secret patterns, and hosted CI validation wrapper registration.
+  The sole generated release-artifact exception is `action-dist/index.js`; release readiness
+  rebuilds it in memory and requires byte-for-byte freshness through `bundle:action:check`.
   It also verifies that rollback instructions still cover staging cleanup, proposal pull request
   closure, proposal branch deletion, post-merge reverts, and the no-database MVP policy; that
   `smoke` keeps workspace package pack dry-run coverage; that the root Action manifest keeps the
@@ -46,7 +48,8 @@ The current local CI parity commands are:
   read-only contents permission.
   Fixture dogfood workflow contracts are also checked so dry-run stays read-only, exercises the
   sanitized JSON summary artifact path, and propose and stage-draft stay manual, fixture-backed,
-  and output-asserting. It is a maintainer release gate, not a live-provider check. The hosted live
+  and output-asserting. Approved-draft promotion also stays manual, fixture-backed, and
+  output-asserting. It is a maintainer release gate, not a live-provider check. The hosted live
   provider workflow contract is checked for manual-only dispatch, read-only permissions, input and
   secret preflight before checkout, runtime setup, and the release smoke command.
 - `pnpm run lint`: runs `oxlint` across the repository as a fast JavaScript and TypeScript lint
@@ -58,6 +61,12 @@ The current local CI parity commands are:
 `release-readiness` until a formatter baseline ADR accepts the rewrite. `migration-check` also
 remains intentionally unconfigured, fails closed, and is protected by `release-readiness` until its
 owner defines a real check.
+
+`pnpm run bundle:action` compiles the workspace and writes the reviewable Action runtime bundle.
+`pnpm run bundle:action:check` compiles the same graph without rewriting the tracked artifact and
+fails when `action-dist/index.js` is missing or stale. Consumer workflows do not invoke pnpm or the
+TypeScript compiler. Source lint excludes the derived bundle; bundle freshness and bundled Action
+smoke cover that artifact instead.
 
 The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and
 manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,
@@ -105,9 +114,10 @@ with `pnpm run hosted-live-provider-smoke -- --model <provider-model>` for the e
 release-candidate commit before public package publication or a versioned Action tag.
 
 Repository Actions settings keep default workflow permissions at read-only, with workflow-created
-pull requests enabled so explicit `propose` and `stage-draft` jobs can open proposal pull requests.
+pull requests enabled so explicit `propose`, `stage-draft`, and `promote-draft` jobs can open proposal pull requests.
 Write-mode dogfood remains manual-only through `.github/workflows/clarissimi-propose-fixture.yml`
-and `.github/workflows/clarissimi-stage-draft-fixture.yml`.
+and `.github/workflows/clarissimi-stage-draft-fixture.yml`. Approved-draft promotion dogfood is
+manual-only through `.github/workflows/clarissimi-promote-draft-fixture.yml`.
 
 Hosted read-only dogfood evidence:
 

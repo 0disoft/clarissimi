@@ -43,10 +43,13 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   reading configs, ledgers, providers, or draft files
 - `packages/action`: Action runner for dry-run summaries, fixture-first public recognition
   proposals, fixture-first draft review proposals, and event-path live GitHub collection in write
-  modes with explicit config-path loading, optional sanitized JSON summary artifacts, and explicit
-  fake or OpenAI-compatible provider selection
-- root `action.yml`: composite Action defaulting to `propose` and exposing explicit `dry-run`
-  and explicit config-path loading
+  modes with explicit config-path loading, optional sanitized JSON summary artifacts, explicit
+  fake or OpenAI-compatible provider selection, and approved draft promotion without provider calls
+- root `action.yml`: composite Action defaulting to `propose`, exposing explicit `dry-run` and
+  config-path loading, and executing the committed `action-dist/index.js` release bundle without
+  consumer-time package installation or compilation
+- `scripts/bundle-action.mjs`: pinned esbuild bundle generation and byte-for-byte freshness checks
+  for the tracked Action release artifact
 - root `package.json`: configured `docs`, `lint`, `smoke`, and release-only
   `live-provider-smoke` scripts for documentation integrity, fast Oxlint coverage, CLI subprocess
   smoke coverage, Action dry-run coverage, and default propose and live-provider credential
@@ -65,6 +68,8 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   `event-path` inputs, including the sanitized JSON summary artifact path
 - `.github/workflows/clarissimi-propose-fixture.yml`: manual-only fixture propose dogfood
 - `.github/workflows/clarissimi-stage-draft-fixture.yml`: manual-only fixture stage-draft dogfood
+- `.github/workflows/clarissimi-promote-draft-fixture.yml`: manual-only approved-draft promotion
+  dogfood that verifies the provider-free public proposal path
 - `.github/workflows/clarissimi-live-provider-smoke.yml`: manual-only credentialed live provider
   smoke
 - `.github/workflows/ci.yml`: hosted validation for `docs`, `release-readiness`, `lint`, `smoke`,
@@ -185,6 +190,12 @@ Completed deliverables:
   closed before mutation
 - proposal pull requests target the current GitHub Actions repository while preserving collected
   source repository context in the recognition body
+- existing canonical ledger records are parsed, duplicate-checked, preserved, and combined with the
+  new assessment before every public output is rebuilt
+- malformed, internally duplicated, or already-recorded contributor/source identities fail before
+  branch publication or pull request mutation
+- repository output paths are checked after proposal-branch checkout and reject symlinks,
+  junctions, hard-linked files, and real-path escapes before staged bytes are copied
 
 Validation:
 

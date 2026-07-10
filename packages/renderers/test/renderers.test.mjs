@@ -5,6 +5,7 @@ import {
   CONTRIBUTIONS_JSONL_PATH,
   RENDERED_OUTPUT_PATHS,
   RendererValidationError,
+  appendPublicContributionRecord,
   buildContributorsJsonDocument,
   buildMaintainerRecentRecognitionShareDocument,
   buildStaticContributionsDocument,
@@ -95,6 +96,51 @@ test("renders only public contribution record fields", () => {
 test("renders empty JSONL as an empty file", () => {
   assert.equal(renderContributionsJsonl([]), "");
   assert.deepEqual(parseContributionsJsonl(""), []);
+});
+
+test("appends a contribution without replacing existing ledger records", () => {
+  const existing = assessment({
+    contributor: {
+      platform: "github",
+      id: "654321",
+      login: "hubot",
+      profileUrl: "https://github.com/hubot"
+    },
+    source: {
+      ...source,
+      pullRequestNumber: 41
+    }
+  });
+  const records = appendPublicContributionRecord([existing], assessment());
+
+  assert.equal(records.length, 2);
+  assert.equal(records[0].contributor.login, "hubot");
+  assert.equal(records[1].contributor.login, "octocat");
+});
+
+test("rejects duplicate contribution identity while appending", () => {
+  assert.throws(
+    () => appendPublicContributionRecord([assessment()], assessment()),
+    (error) => {
+      assert.equal(error instanceof RendererValidationError, true);
+      assert.equal(error.issues[0].code, "duplicate_source");
+      return true;
+    }
+  );
+});
+
+test("rejects duplicate identities already present in a ledger before appending", () => {
+  assert.throws(
+    () => appendPublicContributionRecord(
+      [assessment(), assessment()],
+      assessment({ source: { ...source, pullRequestNumber: 43 } })
+    ),
+    (error) => {
+      assert.equal(error instanceof RendererValidationError, true);
+      assert.equal(error.message, "Ledger contains duplicate contribution records.");
+      return true;
+    }
+  );
 });
 
 test("rejects draft assessments before rendering public outputs", () => {

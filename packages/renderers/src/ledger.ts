@@ -22,6 +22,55 @@ export function toPublicContributionRecords(
   return values.map(toPublicContributionRecord);
 }
 
+export function appendPublicContributionRecord(
+  existingValues: readonly unknown[],
+  nextValue: unknown
+): readonly PublicContributionRecord[] {
+  const existingRecords = toPublicContributionRecords(existingValues);
+  assertUniqueContributionRecords(existingRecords);
+  const nextRecord = toPublicContributionRecord(nextValue);
+
+  if (existingRecords.some((record) => hasSameContributionIdentity(record, nextRecord))) {
+    throw new RendererValidationError("Contribution already exists in the selected ledger.", [
+      {
+        path: "$.source",
+        code: "duplicate_source",
+        message: "A contribution from this contributor and merged pull request is already recorded."
+      }
+    ]);
+  }
+
+  return [...existingRecords, nextRecord];
+}
+
+export function assertUniqueContributionRecords(
+  records: readonly PublicContributionRecord[]
+): void {
+  const seen = new Map<string, number>();
+
+  records.forEach((record, index) => {
+    const key = contributionIdentityKey(record);
+    const firstIndex = seen.get(key);
+    if (firstIndex !== undefined) {
+      throw new RendererValidationError("Ledger contains duplicate contribution records.", [
+        {
+          path: `$[${index}].source`,
+          code: "duplicate_source",
+          message:
+            "Ledger records must be unique for contributor platform, contributor id, repository, event, and pull request number."
+        },
+        {
+          path: `$[${firstIndex}].source`,
+          code: "duplicate_source_original",
+          message: "This earlier ledger record has the same contribution identity."
+        }
+      ]);
+    }
+
+    seen.set(key, index);
+  });
+}
+
 export function renderContributionsJsonl(values: readonly unknown[]): string {
   const records = toPublicContributionRecords(values);
   if (records.length === 0) {
@@ -94,6 +143,23 @@ export function parseContributionsJsonl(input: string): readonly PublicContribut
 
 export function stableStringify(value: unknown): string {
   return JSON.stringify(sortJsonValue(value));
+}
+
+function hasSameContributionIdentity(
+  left: PublicContributionRecord,
+  right: PublicContributionRecord
+): boolean {
+  return contributionIdentityKey(left) === contributionIdentityKey(right);
+}
+
+function contributionIdentityKey(record: PublicContributionRecord): string {
+  return [
+    record.contributor.platform,
+    record.contributor.id,
+    record.source.repository,
+    record.source.event,
+    String(record.source.pullRequestNumber)
+  ].join("\0");
 }
 
 export function renderPrettyJson(value: unknown): string {

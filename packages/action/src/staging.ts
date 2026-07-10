@@ -5,6 +5,7 @@ import { dirname, isAbsolute, join, normalize, sep } from "node:path";
 import { canPublishAssessment } from "@clarissimi/core";
 import {
   RENDERED_OUTPUT_PATHS,
+  appendPublicContributionRecord,
   draftReviewPathForAssessment,
   renderDraftReviewJson,
   renderRecognitionOutputs,
@@ -16,6 +17,7 @@ import type { ContributionAssessment, RecognitionSource, ValidationIssue } from 
 export interface ProposalOutputStagingInput {
   readonly outputDir: string;
   readonly assessments: readonly unknown[];
+  readonly existingRecords?: readonly unknown[];
   readonly redactionMatchCount: number;
 }
 
@@ -59,7 +61,11 @@ export async function stageProposalRecognitionOutputs(
 ): Promise<ProposalOutputStagingResult> {
   const assessments = toPublishableAssessments(input.assessments);
   const source = requireSingleSource(assessments);
-  const outputs = renderRecognitionOutputs(assessments);
+  const records = assessments.reduce<readonly unknown[]>(
+    (currentRecords, assessment) => appendPublicContributionRecord(currentRecords, assessment),
+    input.existingRecords ?? []
+  );
+  const outputs = renderRecognitionOutputs(records);
   const files = await writeRenderedOutputs(input.outputDir, outputs);
 
   return {

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
@@ -187,6 +187,41 @@ test("refuses to overwrite existing proposal branches with unowned changes", asy
         && error.code === "existing_branch_has_unowned_changes"
     );
 
+    assert.equal(await git(repositoryDir, ["rev-parse", "main"]), mainSha);
+    assert.equal(await git(repositoryDir, ["branch", "--show-current"]), "main");
+  });
+});
+
+test("rejects repository output paths that traverse a junction before writing outside the repository", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const stagedOutputDir = join(dir, "staged");
+    const externalDir = join(dir, "external");
+    const externalLedger = join(externalDir, "contributions.jsonl");
+    await initRepository(repositoryDir);
+    await mkdir(externalDir);
+    await writeFile(externalLedger, "EXTERNAL_SENTINEL\n", "utf8");
+    await symlink(externalDir, join(repositoryDir, ".clarissimi"), "junction");
+    const mainSha = await git(repositoryDir, ["rev-parse", "main"]);
+    const staging = await stageProposalRecognitionOutputs({
+      outputDir: stagedOutputDir,
+      assessments: [assessment()],
+      redactionMatchCount: 0
+    });
+
+    await assert.rejects(
+      () => writeProposalBranch({
+        repositoryDir,
+        stagedOutputDir,
+        manifest: staging.manifest,
+        baseBranch: "main"
+      }),
+      (error) =>
+        error instanceof ProposalBranchWriterError
+        && error.code === "unsafe_repository_output_path"
+    );
+
+    assert.equal(await readFile(externalLedger, "utf8"), "EXTERNAL_SENTINEL\n");
     assert.equal(await git(repositoryDir, ["rev-parse", "main"]), mainSha);
     assert.equal(await git(repositoryDir, ["branch", "--show-current"]), "main");
   });

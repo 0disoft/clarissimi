@@ -38,6 +38,7 @@ export const requiredDocumentationPaths = [
   ".github/workflows/ci.yml",
   ".github/workflows/clarissimi-dry-run.yml",
   ".github/workflows/clarissimi-live-provider-smoke.yml",
+  ".github/workflows/clarissimi-promote-draft-fixture.yml",
   ".github/workflows/clarissimi-propose-fixture.yml",
   ".github/workflows/clarissimi-stage-draft-fixture.yml",
   "scripts/hosted-live-provider-smoke.mjs",

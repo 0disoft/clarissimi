@@ -3537,7 +3537,7 @@ async function writeGitHubOutputs(outputPath, summary, summaryJsonPath) {
   if (summaryJsonPath !== void 0) {
     lines.push(`summary-json-path=${summaryJsonPath}`);
   }
-  if (summary.mode === "propose" || summary.mode === "stage-draft") {
+  if (summary.mode === "propose" || summary.mode === "stage-draft" || summary.mode === "promote-draft") {
     lines.push(`staged-file-count=${summary.stagedFileCount}`, `proposal-branch=${summary.proposalBranch}`, `proposal-commit-sha=${summary.proposalCommitSha}`, `proposal-pull-request-number=${summary.proposalPullRequestNumber}`, `proposal-pull-request-url=${summary.proposalPullRequestUrl}`, `proposal-pull-request-action=${summary.proposalPullRequestAction}`);
   }
   await appendFile(outputPath, `${lines.join("\n")}

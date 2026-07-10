@@ -283,6 +283,65 @@ test("promotes an approved draft through a public recognition proposal", async (
   });
 });
 
+test("environment runner writes promote-draft proposal outputs", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const remoteDir = join(dir, "remote.git");
+    const stagingDir = join(dir, "staged");
+    const draftRelativePath = ".clarissimi/drafts/sample-project-42.json";
+    const draftPath = join(repositoryDir, draftRelativePath);
+    const outputPath = join(dir, "github-output.txt");
+    const summaryPath = join(dir, "step-summary.md");
+    const client = new FakePullRequestClient();
+    await initRepositoryWithRemote(repositoryDir, remoteDir);
+    await mkdir(join(repositoryDir, ".clarissimi", "drafts"), { recursive: true });
+    await writeFile(draftPath, JSON.stringify(approvedDraftAssessment()), "utf8");
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        GITHUB_OUTPUT: outputPath,
+        GITHUB_STEP_SUMMARY: summaryPath,
+        GITHUB_WORKSPACE: repositoryDir,
+        GITHUB_REPOSITORY: "0disoft/clarissimi",
+        INPUT_BASE_BRANCH: "main",
+        INPUT_DRAFT_PATH: draftRelativePath,
+        INPUT_MODE: "promote-draft",
+        INPUT_STAGING_DIR: stagingDir,
+        GITHUB_TOKEN: "test-token"
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        }
+      },
+      {
+        pullRequestClient: client
+      }
+    );
+    const parsed = JSON.parse(stdout);
+    const outputText = await readFile(outputPath, "utf8");
+    const summaryText = await readFile(summaryPath, "utf8");
+
+    assert.equal(exitCode, 0);
+    assert.equal(stderr, "");
+    assert.equal(parsed.mode, "promote-draft");
+    assert.equal(outputText.includes("staged-file-count=4"), true);
+    assert.equal(
+      outputText.includes("proposal-branch=clarissimi/recognition/merged_pull_request-42"),
+      true
+    );
+    assert.equal(outputText.includes("proposal-pull-request-number=1"), true);
+    assert.equal(outputText.includes("proposal-pull-request-action=created"), true);
+    assert.equal(summaryText.includes("## Clarissimi promote-draft summary"), true);
+    assert.equal(client.created[0].repository, "0disoft/clarissimi");
+  });
+});
+
 test("promote-draft rejects a contribution already present in the ledger before branch mutation", async () => {
   await withTempDir(async (dir) => {
     const repositoryDir = join(dir, "repo");

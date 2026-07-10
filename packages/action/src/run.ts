@@ -821,7 +821,11 @@ async function writeGitHubOutputs(
     lines.push(`summary-json-path=${summaryJsonPath}`);
   }
 
-  if (summary.mode === "propose" || summary.mode === "stage-draft") {
+  if (
+    summary.mode === "propose"
+    || summary.mode === "stage-draft"
+    || summary.mode === "promote-draft"
+  ) {
     lines.push(
       `staged-file-count=${summary.stagedFileCount}`,
       `proposal-branch=${summary.proposalBranch}`,

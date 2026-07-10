@@ -75,6 +75,9 @@ inapplicable; the approved draft file is the only assessment input.
 - `proposal-pull-request-action`
 - `summary-json-path` when `summary-path` is set
 
+The proposal fields are populated after successful `propose`, `stage-draft`, and `promote-draft`
+runs. Dry-run leaves proposal fields empty.
+
 Outputs must not include raw provider output, raw diff text, raw issue text, tokens, private keys,
 raw pull request bodies, raw patch excerpts, or sensitive security details.
 

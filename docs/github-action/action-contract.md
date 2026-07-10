@@ -137,7 +137,7 @@ The root `action.yml` maps these fields to GitHub Action outputs using the same 
 `draft-count`, `proposed-entry-count`, `skipped-entry-count`, `mode`, `input-source`,
 `approval-status`, and `redaction-match-count`.
 
-In `propose` and `stage-draft` modes, the Action also emits:
+In `propose`, `stage-draft`, and `promote-draft` modes, the Action also emits:
 
 - `staged-file-count`
 - `proposal-branch`

@@ -43,6 +43,8 @@ The versioned Action tag requires:
   `release-readiness` step, passes on the release candidate commit
 - `pnpm run hosted-ci-validation` confirms the hosted `CI` workflow passed for the release
   candidate commit
+- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>` passes in the private
+  `0disoft/integration-lab` consumer repository for the immutable candidate ref
 - `pnpm run lint`
 - `pnpm run check`
 - `pnpm run contract`
@@ -119,6 +121,21 @@ commit and uses `gh run watch` when the run is still queued or in progress. It d
 current local `HEAD`, `0disoft/clarissimi`, `main`, and workflow `CI`; pass `--sha`, `--repo`,
 `--branch`, or `--workflow` only when validating a different release candidate.
 
+After hosted CI passes, exercise the Action from a separate consumer repository. Omit the option to
+test the current Clarissimi `HEAD` SHA, or pass an immutable release tag explicitly:
+
+```powershell
+pnpm run hosted-external-consumer-smoke
+pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0.1.1
+```
+
+The helper rejects moving Clarissimi refs, dispatches `clarissimi.yml` in the private
+`0disoft/integration-lab` repository, and watches the resulting workflow to completion. The consumer
+workflow checks out the requested tag or SHA into its own workspace before invoking the local Action
+path, so this gate detects consumer checkout, bundle startup, and input-contract failures that
+Clarissimi's same-repository dogfood cannot expose. It uses the maintainer's authenticated `gh`
+session and does not read provider secrets.
+
 After `CLARISSIMI_PROVIDER_TOKEN` is configured as a repository secret, run the manual hosted smoke
 from a maintainer shell without printing the token value:
 
@@ -158,8 +175,9 @@ provider token value. If a maintainer needs to run the underlying commands manua
 endpoint, and thinking inputs.
 
 Keep recent passed workflow evidence in this document so release readiness does not silently drift.
-For the final release candidate, capture the exact hosted CI and hosted live-provider run URLs in
-the release PR, release issue, or GitHub release notes after the final candidate commit is pushed.
+For the final release candidate, capture the exact hosted CI, external consumer, and hosted
+live-provider run URLs in the release PR, release issue, or GitHub release notes after the final
+candidate commit is pushed.
 Do not make an evidence-only commit after final candidate validation just to chase the candidate
 SHA; that commit would create a new candidate and stale the evidence again.
 Use `docs/ops/release-candidate-evidence.md` as the copyable evidence checklist for that external
@@ -175,6 +193,17 @@ Refresh this evidence with
 release-candidate commit before public package publication or a versioned Action tag, then attach
 the final run URL outside the repository commit if updating this document would change the
 candidate SHA.
+
+Recent external consumer evidence: `Clarissimi external consumer` workflow run `29081007872`
+passed in `0disoft/integration-lab` for immutable tag `v0.1.1`. The full stage, approve, promote,
+and Markdown summary table path subsequently passed in workflow run `29081250915` and merged
+recognition pull request `https://github.com/0disoft/integration-lab/pull/9`.
+Run URLs: `https://github.com/0disoft/integration-lab/actions/runs/29081007872` and
+`https://github.com/0disoft/integration-lab/actions/runs/29081250915`.
+Refresh this evidence with
+`pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>` for the exact immutable
+release candidate, then attach the final run URL outside the repository commit if updating this
+document would change the candidate SHA.
 
 ## Owners
 

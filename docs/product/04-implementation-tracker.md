@@ -62,6 +62,8 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   hosted workflow dispatch and watch after the repository secret name is configured
 - root `package.json`: configured `hosted-ci-validation` script for release maintainers to verify
   that the hosted `CI` workflow passed for the selected release candidate commit
+- root `package.json`: configured `hosted-external-consumer-smoke` script for release maintainers to
+  dispatch and watch an immutable Clarissimi tag or SHA in `0disoft/integration-lab`
 - root `package.json`: configured `release-candidate-evidence-issue` script for release
   maintainers to validate hosted CI and hosted live-provider run metadata before creating an
   external release evidence issue
@@ -487,9 +489,12 @@ Completed deliverables:
   maintainers must refresh this evidence with `pnpm run hosted-ci-validation` for the exact
   release-candidate commit before publication or versioned Action tags
 - `docs/ops/release-candidate-evidence.md` provides a copyable final-candidate evidence checklist
-  so maintainers can attach exact hosted CI and hosted live-provider run URLs to a release PR,
-  release issue, or GitHub release notes without creating an evidence-only commit that changes the
-  candidate SHA
+  so maintainers can attach exact hosted CI, external consumer, and hosted live-provider run URLs to
+  a release PR, release issue, or GitHub release notes without creating an evidence-only commit that
+  changes the candidate SHA
+- immutable tag `v0.1.1` passed external consumer run `29081007872`; the full stage, approve,
+  promote, and Markdown summary table path passed run `29081250915` and merged integration-lab
+  recognition pull request `#9`
 - `pnpm run release-candidate-evidence-issue` validates candidate run metadata and creates or
   previews the external release evidence issue without reading provider token values; versioned
   Action evidence records release type, immutable tag, ADR 0031, and the package blocker

@@ -141,15 +141,14 @@ node packages/cli/dist/bin/clarissimi.js import-draft --draft .clarissimi/drafts
 
 ## GitHub Action
 
-The first public Action release is pinned as `0disoft/clarissimi@v0.1.0`. Consumer workflows should
-use that immutable tag instead of the moving `main` branch. npm packages and GitHub Marketplace
-publication remain intentionally unavailable.
+The current public Action release is `0disoft/clarissimi@v0.1.1`. Consumer workflows should use
+that immutable tag instead of the moving `main` branch. The first release, `v0.1.0`, remains
+immutable. npm packages and GitHub Marketplace publication remain intentionally unavailable.
 
-The current development branch prepares later releases to execute a committed Action bundle rather
-than installing pnpm dependencies and compiling TypeScript in each consumer run. `v0.1.0` keeps its
-published runtime behavior unchanged; use the next immutable patch tag after it is released to get
-the bundled startup path. Ubuntu is the currently supported consumer runner. macOS and Windows
-support remain unclaimed until consumer-level smoke coverage exists.
+The `v0.1.1` release executes the committed Action bundle rather than installing pnpm dependencies
+and compiling TypeScript in each consumer run. `v0.1.0` keeps its published source-build runtime
+behavior unchanged. Ubuntu is the currently supported consumer runner. macOS and Windows support
+remain unclaimed until consumer-level smoke coverage exists.
 
 The Action package runs dry-run summaries without GitHub API writes, live provider credentials, or
 repository file changes:
@@ -180,11 +179,10 @@ Stage-draft mode requires the same checked-out repository and write permissions,
 updates a draft review pull request. It leaves `.clarissimi/contributions.jsonl`, `CONTRIBUTORS.md`,
 contributor JSON, and static public data untouched.
 
-The development branch also closes the approval loop with `promote-draft`: after a maintainer edits
+The `v0.1.1` release closes the approval loop with `promote-draft`: after a maintainer edits
 an inbox draft to `approved` or `auto_approved` and merges that review PR, a manual Action run can
 promote the checked-in draft into the normal recognition proposal. Promotion does not call a
-provider or infer approval. This mode is not present in immutable tag `v0.1.0`; wait for a later
-immutable release tag before using it from another repository.
+provider or infer approval.
 
 When `propose` or `stage-draft` receives `GITHUB_EVENT_PATH`, it routes the merged pull request
 through the live GitHub collector using `GITHUB_TOKEN`; fixture inputs remain the deterministic test
@@ -196,8 +194,8 @@ disabled`. The Action can also load a JSON config file or `clarissimi.config.ts`
 is explicitly provided; it does not automatically discover config files. Set `summary-path` when a
 workflow should keep the sanitized JSON run summary as an uploadable artifact. Set
 `markdown-summary: table` to add the compact table to proposed `CONTRIBUTORS.md` output; this input
-also works in `promote-draft`, which otherwise skips config and provider loading. This input is not
-available in immutable tag `v0.1.0`; use a later release tag that includes it.
+also works in `promote-draft`, which otherwise skips config and provider loading. This input is
+available in immutable tag `v0.1.1`.
 
 Release maintainers who want automated provider mode can run `pnpm run live-provider-smoke` with
 `CLARISSIMI_PROVIDER_TOKEN` and `CLARISSIMI_PROVIDER_MODEL` to perform an explicit credentialed
@@ -270,6 +268,7 @@ The current executable checks are:
 Release-only hosted checks are:
 
 - `pnpm run hosted-ci-validation`
+- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`
 - `pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --provider-model <provider-model>`
 
 Release-only credentialed checks are:

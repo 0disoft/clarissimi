@@ -74,6 +74,26 @@ Record:
 - Provider endpoint override, if any:
 - Provider thinking mode, if any:
 
+## External Consumer Evidence
+
+Run this after the candidate commit is pushed. The helper accepts only an immutable version tag or
+40-character commit SHA:
+
+```powershell
+pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>
+```
+
+Record:
+
+- Consumer repository: `0disoft/integration-lab`
+- Workflow name: `Clarissimi external consumer`
+- Run URL:
+- Run id:
+- Run conclusion:
+- Run timestamp:
+- Clarissimi tag or commit SHA under test:
+- Consumer workflow commit SHA:
+
 ## Evidence Issue Helper
 
 After hosted CI and hosted live-provider smoke pass for the same candidate SHA, create or preview a
@@ -113,5 +133,6 @@ Before publication or a versioned Action tag, confirm:
   recognition records, derived output rebuilds, and immutable Action tag recovery.
 - Versioned Action releases use the exact tag recorded in the evidence issue and do not create a
   moving `v0` alias.
+- The external consumer workflow passed for that exact immutable tag or commit SHA.
 - No evidence-only commit was created after final candidate validation solely to update recorded run
   URLs.

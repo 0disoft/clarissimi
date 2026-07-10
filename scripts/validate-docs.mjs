@@ -44,7 +44,8 @@ export const requiredDocumentationPaths = [
   "scripts/hosted-external-consumer-smoke.mjs",
   "scripts/hosted-live-provider-smoke.mjs",
   "scripts/release-candidate-evidence-issue.mjs",
-  "scripts/release-readiness.mjs"
+  "scripts/release-readiness.mjs",
+  "scripts/verify-action-major-tag.mjs"
 ];
 
 export async function validateDocs(options = {}) {

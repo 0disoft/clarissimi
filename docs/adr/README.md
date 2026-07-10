@@ -52,6 +52,8 @@ engine.
   committed JavaScript bundle without consumer-time dependency installation or compilation
 - `0033-promote-approved-drafts.md`: turn an explicitly approved draft inbox file into a normal
   public recognition proposal without provider calls or direct default-branch writes
+- `0034-add-v0-major-alias.md`: provide the moving `v0` Action channel with exact-SHA verification
+  while immutable patch tags remain fixed
 
 ## Review Blockers
 

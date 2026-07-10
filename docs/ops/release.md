@@ -8,13 +8,14 @@ Cover release types, versioning, pre-release checklist, deployment flow, post-de
 
 ## Current Release Policy
 
-Clarissimi is not ready for public package publication. ADR 0031 authorizes the first public root
-GitHub Action release at immutable tag `v0.1.0` after every gate in this document passes for the
-exact tag target commit. The corresponding GitHub Release must be marked as a pre-release.
+Clarissimi is not ready for public package publication. ADR 0031 authorizes immutable root GitHub
+Action releases beginning with `v0.1.0` after every gate in this document passes for the exact tag
+target commit. ADR 0034 authorizes moving major alias `v0` only after it is tied to one explicitly
+selected, already validated immutable `v0.x.y` release.
 
 The current root and workspace packages stay private at `0.0.0`. Do not bump package versions,
-remove `private: true`, publish npm packages, create a moving `v0` tag, or publish to GitHub
-Marketplace until a separate accepted release decision changes those boundaries.
+remove `private: true`, publish npm packages, create another moving major alias, or publish to
+GitHub Marketplace until a separate accepted release decision changes those boundaries.
 
 ## Release Types
 
@@ -24,8 +25,10 @@ Marketplace until a separate accepted release decision changes those boundaries.
 - Dogfood workflow update: allowed when Action examples, permissions, `actionlint`, and root
   `action.yml` parsing pass.
 - Public package publication: blocked.
-- Versioned GitHub Action tag: allowed for immutable `v0.1.0` under ADR 0031 after all pre-release
-  gates pass for the exact tag target commit.
+- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0031 after all
+  pre-release gates pass for the exact tag target commit.
+- Moving GitHub Action major alias: `v0` is allowed under ADR 0034 after the selected immutable
+  release passes the alias verification and external consumer gates.
 - GitHub Marketplace publication: blocked.
 
 ## Pre-Release Gates
@@ -75,7 +78,7 @@ workspace publication scope, and package rollback.
 4. Create an external release evidence issue that identifies release type `versioned-action-tag`,
    release version `v0.1.0`, ADR 0031, all four run URLs, and the candidate SHA.
 5. Create immutable tag `v0.1.0` at that SHA and create a GitHub pre-release linked to the evidence
-   issue. Do not create or move a `v0` alias.
+   issue. The first release does not create `v0`; later promotion follows ADR 0034.
 6. Verify the remote tag target, GitHub Release metadata, and a hosted live-provider smoke run using
    ref `v0.1.0`.
 
@@ -87,6 +90,25 @@ the old SHA, replacement SHA, user impact, and recovery path in a public issue.
 For releases after `v0.1.0`, regenerate `action-dist/index.js` before candidate validation and
 verify it with `pnpm run bundle:action:check`. The immutable `v0.1.0` tag keeps its original
 consumer-time install and build behavior; do not move it to adopt the bundle.
+
+## Major Alias Promotion
+
+Promote `v0` only after the selected immutable version tag and non-draft GitHub Release exist and
+all versioned-release evidence is complete:
+
+1. Record the current remote `v0` SHA, or record that the alias does not exist.
+2. Select the target immutable `v0.x.y` tag and resolve its peeled commit SHA. Do not infer the
+   target from the newest available tag.
+3. Create `v0`, or move it with a compare-and-swap lease that expects the recorded old SHA.
+4. Run
+   `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`.
+5. Run external dry-run and full-write smoke with `clarissimi-ref=v0` and the same
+   `expected-sha=<commit-sha>` on Ubuntu, macOS, and Windows.
+6. Run the read-only orphan audit after full-write cleanup.
+
+If any post-promotion check fails, restore `v0` to the recorded old SHA with a lease. If this was
+the first alias creation, delete only `v0`. Never move or delete the immutable patch tag as an alias
+rollback. Consumers that need reproducible dependency review should pin the patch tag or commit SHA.
 
 ## Hosted Live Provider Smoke
 
@@ -123,19 +145,21 @@ current local `HEAD`, `0disoft/clarissimi`, `main`, and workflow `CI`; pass `--s
 `--branch`, or `--workflow` only when validating a different release candidate.
 
 After hosted CI passes, exercise the Action from a separate consumer repository. Omit the option to
-test the current Clarissimi `HEAD` SHA, or pass an immutable release tag explicitly:
+test the current Clarissimi `HEAD` SHA, pass an immutable release tag, or test `v0` with the exact
+expected commit SHA:
 
 ```powershell
 pnpm run hosted-external-consumer-smoke
 pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0.1.1
+pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>
 ```
 
-The helper rejects moving Clarissimi refs, dispatches `clarissimi.yml` in the private
-`0disoft/integration-lab` repository, and watches the resulting workflow to completion. The consumer
-workflow checks out the requested tag or SHA into its own workspace before invoking the local Action
-path, so this gate detects consumer checkout, bundle startup, and input-contract failures that
-Clarissimi's same-repository dogfood cannot expose. It uses the maintainer's authenticated `gh`
-session and does not read provider secrets.
+The helper rejects moving Clarissimi refs other than `v0`; that alias requires `--expected-sha`.
+It dispatches `clarissimi.yml` in the private `0disoft/integration-lab` repository and watches the
+resulting workflow to completion. The consumer workflow checks the resolved Action commit before
+invoking the local Action path, so this gate detects alias drift, consumer checkout, bundle startup,
+and input-contract failures that Clarissimi's same-repository dogfood cannot expose. It uses the
+maintainer's authenticated `gh` session and does not read provider secrets.
 
 After `CLARISSIMI_PROVIDER_TOKEN` is configured as a repository secret, run the manual hosted smoke
 from a maintainer shell without printing the token value:
@@ -221,8 +245,8 @@ evidence.
 ## Validation
 
 - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
-- Release status: immutable Action tag `v0.1.0` is allowed by ADR 0031 after all gates pass; public
-  package publication and GitHub Marketplace publication remain blocked
+- Release status: immutable `v0.x.y` Action tags are allowed by ADR 0031 and moving major alias
+  `v0` is allowed by ADR 0034 after exact-SHA verification; public package publication and GitHub Marketplace publication remain blocked
 - Recent hosted CI validation evidence: `CI` workflow run `29052254866` passed on
   `2026-07-09T21:42:23Z` for validated source commit
   `eaf22e44f5ef87391a16cf5a6597395826f05b7d` on `main` and validated `docs`,

@@ -67,6 +67,10 @@ and must match `pnpm run bundle:action:check` before merge or release. The compo
 Bash. Ubuntu, macOS, and Windows are claimed consumer runners after external dry-run and full-write
 smoke passed for immutable tag `v0.1.1`.
 
+ADR 0034 permits moving major alias `v0` only when it resolves to the exact commit of a validated
+immutable `v0.x.y` release. Immutable version tags never move. Consumers that need deterministic
+dependency review should pin the immutable patch tag or commit SHA instead of the major alias.
+
 The future expanded action contract should include:
 
 - mode: `commit`

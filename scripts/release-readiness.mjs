@@ -56,6 +56,10 @@ export const requiredPackageScripts = [
     includes: ["scripts/hosted-live-provider-smoke.mjs"]
   },
   {
+    name: "verify-action-major-tag",
+    includes: ["scripts/verify-action-major-tag.mjs"]
+  },
+  {
     name: "release-candidate-evidence-issue",
     includes: ["scripts/release-candidate-evidence-issue.mjs"]
   }
@@ -111,21 +115,23 @@ export const releasePolicyDocumentContract = {
   path: "docs/ops/release.md",
   requiredSnippets: [
     "Clarissimi is not ready for public package publication.",
-    "ADR 0031 authorizes the first public root",
-    "GitHub Action release at immutable tag `v0.1.0`",
+    "ADR 0031 authorizes immutable root GitHub",
+    "ADR 0034 authorizes moving major alias `v0`",
     "The current root and workspace packages stay private at `0.0.0`.",
     "Do not bump package versions,",
-    "create a moving `v0` tag",
+    "create another moving major alias",
     "Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,",
     "`pnpm run lint`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and repository hygiene",
     "- Public package publication: blocked.",
-    "- Versioned GitHub Action tag: allowed for immutable `v0.1.0` under ADR 0031",
+    "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0031",
+    "- Moving GitHub Action major alias: `v0` is allowed under ADR 0034",
     "- GitHub Marketplace publication: blocked.",
     "The versioned Action tag requires:",
     "Public package publication remains blocked even when every technical gate above passes.",
     "## First Action Release Procedure",
     "release type `versioned-action-tag`",
-    "Do not create or move a `v0` alias.",
+    "## Major Alias Promotion",
+    "`pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
     "publish a corrective patch tag such as `v0.1.1`",
     "`pnpm run hosted-ci-validation`",
     "`pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
@@ -135,7 +141,7 @@ export const releasePolicyDocumentContract = {
     "public product-positioning guardrails",
     "intentionally fail-closed `format` and `migration-check`",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
-    "Release status: immutable Action tag `v0.1.0` is allowed by ADR 0031",
+    "Release status: immutable `v0.x.y` Action tags are allowed by ADR 0031",
     "package publication and GitHub Marketplace publication remain blocked"
   ]
 };
@@ -198,6 +204,8 @@ export const readmeValidationContract = {
     "- `pnpm run live-provider-smoke`",
     "- `pnpm run hosted-ci-validation`",
     "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
+    "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>`",
+    "- `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
     "Release-only credentialed checks are:",
     "- `pnpm run hosted-live-provider-smoke -- --model <provider-model>`",
     "`format` intentionally fails closed",
@@ -248,7 +256,8 @@ export const docsValidationScriptContract = {
     "\"scripts/hosted-external-consumer-smoke.mjs\"",
     "\"scripts/hosted-live-provider-smoke.mjs\"",
     "\"scripts/release-candidate-evidence-issue.mjs\"",
-    "\"scripts/release-readiness.mjs\""
+    "\"scripts/release-readiness.mjs\"",
+    "\"scripts/verify-action-major-tag.mjs\""
   ]
 };
 
@@ -926,6 +935,8 @@ export const rollbackProcedureContract = {
     "Revert the recognition pull request",
     "configured rebuild command",
     "Published Action tag with a normal defect",
+    "Moving `v0` alias fails verification",
+    "Restore `v0` to the SHA recorded before promotion",
     "do not move or overwrite the existing tag.",
     "urgent security or supply-chain incident",
     "old SHA, replacement SHA, affected users, and verification evidence",
@@ -1306,7 +1317,8 @@ export async function runReleaseReadiness(options = {}) {
 
   console.log("release readiness static gates passed");
   console.log("hosted CI, dry-run, write-mode, and credentialed release evidence recorded in docs/ops/release.md");
-  console.log("immutable Action tag v0.1.0 is allowed by ADR 0031 after all release gates pass");
+  console.log("immutable v0.x.y Action tags are allowed by ADR 0031 after all release gates pass");
+  console.log("moving Action alias v0 is allowed by ADR 0034 after exact-SHA post-promotion verification");
   console.log("public package publication and GitHub Marketplace publication remain blocked by release policy");
 }
 

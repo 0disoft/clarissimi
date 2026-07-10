@@ -64,7 +64,39 @@ test("hosted external consumer smoke defaults to the current HEAD SHA", async ()
   assert.equal(dispatch.args.includes(`clarissimi-ref=${exampleSha}`), true);
 });
 
-test("hosted external consumer smoke rejects mutable or malformed inputs before dispatch", async () => {
+test("hosted external consumer smoke accepts v0 only with an expected SHA", async () => {
+  const harness = createHarness({
+    runs: [{
+      databaseId: 34567,
+      createdAt: "2026-07-10T00:00:10.000Z",
+      headBranch: "main",
+      headSha: "integration-lab-sha",
+      status: "queued",
+      conclusion: ""
+    }]
+  });
+
+  const exitCode = await runHostedExternalConsumerSmoke([
+    "--clarissimi-ref", "v0", "--expected-sha", exampleSha
+  ], harness.runtime);
+
+  assert.equal(exitCode, 0);
+  const dispatch = harness.commands.find((entry) => entry.args[0] === "workflow");
+  assert.equal(dispatch.args.includes("clarissimi-ref=v0"), true);
+  assert.equal(dispatch.args.includes(`expected-sha=${exampleSha}`), true);
+
+  const missingSha = createHarness({});
+  assert.equal(await runHostedExternalConsumerSmoke([
+    "--clarissimi-ref", "v0"
+  ], missingSha.runtime), 2);
+  assert.equal(
+    missingSha.errors.includes("--expected-sha is required when --clarissimi-ref is v0."),
+    true
+  );
+  assert.equal(missingSha.commands.length, 0);
+});
+
+test("hosted external consumer smoke rejects unsupported mutable or malformed inputs before dispatch", async () => {
   const mutableRef = createHarness({});
   const mutableRefExitCode = await runHostedExternalConsumerSmoke([
     "--clarissimi-ref",
@@ -74,7 +106,7 @@ test("hosted external consumer smoke rejects mutable or malformed inputs before 
   assert.equal(mutableRefExitCode, 2);
   assert.equal(
     mutableRef.errors.includes(
-      "--clarissimi-ref must be a semantic version tag or 40-character commit SHA; moving refs are rejected."
+      "--clarissimi-ref must be an immutable semantic version tag, 40-character commit SHA, or v0."
     ),
     true
   );

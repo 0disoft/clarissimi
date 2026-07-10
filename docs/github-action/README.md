@@ -36,8 +36,10 @@ code.
 
 ## Action Usage
 
-Pin public workflows to `0disoft/clarissimi@v0.1.1`. The moving `main` ref is reserved for this
-repository's development and dogfood workflows. The first public tag, `v0.1.0`, remains immutable.
+Use `0disoft/clarissimi@v0` for maintainer-approved `0.x` updates, or pin
+`0disoft/clarissimi@v0.1.1` when exact patch reproducibility matters. The moving `main` ref is
+reserved for this repository's development and dogfood workflows. Immutable version tags never
+move.
 
 The current `action.yml` defaults to `propose` mode and also supports explicit read-only `dry-run`
 and write-mode `stage-draft`. The `v0.1.1` release executes the committed `action-dist/index.js`

@@ -9,14 +9,15 @@ const defaults = {
 
 const usageText = [
   "Usage:",
-  "  pnpm run hosted-external-consumer-smoke -- [--clarissimi-ref <immutable-tag-or-sha>] [--repo <owner/name>] [--workflow <workflow-file>] [--workflow-ref <git-ref>]",
+  "  pnpm run hosted-external-consumer-smoke -- [--clarissimi-ref <immutable-tag-or-sha|v0>] [--expected-sha <commit-sha>] [--repo <owner/name>] [--workflow <workflow-file>] [--workflow-ref <git-ref>]",
   "",
   "Examples:",
   "  pnpm run hosted-external-consumer-smoke",
   "  pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0.1.1",
+  "  pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha 0123456789abcdef0123456789abcdef01234567",
   "",
   "When --clarissimi-ref is omitted, the script tests the current Clarissimi HEAD SHA.",
-  "The target workflow checks out that immutable ref inside the external consumer repository."
+  "The moving v0 alias is accepted only with --expected-sha so the consumer checkout can prove its target."
 ].join("\n");
 
 export async function runHostedExternalConsumerSmoke(argv, runtime = defaultRuntime()) {
@@ -44,6 +45,7 @@ async function run(argv, runtime) {
   const workflow = args.workflow ?? defaults.workflow;
   const workflowRef = args.workflowRef ?? defaults.workflowRef;
   const clarissimiRef = args.clarissimiRef ?? await readCurrentHeadSha(runtime);
+  const expectedSha = args.expectedSha;
 
   if (!isGitHubRepositoryName(repo)) {
     return usageFailure(runtime, "--repo must use owner/name format.");
@@ -57,11 +59,19 @@ async function run(argv, runtime) {
     return usageFailure(runtime, "--workflow-ref requires a non-empty value.");
   }
 
-  if (!isImmutableClarissimiRef(clarissimiRef)) {
+  if (!isImmutableClarissimiRef(clarissimiRef) && clarissimiRef !== "v0") {
     return usageFailure(
       runtime,
-      "--clarissimi-ref must be a semantic version tag or 40-character commit SHA; moving refs are rejected."
+      "--clarissimi-ref must be an immutable semantic version tag, 40-character commit SHA, or v0."
     );
+  }
+
+  if (expectedSha !== undefined && !isCommitSha(expectedSha)) {
+    return usageFailure(runtime, "--expected-sha must be a 40-character commit SHA.");
+  }
+
+  if (clarissimiRef === "v0" && expectedSha === undefined) {
+    return usageFailure(runtime, "--expected-sha is required when --clarissimi-ref is v0.");
   }
 
   await requireGh(runtime);
@@ -71,7 +81,8 @@ async function run(argv, runtime) {
     repo,
     workflow,
     workflowRef,
-    clarissimiRef
+    clarissimiRef,
+    expectedSha
   });
 
   const runId = await findDispatchedRun(runtime, {
@@ -110,6 +121,7 @@ function parseArgs(argv, runtime) {
 
     const property = {
       "clarissimi-ref": "clarissimiRef",
+      "expected-sha": "expectedSha",
       repo: "repo",
       workflow: "workflow",
       "workflow-ref": "workflowRef"
@@ -143,6 +155,10 @@ function isGitHubRepositoryName(value) {
 function isImmutableClarissimiRef(value) {
   return /^[a-fA-F0-9]{40}$/.test(value)
     || /^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/.test(value);
+}
+
+function isCommitSha(value) {
+  return typeof value === "string" && /^[a-fA-F0-9]{40}$/.test(value);
 }
 
 function isPositiveRunId(value) {
@@ -181,7 +197,7 @@ async function requireGh(runtime) {
 }
 
 async function dispatchWorkflow(runtime, options) {
-  const result = await runtime.runCommand("gh", [
+  const dispatchArgs = [
     "workflow",
     "run",
     options.workflow,
@@ -191,7 +207,11 @@ async function dispatchWorkflow(runtime, options) {
     options.workflowRef,
     "-f",
     `clarissimi-ref=${options.clarissimiRef}`
-  ]);
+  ];
+  if (options.expectedSha !== undefined) {
+    dispatchArgs.push("-f", `expected-sha=${options.expectedSha}`);
+  }
+  const result = await runtime.runCommand("gh", dispatchArgs);
   if (result.exitCode !== 0) {
     throw new Error(`Unable to dispatch ${options.workflow}.\n${boundedOutput(result.stderr)}`);
   }
@@ -199,6 +219,7 @@ async function dispatchWorkflow(runtime, options) {
   runtime.log(
     `dispatched ${options.workflow} on ${options.repo}@${options.workflowRef} `
     + `for Clarissimi ${options.clarissimiRef}`
+    + (options.expectedSha === undefined ? "" : ` at expected SHA ${options.expectedSha}`)
   );
 }
 

@@ -162,8 +162,9 @@ Before publication or a versioned Action tag, confirm:
 - Package manifests and Action metadata match the selected release decision.
 - Rollback instructions in `docs/ops/rollback.md` still cover proposal branches, pull requests,
   recognition records, derived output rebuilds, and immutable Action tag recovery.
-- Versioned Action releases use the exact tag recorded in the evidence issue and do not create a
-  moving `v0` alias.
+- Versioned Action releases use the exact immutable tag recorded in the evidence issue. A later
+  `v0` promotion follows ADR 0034, verifies the expected commit independently, and does not move the
+  immutable tag.
 - The external consumer workflow passed for that exact immutable tag or commit SHA.
 - The external full-write workflow passed stage, approval, promotion, recognition verification, and
   cleanup on Ubuntu, macOS, and Windows for that exact immutable ref.

@@ -33,6 +33,7 @@ Choose the narrowest rollback path:
 | Open proposal pull request before merge | Close the proposal pull request and delete the proposal branch. |
 | Merged recognition pull request | Revert the recognition pull request and run the rebuild path for derived outputs. |
 | Published Action tag with a normal defect | Keep the tag immutable and publish a corrective patch tag. |
+| Moving `v0` alias fails verification | Restore the recorded previous SHA with a lease, or delete only a newly created alias. |
 | Published Action tag with an urgent security or supply-chain incident | Document impact and recovery, then delete or replace the tag only when continued availability is more dangerous. |
 
 ## Procedure
@@ -66,6 +67,11 @@ configured rebuild command and rerun validation.
 For a published Action tag with a normal defect, do not move or overwrite the existing tag. Stop
 promoting the affected version, document the defect in the release notes, fix and validate a new
 candidate, and publish the next patch tag such as `v0.1.1`.
+
+For a failed `v0` alias promotion, keep the selected immutable version tag and GitHub Release
+unchanged. Restore `v0` to the SHA recorded before promotion using a compare-and-swap lease. If no
+alias existed before the failed promotion, delete only `v0`. Rerun the read-only major-tag verifier
+and external consumer smoke against the restored state.
 
 For an urgent security or supply-chain incident, first preserve the affected tag name, old SHA,
 workflow evidence, and release URL in an incident issue. Delete or replace the remote tag only when

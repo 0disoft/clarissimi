@@ -414,9 +414,9 @@ Completed deliverables:
   version used by hosted CI through Corepack
 - release-readiness verifies that root and workspace package manifests remain private at `0.0.0`
   while public package publication is blocked
-- release-readiness verifies that `docs/ops/release.md` allows immutable Action tag `v0.1.0` under
-  ADR 0031 while package publication, package version changes, a moving `v0` alias, and GitHub
-  Marketplace publication remain blocked
+- release-readiness verifies that `docs/ops/release.md` keeps immutable Action tags fixed under ADR
+  0031 and permits moving major alias `v0` under ADR 0034 while package publication, package
+  version changes, and GitHub Marketplace publication remain blocked
 - release-readiness verifies that `docs/ops/release.md` names public product-positioning guardrails
   and intentionally fail-closed validation placeholders in its release gate coverage
 - release-readiness verifies that workspace package manifests keep their `dist` entrypoints,
@@ -506,6 +506,9 @@ Release follow-up:
 
 - ADR 0031 accepts immutable Action tag `v0.1.0` as the first public distribution after exact-SHA
   local, hosted CI, and hosted live-provider gates pass.
+- ADR 0034 accepts moving major alias `v0` only for an explicitly selected immutable `v0.x.y`
+  release. Alias verification compares the remote alias, immutable tag, GitHub Release, and
+  expected consumer checkout SHA before the channel is considered healthy.
 - Public package publication and GitHub Marketplace publication remain blocked until a separate
   accepted release decision changes `docs/ops/release.md`.
 

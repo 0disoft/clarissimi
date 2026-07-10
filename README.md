@@ -141,9 +141,10 @@ node packages/cli/dist/bin/clarissimi.js import-draft --draft .clarissimi/drafts
 
 ## GitHub Action
 
-The current public Action release is `0disoft/clarissimi@v0.1.1`. Consumer workflows should use
-that immutable tag instead of the moving `main` branch. The first release, `v0.1.0`, remains
-immutable. npm packages and GitHub Marketplace publication remain intentionally unavailable.
+The current public Action release is `0disoft/clarissimi@v0.1.1`. Consumers may pin that immutable
+tag or use `0disoft/clarissimi@v0` to follow maintainer-approved `0.x` Action releases. The first
+release, `v0.1.0`, remains immutable, and `main` is never a consumer release channel. npm packages
+and GitHub Marketplace publication remain intentionally unavailable.
 
 The `v0.1.1` release executes the committed Action bundle rather than installing pnpm dependencies
 and compiling TypeScript in each consumer run. `v0.1.0` keeps its published source-build runtime
@@ -269,6 +270,8 @@ Release-only hosted checks are:
 
 - `pnpm run hosted-ci-validation`
 - `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`
+- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>`
+- `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`
 - `pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --external-run <run-id> --external-write-run <run-id> --provider-model <provider-model>`
 
 Release-only credentialed checks are:

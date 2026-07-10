@@ -136,6 +136,10 @@ node packages/cli/dist/bin/clarissimi.js import-draft --draft .clarissimi/drafts
 
 ## GitHub Action
 
+The first public Action release is pinned as `0disoft/clarissimi@v0.1.0`. Consumer workflows should
+use that immutable tag instead of the moving `main` branch. npm packages and GitHub Marketplace
+publication remain intentionally unavailable.
+
 The Action package runs dry-run summaries without GitHub API writes, live provider credentials, or
 repository file changes:
 

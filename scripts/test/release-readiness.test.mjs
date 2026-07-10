@@ -186,8 +186,8 @@ test("release readiness rejects accidental public package release drift", () => 
   packageJson.version = "0.1.0";
 
   assert.deepEqual(validatePackageReleasePolicy(packageJson), [
-    "package.json private must remain true until release blockers are cleared.",
-    "package.json version must remain 0.0.0 until release blockers are cleared."
+    "package.json private must remain true while public package publication is blocked.",
+    "package.json version must remain 0.0.0 while public package publication is blocked."
   ]);
 });
 
@@ -197,51 +197,33 @@ test("release readiness reports workspace package release policy drift with mani
   packageJson.version = "0.2.0";
 
   assert.deepEqual(validatePackageReleasePolicy(packageJson, packageReleasePolicy, "packages/cli/package.json"), [
-    "packages/cli/package.json private must remain true until release blockers are cleared.",
-    "packages/cli/package.json version must remain 0.0.0 until release blockers are cleared."
+    "packages/cli/package.json private must remain true while public package publication is blocked.",
+    "packages/cli/package.json version must remain 0.0.0 while public package publication is blocked."
   ]);
 });
 
-test("release readiness accepts the blocked release policy document contract", () => {
+test("release readiness accepts the Action release policy document contract", () => {
   assert.deepEqual(validateReleasePolicyDocumentContract(createReleasePolicyText()), []);
 });
 
 test("release readiness rejects release policy document drift", () => {
   const text = createReleasePolicyText()
     .replace("Clarissimi is not ready for public package publication.", "Clarissimi can publish packages.")
+    .replace("ADR 0031 authorizes the first public root", "No release decision exists.")
+    .replace("GitHub Action release at immutable tag `v0.1.0`", "GitHub Action follows main.")
     .replace("- Public package publication: blocked.", "- Public package publication: allowed.")
-    .replace("- Versioned GitHub Action tag: blocked.", "- Versioned GitHub Action tag: allowed.")
-    .replace("Do not bump versions, publish packages, or create", "Bump versions and publish packages.")
-    .replace("Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,", "Source-only merge: allowed after `pnpm run lint`,")
-    .replace("`pnpm run lint`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and repository hygiene", "`pnpm run check`, `pnpm run contract`, and repository hygiene")
-    .replace("`pnpm run hosted-ci-validation`", "`pnpm run hosted-live-provider-smoke`")
-    .replace("release PR, release issue, or GitHub release notes", "local notes")
-    .replace(
-      "Do not make an evidence-only commit after final candidate validation",
-      "Commit evidence after every validation run"
-    )
-    .replace("docs/ops/release-candidate-evidence.md", "docs/ops/release.md")
-    .replace("public product-positioning guardrails", "public docs")
-    .replace("intentionally fail-closed `format` and `migration-check`", "format and migration checks")
-    .replace(
-      "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
-      "- Required validation names: `docs`, `smoke`, `check`, `contract`"
-    );
+    .replace("- Versioned GitHub Action tag: allowed for immutable `v0.1.0` under ADR 0031", "- Versioned GitHub Action tag: moving latest.")
+    .replace("- GitHub Marketplace publication: blocked.", "- GitHub Marketplace publication: allowed.")
+    .replace("Do not create or move a `v0` alias.", "Move `v0` after each release.");
 
   assert.deepEqual(validateReleasePolicyDocumentContract(text), [
     "docs/ops/release.md must include Clarissimi is not ready for public package publication..",
-    "docs/ops/release.md must include Do not bump versions, publish packages, or create.",
-    "docs/ops/release.md must include Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,.",
-    "docs/ops/release.md must include `pnpm run lint`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and repository hygiene.",
+    "docs/ops/release.md must include ADR 0031 authorizes the first public root.",
+    "docs/ops/release.md must include GitHub Action release at immutable tag `v0.1.0`.",
     "docs/ops/release.md must include - Public package publication: blocked..",
-    "docs/ops/release.md must include - Versioned GitHub Action tag: blocked..",
-    "docs/ops/release.md must include `pnpm run hosted-ci-validation`.",
-    "docs/ops/release.md must include release PR, release issue, or GitHub release notes.",
-    "docs/ops/release.md must include Do not make an evidence-only commit after final candidate validation.",
-    "docs/ops/release.md must include docs/ops/release-candidate-evidence.md.",
-    "docs/ops/release.md must include public product-positioning guardrails.",
-    "docs/ops/release.md must include intentionally fail-closed `format` and `migration-check`.",
-    "docs/ops/release.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`."
+    "docs/ops/release.md must include - Versioned GitHub Action tag: allowed for immutable `v0.1.0` under ADR 0031.",
+    "docs/ops/release.md must include - GitHub Marketplace publication: blocked..",
+    "docs/ops/release.md must include Do not create or move a `v0` alias.."
   ]);
 });
 
@@ -674,14 +656,14 @@ test("release readiness rejects incident response document drift", () => {
     .replace("| SEV-1 | Token, private key, raw provider output, raw diff, or sensitive evidence is public.", "| SEV-1 | Service outage.")
     .replace("Capture commit SHA, workflow run URL, PR URL, and local command output.", "Capture a summary.")
     .replace("Use `docs/ops/secrets.md` for credential exposure.", "Handle credentials manually.")
-    .replace("Do not publish release notes or versioned Action tags until release blockers are cleared.", "Publish after maintainer approval.");
+    .replace("Do not publish or promote a versioned Action tag while any required release gate is failing.", "Publish after maintainer approval.");
 
   assert.deepEqual(validateIncidentResponseDocumentContract(text), [
     "docs/ops/incident-response.md must include Incident response is repository-local for the MVP..",
     "docs/ops/incident-response.md must include | SEV-1 | Token, private key, raw provider output, raw diff, or sensitive evidence is public..",
     "docs/ops/incident-response.md must include Capture commit SHA, workflow run URL, PR URL, and local command output..",
     "docs/ops/incident-response.md must include Use `docs/ops/secrets.md` for credential exposure..",
-    "docs/ops/incident-response.md must include Do not publish release notes or versioned Action tags until release blockers are cleared.."
+    "docs/ops/incident-response.md must include Do not publish or promote a versioned Action tag while any required release gate is failing.."
   ]);
 });
 
@@ -1197,6 +1179,8 @@ test("release readiness rejects missing rollback procedure coverage", () => {
     .replace("Delete the temporary staging directory.", "Clean up temporary files.")
     .replace("Close the proposal pull request and delete the proposal branch.", "Resolve the proposal.")
     .replace("Revert the recognition pull request", "Undo the recognition change")
+    .replace("Published Action tag with a normal defect", "Published tag")
+    .replace("do not move or overwrite the existing tag.", "Move the tag.")
     .replace("No database rollback exists in the MVP.", "Database rollback is TBD.");
 
   assert.deepEqual(validateRollbackProcedureContract(text), [
@@ -1205,6 +1189,8 @@ test("release readiness rejects missing rollback procedure coverage", () => {
     "docs/ops/rollback.md must include Delete the temporary staging directory..",
     "docs/ops/rollback.md must include Close the proposal pull request and delete the proposal branch..",
     "docs/ops/rollback.md must include Revert the recognition pull request.",
+    "docs/ops/rollback.md must include Published Action tag with a normal defect.",
+    "docs/ops/rollback.md must include do not move or overwrite the existing tag..",
     "docs/ops/rollback.md must include No database rollback exists in the MVP.."
   ]);
 });
@@ -1629,18 +1615,25 @@ function createRootPackageManagerPackageJson() {
 function createReleasePolicyText() {
   return [
     "Clarissimi is not ready for public package publication.",
-    "A versioned Action tag remain blocked until maintainers accept a release ADR or update this operational contract.",
-    "The current root package stays private at `0.0.0`.",
-    "Do not bump versions, publish packages, or create",
-    "release tags as part of ordinary implementation work.",
+    "ADR 0031 authorizes the first public root",
+    "GitHub Action release at immutable tag `v0.1.0`",
+    "The current root and workspace packages stay private at `0.0.0`.",
+    "Do not bump package versions,",
+    "create a moving `v0` tag",
     "",
     "Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,",
     "`pnpm run lint`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and repository hygiene",
     "",
     "- Public package publication: blocked.",
-    "- Versioned GitHub Action tag: blocked.",
+    "- Versioned GitHub Action tag: allowed for immutable `v0.1.0` under ADR 0031",
+    "- GitHub Marketplace publication: blocked.",
     "",
-    "Public package publication and versioned Action tags require:",
+    "The versioned Action tag requires:",
+    "Public package publication remains blocked even when every technical gate above passes.",
+    "## First Action Release Procedure",
+    "release type `versioned-action-tag`",
+    "Do not create or move a `v0` alias.",
+    "publish a corrective patch tag such as `v0.1.1`",
     "`pnpm run hosted-ci-validation`",
     "release PR, release issue, or GitHub release notes",
     "Do not make an evidence-only commit after final candidate validation",
@@ -1650,7 +1643,8 @@ function createReleasePolicyText() {
     "",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
     "",
-    "- Release blocker status: public package publication and versioned Action tags are blocked",
+    "- Release status: immutable Action tag `v0.1.0` is allowed by ADR 0031",
+    "package publication and GitHub Marketplace publication remain blocked",
     ""
   ].join("\n");
 }
@@ -2092,7 +2086,7 @@ function createIncidentResponseDocumentText() {
     "5. Rerun required validation before resuming.",
     "",
     "- Add or update tests when the incident was preventable by validation.",
-    "- Do not publish release notes or versioned Action tags until release blockers are cleared.",
+    "- Do not publish or promote a versioned Action tag while any required release gate is failing.",
     "- Primary owner: Repository maintainers",
     ""
   ].join("\n");
@@ -2451,6 +2445,7 @@ function createRollbackProcedureText() {
     "| Published proposal branch without pull request | Delete the remote proposal branch. |",
     "| Open proposal pull request before merge | Close the proposal pull request and delete the proposal branch. |",
     "| Merged recognition pull request | Revert the recognition pull request and run the rebuild path for derived outputs. |",
+    "| Published Action tag with a normal defect | Keep the tag immutable and publish a corrective patch tag. |",
     "",
     "```powershell",
     "git branch --delete clarissimi/recognition/<source-kind>-<source-id>",
@@ -2458,6 +2453,8 @@ function createRollbackProcedureText() {
     "```",
     "",
     "After the revert lands, regenerate derived outputs with the configured rebuild command.",
+    "For a published Action tag with a normal defect, do not move or overwrite the existing tag.",
+    "An urgent security or supply-chain incident records the old SHA, replacement SHA, affected users, and verification evidence.",
     "",
     "No database rollback exists in the MVP.",
     "",

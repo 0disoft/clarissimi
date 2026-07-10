@@ -17,6 +17,7 @@ models, validation names, and conclusions only.
 - Candidate commit SHA:
 - Branch:
 - Release type: source-only merge, public package publication, or versioned Action tag
+- Release version, when tagging:
 - Release decision reference: release ADR, release issue, or maintainer approval URL
 
 ## Local Validation Evidence
@@ -86,6 +87,15 @@ Use `--print` to preview the issue body without creating a public GitHub issue. 
 that both run IDs completed successfully, match the selected branch, and validate the same candidate
 SHA. It records only the secret name `CLARISSIMI_PROVIDER_TOKEN`, never the secret value.
 
+For the Action release authorized by ADR 0031, identify the immutable tag explicitly:
+
+```powershell
+pnpm run release-candidate-evidence-issue -- --release-type versioned-action-tag --release-version v0.1.0 --sha <candidate-sha> --ci-run <ci-run-id> --live-run <live-run-id> --provider-model <provider-model>
+```
+
+The helper rejects package-publication evidence while public packages remain blocked. A
+source-only evidence issue may omit both release options.
+
 For gateway providers, pass the same non-secret provider options used by hosted live-provider smoke:
 
 ```powershell
@@ -100,6 +110,8 @@ Before publication or a versioned Action tag, confirm:
   leaderboards.
 - Package manifests and Action metadata match the selected release decision.
 - Rollback instructions in `docs/ops/rollback.md` still cover proposal branches, pull requests,
-  recognition records, and derived output rebuilds.
+  recognition records, derived output rebuilds, and immutable Action tag recovery.
+- Versioned Action releases use the exact tag recorded in the evidence issue and do not create a
+  moving `v0` alias.
 - No evidence-only commit was created after final candidate validation solely to update recorded run
   URLs.

@@ -99,16 +99,22 @@ export const releasePolicyDocumentContract = {
   path: "docs/ops/release.md",
   requiredSnippets: [
     "Clarissimi is not ready for public package publication.",
-    "versioned Action tag remain blocked",
-    "until maintainers accept a release ADR or update this",
-    "The current root package stays private at `0.0.0`.",
-    "Do not bump versions, publish packages, or create",
-    "release tags as part of ordinary implementation work",
+    "ADR 0031 authorizes the first public root",
+    "GitHub Action release at immutable tag `v0.1.0`",
+    "The current root and workspace packages stay private at `0.0.0`.",
+    "Do not bump package versions,",
+    "create a moving `v0` tag",
     "Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,",
     "`pnpm run lint`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and repository hygiene",
     "- Public package publication: blocked.",
-    "- Versioned GitHub Action tag: blocked.",
-    "Public package publication and versioned Action tags require:",
+    "- Versioned GitHub Action tag: allowed for immutable `v0.1.0` under ADR 0031",
+    "- GitHub Marketplace publication: blocked.",
+    "The versioned Action tag requires:",
+    "Public package publication remains blocked even when every technical gate above passes.",
+    "## First Action Release Procedure",
+    "release type `versioned-action-tag`",
+    "Do not create or move a `v0` alias.",
+    "publish a corrective patch tag such as `v0.1.1`",
     "`pnpm run hosted-ci-validation`",
     "release PR, release issue, or GitHub release notes",
     "Do not make an evidence-only commit after final candidate validation",
@@ -116,7 +122,8 @@ export const releasePolicyDocumentContract = {
     "public product-positioning guardrails",
     "intentionally fail-closed `format` and `migration-check`",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
-    "Release blocker status: public package publication and versioned Action tags are blocked"
+    "Release status: immutable Action tag `v0.1.0` is allowed by ADR 0031",
+    "package publication and GitHub Marketplace publication remain blocked"
   ]
 };
 
@@ -454,7 +461,7 @@ export const incidentResponseDocumentContract = {
     "Use `docs/ops/rollback.md` for proposal branch, pull request, or ledger cleanup.",
     "Rerun required validation before resuming.",
     "Add or update tests when the incident was preventable by validation.",
-    "Do not publish release notes or versioned Action tags until release blockers are cleared.",
+    "Do not publish or promote a versioned Action tag while any required release gate is failing.",
     "Primary owner: Repository maintainers"
   ]
 };
@@ -885,6 +892,10 @@ export const rollbackProcedureContract = {
     "Close the proposal pull request and delete the proposal branch.",
     "Revert the recognition pull request",
     "configured rebuild command",
+    "Published Action tag with a normal defect",
+    "do not move or overwrite the existing tag.",
+    "urgent security or supply-chain incident",
+    "old SHA, replacement SHA, affected users, and verification evidence",
     "No database rollback exists in the MVP.",
     ".clarissimi/contributions.jsonl",
     "Derived files should be regenerated from approved contribution records"
@@ -1216,7 +1227,8 @@ export async function runReleaseReadiness(options = {}) {
 
   console.log("release readiness static gates passed");
   console.log("hosted CI, dry-run, write-mode, and credentialed release evidence recorded in docs/ops/release.md");
-  console.log("public package publication and versioned Action tags remain blocked by release policy");
+  console.log("immutable Action tag v0.1.0 is allowed by ADR 0031 after all release gates pass");
+  console.log("public package publication and GitHub Marketplace publication remain blocked by release policy");
 }
 
 if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) {
@@ -2735,11 +2747,11 @@ export function validatePackageReleasePolicy(
   const issues = [];
 
   if (packageJson?.private !== policy.private) {
-    issues.push(`${manifestPath} private must remain ${String(policy.private)} until release blockers are cleared.`);
+    issues.push(`${manifestPath} private must remain ${String(policy.private)} while public package publication is blocked.`);
   }
 
   if (packageJson?.version !== policy.version) {
-    issues.push(`${manifestPath} version must remain ${policy.version} until release blockers are cleared.`);
+    issues.push(`${manifestPath} version must remain ${policy.version} while public package publication is blocked.`);
   }
 
   return issues;

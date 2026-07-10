@@ -31,6 +31,10 @@ test("release candidate evidence issue prints a validated evidence body", async 
     "main",
     "--sha",
     exampleSha,
+    "--release-type",
+    "versioned-action-tag",
+    "--release-version",
+    "v0.1.0",
     "--ci-run",
     "12345",
     "--live-run",
@@ -57,6 +61,9 @@ test("release candidate evidence issue prints a validated evidence body", async 
   assert.equal(harness.logs.join("\n").includes("--endpoint https://gateway.example/v1/chat/completions"), true);
   assert.equal(harness.logs.join("\n").includes("Provider endpoint override: `https://gateway.example/v1/chat/completions`"), true);
   assert.equal(harness.logs.join("\n").includes("Provider thinking mode: `disabled`"), true);
+  assert.equal(harness.logs.join("\n").includes("versioned Action tag `v0.1.0` under ADR 0031"), true);
+  assert.equal(harness.logs.join("\n").includes("publishing immutable tag `v0.1.0`"), true);
+  assert.equal(harness.logs.join("\n").includes("public package publication remains blocked"), true);
   assert.equal(harness.logs.join("\n").includes("provider-token-value"), false);
 });
 
@@ -192,6 +199,46 @@ test("release candidate evidence issue rejects invalid inputs before calling git
   assert.equal(unsupportedThinkingExitCode, 2);
   assert.equal(unsupportedThinking.errors.includes("--provider-thinking supports only disabled."), true);
   assert.equal(unsupportedThinking.commands.length, 0);
+
+  const unsupportedReleaseType = createHarness({ headSha: exampleSha });
+  const unsupportedReleaseTypeExitCode = await runReleaseCandidateEvidenceIssue([
+    "--ci-run",
+    "12345",
+    "--live-run",
+    "67890",
+    "--provider-model",
+    "gpt-4.1-mini",
+    "--release-type",
+    "package-publication"
+  ], unsupportedReleaseType.runtime);
+
+  assert.equal(unsupportedReleaseTypeExitCode, 2);
+  assert.equal(
+    unsupportedReleaseType.errors.includes("--release-type supports source-only or versioned-action-tag."),
+    true
+  );
+  assert.equal(unsupportedReleaseType.commands.length, 0);
+
+  const invalidReleaseVersion = createHarness({ headSha: exampleSha });
+  const invalidReleaseVersionExitCode = await runReleaseCandidateEvidenceIssue([
+    "--ci-run",
+    "12345",
+    "--live-run",
+    "67890",
+    "--provider-model",
+    "gpt-4.1-mini",
+    "--release-type",
+    "versioned-action-tag",
+    "--release-version",
+    "v0.2.0"
+  ], invalidReleaseVersion.runtime);
+
+  assert.equal(invalidReleaseVersionExitCode, 2);
+  assert.equal(
+    invalidReleaseVersion.errors.includes("--release-version requires a v0.1.x tag authorized by ADR 0031."),
+    true
+  );
+  assert.equal(invalidReleaseVersion.commands.length, 0);
 });
 
 test("release candidate evidence issue rejects workflow run mismatch before issue creation", async () => {

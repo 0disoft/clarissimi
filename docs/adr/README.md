@@ -46,6 +46,8 @@ engine.
 - `0028-add-native-typescript-config-loading.md`: add dependency-free TypeScript config loading
 - `0029-add-explicit-action-config-path.md`: add explicit Action config-file loading
 - `0030-add-action-summary-artifact.md`: add a workspace-bounded Action JSON summary artifact
+- `0031-first-public-action-release.md`: distribute the first public Action at immutable tag
+  `v0.1.0` while package publication remains blocked
 
 ## Review Blockers
 

@@ -399,10 +399,10 @@ Completed deliverables:
 - release-readiness verifies that the root `packageManager` remains pinned to the package manager
   version used by hosted CI through Corepack
 - release-readiness verifies that root and workspace package manifests remain private at `0.0.0`
-  while public package publication and versioned Action tags are blocked
-- release-readiness verifies that `docs/ops/release.md` keeps public package publication,
-  marketplace release notes, versioned Action tags, version bumps, and release tags blocked until a
-  maintainer release decision changes the policy
+  while public package publication is blocked
+- release-readiness verifies that `docs/ops/release.md` allows immutable Action tag `v0.1.0` under
+  ADR 0031 while package publication, package version changes, a moving `v0` alias, and GitHub
+  Marketplace publication remain blocked
 - release-readiness verifies that `docs/ops/release.md` names public product-positioning guardrails
   and intentionally fail-closed validation placeholders in its release gate coverage
 - release-readiness verifies that workspace package manifests keep their `dist` entrypoints,
@@ -479,12 +479,15 @@ Completed deliverables:
   release issue, or GitHub release notes without creating an evidence-only commit that changes the
   candidate SHA
 - `pnpm run release-candidate-evidence-issue` validates candidate run metadata and creates or
-  previews the external release evidence issue without reading provider token values
+  previews the external release evidence issue without reading provider token values; versioned
+  Action evidence records release type, immutable tag, ADR 0031, and the package blocker
 
 Release follow-up:
 
-- Public package publication and versioned Action tags remain blocked until maintainers accept a
-  release ADR or update `docs/ops/release.md`.
+- ADR 0031 accepts immutable Action tag `v0.1.0` as the first public distribution after exact-SHA
+  local, hosted CI, and hosted live-provider gates pass.
+- Public package publication and GitHub Marketplace publication remain blocked until a separate
+  accepted release decision changes `docs/ops/release.md`.
 
 ### 10. Agent-Assisted Draft Import
 

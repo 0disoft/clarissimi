@@ -37,8 +37,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
 - Monorepo validation evidence: implemented packages are covered by `pnpm run docs`,
   `pnpm run release-readiness`, `pnpm run lint`, `pnpm run smoke`, `pnpm run check`, and
   `pnpm run contract`.
-- Monorepo release or rollout policy: no public package publication or versioned Action tag before
-  `docs/ops/release.md` gates pass.
+- Monorepo release or rollout policy: versioned root Action tags may be created under ADR 0031 after
+  `docs/ops/release.md` gates pass; public package publication remains blocked.
 - Monorepo compatibility and migration policy: schema versions and ledger shape changes require an
   ADR or product decision plus validation and rollback guidance.
 

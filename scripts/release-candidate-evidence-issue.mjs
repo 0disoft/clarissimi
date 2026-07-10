@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 const defaults = {
   repo: "0disoft/clarissimi",
   branch: "main",
+  releaseType: "source-only",
   ciWorkflowName: "CI",
   liveWorkflowName: "Clarissimi live provider smoke",
   secretName: "CLARISSIMI_PROVIDER_TOKEN"
@@ -11,11 +12,11 @@ const defaults = {
 
 const usageText = [
   "Usage:",
-  "  pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --provider-model <model> [--provider-endpoint <chat-completions-url>] [--provider-thinking <mode>] [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch-name>] [--title <issue-title>] [--print]",
+  "  pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --provider-model <model> [--release-type <source-only|versioned-action-tag>] [--release-version <v0.1.x>] [--provider-endpoint <chat-completions-url>] [--provider-thinking <mode>] [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch-name>] [--title <issue-title>] [--print]",
   "",
   "Examples:",
   "  pnpm run release-candidate-evidence-issue -- --ci-run 12345 --live-run 67890 --provider-model gpt-4.1-mini",
-  "  pnpm run release-candidate-evidence-issue -- --sha 0123456789abcdef0123456789abcdef01234567 --ci-run 12345 --live-run 67890 --provider-model minimax-m3 --provider-endpoint https://example.com/v1/chat/completions --provider-thinking disabled --print",
+  "  pnpm run release-candidate-evidence-issue -- --release-type versioned-action-tag --release-version v0.1.0 --sha 0123456789abcdef0123456789abcdef01234567 --ci-run 12345 --live-run 67890 --provider-model minimax-m3 --provider-endpoint https://example.com/v1/chat/completions --provider-thinking disabled --print",
   "",
   "The script validates hosted CI and hosted live-provider run metadata before creating the release evidence issue.",
   "It records secret names only and never reads or prints provider token values."
@@ -73,6 +74,19 @@ async function run(argv, runtime) {
     return usageFailure(runtime, "--provider-thinking supports only disabled.");
   }
 
+  const releaseType = args.releaseType ?? defaults.releaseType;
+  if (!["source-only", "versioned-action-tag"].includes(releaseType)) {
+    return usageFailure(runtime, "--release-type supports source-only or versioned-action-tag.");
+  }
+
+  if (releaseType === "versioned-action-tag" && !isVersionTag(args.releaseVersion)) {
+    return usageFailure(runtime, "--release-version requires a v0.1.x tag authorized by ADR 0031.");
+  }
+
+  if (releaseType === "source-only" && args.releaseVersion !== undefined) {
+    return usageFailure(runtime, "--release-version is valid only with --release-type versioned-action-tag.");
+  }
+
   if (args.title !== undefined && args.title.trim().length === 0) {
     return usageFailure(runtime, "--title requires a non-empty value.");
   }
@@ -102,13 +116,17 @@ async function run(argv, runtime) {
     workflowName: defaults.liveWorkflowName
   });
 
-  const title = args.title ?? `Release candidate evidence for ${sha.slice(0, 7)}`;
+  const title = args.title ?? (releaseType === "versioned-action-tag"
+    ? `Release candidate evidence for ${args.releaseVersion} at ${sha.slice(0, 7)}`
+    : `Release candidate evidence for ${sha.slice(0, 7)}`);
   const body = renderIssueBody({
     repo,
     branch,
     sha,
     ciRun,
     liveRun,
+    releaseType,
+    releaseVersion: args.releaseVersion,
     providerModel: args.providerModel,
     providerEndpoint: args.providerEndpoint,
     providerThinking: args.providerThinking
@@ -172,6 +190,8 @@ function parseArgs(argv, runtime) {
       "provider-model",
       "provider-endpoint",
       "provider-thinking",
+      "release-type",
+      "release-version",
       "title"
     ].includes(key)) {
       return usageFailure(runtime, `Unsupported option: ${arg}`);
@@ -213,6 +233,11 @@ function isHttpsUrl(value) {
 
 function isCommitSha(value) {
   return typeof value === "string" && /^[a-fA-F0-9]{40}$/.test(value);
+}
+
+function isVersionTag(value) {
+  return typeof value === "string"
+    && /^v0\.1\.(?:0|[1-9][0-9]*)$/.test(value);
 }
 
 function isPositiveRunId(value) {
@@ -309,6 +334,15 @@ function renderIssueBody(options) {
     options.providerEndpoint === undefined ? undefined : `--endpoint ${options.providerEndpoint}`,
     options.providerThinking === undefined ? undefined : `--thinking ${options.providerThinking}`
   ].filter(Boolean).join(" ");
+  const releaseType = options.releaseType === "versioned-action-tag"
+    ? `versioned Action tag \`${options.releaseVersion}\` under ADR 0031`
+    : "source-only merge evidence";
+  const releaseDecision = options.releaseType === "versioned-action-tag"
+    ? "ADR 0031"
+    : "`docs/ops/release.md` source-only merge policy";
+  const releasePolicyConclusion = options.releaseType === "versioned-action-tag"
+    ? `This evidence supports publishing immutable tag \`${options.releaseVersion}\` at \`${options.sha}\` and creating its GitHub pre-release. Do not create a moving \`v0\` alias.`
+    : "This evidence supports a source-only merge. A versioned Action tag requires the release type and version to be recorded explicitly.";
 
   return [
     `Release candidate evidence for \`${options.sha}\` on \`${options.branch}\`.`,
@@ -318,7 +352,10 @@ function renderIssueBody(options) {
     `- Repository: \`${options.repo}\``,
     `- Branch: \`${options.branch}\``,
     `- Candidate SHA: \`${options.sha}\``,
-    "- Release type: evidence capture only; public package publication and versioned Action tags remain blocked by `docs/ops/release.md` until a maintainer release decision changes the policy.",
+    `- Release type: ${releaseType}`,
+    `- Release decision: ${releaseDecision}`,
+    "- Package status: root and workspace packages remain private at `0.0.0`; public package publication remains blocked.",
+    "- Marketplace status: GitHub Marketplace publication remains blocked.",
     "",
     "## Hosted CI Evidence",
     "",
@@ -344,9 +381,9 @@ function renderIssueBody(options) {
     `- Provider endpoint override: ${options.providerEndpoint === undefined ? "not used" : `\`${options.providerEndpoint}\``}`,
     `- Provider thinking mode: ${options.providerThinking === undefined ? "not used" : `\`${options.providerThinking}\``}`,
     "",
-    "## Decision Needed Before Publication",
+    "## Release Policy",
     "",
-    "A maintainer still needs to accept a release ADR or update `docs/ops/release.md` before package publication, version bumping, release tags, marketplace release notes, or versioned Action tags.",
+    releasePolicyConclusion,
     ""
   ].join("\n");
 }

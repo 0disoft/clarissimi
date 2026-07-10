@@ -36,6 +36,9 @@ code.
 
 ## Action Usage
 
+Pin public workflows to `0disoft/clarissimi@v0.1.0`. The moving `main` ref is reserved for this
+repository's development and dogfood workflows.
+
 The current `action.yml` defaults to `propose` mode and also supports explicit read-only `dry-run`
 and write-mode `stage-draft`. It builds the local Action package from source at runtime. Dry-run
 mode emits a bounded summary and does not read provider credentials, use GitHub write tokens, create
@@ -83,7 +86,7 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - uses: 0disoft/clarissimi@main
+      - uses: 0disoft/clarissimi@v0.1.0
         with:
           mode: dry-run
 ```
@@ -92,7 +95,7 @@ Example explicit OpenAI-compatible provider dry run:
 
 ```yaml
 steps:
-  - uses: 0disoft/clarissimi@main
+  - uses: 0disoft/clarissimi@v0.1.0
     env:
       CLARISSIMI_PROVIDER_TOKEN: ${{ secrets.CLARISSIMI_PROVIDER_TOKEN }}
     with:
@@ -104,7 +107,7 @@ steps:
 For local fixture checks, pass `github-fixture`:
 
 ```yaml
-- uses: 0disoft/clarissimi@main
+- uses: 0disoft/clarissimi@v0.1.0
   with:
     mode: dry-run
     github-fixture: fixtures/github-merged-pr-basic.json
@@ -113,7 +116,7 @@ For local fixture checks, pass `github-fixture`:
 For local or CI checks against a GitHub event payload file, pass `event-path`:
 
 ```yaml
-- uses: 0disoft/clarissimi@main
+- uses: 0disoft/clarissimi@v0.1.0
   with:
     mode: dry-run
     event-path: fixtures/github-pull-request-merged-event.json
@@ -127,7 +130,7 @@ token in the workflow secret boundary:
 
 ```yaml
 steps:
-  - uses: 0disoft/clarissimi@main
+  - uses: 0disoft/clarissimi@v0.1.0
     env:
       CLARISSIMI_PROVIDER_TOKEN: ${{ secrets.CLARISSIMI_PROVIDER_TOKEN }}
     with:
@@ -140,7 +143,7 @@ To upload the sanitized JSON summary as a workflow artifact:
 ```yaml
 steps:
   - id: clarissimi
-    uses: 0disoft/clarissimi@main
+    uses: 0disoft/clarissimi@v0.1.0
     with:
       mode: dry-run
       summary-path: .clarissimi/run-summary.json
@@ -174,7 +177,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: 0disoft/clarissimi@main
+      - uses: 0disoft/clarissimi@v0.1.0
         with:
           mode: propose
           base-branch: main
@@ -193,7 +196,7 @@ steps:
   - uses: actions/checkout@v7
     with:
       fetch-depth: 0
-  - uses: 0disoft/clarissimi@main
+  - uses: 0disoft/clarissimi@v0.1.0
     with:
       mode: propose
       github-fixture: fixtures/github-merged-pr-approved.json
@@ -213,7 +216,7 @@ steps:
   - uses: actions/checkout@v7
     with:
       fetch-depth: 0
-  - uses: 0disoft/clarissimi@main
+  - uses: 0disoft/clarissimi@v0.1.0
     with:
       mode: stage-draft
       base-branch: main

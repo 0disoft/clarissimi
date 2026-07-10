@@ -51,9 +51,9 @@ This repository type owns workspace boundaries, package ownership, dependency po
   must also follow the dependency graph below so package manifests and `tsconfig` build order do
   not drift apart.
 - Monorepo release or rollout policy: source-only merges may continue after local and hosted
-  validation, but public package publication and versioned Action tags remain blocked by
-  `docs/ops/release.md`; release-readiness keeps root and workspace package manifests private at
-  `0.0.0` while that blocker is active.
+  validation, and ADR 0031 allows the root Action tag after release gates pass. Public package
+  publication remains blocked by `docs/ops/release.md`; release-readiness keeps root and workspace
+  package manifests private at `0.0.0` while that package blocker is active.
 - Monorepo compatibility and migration policy: schema versions must be explicit and migration work
   must be documented before changing accepted public data shapes.
 

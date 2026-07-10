@@ -1,6 +1,6 @@
 # Release
 
-- Status: Draft
+- Status: Active
 
 ## Operational Contract
 
@@ -8,14 +8,13 @@ Cover release types, versioning, pre-release checklist, deployment flow, post-de
 
 ## Current Release Policy
 
-Clarissimi is not ready for public package publication. The repository may continue to merge and
-dogfood source changes on `main`, but npm package publication, marketplace release notes, or a
-versioned Action tag remain blocked until maintainers accept a release ADR or update this
-operational contract. The pre-release evidence below records the current technical readiness gates.
+Clarissimi is not ready for public package publication. ADR 0031 authorizes the first public root
+GitHub Action release at immutable tag `v0.1.0` after every gate in this document passes for the
+exact tag target commit. The corresponding GitHub Release must be marked as a pre-release.
 
-The current root package stays private at `0.0.0`. Do not bump versions, publish packages, or create
-release tags as part of ordinary implementation work until maintainers accept a release ADR or
-update this operational contract.
+The current root and workspace packages stay private at `0.0.0`. Do not bump package versions,
+remove `private: true`, publish npm packages, create a moving `v0` tag, or publish to GitHub
+Marketplace until a separate accepted release decision changes those boundaries.
 
 ## Release Types
 
@@ -25,11 +24,13 @@ update this operational contract.
 - Dogfood workflow update: allowed when Action examples, permissions, `actionlint`, and root
   `action.yml` parsing pass.
 - Public package publication: blocked.
-- Versioned GitHub Action tag: blocked.
+- Versioned GitHub Action tag: allowed for immutable `v0.1.0` under ADR 0031 after all pre-release
+  gates pass for the exact tag target commit.
+- GitHub Marketplace publication: blocked.
 
 ## Pre-Release Gates
 
-Public package publication and versioned Action tags require:
+The versioned Action tag requires:
 
 - live provider adapter credential handling is implemented and documented without fake secrets
 - CLI and Action provider selection for live providers is implemented without making live calls part
@@ -56,6 +57,27 @@ Public package publication and versioned Action tags require:
 - secret scan shows no committed provider tokens, GitHub tokens, private keys, or environment files
 - rollback instructions cover closing proposal pull requests and deleting proposal branches
 
+Public package publication remains blocked even when every technical gate above passes. It needs a
+separate accepted release decision covering package versions, registry authentication, provenance,
+workspace publication scope, and package rollback.
+
+## First Action Release Procedure
+
+1. Run the local validation and hygiene gates against the final candidate checkout.
+2. Push the candidate commit to `main` and confirm hosted CI for that exact SHA.
+3. Run hosted live-provider smoke for the same SHA.
+4. Create an external release evidence issue that identifies release type `versioned-action-tag`,
+   release version `v0.1.0`, ADR 0031, both hosted run URLs, and the candidate SHA.
+5. Create immutable tag `v0.1.0` at that SHA and create a GitHub pre-release linked to the evidence
+   issue. Do not create or move a `v0` alias.
+6. Verify the remote tag target, GitHub Release metadata, and a hosted live-provider smoke run using
+   ref `v0.1.0`.
+
+If validation fails before publication, do not create the tag. If a defect is found after
+publication, keep `v0.1.0` immutable and publish a corrective patch tag such as `v0.1.1`. Delete or
+replace the published tag only for an urgent security or supply-chain incident, after documenting
+the old SHA, replacement SHA, user impact, and recovery path in a public issue.
+
 ## Hosted Live Provider Smoke
 
 Run non-credentialed release gates before any provider token is used:
@@ -66,8 +88,8 @@ pnpm run release-readiness
 
 This command checks documentation links, release-critical package script registration, package and
 script test-glob registration, the workspace package glob, workspace package manifest identity,
-the blocked root and workspace package release policy, public product-positioning guardrails,
-workspace package publish surface, release policy document blocked-status coverage, release tool
+the blocked root and workspace package publication policy, public product-positioning guardrails,
+workspace package publish surface, release policy document Action-release coverage, release tool
 availability, package ownership table coverage, internal workspace dependency graph, package
 publication metadata, TypeScript project-reference build graph, recorded dry-run and write-mode
 dogfood evidence, the intentionally fail-closed `format` and `migration-check` placeholders, CI
@@ -156,7 +178,8 @@ candidate SHA.
 ## Validation
 
 - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
-- Release blocker status: public package publication and versioned Action tags are blocked
+- Release status: immutable Action tag `v0.1.0` is allowed by ADR 0031 after all gates pass; public
+  package publication and GitHub Marketplace publication remain blocked
 - Recent hosted CI validation evidence: `CI` workflow run `29052254866` passed on
   `2026-07-09T21:42:23Z` for validated source commit
   `eaf22e44f5ef87391a16cf5a6597395826f05b7d` on `main` and validated `docs`,

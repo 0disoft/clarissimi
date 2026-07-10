@@ -32,7 +32,7 @@ Post-incident follow-up:
 
 - Add or update tests when the incident was preventable by validation.
 - Update rollback, secrets, or CI docs when the response path was unclear.
-- Do not publish release notes or versioned Action tags until release blockers are cleared.
+- Do not publish or promote a versioned Action tag while any required release gate is failing.
 
 ## Owners
 
@@ -43,8 +43,8 @@ Post-incident follow-up:
 ## Validation
 
 - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
-- Release blocker status: public package publication and versioned Action tags remain blocked by
-  `docs/ops/release.md`.
+- Release status: versioned Action tags are allowed by ADR 0031 after release gates pass; public
+  package publication remains blocked by `docs/ops/release.md`.
 - Recent hosted live-provider evidence is recorded in `docs/ops/release.md`; refresh it with
   `pnpm run hosted-live-provider-smoke -- --model <provider-model>` for the exact
   release-candidate commit before publication or versioned Action tags.

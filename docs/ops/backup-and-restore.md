@@ -46,8 +46,8 @@ Integrity checks after restore:
 ## Validation
 
 - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
-- Release blocker status: public package publication and versioned Action tags remain blocked by
-  `docs/ops/release.md`.
+- Release status: versioned Action tags are allowed by ADR 0031 after release gates pass; public
+  package publication remains blocked by `docs/ops/release.md`.
 - Recent hosted live-provider evidence is recorded in `docs/ops/release.md`; refresh it with
   `pnpm run hosted-live-provider-smoke -- --model <provider-model>` for the exact
   release-candidate commit before publication or versioned Action tags.

@@ -30,7 +30,7 @@ The current local CI parity commands are:
 - `pnpm run release-readiness`: runs non-credentialed release checks for documentation,
   release-critical package script registration, package and script test-glob registration, the
   workspace package glob, workspace package manifest identity, the blocked root and workspace
-  package release policy, blocked release policy document status, public product-positioning
+  package publication policy, Action release policy document status, public product-positioning
   guardrails, workspace package publish surface, package ownership table coverage, package
   publication metadata, internal workspace dependency graph, TypeScript project-reference build
   graph, recorded dry-run and write-mode dogfood evidence, the intentionally fail-closed `format`
@@ -135,8 +135,8 @@ owners can recover from CI or protection misconfiguration without changing the b
 ## Validation
 
 - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
-- Release blocker status: public package publication and versioned Action tags remain blocked by
-  `docs/ops/release.md`.
+- Release status: versioned Action tags are allowed by ADR 0031 after release gates pass; public
+  package publication remains blocked by `docs/ops/release.md`.
 - Recent hosted live-provider evidence is recorded in `docs/ops/release.md`; refresh it with
   `pnpm run hosted-live-provider-smoke -- --model <provider-model>` for the exact
   release-candidate commit before publication or versioned Action tags.

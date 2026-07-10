@@ -22,7 +22,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
 - Monorepo validation evidence: use the narrowest relevant targeted tests first, then `docs`,
   `release-readiness`, `lint`, `smoke`, `check`, and `contract` before merge.
 - Monorepo release or rollout policy: source-only merges may land after local and hosted
-  validation; package publication and versioned Action tags remain blocked by `docs/ops/release.md`.
+  validation, and ADR 0031 allows the root Action tag after release gates pass; package publication
+  remains blocked by `docs/ops/release.md`.
 - Monorepo compatibility and migration policy: public data, config, ledger, and Action contract
   changes require compatibility notes or explicit migration decisions.
 

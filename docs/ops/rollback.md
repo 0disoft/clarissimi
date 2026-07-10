@@ -32,6 +32,8 @@ Choose the narrowest rollback path:
 | Published proposal branch without pull request | Delete the remote proposal branch. |
 | Open proposal pull request before merge | Close the proposal pull request and delete the proposal branch. |
 | Merged recognition pull request | Revert the recognition pull request and run the rebuild path for derived outputs. |
+| Published Action tag with a normal defect | Keep the tag immutable and publish a corrective patch tag. |
+| Published Action tag with an urgent security or supply-chain incident | Document impact and recovery, then delete or replace the tag only when continued availability is more dangerous. |
 
 ## Procedure
 
@@ -60,6 +62,15 @@ pull request title starts with `Clarissimi recognition:` and the branch is scope
 For a merged recognition pull request, revert the merge or the exact recognition commit with the
 repository's normal GitHub workflow. After the revert lands, regenerate derived outputs with the
 configured rebuild command and rerun validation.
+
+For a published Action tag with a normal defect, do not move or overwrite the existing tag. Stop
+promoting the affected version, document the defect in the release notes, fix and validate a new
+candidate, and publish the next patch tag such as `v0.1.1`.
+
+For an urgent security or supply-chain incident, first preserve the affected tag name, old SHA,
+workflow evidence, and release URL in an incident issue. Delete or replace the remote tag only when
+leaving it available creates greater user risk. Publish a replacement tag or recovery instruction,
+and name the old SHA, replacement SHA, affected users, and verification evidence.
 
 ## Database Rollback Policy
 
@@ -92,8 +103,8 @@ Resume the release or dogfood run only after:
 ## Validation
 
 - Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
-- Release blocker status: public package publication and versioned Action tags remain blocked by
-  `docs/ops/release.md`.
+- Release status: versioned Action tags are allowed by ADR 0031 after release gates pass; public
+  package publication remains blocked by `docs/ops/release.md`.
 - Recent hosted live-provider evidence is recorded in `docs/ops/release.md`; refresh it with
   `pnpm run hosted-live-provider-smoke -- --model <provider-model>` for the exact
   release-candidate commit before publication or versioned Action tags.

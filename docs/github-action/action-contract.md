@@ -64,7 +64,8 @@ The root `action.yml` exposes the same surface as a composite action:
 The composite Action executes `action-dist/index.js`. Consumer runs must not install repository
 dependencies or compile workspace TypeScript. The tracked bundle is derived from the Action source
 and must match `pnpm run bundle:action:check` before merge or release. The composite launcher uses
-Bash, and Ubuntu is the only currently claimed consumer runner.
+Bash. Ubuntu, macOS, and Windows are claimed consumer runners after external dry-run and full-write
+smoke passed for immutable tag `v0.1.1`.
 
 The future expanded action contract should include:
 

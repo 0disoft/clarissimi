@@ -94,14 +94,37 @@ Record:
 - Clarissimi tag or commit SHA under test:
 - Consumer workflow commit SHA:
 
+## External Full-Write Evidence
+
+Run the cleanup-safe full-write matrix for the same immutable Clarissimi ref:
+
+```powershell
+gh workflow run clarissimi-full-write-smoke.yml --repo 0disoft/integration-lab --ref main -f clarissimi-ref=<tag-or-sha>
+```
+
+Record:
+
+- Consumer repository: `0disoft/integration-lab`
+- Workflow name: `Clarissimi full write smoke`
+- Run URL:
+- Run id:
+- Run conclusion:
+- Run timestamp:
+- Clarissimi tag or commit SHA under test:
+- Consumer workflow commit SHA:
+- Ubuntu job conclusion:
+- macOS job conclusion:
+- Windows job conclusion:
+- Stage, approval, promotion, recognition verification, and cleanup step conclusions:
+
 ## Evidence Issue Helper
 
 After hosted CI and hosted live-provider smoke pass for the same candidate SHA, and external
-consumer smoke passes for the corresponding immutable Clarissimi ref, create or preview a release
-evidence issue from the run metadata:
+consumer dry-run and full-write smoke pass for the corresponding immutable Clarissimi ref, create
+or preview a release evidence issue from the run metadata:
 
 ```powershell
-pnpm run release-candidate-evidence-issue -- --sha <candidate-sha> --ci-run <ci-run-id> --live-run <live-run-id> --external-run <external-run-id> --provider-model <provider-model>
+pnpm run release-candidate-evidence-issue -- --sha <candidate-sha> --ci-run <ci-run-id> --live-run <live-run-id> --external-run <external-run-id> --external-write-run <full-write-run-id> --provider-model <provider-model>
 ```
 
 Use `--print` to preview the issue body without creating a public GitHub issue. The helper validates
@@ -110,13 +133,15 @@ validate the same candidate SHA. It also inspects the external run in `0disoft/i
 requires workflow `Clarissimi external consumer` on `main`, and checks that its display title names
 the exact immutable Clarissimi ref. Source-only evidence defaults that ref to the candidate SHA;
 versioned Action evidence defaults it to the release version. Use `--external-ref` only to state the
-same expected value explicitly. The helper records only the secret name
+same expected value explicitly. The helper also requires the full-write matrix to contain successful
+Ubuntu, macOS, and Windows jobs with successful stage, approval, promotion, recognition
+verification, and cleanup steps. It records only the secret name
 `CLARISSIMI_PROVIDER_TOKEN`, never the secret value.
 
 For the Action release authorized by ADR 0031, identify the immutable tag explicitly:
 
 ```powershell
-pnpm run release-candidate-evidence-issue -- --release-type versioned-action-tag --release-version v0.1.0 --sha <candidate-sha> --ci-run <ci-run-id> --live-run <live-run-id> --external-run <external-run-id> --provider-model <provider-model>
+pnpm run release-candidate-evidence-issue -- --release-type versioned-action-tag --release-version v0.1.0 --sha <candidate-sha> --ci-run <ci-run-id> --live-run <live-run-id> --external-run <external-run-id> --external-write-run <full-write-run-id> --provider-model <provider-model>
 ```
 
 The helper rejects package-publication evidence while public packages remain blocked. A
@@ -125,7 +150,7 @@ source-only evidence issue may omit both release options.
 For gateway providers, pass the same non-secret provider options used by hosted live-provider smoke:
 
 ```powershell
-pnpm run release-candidate-evidence-issue -- --sha <candidate-sha> --ci-run <ci-run-id> --live-run <live-run-id> --external-run <external-run-id> --provider-model minimax-m3 --provider-endpoint <chat-completions-url> --provider-thinking disabled
+pnpm run release-candidate-evidence-issue -- --sha <candidate-sha> --ci-run <ci-run-id> --live-run <live-run-id> --external-run <external-run-id> --external-write-run <full-write-run-id> --provider-model minimax-m3 --provider-endpoint <chat-completions-url> --provider-thinking disabled
 ```
 
 ## Publication Decision
@@ -140,5 +165,7 @@ Before publication or a versioned Action tag, confirm:
 - Versioned Action releases use the exact tag recorded in the evidence issue and do not create a
   moving `v0` alias.
 - The external consumer workflow passed for that exact immutable tag or commit SHA.
+- The external full-write workflow passed stage, approval, promotion, recognition verification, and
+  cleanup on Ubuntu, macOS, and Windows for that exact immutable ref.
 - No evidence-only commit was created after final candidate validation solely to update recorded run
   URLs.

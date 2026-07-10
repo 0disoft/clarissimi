@@ -147,8 +147,8 @@ immutable. npm packages and GitHub Marketplace publication remain intentionally 
 
 The `v0.1.1` release executes the committed Action bundle rather than installing pnpm dependencies
 and compiling TypeScript in each consumer run. `v0.1.0` keeps its published source-build runtime
-behavior unchanged. Ubuntu is the currently supported consumer runner. macOS and Windows support
-remain unclaimed until consumer-level smoke coverage exists.
+behavior unchanged. Ubuntu, macOS, and Windows runners have passed external dry-run and full-write
+consumer smoke for `v0.1.1`.
 
 The Action package runs dry-run summaries without GitHub API writes, live provider credentials, or
 repository file changes:
@@ -269,7 +269,7 @@ Release-only hosted checks are:
 
 - `pnpm run hosted-ci-validation`
 - `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`
-- `pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --external-run <run-id> --provider-model <provider-model>`
+- `pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --external-run <run-id> --external-write-run <run-id> --provider-model <provider-model>`
 
 Release-only credentialed checks are:
 

@@ -20,7 +20,8 @@ test("release candidate evidence issue prints a validated evidence body", async 
         url: "https://github.com/owner/repo/actions/runs/67890",
         event: "workflow_dispatch"
       }),
-      "24680": createExternalRun("v0.1.0")
+      "24680": createExternalRun("v0.1.0"),
+      "13579": createExternalWriteRun("v0.1.0")
     }
   });
 
@@ -42,6 +43,8 @@ test("release candidate evidence issue prints a validated evidence body", async 
     "67890",
     "--external-run",
     "24680",
+    "--external-write-run",
+    "13579",
     "--provider-model",
     "minimax-m3",
     "--provider-endpoint",
@@ -56,12 +59,14 @@ test("release candidate evidence issue prints a validated evidence body", async 
     ["gh", "--version"],
     ["gh", "run", "view"],
     ["gh", "run", "view"],
+    ["gh", "run", "view"],
     ["gh", "run", "view"]
   ]);
   assert.equal(harness.logs.join("\n").includes("Release candidate evidence for `0123456789abcdef0123456789abcdef01234567`"), true);
   assert.equal(harness.logs.join("\n").includes("https://github.com/owner/repo/actions/runs/12345"), true);
   assert.equal(harness.logs.join("\n").includes("Repository secret used by workflow: `CLARISSIMI_PROVIDER_TOKEN`"), true);
   assert.equal(harness.logs.join("\n").includes("https://github.com/0disoft/integration-lab/actions/runs/24680"), true);
+  assert.equal(harness.logs.join("\n").includes("https://github.com/0disoft/integration-lab/actions/runs/13579"), true);
   assert.equal(harness.logs.join("\n").includes("Clarissimi ref: `v0.1.0`"), true);
   assert.equal(harness.logs.join("\n").includes("minimax-m3"), true);
   assert.equal(harness.logs.join("\n").includes("--endpoint https://gateway.example/v1/chat/completions"), true);
@@ -88,7 +93,8 @@ test("release candidate evidence issue resolves HEAD and creates an issue with b
         workflowName: "Clarissimi live provider smoke",
         url: "https://github.com/0disoft/clarissimi/actions/runs/67890"
       }),
-      "24680": createExternalRun(exampleSha)
+      "24680": createExternalRun(exampleSha),
+      "13579": createExternalWriteRun(exampleSha)
     }
   });
 
@@ -99,6 +105,8 @@ test("release candidate evidence issue resolves HEAD and creates an issue with b
     "67890",
     "--external-run",
     "24680",
+    "--external-write-run",
+    "13579",
     "--provider-model",
     "gpt-4.1-mini",
     "--title",
@@ -109,6 +117,7 @@ test("release candidate evidence issue resolves HEAD and creates an issue with b
   assert.deepEqual(harness.commands.map((command) => [command.command, ...command.args.slice(0, 2)]), [
     ["git", "rev-parse", "HEAD"],
     ["gh", "--version"],
+    ["gh", "run", "view"],
     ["gh", "run", "view"],
     ["gh", "run", "view"],
     ["gh", "run", "view"],
@@ -131,6 +140,7 @@ test("release candidate evidence issue resolves HEAD and creates an issue with b
   assert.equal(issueCreate.options.input.includes("Run id: `12345`"), true);
   assert.equal(issueCreate.options.input.includes("Run id: `67890`"), true);
   assert.equal(issueCreate.options.input.includes("Run id: `24680`"), true);
+  assert.equal(issueCreate.options.input.includes("Run id: `13579`"), true);
   assert.equal(harness.logs.includes("release candidate evidence issue created: https://github.com/0disoft/clarissimi/issues/12"), true);
 });
 
@@ -186,6 +196,27 @@ test("release candidate evidence issue rejects invalid inputs before calling git
   );
   assert.equal(missingExternalRun.commands.length, 0);
 
+  const missingExternalWriteRun = createHarness({ headSha: exampleSha });
+  const missingExternalWriteRunExitCode = await runReleaseCandidateEvidenceIssue([
+    "--ci-run",
+    "12345",
+    "--live-run",
+    "67890",
+    "--external-run",
+    "24680",
+    "--provider-model",
+    "gpt-4.1-mini"
+  ], missingExternalWriteRun.runtime);
+
+  assert.equal(missingExternalWriteRunExitCode, 2);
+  assert.equal(
+    missingExternalWriteRun.errors.includes(
+      "--external-write-run requires a positive numeric workflow run id."
+    ),
+    true
+  );
+  assert.equal(missingExternalWriteRun.commands.length, 0);
+
   const emptyModel = createHarness({ headSha: exampleSha });
   const emptyModelExitCode = await runReleaseCandidateEvidenceIssue([
     "--ci-run",
@@ -194,6 +225,8 @@ test("release candidate evidence issue rejects invalid inputs before calling git
     "67890",
     "--external-run",
     "24680",
+    "--external-write-run",
+    "13579",
     "--provider-model",
     ""
   ], emptyModel.runtime);
@@ -210,6 +243,8 @@ test("release candidate evidence issue rejects invalid inputs before calling git
     "67890",
     "--external-run",
     "24680",
+    "--external-write-run",
+    "13579",
     "--provider-model",
     "minimax-m3",
     "--provider-endpoint",
@@ -299,6 +334,8 @@ test("release candidate evidence issue rejects workflow run mismatch before issu
     "67890",
     "--external-run",
     "24680",
+    "--external-write-run",
+    "13579",
     "--provider-model",
     "gpt-4.1-mini"
   ], wrongSha.runtime);
@@ -334,6 +371,8 @@ test("release candidate evidence issue rejects workflow run mismatch before issu
     "67890",
     "--external-run",
     "24680",
+    "--external-write-run",
+    "13579",
     "--provider-model",
     "gpt-4.1-mini"
   ], failedRun.runtime);
@@ -372,6 +411,8 @@ test("release candidate evidence issue rejects an external run for another Clari
     "67890",
     "--external-run",
     "24680",
+    "--external-write-run",
+    "13579",
     "--provider-model",
     "gpt-4.1-mini"
   ], harness.runtime);
@@ -387,6 +428,57 @@ test("release candidate evidence issue rejects an external run for another Clari
   assert.equal(
     harness.commands.some((command) => command.command === "gh" && command.args[0] === "issue"),
     false
+  );
+});
+
+test("release candidate evidence issue rejects full-write evidence without successful cleanup", async () => {
+  const fullWriteRun = createExternalWriteRun(exampleSha);
+  const windowsJob = fullWriteRun.jobs.find((job) => job.name.includes("windows-latest"));
+  const cleanupStep = windowsJob.steps.find((step) =>
+    step.name === "Clean up smoke pull requests and branches"
+  );
+  cleanupStep.conclusion = "failure";
+
+  const harness = createHarness({
+    headSha: exampleSha,
+    runs: {
+      "12345": createRun({
+        databaseId: 12345,
+        workflowName: "CI",
+        url: "https://github.com/0disoft/clarissimi/actions/runs/12345"
+      }),
+      "67890": createRun({
+        databaseId: 67890,
+        workflowName: "Clarissimi live provider smoke",
+        url: "https://github.com/0disoft/clarissimi/actions/runs/67890"
+      }),
+      "24680": createExternalRun(exampleSha),
+      "13579": fullWriteRun
+    }
+  });
+
+  const exitCode = await runReleaseCandidateEvidenceIssue([
+    "--sha",
+    exampleSha,
+    "--ci-run",
+    "12345",
+    "--live-run",
+    "67890",
+    "--external-run",
+    "24680",
+    "--external-write-run",
+    "13579",
+    "--provider-model",
+    "gpt-4.1-mini"
+  ], harness.runtime);
+
+  assert.equal(exitCode, 1);
+  assert.equal(
+    harness.errors.includes(
+      "external full-write smoke run 13579 job Stage, approve, and promote (windows-latest) "
+      + "step Clean up smoke pull requests and branches must succeed."
+    ),
+    true
   );
 });
 
@@ -414,6 +506,36 @@ function createExternalRun(ref, overrides = {}) {
     headSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     url: "https://github.com/0disoft/integration-lab/actions/runs/24680",
     workflowName: "Clarissimi external consumer",
+    ...overrides
+  });
+}
+
+function createExternalWriteRun(ref, overrides = {}) {
+  const runId = 13579;
+  return createRun({
+    databaseId: runId,
+    displayTitle: `Clarissimi full write smoke · ${ref} · ${runId}`,
+    event: "workflow_dispatch",
+    headBranch: "main",
+    headSha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    jobs: ["ubuntu-latest", "macos-latest", "windows-latest"].map((runner) => ({
+      conclusion: "success",
+      name: `Stage, approve, and promote (${runner})`,
+      status: "completed",
+      steps: [
+        "Stage synthetic draft",
+        "Approve and merge the draft proposal",
+        "Promote approved draft",
+        "Verify recognition proposal",
+        "Clean up smoke pull requests and branches"
+      ].map((name) => ({
+        conclusion: "success",
+        name,
+        status: "completed"
+      }))
+    })),
+    url: `https://github.com/0disoft/integration-lab/actions/runs/${runId}`,
+    workflowName: "Clarissimi full write smoke",
     ...overrides
   });
 }

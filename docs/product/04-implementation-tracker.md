@@ -492,14 +492,15 @@ Completed deliverables:
   so maintainers can attach exact hosted CI, external consumer, and hosted live-provider run URLs to
   a release PR, release issue, or GitHub release notes without creating an evidence-only commit that
   changes the candidate SHA
-- immutable tag `v0.1.1` passed external consumer matrix run `29083278366` on Ubuntu, macOS, and
-  Windows; cleanup-safe full-write run `29083329160` staged, approved, and promoted against an
-  ephemeral base, verified the Markdown summary table, and removed its pull request and branch
-  artifacts without mutating integration-lab `main`
+- immutable tag `v0.1.1` passed external consumer matrix run `29083278366` and cleanup-safe
+  full-write matrix run `29084798439` on Ubuntu, macOS, and Windows; orphan audit run `29084888305`
+  confirmed the matrix removed its pull request and branch artifacts without mutating
+  integration-lab `main`
 - `pnpm run release-candidate-evidence-issue` validates candidate run metadata and creates or
   previews the external release evidence issue without reading provider token values; it requires
-  the external run display title to identify the exact candidate SHA or release tag, and versioned
-  Action evidence records release type, immutable tag, ADR 0031, and the package blocker
+  both external run display titles to identify the exact candidate SHA or release tag, requires all
+  full-write runner and cleanup steps to succeed, and records release type, immutable tag, ADR 0031,
+  and the package blocker
 
 Release follow-up:
 

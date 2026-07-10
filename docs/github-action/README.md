@@ -50,8 +50,8 @@ or updates a draft review pull request. When `propose` or `stage-draft` receives
 `GITHUB_EVENT_PATH`, it routes the merged pull request through the live GitHub collector using
 `GITHUB_TOKEN`; fixture inputs remain the deterministic local and test path.
 
-Ubuntu is the currently supported consumer runner. The composite launcher uses Bash. macOS and
-Windows support require separate consumer-level smoke evidence before they can be claimed.
+The composite launcher uses Bash. Ubuntu, macOS, and Windows have passed external dry-run and
+full-write consumer smoke for immutable tag `v0.1.1`.
 
 The Action defaults to the fake provider when no provider input or config value is set. To use an
 OpenAI-compatible provider, pass `provider: openai-compatible` and `provider-model`, or provide

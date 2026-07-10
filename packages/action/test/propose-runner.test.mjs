@@ -307,6 +307,7 @@ test("environment runner writes promote-draft proposal outputs", async () => {
         GITHUB_REPOSITORY: "0disoft/clarissimi",
         INPUT_BASE_BRANCH: "main",
         INPUT_DRAFT_PATH: draftRelativePath,
+        INPUT_MARKDOWN_SUMMARY: "table",
         INPUT_MODE: "promote-draft",
         INPUT_STAGING_DIR: stagingDir,
         GITHUB_TOKEN: "test-token"
@@ -326,6 +327,7 @@ test("environment runner writes promote-draft proposal outputs", async () => {
     const parsed = JSON.parse(stdout);
     const outputText = await readFile(outputPath, "utf8");
     const summaryText = await readFile(summaryPath, "utf8");
+    const contributorsMarkdown = await readFile(join(stagingDir, "CONTRIBUTORS.md"), "utf8");
 
     assert.equal(exitCode, 0);
     assert.equal(stderr, "");
@@ -338,6 +340,8 @@ test("environment runner writes promote-draft proposal outputs", async () => {
     assert.equal(outputText.includes("proposal-pull-request-number=1"), true);
     assert.equal(outputText.includes("proposal-pull-request-action=created"), true);
     assert.equal(summaryText.includes("## Clarissimi promote-draft summary"), true);
+    assert.equal(contributorsMarkdown.includes("| Contributor | Total | Types |"), true);
+    assert.equal(contributorsMarkdown.includes("## octocat"), true);
     assert.equal(client.created[0].repository, "0disoft/clarissimi");
   });
 });

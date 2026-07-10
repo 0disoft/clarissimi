@@ -119,6 +119,9 @@ Derived contributor profiles may include counts, contribution types, affected ar
 recognition summaries. `CONTRIBUTORS.md` displays the total recognized contribution count and
 per-type event counts for each contributor. These counts come directly from ledger records and must
 not be weighted or converted into public average scores, total scores, percentages, or ranks.
+When `markdownSummary` is `table`, the same raw event counts are repeated in a compact summary table
+above the detailed recognition sections. The table does not replace evidence-linked detail and does
+not introduce score, percentage, rank, or tier fields.
 
 Maintainer-only analytics may calculate recent recognition share from the same ledger, but those
 results are stdout-only analysis and are not public derived ledger outputs.

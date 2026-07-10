@@ -12,13 +12,19 @@ import {
   toDraftReviewRecord,
   type RenderedRecognitionOutputs
 } from "@clarissimi/renderers";
-import type { ContributionAssessment, RecognitionSource, ValidationIssue } from "@clarissimi/schemas";
+import type {
+  ConfigMarkdownSummary,
+  ContributionAssessment,
+  RecognitionSource,
+  ValidationIssue
+} from "@clarissimi/schemas";
 
 export interface ProposalOutputStagingInput {
   readonly outputDir: string;
   readonly assessments: readonly unknown[];
   readonly existingRecords?: readonly unknown[];
   readonly redactionMatchCount: number;
+  readonly markdownSummary?: ConfigMarkdownSummary;
 }
 
 export interface ProposalOutputStagingResult {
@@ -65,7 +71,10 @@ export async function stageProposalRecognitionOutputs(
     (currentRecords, assessment) => appendPublicContributionRecord(currentRecords, assessment),
     input.existingRecords ?? []
   );
-  const outputs = renderRecognitionOutputs(records);
+  const outputs = renderRecognitionOutputs(
+    records,
+    input.markdownSummary === undefined ? {} : { summary: input.markdownSummary }
+  );
   const files = await writeRenderedOutputs(input.outputDir, outputs);
 
   return {

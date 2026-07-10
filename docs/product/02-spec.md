@@ -150,6 +150,9 @@ rebuildable.
 `CONTRIBUTORS.md` groups approved recognition by contributor and shows the contributor's total
 recognized contribution count plus deterministic per-type counts. These are event counts from the
 ledger, not weighted scores, percentages, ranks, or contributor tiers.
+An opt-in compact summary table may repeat contributor identity, total event count, and deterministic
+per-type counts before the detailed sections. It must preserve the evidence-linked contributor
+details and must not add score, percentage, rank, ordering-by-count, or tier semantics.
 
 The MVP keeps `contributions.jsonl` as a single file. If ledger size or merge conflicts become a
 real operational problem, Clarissimi should migrate through an explicit schema-versioned yearly

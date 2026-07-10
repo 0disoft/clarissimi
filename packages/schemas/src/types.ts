@@ -12,6 +12,10 @@ export const CONFIG_MODES = ["dry-run", "propose", "commit"] as const;
 
 export type ConfigMode = (typeof CONFIG_MODES)[number];
 
+export const CONFIG_MARKDOWN_SUMMARIES = ["none", "table"] as const;
+
+export type ConfigMarkdownSummary = (typeof CONFIG_MARKDOWN_SUMMARIES)[number];
+
 export const CONTRIBUTION_TYPES = [
   "bug_fix",
   "bug_report",
@@ -66,6 +70,7 @@ export interface ClarissimiConfig {
   readonly providerModel?: string;
   readonly providerThinking?: ConfigProviderThinking;
   readonly mode?: ConfigMode;
+  readonly markdownSummary?: ConfigMarkdownSummary;
 }
 
 export interface ContributorIdentity {

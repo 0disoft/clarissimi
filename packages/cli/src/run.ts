@@ -29,7 +29,9 @@ import {
 import {
   isConfigProvider,
   isConfigProviderThinking,
+  isConfigMarkdownSummary,
   validateContributionAssessment,
+  type ConfigMarkdownSummary,
   type ConfigProviderThinking,
   type ValidationIssue
 } from "@clarissimi/schemas";
@@ -185,7 +187,10 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
       ? {
           contributionsJsonl: renderContributionsJsonl([result.assessment]),
           contributorsJson: renderContributorsJson([result.assessment]),
-          contributorsMarkdown: renderContributorsMarkdown([result.assessment]),
+          contributorsMarkdown: renderContributorsMarkdown(
+            [result.assessment],
+            { summary: resolveMarkdownSummary(args, config) }
+          ),
           staticDataJson: renderStaticContributionsJson([result.assessment])
         }
       : null;
@@ -346,6 +351,7 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
   const outDir = getStringFlag(args, "out-dir");
 
   try {
+    const config = (await validateConfigFile(io.cwd, getStringFlag(args, "config"))).config;
     const parsedDraftInput = parseJsonText(
       await readTextFile(resolveFromCwd(io.cwd, draftPath)),
       draftPath
@@ -359,7 +365,9 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
     const existingLedgerText = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
     const existingRecords = parseContributionsJsonl(existingLedgerText);
     const nextRecords = appendPublicContributionRecord(existingRecords, validation.value);
-    const outputs = renderRecognitionOutputs(nextRecords);
+    const outputs = renderRecognitionOutputs(nextRecords, {
+      summary: resolveMarkdownSummary(args, config)
+    });
 
     await writeTextFile(ledgerPath, outputs.contributionsJsonl);
 
@@ -392,6 +400,11 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
     });
     return CLI_EXIT_CODES.success;
   } catch (error) {
+    if (error instanceof CliUsageError) {
+      io.stderr(`${error.message}\n`);
+      return CLI_EXIT_CODES.usage;
+    }
+
     writeFailure(io, args, "import-draft", error);
     return error instanceof RendererValidationError
       ? CLI_EXIT_CODES.policyRejection
@@ -443,6 +456,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function resolveMarkdownSummary(
+  args: ParsedArgs,
+  config: CliConfig
+): ConfigMarkdownSummary {
+  const value = getStringFlag(args, "markdown-summary") ?? config.markdownSummary ?? "none";
+  if (!isConfigMarkdownSummary(value)) {
+    throw new CliUsageError(`Unsupported Markdown summary: ${value}`);
+  }
+
+  return value;
+}
+
 async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const positionalError = rejectUnexpectedPositionals(args, "rebuild");
   if (positionalError !== undefined) {
@@ -457,10 +482,13 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const outDir = getStringFlag(args, "out-dir");
 
   try {
+    const config = (await validateConfigFile(io.cwd, getStringFlag(args, "config"))).config;
     const ledgerText = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
     const records = parseContributionsJsonl(ledgerText);
     assertUniqueContributionRecords(records);
-    const outputs = renderRecognitionOutputs(records);
+    const outputs = renderRecognitionOutputs(records, {
+      summary: resolveMarkdownSummary(args, config)
+    });
 
     if (outDir !== undefined) {
       await writeRenderedOutputs(resolveFromCwd(io.cwd, outDir), outputs);
@@ -485,6 +513,11 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
     });
     return CLI_EXIT_CODES.success;
   } catch (error) {
+    if (error instanceof CliUsageError) {
+      io.stderr(`${error.message}\n`);
+      return CLI_EXIT_CODES.usage;
+    }
+
     writeFailure(io, args, "rebuild", error);
     return error instanceof RendererValidationError
       ? CLI_EXIT_CODES.invalidLedger
@@ -564,11 +597,11 @@ function renderHelp(): string {
     "  clarissimi --help",
     "  clarissimi validate-config [--config <path>] [--json]",
     "  clarissimi validate-ledger [--ledger <path>] [--json]",
-    "  clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run [--config <path>] [--provider <id>] [--provider-model <model>] [--provider-endpoint <url>] [--provider-thinking disabled] [--json]",
+    "  clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run [--config <path>] [--markdown-summary none|table] [--provider <id>] [--provider-model <model>] [--provider-endpoint <url>] [--provider-thinking disabled] [--json]",
     "  clarissimi stage-draft --draft <path> [--drafts-dir <path>] [--json]",
     "  clarissimi approve-draft --draft <path> [--json]",
-    "  clarissimi import-draft --draft <path> [--ledger <path>] [--out-dir <path>] [--json]",
-    "  clarissimi rebuild [--ledger <path>] [--out-dir <path>] [--json]",
+    "  clarissimi import-draft --draft <path> [--ledger <path>] [--out-dir <path>] [--config <path>] [--markdown-summary none|table] [--json]",
+    "  clarissimi rebuild [--ledger <path>] [--out-dir <path>] [--config <path>] [--markdown-summary none|table] [--json]",
     "  clarissimi analytics recent-share [--ledger <path>] [--window-days <days>] [--as-of <iso-date>] [--json]",
     ""
   ].join("\n");

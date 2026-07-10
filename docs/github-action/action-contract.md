@@ -48,6 +48,8 @@ The root `action.yml` exposes the same surface as a composite action:
 - `event-path`: optional event payload path override
 - `github-fixture`: optional GitHub merged pull request fixture path
 - `config-path`: optional explicit path to a JSON Clarissimi config file or `clarissimi.config.ts`
+- `markdown-summary`: optional `none` or `table` layout for generated `CONTRIBUTORS.md`; defaults to
+  `none`
 - `base-branch`: defaults to `main`
 - `remote-name`: defaults to `origin`
 - `staging-dir`: optional temporary staging directory
@@ -80,6 +82,11 @@ files. When set, the path is resolved relative to `GITHUB_WORKSPACE` unless it i
 and validated through `packages/schemas`. Action inputs and workflow environment values take
 precedence over config values. Omitted provider inputs fall back to config values, then the runner's
 fake provider default. Unsupported `INPUT_MODE` values fail before config-file loading.
+
+`markdown-summary` controls presentation only. `table` adds a deterministic contributor, total, and
+type-count summary before the existing evidence-linked detailed sections. An explicit Action input
+overrides config `markdownSummary`; omitted values fall back to config, then `none`. Promote-draft
+does not load config, but it accepts the explicit presentation input.
 
 `summary-path` is explicit and optional. When set, it must be a relative path that stays inside
 `GITHUB_WORKSPACE`. The Action writes the same sanitized JSON summary that it prints to stdout and

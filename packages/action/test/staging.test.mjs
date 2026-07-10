@@ -107,6 +107,23 @@ test("stages renderer outputs with deterministic file metadata", async () => {
   });
 });
 
+test("stages the optional contributor summary table", async () => {
+  await withTempDir(async (dir) => {
+    const result = await stageProposalRecognitionOutputs({
+      outputDir: dir,
+      assessments: [assessment()],
+      redactionMatchCount: 0,
+      markdownSummary: "table"
+    });
+    const markdown = await readFile(join(dir, RENDERED_OUTPUT_PATHS.contributorsMarkdown), "utf8");
+
+    assert.equal(result.manifest.mode, "propose");
+    assert.equal(markdown.includes("| Contributor | Total | Types |"), true);
+    assert.equal(markdown.includes("| [@octocat](https://github.com/octocat) | 1 | test 1 |"), true);
+    assert.equal(markdown.includes("## octocat"), true);
+  });
+});
+
 test("rejects draft assessments before staging public files", async () => {
   await withTempDir(async (dir) => {
     await assert.rejects(

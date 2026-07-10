@@ -2,6 +2,7 @@ import {
   APPROVAL_STATUSES,
   ASSESSMENT_SCHEMA_VERSION,
   CONFIG_MODES,
+  CONFIG_MARKDOWN_SUMMARIES,
   CONFIG_PROVIDERS,
   CONFIG_PROVIDER_THINKING_VALUES,
   CONTRIBUTION_TYPES,
@@ -11,6 +12,7 @@ import {
   type ClarissimiConfig,
   type ContributionAssessment,
   type ConfigMode,
+  type ConfigMarkdownSummary,
   type ConfigProvider,
   type ConfigProviderThinking,
   type ContributionType,
@@ -101,6 +103,10 @@ export function isConfigMode(value: string): value is ConfigMode {
   return (CONFIG_MODES as readonly string[]).includes(value);
 }
 
+export function isConfigMarkdownSummary(value: string): value is ConfigMarkdownSummary {
+  return (CONFIG_MARKDOWN_SUMMARIES as readonly string[]).includes(value);
+}
+
 export function isImpactLevel(value: string): value is ContributionAssessment["impactLevel"] {
   return (IMPACT_LEVELS as readonly string[]).includes(value);
 }
@@ -184,6 +190,12 @@ export function validateClarissimiConfig(value: unknown): ValidationResult<Clari
     issues
   );
   const mode = expectOptionalEnum(value.mode, isConfigMode, "$.mode", issues);
+  const markdownSummary = expectOptionalEnum(
+    value.markdownSummary,
+    isConfigMarkdownSummary,
+    "$.markdownSummary",
+    issues
+  );
 
   if (issues.length > 0) {
     return invalid(issues);
@@ -195,6 +207,7 @@ export function validateClarissimiConfig(value: unknown): ValidationResult<Clari
     providerModel?: string;
     providerThinking?: ConfigProviderThinking;
     mode?: ConfigMode;
+    markdownSummary?: ConfigMarkdownSummary;
   } = {};
 
   if (provider !== undefined) {
@@ -215,6 +228,10 @@ export function validateClarissimiConfig(value: unknown): ValidationResult<Clari
 
   if (mode !== undefined) {
     config.mode = mode;
+  }
+
+  if (markdownSummary !== undefined) {
+    config.markdownSummary = markdownSummary;
   }
 
   return {

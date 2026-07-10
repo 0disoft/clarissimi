@@ -912,6 +912,7 @@ var ASSESSMENT_SCHEMA_VERSION = "clarissimi.assessment/v1";
 var CONFIG_PROVIDERS = ["fake", "openai-compatible"];
 var CONFIG_PROVIDER_THINKING_VALUES = ["disabled"];
 var CONFIG_MODES = ["dry-run", "propose", "commit"];
+var CONFIG_MARKDOWN_SUMMARIES = ["none", "table"];
 var CONTRIBUTION_TYPES = [
   "bug_fix",
   "bug_report",
@@ -1025,6 +1026,9 @@ function isConfigProviderThinking(value) {
 function isConfigMode(value) {
   return CONFIG_MODES.includes(value);
 }
+function isConfigMarkdownSummary(value) {
+  return CONFIG_MARKDOWN_SUMMARIES.includes(value);
+}
 function isImpactLevel(value) {
   return IMPACT_LEVELS.includes(value);
 }
@@ -1086,6 +1090,7 @@ function validateClarissimiConfig(value) {
   const providerModel = expectOptionalNonEmptyString(value.providerModel, "$.providerModel", issues);
   const providerThinking = expectOptionalEnum(value.providerThinking, isConfigProviderThinking, "$.providerThinking", issues);
   const mode = expectOptionalEnum(value.mode, isConfigMode, "$.mode", issues);
+  const markdownSummary = expectOptionalEnum(value.markdownSummary, isConfigMarkdownSummary, "$.markdownSummary", issues);
   if (issues.length > 0) {
     return invalid(issues);
   }
@@ -1104,6 +1109,9 @@ function validateClarissimiConfig(value) {
   }
   if (mode !== void 0) {
     config.mode = mode;
+  }
+  if (markdownSummary !== void 0) {
+    config.markdownSummary = markdownSummary;
   }
   return {
     ok: true,
@@ -1628,10 +1636,21 @@ function renderContributorsMarkdown(values, options = {}) {
     lines.push("No approved recognition records yet.", "");
     return lines.join("\n");
   }
+  if (options.summary === "table") {
+    appendContributorSummaryTable(lines, profiles);
+  }
   profiles.forEach((profile) => {
     appendContributorProfile(lines, profile);
   });
   return lines.join("\n");
+}
+function appendContributorSummaryTable(lines, profiles) {
+  lines.push("| Contributor | Total | Types |", "| --- | ---: | --- |");
+  profiles.forEach((profile) => {
+    const contributor = `[@${escapeMarkdown(profile.contributor.login)}](${profile.contributor.profileUrl})`;
+    lines.push(`| ${contributor} | ${profile.contributionCount} | ${renderTypeBreakdown(profile)} |`);
+  });
+  lines.push("");
 }
 function appendContributorProfile(lines, profile) {
   lines.push(`## ${escapeMarkdown(profile.contributor.login)}`, "", renderContributionSummary(profile), "");
@@ -1642,12 +1661,14 @@ function appendContributorProfile(lines, profile) {
 }
 function renderContributionSummary(profile) {
   const contributionLabel = profile.contributionCount === 1 ? "1 recognized contribution" : `${profile.contributionCount} recognized contributions`;
+  return `**${contributionLabel}** \xB7 ${renderTypeBreakdown(profile)}`;
+}
+function renderTypeBreakdown(profile) {
   const typeCounts = /* @__PURE__ */ new Map();
   profile.recognitions.forEach((recognition) => {
     typeCounts.set(recognition.contributionType, (typeCounts.get(recognition.contributionType) ?? 0) + 1);
   });
-  const typeBreakdown = Array.from(typeCounts.entries()).sort(([left], [right]) => left.localeCompare(right)).map(([type, count]) => `${escapeMarkdown(type)} ${count}`).join(" \xB7 ");
-  return `**${contributionLabel}** \xB7 ${typeBreakdown}`;
+  return Array.from(typeCounts.entries()).sort(([left], [right]) => left.localeCompare(right)).map(([type, count]) => `${escapeMarkdown(type)} ${count}`).join(" \xB7 ");
 }
 function renderRecognitionLine(recognition) {
   const text = escapeMarkdown(recognition.publicRecognitionText);
@@ -1709,11 +1730,11 @@ var RENDERED_OUTPUT_PATHS = {
   contributorsMarkdown: CONTRIBUTORS_MARKDOWN_PATH,
   staticDataJson: STATIC_DATA_JSON_PATH
 };
-function renderRecognitionOutputs(values) {
+function renderRecognitionOutputs(values, markdownOptions = {}) {
   return {
     contributionsJsonl: renderContributionsJsonl(values),
     contributorsJson: renderContributorsJson(values),
-    contributorsMarkdown: renderContributorsMarkdown(values),
+    contributorsMarkdown: renderContributorsMarkdown(values, markdownOptions),
     staticDataJson: renderStaticContributionsJson(values)
   };
 }
@@ -1731,7 +1752,7 @@ async function stageProposalRecognitionOutputs(input) {
   const assessments = toPublishableAssessments(input.assessments);
   const source = requireSingleSource(assessments);
   const records = assessments.reduce((currentRecords, assessment) => appendPublicContributionRecord(currentRecords, assessment), input.existingRecords ?? []);
-  const outputs = renderRecognitionOutputs(records);
+  const outputs = renderRecognitionOutputs(records, input.markdownSummary === void 0 ? {} : { summary: input.markdownSummary });
   const files = await writeRenderedOutputs(input.outputDir, outputs);
   return {
     outputDir: input.outputDir,
@@ -3010,7 +3031,8 @@ async function runActionPropose(input) {
     outputDir: input.stagingDir,
     assessments: [prepared.assessment],
     existingRecords: await readExistingRecognitionRecords(input.repositoryDir),
-    redactionMatchCount: prepared.redactionMatchCount
+    redactionMatchCount: prepared.redactionMatchCount,
+    ...input.markdownSummary === void 0 ? {} : { markdownSummary: input.markdownSummary }
   });
   const branch = await writeProposalBranch({
     repositoryDir: input.repositoryDir,
@@ -3105,7 +3127,8 @@ async function runActionPromoteDraft(input) {
     outputDir: input.stagingDir,
     assessments: [assessment],
     existingRecords: await readExistingRecognitionRecords(input.repositoryDir),
-    redactionMatchCount: 0
+    redactionMatchCount: 0,
+    ...input.markdownSummary === void 0 ? {} : { markdownSummary: input.markdownSummary }
   });
   const branch = await writeProposalBranch({
     repositoryDir: input.repositoryDir,
@@ -3171,7 +3194,8 @@ async function runActionFromEnvironment(env, io, runtime = {}) {
     const config = explicitMode === "promote-draft" ? {} : await loadActionConfigFromEnvironment(env);
     const mode = explicitMode ?? normalizeActionMode(config.mode ?? "propose");
     const input = {
-      mode
+      mode,
+      markdownSummary: resolveActionMarkdownSummary(env, config)
     };
     if (mode === "promote-draft") {
       if (explicitEventPath !== void 0 || githubFixturePath !== void 0) {
@@ -3270,6 +3294,7 @@ function buildActionWriteInput(input, env, runtime, mode) {
     };
     assignOptional7(promoteDraftInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
     assignOptional7(promoteDraftInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
+    assignOptional7(promoteDraftInput, "markdownSummary", input.markdownSummary);
     return promoteDraftInput;
   }
   const liveGitHubClientOptions = buildLiveGitHubClientOptions(clientOptions, runtime);
@@ -3518,6 +3543,13 @@ function parseProviderThinking(value) {
   }
   if (!isConfigProviderThinking(value)) {
     throw new ActionUsageError("INPUT_PROVIDER_THINKING supports only disabled.");
+  }
+  return value;
+}
+function resolveActionMarkdownSummary(env, config) {
+  const value = readEnvInput(env.INPUT_MARKDOWN_SUMMARY) ?? config.markdownSummary ?? "none";
+  if (!isConfigMarkdownSummary(value)) {
+    throw new ActionUsageError("INPUT_MARKDOWN_SUMMARY supports only none or table.");
   }
   return value;
 }

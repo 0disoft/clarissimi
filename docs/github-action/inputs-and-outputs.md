@@ -15,6 +15,7 @@
 - `event-path`: explicit event payload path for local runs, tests, and write-mode live collection
 - `github-fixture`: explicit GitHub merged pull request fixture path for fixture-first runs
 - `config-path`: optional explicit path to a JSON Clarissimi config file or `clarissimi.config.ts`
+- `markdown-summary`: `none` or `table`; `table` adds a compact summary before contributor details
 - `mode`: `dry-run`, `propose`, `stage-draft`, or `promote-draft`, default `propose`
 - `draft-path`: approved `.clarissimi/drafts/*.json` path required by `promote-draft`
 - `base-branch`: base branch for proposal pull requests
@@ -40,14 +41,16 @@ workflow environment. The current Action reads `GITHUB_TOKEN` only in `propose`,
 The current package supports `INPUT_EVENT_PATH`, `GITHUB_EVENT_PATH`, `INPUT_GITHUB_FIXTURE`,
 `INPUT_CONFIG_PATH`, `INPUT_DRAFT_PATH`, `INPUT_MODE`, `INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`, `INPUT_STAGING_DIR`,
 `INPUT_SUMMARY_PATH`, `INPUT_PROVIDER`, `INPUT_PROVIDER_MODEL`, `INPUT_PROVIDER_ENDPOINT`, and
-`INPUT_PROVIDER_THINKING`.
+`INPUT_PROVIDER_THINKING`. It also supports `INPUT_MARKDOWN_SUMMARY` for derived Markdown layout.
 
 The root `action.yml` currently exposes `event-path`, `github-fixture`, `draft-path`, `mode`,
 `base-branch`, `remote-name`, `staging-dir`, `summary-path`, `config-path`, `provider`, `provider-model`,
-`provider-endpoint`, and `provider-thinking`.
+`provider-endpoint`, and `provider-thinking`. It also exposes `markdown-summary`.
 `config-path` is explicit-only; the Action does not automatically discover repository config files.
 Action inputs and workflow environment values take precedence over config values. Omitted provider
 inputs fall back to config values, then `fake`.
+`markdown-summary` falls back to config `markdownSummary`, then `none`. An explicit Action input
+overrides config.
 `summary-path` is explicit-only, must be relative, and must stay inside `GITHUB_WORKSPACE`. The
 summary artifact contains the same sanitized JSON summary as stdout.
 An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`
@@ -56,7 +59,8 @@ In `dry-run`, event payloads are mapped from the local event file without live G
 In `propose` and `stage-draft`, event payloads route to the live GitHub collector when no explicit
 fixture is provided.
 In `promote-draft`, event, fixture, config, and provider inputs are ignored or rejected as
-inapplicable; the approved draft file is the only assessment input.
+inapplicable; the approved draft file is the only assessment input. The independent
+`markdown-summary` presentation input remains applicable to the rebuilt derived output.
 
 ## Current Outputs
 

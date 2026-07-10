@@ -828,6 +828,30 @@ test("environment runner returns usage failure for unsupported mode", async () =
   assert.equal(stderr, "Unsupported action mode: commit.\n");
 });
 
+test("environment runner rejects unsupported Markdown summary inputs", async () => {
+  let stdout = "";
+  let stderr = "";
+
+  const exitCode = await runActionFromEnvironment(
+    {
+      INPUT_MODE: "dry-run",
+      INPUT_MARKDOWN_SUMMARY: "grid"
+    },
+    {
+      stdout: (value) => {
+        stdout += value;
+      },
+      stderr: (value) => {
+        stderr += value;
+      }
+    }
+  );
+
+  assert.equal(exitCode, 1);
+  assert.equal(stdout, "");
+  assert.equal(stderr, "INPUT_MARKDOWN_SUMMARY supports only none or table.\n");
+});
+
 test("environment runner validates unsupported mode before resolving provider credentials", async () => {
   let stdout = "";
   let stderr = "";

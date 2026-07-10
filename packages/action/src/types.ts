@@ -1,4 +1,4 @@
-import type { ContributionAssessment } from "@clarissimi/schemas";
+import type { ConfigMarkdownSummary, ContributionAssessment } from "@clarissimi/schemas";
 import type { LiveGitHubClient } from "@clarissimi/github";
 import type { ContributionDraftProvider } from "@clarissimi/providers";
 import type { ProposalPullRequestClient } from "./pull-request.js";
@@ -19,6 +19,7 @@ export interface ActionDryRunInput {
   readonly githubFixturePath?: string;
   readonly liveGitHubClient?: LiveGitHubClient;
   readonly provider?: ContributionDraftProvider;
+  readonly markdownSummary?: ConfigMarkdownSummary;
 }
 
 export interface ActionProposeInput extends ActionDryRunInput {

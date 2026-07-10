@@ -19,6 +19,7 @@ import {
 import {
   isConfigProvider,
   isConfigProviderThinking,
+  isConfigMarkdownSummary,
   isApprovalStatus,
   type ApprovalStatus,
   type ClarissimiConfig,
@@ -105,7 +106,8 @@ export async function runActionPropose(input: ActionProposeInput): Promise<Actio
     outputDir: input.stagingDir,
     assessments: [prepared.assessment],
     existingRecords: await readExistingRecognitionRecords(input.repositoryDir),
-    redactionMatchCount: prepared.redactionMatchCount
+    redactionMatchCount: prepared.redactionMatchCount,
+    ...(input.markdownSummary === undefined ? {} : { markdownSummary: input.markdownSummary })
   });
   const branch = await writeProposalBranch({
     repositoryDir: input.repositoryDir,
@@ -208,7 +210,8 @@ export async function runActionPromoteDraft(
     outputDir: input.stagingDir,
     assessments: [assessment],
     existingRecords: await readExistingRecognitionRecords(input.repositoryDir),
-    redactionMatchCount: 0
+    redactionMatchCount: 0,
+    ...(input.markdownSummary === undefined ? {} : { markdownSummary: input.markdownSummary })
   });
   const branch = await writeProposalBranch({
     repositoryDir: input.repositoryDir,
@@ -297,7 +300,8 @@ export async function runActionFromEnvironment(
       : await loadActionConfigFromEnvironment(env);
     const mode = explicitMode ?? normalizeActionMode(config.mode ?? "propose");
     const input: ActionDryRunInput = {
-      mode
+      mode,
+      markdownSummary: resolveActionMarkdownSummary(env, config)
     };
     if (mode === "promote-draft") {
       if (explicitEventPath !== undefined || githubFixturePath !== undefined) {
@@ -441,6 +445,7 @@ function buildActionWriteInput(
     };
     assignOptional(promoteDraftInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
     assignOptional(promoteDraftInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
+    assignOptional(promoteDraftInput, "markdownSummary", input.markdownSummary);
 
     return promoteDraftInput;
   }
@@ -794,6 +799,18 @@ function parseProviderThinking(value: string | undefined): ConfigProviderThinkin
 
   if (!isConfigProviderThinking(value)) {
     throw new ActionUsageError("INPUT_PROVIDER_THINKING supports only disabled.");
+  }
+
+  return value;
+}
+
+function resolveActionMarkdownSummary(
+  env: NodeJS.ProcessEnv,
+  config: ClarissimiConfig
+): NonNullable<ClarissimiConfig["markdownSummary"]> {
+  const value = readEnvInput(env.INPUT_MARKDOWN_SUMMARY) ?? config.markdownSummary ?? "none";
+  if (!isConfigMarkdownSummary(value)) {
+    throw new ActionUsageError("INPUT_MARKDOWN_SUMMARY supports only none or table.");
   }
 
   return value;

@@ -1,3 +1,5 @@
+import type { ConfigMarkdownSummary } from "@clarissimi/schemas";
+
 import type {
   ContributorRecognitionProfile,
   PublicRecognitionSummary
@@ -6,6 +8,7 @@ import { deriveContributorProfiles } from "./contributors.js";
 
 export interface ContributorsMarkdownOptions {
   readonly title?: string;
+  readonly summary?: ConfigMarkdownSummary;
 }
 
 export function renderContributorsMarkdown(
@@ -26,11 +29,34 @@ export function renderContributorsMarkdown(
     return lines.join("\n");
   }
 
+  if (options.summary === "table") {
+    appendContributorSummaryTable(lines, profiles);
+  }
+
   profiles.forEach((profile) => {
     appendContributorProfile(lines, profile);
   });
 
   return lines.join("\n");
+}
+
+function appendContributorSummaryTable(
+  lines: string[],
+  profiles: readonly ContributorRecognitionProfile[]
+): void {
+  lines.push(
+    "| Contributor | Total | Types |",
+    "| --- | ---: | --- |"
+  );
+
+  profiles.forEach((profile) => {
+    const contributor = `[@${escapeMarkdown(profile.contributor.login)}](${profile.contributor.profileUrl})`;
+    lines.push(
+      `| ${contributor} | ${profile.contributionCount} | ${renderTypeBreakdown(profile)} |`
+    );
+  });
+
+  lines.push("");
 }
 
 function appendContributorProfile(
@@ -55,6 +81,10 @@ function renderContributionSummary(profile: ContributorRecognitionProfile): stri
   const contributionLabel = profile.contributionCount === 1
     ? "1 recognized contribution"
     : `${profile.contributionCount} recognized contributions`;
+  return `**${contributionLabel}** · ${renderTypeBreakdown(profile)}`;
+}
+
+function renderTypeBreakdown(profile: ContributorRecognitionProfile): string {
   const typeCounts = new Map<string, number>();
 
   profile.recognitions.forEach((recognition) => {
@@ -64,12 +94,10 @@ function renderContributionSummary(profile: ContributorRecognitionProfile): stri
     );
   });
 
-  const typeBreakdown = Array.from(typeCounts.entries())
+  return Array.from(typeCounts.entries())
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([type, count]) => `${escapeMarkdown(type)} ${count}`)
     .join(" · ");
-
-  return `**${contributionLabel}** · ${typeBreakdown}`;
 }
 
 function renderRecognitionLine(recognition: PublicRecognitionSummary): string {

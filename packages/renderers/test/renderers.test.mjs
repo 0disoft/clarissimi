@@ -363,6 +363,57 @@ test("renders per-contributor totals and deterministic type counts without score
   assert.equal(markdown.includes("%"), false);
 });
 
+test("renders an optional contributor summary table before the detailed sections", () => {
+  const markdown = renderContributorsMarkdown([
+    assessment(),
+    assessment({
+      contributionType: "documentation",
+      source: {
+        ...source,
+        pullRequestNumber: 43
+      }
+    }),
+    assessment({
+      contributor: {
+        platform: "github",
+        id: "456",
+        login: "maintainer-helper",
+        profileUrl: "https://github.com/maintainer-helper"
+      },
+      contributionType: "security",
+      source: {
+        ...source,
+        pullRequestNumber: 44
+      }
+    })
+  ], { summary: "table" });
+
+  assert.equal(
+    markdown.includes("| Contributor | Total | Types |\n| --- | ---: | --- |"),
+    true
+  );
+  assert.equal(
+    markdown.includes("| [@maintainer\\-helper](https://github.com/maintainer-helper) | 1 | security 1 |"),
+    true
+  );
+  assert.equal(
+    markdown.includes("| [@octocat](https://github.com/octocat) | 2 | documentation 1 · test 1 |"),
+    true
+  );
+  assert.equal(markdown.indexOf("| Contributor |"), markdown.lastIndexOf("| Contributor |"));
+  assert.equal(markdown.indexOf("| Contributor |") < markdown.indexOf("## maintainer\\-helper"), true);
+  assert.equal(markdown.includes("## octocat"), true);
+  assert.equal(markdown.includes("score"), false);
+  assert.equal(markdown.includes("rank"), false);
+  assert.equal(markdown.includes("%"), false);
+});
+
+test("keeps the contributor summary table disabled by default", () => {
+  const markdown = renderContributorsMarkdown([assessment()]);
+
+  assert.equal(markdown.includes("| Contributor | Total | Types |"), false);
+});
+
 test("builds static data from the same public records", () => {
   const document = buildStaticContributionsDocument([assessment()]);
 
@@ -372,10 +423,11 @@ test("builds static data from the same public records", () => {
 });
 
 test("renders all repository output targets consistently", () => {
-  const outputs = renderRecognitionOutputs([assessment()]);
+  const outputs = renderRecognitionOutputs([assessment()], { summary: "table" });
 
   assert.equal(outputs.contributionsJsonl.includes("clarissimi.assessment/v1"), true);
   assert.equal(outputs.contributorsJson.includes("clarissimi.contributors/v1"), true);
   assert.equal(outputs.contributorsMarkdown.includes("Added regression coverage"), true);
+  assert.equal(outputs.contributorsMarkdown.includes("| Contributor | Total | Types |"), true);
   assert.equal(outputs.staticDataJson.includes("clarissimi.static-contributions/v1"), true);
 });

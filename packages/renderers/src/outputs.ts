@@ -8,6 +8,7 @@ import {
 import { renderContributorsJson } from "./contributors.js";
 import { renderContributionsJsonl } from "./ledger.js";
 import { renderContributorsMarkdown } from "./markdown.js";
+import type { ContributorsMarkdownOptions } from "./markdown.js";
 import { renderStaticContributionsJson } from "./static-data.js";
 
 export const RENDERED_OUTPUT_PATHS = {
@@ -17,11 +18,14 @@ export const RENDERED_OUTPUT_PATHS = {
   staticDataJson: STATIC_DATA_JSON_PATH
 } as const;
 
-export function renderRecognitionOutputs(values: readonly unknown[]): RenderedRecognitionOutputs {
+export function renderRecognitionOutputs(
+  values: readonly unknown[],
+  markdownOptions: ContributorsMarkdownOptions = {}
+): RenderedRecognitionOutputs {
   return {
     contributionsJsonl: renderContributionsJsonl(values),
     contributorsJson: renderContributorsJson(values),
-    contributorsMarkdown: renderContributorsMarkdown(values),
+    contributorsMarkdown: renderContributorsMarkdown(values, markdownOptions),
     staticDataJson: renderStaticContributionsJson(values)
   };
 }

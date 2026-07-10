@@ -32,6 +32,8 @@ Validates Clarissimi configuration without collecting GitHub evidence or calling
 The current implementation validates `clarissimi.config.ts` or `.clarissimi/config.json`. If both
 default config files exist, the command fails closed and requires `--config <path>` to choose one.
 TypeScript config files must be named `clarissimi.config.ts` and export a default config object.
+The optional `markdownSummary` field accepts `none` or `table`. `none` is the default. `table` adds
+a compact contributor summary table before the existing detailed `CONTRIBUTORS.md` sections.
 
 ### `clarissimi validate-ledger`
 
@@ -52,6 +54,7 @@ read tokens, or infer linked issues and review comments.
 
 The fixture-first implementation does not write files in this command. If a fixture explicitly
 contains approved maintainer status, the command may render public output previews.
+`--markdown-summary none|table` overrides the config value for the preview.
 
 Provider selection flags:
 
@@ -72,6 +75,8 @@ Rebuilds derived outputs from `.clarissimi/contributions.jsonl`.
 The fixture-first implementation previews rebuilds by default and writes files only when `--out-dir`
 is explicit. Rebuild fails before writing derived outputs when the selected ledger contains
 duplicate contribution identities.
+Rebuild loads the selected or default Clarissimi config. `--markdown-summary none|table` overrides
+`markdownSummary` for that run.
 
 ### `clarissimi analytics recent-share`
 
@@ -133,6 +138,8 @@ recognition records.
 By default, `--ledger` is `.clarissimi/contributions.jsonl`. The override is for local validation,
 test fixtures, and recovery workflows; it is not an MVP monthly or yearly partition mode. Public
 derived outputs still use the canonical Clarissimi output paths when `--out-dir` is explicit.
+Import loads the selected or default Clarissimi config. `--markdown-summary none|table` overrides
+`markdownSummary` when derived files are rendered.
 
 ## Modes
 

@@ -38,6 +38,8 @@ The current config object supports:
 - `providerEndpoint`: optional OpenAI-compatible chat completions endpoint; must be an HTTP(S) URL
 - `providerThinking`: optional OpenAI-compatible thinking mode; currently only `disabled`
 - `mode`: `dry-run`, `propose`, or `commit` as schema-recognized output mode values
+- `markdownSummary`: `none` or `table`; `table` adds a compact contributor summary before the
+  existing detailed `CONTRIBUTORS.md` sections
 
 TypeScript config files must be named `clarissimi.config.ts` and must export a default config
 object. They are loaded through the Node.js 24 runtime rather than a third-party loader dependency.
@@ -46,6 +48,9 @@ object. They are loaded through the Node.js 24 runtime rather than a third-party
 `mode: "commit"` is parsed but rejected by that command before provider calls. The current
 implemented write paths are owned by the GitHub Action `propose` and `stage-draft` modes. Direct
 `commit` writes remain reserved for a future explicit write-mode decision.
+
+`recognize`, `import-draft`, and `rebuild` accept `--markdown-summary none|table` as an explicit
+override. The default `none` value preserves the detailed-only Markdown layout.
 
 ## Expected Configuration Areas
 

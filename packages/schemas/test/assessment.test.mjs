@@ -5,6 +5,7 @@ import {
   ASSESSMENT_SCHEMA_VERSION,
   CONTRIBUTION_TYPES,
   CONFIG_MODES,
+  CONFIG_MARKDOWN_SUMMARIES,
   CONFIG_PROVIDERS,
   hasPublicRankingLanguage,
   validateClarissimiConfig,
@@ -220,11 +221,13 @@ test("accepts supported Clarissimi config values", () => {
     providerModel: "example-model",
     providerEndpoint: "https://example.com/v1/chat/completions",
     providerThinking: "disabled",
-    mode: "dry-run"
+    mode: "dry-run",
+    markdownSummary: "table"
   });
 
   assert.equal(result.ok, true);
   assert.equal(result.value.provider, "openai-compatible");
+  assert.equal(result.value.markdownSummary, "table");
 });
 
 test("rejects unsupported provider endpoint config values", () => {
@@ -243,15 +246,18 @@ test("rejects unsupported provider endpoint config values", () => {
 
 test("rejects unsupported Clarissimi config values", () => {
   const result = validateClarissimiConfig({
-    provider: "leaderboard-provider"
+    provider: "leaderboard-provider",
+    markdownSummary: "leaderboard"
   });
 
   assert.equal(result.ok, false);
   assert.equal(result.issues.some((issue) => issue.path === "$.provider"), true);
+  assert.equal(result.issues.some((issue) => issue.path === "$.markdownSummary"), true);
 });
 
 test("exports Clarissimi config vocabulary", () => {
   assert.equal(CONFIG_PROVIDERS.includes("openai-compatible"), true);
   assert.equal(CONFIG_PROVIDERS.includes("ranking-model"), false);
   assert.equal(CONFIG_MODES.includes("propose"), true);
+  assert.deepEqual(CONFIG_MARKDOWN_SUMMARIES, ["none", "table"]);
 });

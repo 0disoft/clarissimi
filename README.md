@@ -117,6 +117,11 @@ node packages/cli/dist/bin/clarissimi.js import-draft --draft agent-draft.json -
 the ledger. It also accepts a `clarissimi.draft-envelope/v1` wrapper for delegated LLM workflows,
 but public outputs record only the validated assessment.
 
+Set `markdownSummary: "table"` in `clarissimi.config.ts` or `.clarissimi/config.json`, or pass
+`--markdown-summary table`, to add a compact contributor, total, and contribution-type table above
+the existing detailed `CONTRIBUTORS.md` sections. The default `none` layout keeps existing output
+unchanged.
+
 See `docs/cli/agent-assisted-drafts.md` for a complete assessment template, PR source fields, and
 the rule that impact levels and confidence are not public contributor scores.
 See `docs/cli/ledger-format.md` for the public ledger fields, PR number and URL placement, and the
@@ -189,7 +194,10 @@ continue to use fake providers or injected fetch implementations. Providers that
 reasoning in message content can opt into `provider-thinking: disabled` or `--provider-thinking
 disabled`. The Action can also load a JSON config file or `clarissimi.config.ts` when `config-path`
 is explicitly provided; it does not automatically discover config files. Set `summary-path` when a
-workflow should keep the sanitized JSON run summary as an uploadable artifact.
+workflow should keep the sanitized JSON run summary as an uploadable artifact. Set
+`markdown-summary: table` to add the compact table to proposed `CONTRIBUTORS.md` output; this input
+also works in `promote-draft`, which otherwise skips config and provider loading. This input is not
+available in immutable tag `v0.1.0`; use a later release tag that includes it.
 
 Release maintainers who want automated provider mode can run `pnpm run live-provider-smoke` with
 `CLARISSIMI_PROVIDER_TOKEN` and `CLARISSIMI_PROVIDER_MODEL` to perform an explicit credentialed

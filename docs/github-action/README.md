@@ -63,6 +63,11 @@ Repository config-file loading is explicit through `config-path`; the Action doe
 discover config files. Action inputs and workflow environment values take precedence over config
 values.
 
+Set `markdown-summary: table` to add a compact contributor totals table above the detailed
+`CONTRIBUTORS.md` recognition sections. The default `none` layout preserves existing output. The
+explicit input also applies to `promote-draft`, which does not load provider config. Immutable tag
+`v0.1.0` predates this input; use a later release tag that includes it.
+
 When a later workflow step needs a durable machine-readable summary, set `summary-path`. The path
 must be relative to `GITHUB_WORKSPACE`, and the written JSON follows the same raw-evidence and
 secret-exclusion rules as stdout, GitHub outputs, and the step summary.

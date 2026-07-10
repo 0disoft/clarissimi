@@ -1350,3 +1350,50 @@ test("rebuild writes derived outputs only when out-dir is provided", async () =>
     assert.equal(markdown.includes("Added regression coverage"), true);
   });
 });
+
+test("rebuild renders the configured Markdown summary table and lets the flag override it", async () => {
+  await withTempDir(async (dir) => {
+    const ledgerDir = join(dir, ".clarissimi");
+    const ledger = join(ledgerDir, "contributions.jsonl");
+    const configPath = join(ledgerDir, "config.json");
+    const tableOutDir = join(dir, "table-out");
+    const detailsOutDir = join(dir, "details-out");
+    await mkdir(ledgerDir, { recursive: true });
+    await writeFile(ledger, `${JSON.stringify(assessment())}\n`, "utf8");
+    await writeFile(configPath, `${JSON.stringify({ markdownSummary: "table" })}\n`, "utf8");
+
+    const tableResult = await run([
+      "rebuild",
+      "--ledger",
+      ledger,
+      "--out-dir",
+      tableOutDir,
+      "--config",
+      configPath,
+      "--json"
+    ], dir);
+    const tableMarkdown = await readFile(join(tableOutDir, "CONTRIBUTORS.md"), "utf8");
+
+    assert.equal(tableResult.exitCode, 0);
+    assert.equal(tableMarkdown.includes("| Contributor | Total | Types |"), true);
+    assert.equal(tableMarkdown.includes("## octocat"), true);
+
+    const detailsResult = await run([
+      "rebuild",
+      "--ledger",
+      ledger,
+      "--out-dir",
+      detailsOutDir,
+      "--config",
+      configPath,
+      "--markdown-summary",
+      "none",
+      "--json"
+    ], dir);
+    const detailsMarkdown = await readFile(join(detailsOutDir, "CONTRIBUTORS.md"), "utf8");
+
+    assert.equal(detailsResult.exitCode, 0);
+    assert.equal(detailsMarkdown.includes("| Contributor | Total | Types |"), false);
+    assert.equal(detailsMarkdown.includes("## octocat"), true);
+  });
+});

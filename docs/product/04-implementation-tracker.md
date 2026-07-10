@@ -35,7 +35,8 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   when maintainer hints would introduce public scoring or ranking language; OpenAI-compatible
   provider instructions reject public score-share and time-window contribution-percentage language
 - `packages/renderers`: JSONL, contributor JSON, Markdown, static-data renderers, draft review
-  JSON rendering, and maintainer-only recent-share analytics
+  JSON rendering, per-contributor Markdown totals and type counts, and maintainer-only recent-share
+  analytics
 - `packages/cli`: fixture-first validation, recognition dry-run, agent-assisted draft staging,
   approval, import, rebuild, maintainer-only analytics commands, help output, and explicit fake or
   OpenAI-compatible provider selection; config loading supports `clarissimi.config.ts` and

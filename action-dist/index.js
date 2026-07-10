@@ -1634,11 +1634,20 @@ function renderContributorsMarkdown(values, options = {}) {
   return lines.join("\n");
 }
 function appendContributorProfile(lines, profile) {
-  lines.push(`## ${escapeMarkdown(profile.contributor.login)}`, "");
+  lines.push(`## ${escapeMarkdown(profile.contributor.login)}`, "", renderContributionSummary(profile), "");
   profile.recognitions.forEach((recognition) => {
     lines.push(`- ${renderRecognitionLine(recognition)}`);
   });
   lines.push("");
+}
+function renderContributionSummary(profile) {
+  const contributionLabel = profile.contributionCount === 1 ? "1 recognized contribution" : `${profile.contributionCount} recognized contributions`;
+  const typeCounts = /* @__PURE__ */ new Map();
+  profile.recognitions.forEach((recognition) => {
+    typeCounts.set(recognition.contributionType, (typeCounts.get(recognition.contributionType) ?? 0) + 1);
+  });
+  const typeBreakdown = Array.from(typeCounts.entries()).sort(([left], [right]) => left.localeCompare(right)).map(([type, count]) => `${escapeMarkdown(type)} ${count}`).join(" \xB7 ");
+  return `**${contributionLabel}** \xB7 ${typeBreakdown}`;
 }
 function renderRecognitionLine(recognition) {
   const text = escapeMarkdown(recognition.publicRecognitionText);

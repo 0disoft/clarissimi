@@ -309,7 +309,58 @@ test("renders idempotent contributors markdown", () => {
   assert.equal(first, second);
   assert.equal(first.includes("# Contributors"), true);
   assert.equal(first.includes("## octocat"), true);
+  assert.equal(first.includes("**1 recognized contribution** · test 1"), true);
   assert.equal(first.includes("leaderboard"), false);
+});
+
+test("renders per-contributor totals and deterministic type counts without scores", () => {
+  const markdown = renderContributorsMarkdown([
+    assessment(),
+    assessment({
+      source: {
+        ...source,
+        pullRequestNumber: 43
+      }
+    }),
+    assessment({
+      contributionType: "documentation",
+      affectedArea: "setup guide",
+      suggestedBadge: "Docs Pathfinder",
+      publicRecognitionText: "Improved setup documentation for first-time contributors.",
+      source: {
+        ...source,
+        pullRequestNumber: 44
+      }
+    }),
+    assessment({
+      contributor: {
+        platform: "github",
+        id: "456",
+        login: "maintainer-helper",
+        profileUrl: "https://github.com/maintainer-helper"
+      },
+      contributionType: "security",
+      affectedArea: "token handling",
+      suggestedBadge: "Security Steward",
+      publicRecognitionText: "Hardened token handling at the provider boundary.",
+      source: {
+        ...source,
+        pullRequestNumber: 45
+      }
+    })
+  ]);
+
+  assert.equal(
+    markdown.includes("## maintainer\\-helper\n\n**1 recognized contribution** · security 1"),
+    true
+  );
+  assert.equal(
+    markdown.includes("## octocat\n\n**3 recognized contributions** · documentation 1 · test 2"),
+    true
+  );
+  assert.equal(markdown.includes("score"), false);
+  assert.equal(markdown.includes("rank"), false);
+  assert.equal(markdown.includes("%"), false);
 });
 
 test("builds static data from the same public records", () => {

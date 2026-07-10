@@ -43,7 +43,7 @@ The initial source-of-truth output is:
 
 - `.clarissimi/contributions.jsonl`: append-only recognition ledger
 - `.clarissimi/contributors.json`: derived contributor profile data
-- `CONTRIBUTORS.md`: maintainer-approved public recognition section
+- `CONTRIBUTORS.md`: maintainer-approved recognition history with per-contributor totals and type counts
 - static JSON data for future GitHub Pages rendering
 
 The default write mode should be `propose`: Clarissimi opens a pull request with recognition

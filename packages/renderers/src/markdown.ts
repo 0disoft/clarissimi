@@ -37,13 +37,39 @@ function appendContributorProfile(
   lines: string[],
   profile: ContributorRecognitionProfile
 ): void {
-  lines.push(`## ${escapeMarkdown(profile.contributor.login)}`, "");
+  lines.push(
+    `## ${escapeMarkdown(profile.contributor.login)}`,
+    "",
+    renderContributionSummary(profile),
+    ""
+  );
 
   profile.recognitions.forEach((recognition) => {
     lines.push(`- ${renderRecognitionLine(recognition)}`);
   });
 
   lines.push("");
+}
+
+function renderContributionSummary(profile: ContributorRecognitionProfile): string {
+  const contributionLabel = profile.contributionCount === 1
+    ? "1 recognized contribution"
+    : `${profile.contributionCount} recognized contributions`;
+  const typeCounts = new Map<string, number>();
+
+  profile.recognitions.forEach((recognition) => {
+    typeCounts.set(
+      recognition.contributionType,
+      (typeCounts.get(recognition.contributionType) ?? 0) + 1
+    );
+  });
+
+  const typeBreakdown = Array.from(typeCounts.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([type, count]) => `${escapeMarkdown(type)} ${count}`)
+    .join(" · ");
+
+  return `**${contributionLabel}** · ${typeBreakdown}`;
 }
 
 function renderRecognitionLine(recognition: PublicRecognitionSummary): string {

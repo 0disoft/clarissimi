@@ -116,7 +116,9 @@ Rejected examples:
 - `points`
 
 Derived contributor profiles may include counts, contribution types, affected areas, badges, and
-recognition summaries. They must not compute public average scores or total scores.
+recognition summaries. `CONTRIBUTORS.md` displays the total recognized contribution count and
+per-type event counts for each contributor. These counts come directly from ledger records and must
+not be weighted or converted into public average scores, total scores, percentages, or ranks.
 
 Maintainer-only analytics may calculate recent recognition share from the same ledger, but those
 results are stdout-only analysis and are not public derived ledger outputs.

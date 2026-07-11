@@ -17,7 +17,10 @@ export async function readTextFile(path: string): Promise<string> {
   return readFile(path, "utf8");
 }
 
-export async function writeTextFile(path: string, value: string): Promise<void> {
+export async function writeTextFile(
+  path: string,
+  value: string,
+): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, value, "utf8");
 }

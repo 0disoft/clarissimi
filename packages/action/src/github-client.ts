@@ -4,7 +4,7 @@ import {
   type ProposalPullRequestClient,
   type ProposalPullRequestCreateInput,
   type ProposalPullRequestLookupInput,
-  type ProposalPullRequestUpdateInput
+  type ProposalPullRequestUpdateInput,
 } from "./pull-request.js";
 
 const DEFAULT_GITHUB_API_URL = "https://api.github.com";
@@ -16,13 +16,13 @@ export interface GitHubPullRequestClientOptions {
 }
 
 export function createGitHubPullRequestClient(
-  options: GitHubPullRequestClientOptions
+  options: GitHubPullRequestClientOptions,
 ): ProposalPullRequestClient {
   const token = options.token.trim();
   if (token.length === 0) {
     throw new ProposalPullRequestClientError(
       "permission_denied",
-      "A GitHub token is required to create or update proposal pull requests."
+      "A GitHub token is required to create or update proposal pull requests.",
     );
   }
 
@@ -30,7 +30,9 @@ export function createGitHubPullRequestClient(
   const fetchImpl = options.fetch ?? fetch;
 
   return {
-    async findOpenPullRequest(input: ProposalPullRequestLookupInput): Promise<ProposalPullRequest | null> {
+    async findOpenPullRequest(
+      input: ProposalPullRequestLookupInput,
+    ): Promise<ProposalPullRequest | null> {
       const [owner] = splitRepository(input.repository);
       const url = new URL(`${apiUrl}/repos/${input.repository}/pulls`);
       url.searchParams.set("state", "open");
@@ -38,12 +40,12 @@ export function createGitHubPullRequestClient(
       url.searchParams.set("base", input.baseBranch);
 
       const response = await requestJson(fetchImpl, token, url, {
-        method: "GET"
+        method: "GET",
       });
       if (!Array.isArray(response)) {
         throw new ProposalPullRequestClientError(
           "unexpected",
-          "GitHub pull request lookup returned an unexpected response."
+          "GitHub pull request lookup returned an unexpected response.",
         );
       }
 
@@ -51,7 +53,9 @@ export function createGitHubPullRequestClient(
       return first === undefined ? null : parsePullRequest(first);
     },
 
-    async createPullRequest(input: ProposalPullRequestCreateInput): Promise<ProposalPullRequest> {
+    async createPullRequest(
+      input: ProposalPullRequestCreateInput,
+    ): Promise<ProposalPullRequest> {
       const url = new URL(`${apiUrl}/repos/${input.repository}/pulls`);
       const response = await requestJson(fetchImpl, token, url, {
         method: "POST",
@@ -59,25 +63,29 @@ export function createGitHubPullRequestClient(
           title: input.title,
           body: input.body,
           head: input.headBranch,
-          base: input.baseBranch
-        })
+          base: input.baseBranch,
+        }),
       });
 
       return parsePullRequest(response);
     },
 
-    async updatePullRequest(input: ProposalPullRequestUpdateInput): Promise<ProposalPullRequest> {
-      const url = new URL(`${apiUrl}/repos/${input.repository}/pulls/${input.number}`);
+    async updatePullRequest(
+      input: ProposalPullRequestUpdateInput,
+    ): Promise<ProposalPullRequest> {
+      const url = new URL(
+        `${apiUrl}/repos/${input.repository}/pulls/${input.number}`,
+      );
       const response = await requestJson(fetchImpl, token, url, {
         method: "PATCH",
         body: JSON.stringify({
           title: input.title,
-          body: input.body
-        })
+          body: input.body,
+        }),
       });
 
       return parsePullRequest(response);
-    }
+    },
   };
 }
 
@@ -85,7 +93,7 @@ async function requestJson(
   fetchImpl: typeof fetch,
   token: string,
   url: URL,
-  init: RequestInit
+  init: RequestInit,
 ): Promise<unknown> {
   const response = await fetchImpl(url, {
     ...init,
@@ -93,8 +101,8 @@ async function requestJson(
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-      "X-GitHub-Api-Version": "2022-11-28"
-    }
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
   });
 
   const text = await response.text();
@@ -106,11 +114,21 @@ async function requestJson(
   throw mapGitHubError(response.status, body);
 }
 
-function mapGitHubError(status: number, body: unknown): ProposalPullRequestClientError {
+function mapGitHubError(
+  status: number,
+  body: unknown,
+): ProposalPullRequestClientError {
   const message = githubMessage(body);
   if (status === 401 || status === 403) {
-    if (/workflow|actions.*pull request|pull request.*disabled|repository setting/i.test(message)) {
-      return new ProposalPullRequestClientError("repository_setting_blocked", message);
+    if (
+      /workflow|actions.*pull request|pull request.*disabled|repository setting/i.test(
+        message,
+      )
+    ) {
+      return new ProposalPullRequestClientError(
+        "repository_setting_blocked",
+        message,
+      );
     }
 
     return new ProposalPullRequestClientError("permission_denied", message);
@@ -127,7 +145,7 @@ function parsePullRequest(value: unknown): ProposalPullRequest {
   if (!isRecord(value)) {
     throw new ProposalPullRequestClientError(
       "unexpected",
-      "GitHub pull request response must be an object."
+      "GitHub pull request response must be an object.",
     );
   }
 
@@ -136,7 +154,7 @@ function parsePullRequest(value: unknown): ProposalPullRequest {
   if (!isRecord(head) || !isRecord(base)) {
     throw new ProposalPullRequestClientError(
       "unexpected",
-      "GitHub pull request response must include head and base refs."
+      "GitHub pull request response must include head and base refs.",
     );
   }
 
@@ -145,7 +163,7 @@ function parsePullRequest(value: unknown): ProposalPullRequest {
     url: expectString(value.html_url, "html_url"),
     headBranch: expectString(head.ref, "head.ref"),
     baseBranch: expectString(base.ref, "base.ref"),
-    title: expectString(value.title, "title")
+    title: expectString(value.title, "title"),
   };
 }
 
@@ -161,7 +179,7 @@ function splitRepository(repository: string): readonly [string, string] {
   if (parts.length !== 2 || parts[0].length === 0 || parts[1].length === 0) {
     throw new ProposalPullRequestClientError(
       "unexpected",
-      "Repository must use owner/name format for GitHub pull request operations."
+      "Repository must use owner/name format for GitHub pull request operations.",
     );
   }
 
@@ -177,7 +195,7 @@ function parseOptionalJson(text: string): unknown {
     return JSON.parse(text) as unknown;
   } catch {
     return {
-      message: text
+      message: text,
     };
   }
 }
@@ -194,7 +212,7 @@ function expectString(value: unknown, field: string): string {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new ProposalPullRequestClientError(
       "unexpected",
-      `GitHub pull request response field ${field} must be a non-empty string.`
+      `GitHub pull request response field ${field} must be a non-empty string.`,
     );
   }
 
@@ -205,7 +223,7 @@ function expectNumber(value: unknown, field: string): number {
   if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
     throw new ProposalPullRequestClientError(
       "unexpected",
-      `GitHub pull request response field ${field} must be a positive integer.`
+      `GitHub pull request response field ${field} must be a positive integer.`,
     );
   }
 

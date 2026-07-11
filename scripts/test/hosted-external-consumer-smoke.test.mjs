@@ -8,160 +8,199 @@ const evidenceId = "0123456789abcdef0123456789abcdef";
 
 test("hosted external consumer smoke dispatches and watches an immutable tag", async () => {
   const harness = createHarness({
-    runs: [{
-      databaseId: 12345,
-      displayTitle: `Clarissimi external consumer · v0.1.1 · ${evidenceId}`,
-      createdAt: "2026-07-10T00:00:10.000Z",
-      headBranch: "main",
-      headSha: "integration-lab-sha",
-      status: "queued",
-      conclusion: ""
-    }]
+    runs: [
+      {
+        databaseId: 12345,
+        displayTitle: `Clarissimi external consumer · v0.1.1 · ${evidenceId}`,
+        createdAt: "2026-07-10T00:00:10.000Z",
+        headBranch: "main",
+        headSha: "integration-lab-sha",
+        status: "queued",
+        conclusion: "",
+      },
+    ],
   });
 
-  const exitCode = await runHostedExternalConsumerSmoke([
-    "--clarissimi-ref",
-    "v0.1.1",
-    "--evidence-id",
-    evidenceId
-  ], harness.runtime);
+  const exitCode = await runHostedExternalConsumerSmoke(
+    ["--clarissimi-ref", "v0.1.1", "--evidence-id", evidenceId],
+    harness.runtime,
+  );
 
   assert.equal(exitCode, 0);
-  assert.deepEqual(harness.commands.map((entry) => [entry.command, ...entry.args.slice(0, 2)]), [
-    ["gh", "--version"],
-    ["gh", "workflow", "run"],
-    ["gh", "run", "list"],
-    ["gh", "run", "watch"]
-  ]);
-  const dispatch = harness.commands.find((entry) => entry.args[0] === "workflow");
+  assert.deepEqual(
+    harness.commands.map((entry) => [entry.command, ...entry.args.slice(0, 2)]),
+    [
+      ["gh", "--version"],
+      ["gh", "workflow", "run"],
+      ["gh", "run", "list"],
+      ["gh", "run", "watch"],
+    ],
+  );
+  const dispatch = harness.commands.find(
+    (entry) => entry.args[0] === "workflow",
+  );
   assert.equal(dispatch.args.includes("clarissimi-ref=v0.1.1"), true);
   assert.equal(dispatch.args.includes(`evidence-id=${evidenceId}`), true);
   assert.equal(
     harness.logs.includes(
-      "hosted external consumer smoke passed for Clarissimi v0.1.1: "
-      + "https://github.com/0disoft/integration-lab/actions/runs/12345"
+      "hosted external consumer smoke passed for Clarissimi v0.1.1: " +
+        "https://github.com/0disoft/integration-lab/actions/runs/12345",
     ),
-    true
+    true,
   );
 });
 
 test("hosted external consumer smoke defaults to the current HEAD SHA", async () => {
   const harness = createHarness({
     headSha: exampleSha,
-    runs: [{
-      databaseId: 23456,
-      createdAt: "2026-07-10T00:00:10.000Z",
-      headBranch: "main",
-      headSha: "integration-lab-sha",
-      status: "in_progress",
-      conclusion: ""
-    }]
+    runs: [
+      {
+        databaseId: 23456,
+        createdAt: "2026-07-10T00:00:10.000Z",
+        headBranch: "main",
+        headSha: "integration-lab-sha",
+        status: "in_progress",
+        conclusion: "",
+      },
+    ],
   });
 
   const exitCode = await runHostedExternalConsumerSmoke([], harness.runtime);
 
   assert.equal(exitCode, 0);
-  assert.deepEqual(harness.commands.slice(0, 2).map((entry) => [entry.command, ...entry.args]), [
-    ["git", "rev-parse", "HEAD"],
-    ["gh", "--version"]
-  ]);
-  const dispatch = harness.commands.find((entry) => entry.args[0] === "workflow");
+  assert.deepEqual(
+    harness.commands.slice(0, 2).map((entry) => [entry.command, ...entry.args]),
+    [
+      ["git", "rev-parse", "HEAD"],
+      ["gh", "--version"],
+    ],
+  );
+  const dispatch = harness.commands.find(
+    (entry) => entry.args[0] === "workflow",
+  );
   assert.equal(dispatch.args.includes(`clarissimi-ref=${exampleSha}`), true);
 });
 
 test("hosted external consumer smoke accepts v0 only with an expected SHA", async () => {
   const harness = createHarness({
-    runs: [{
-      databaseId: 34567,
-      createdAt: "2026-07-10T00:00:10.000Z",
-      headBranch: "main",
-      headSha: "integration-lab-sha",
-      status: "queued",
-      conclusion: ""
-    }]
+    runs: [
+      {
+        databaseId: 34567,
+        createdAt: "2026-07-10T00:00:10.000Z",
+        headBranch: "main",
+        headSha: "integration-lab-sha",
+        status: "queued",
+        conclusion: "",
+      },
+    ],
   });
 
-  const exitCode = await runHostedExternalConsumerSmoke([
-    "--clarissimi-ref", "v0", "--expected-sha", exampleSha
-  ], harness.runtime);
+  const exitCode = await runHostedExternalConsumerSmoke(
+    ["--clarissimi-ref", "v0", "--expected-sha", exampleSha],
+    harness.runtime,
+  );
 
   assert.equal(exitCode, 0);
-  const dispatch = harness.commands.find((entry) => entry.args[0] === "workflow");
+  const dispatch = harness.commands.find(
+    (entry) => entry.args[0] === "workflow",
+  );
   assert.equal(dispatch.args.includes("clarissimi-ref=v0"), true);
   assert.equal(dispatch.args.includes(`expected-sha=${exampleSha}`), true);
 
   const missingSha = createHarness({});
-  assert.equal(await runHostedExternalConsumerSmoke([
-    "--clarissimi-ref", "v0"
-  ], missingSha.runtime), 2);
   assert.equal(
-    missingSha.errors.includes("--expected-sha is required when --clarissimi-ref is v0."),
-    true
+    await runHostedExternalConsumerSmoke(
+      ["--clarissimi-ref", "v0"],
+      missingSha.runtime,
+    ),
+    2,
+  );
+  assert.equal(
+    missingSha.errors.includes(
+      "--expected-sha is required when --clarissimi-ref is v0.",
+    ),
+    true,
   );
   assert.equal(missingSha.commands.length, 0);
 });
 
 test("hosted external consumer smoke rejects unsupported mutable or malformed inputs before dispatch", async () => {
   const invalidEvidenceId = createHarness({});
-  assert.equal(await runHostedExternalConsumerSmoke([
-    "--clarissimi-ref", "v0.1.1", "--evidence-id", "NOT-HEX"
-  ], invalidEvidenceId.runtime), 2);
-  assert.equal(invalidEvidenceId.errors.includes("--evidence-id must be 32 lowercase hexadecimal characters."), true);
+  assert.equal(
+    await runHostedExternalConsumerSmoke(
+      ["--clarissimi-ref", "v0.1.1", "--evidence-id", "NOT-HEX"],
+      invalidEvidenceId.runtime,
+    ),
+    2,
+  );
+  assert.equal(
+    invalidEvidenceId.errors.includes(
+      "--evidence-id must be 32 lowercase hexadecimal characters.",
+    ),
+    true,
+  );
   assert.equal(invalidEvidenceId.commands.length, 0);
 
   const mutableRef = createHarness({});
-  const mutableRefExitCode = await runHostedExternalConsumerSmoke([
-    "--clarissimi-ref",
-    "main"
-  ], mutableRef.runtime);
+  const mutableRefExitCode = await runHostedExternalConsumerSmoke(
+    ["--clarissimi-ref", "main"],
+    mutableRef.runtime,
+  );
 
   assert.equal(mutableRefExitCode, 2);
   assert.equal(
     mutableRef.errors.includes(
-      "--clarissimi-ref must be an immutable semantic version tag, 40-character commit SHA, or v0."
+      "--clarissimi-ref must be an immutable semantic version tag, 40-character commit SHA, or v0.",
     ),
-    true
+    true,
   );
   assert.equal(mutableRef.commands.length, 0);
 
   const invalidRepo = createHarness({});
-  const invalidRepoExitCode = await runHostedExternalConsumerSmoke([
-    "--clarissimi-ref",
-    "v0.1.1",
-    "--repo",
-    "owner-only"
-  ], invalidRepo.runtime);
+  const invalidRepoExitCode = await runHostedExternalConsumerSmoke(
+    ["--clarissimi-ref", "v0.1.1", "--repo", "owner-only"],
+    invalidRepo.runtime,
+  );
 
   assert.equal(invalidRepoExitCode, 2);
-  assert.equal(invalidRepo.errors.includes("--repo must use owner/name format."), true);
+  assert.equal(
+    invalidRepo.errors.includes("--repo must use owner/name format."),
+    true,
+  );
   assert.equal(invalidRepo.commands.length, 0);
 });
 
 test("hosted external consumer smoke fails before watching an invalid run id", async () => {
   const harness = createHarness({
-    runs: [{
-      databaseId: null,
-      createdAt: "2026-07-10T00:00:10.000Z",
-      headBranch: "main",
-      headSha: "integration-lab-sha",
-      status: "queued",
-      conclusion: ""
-    }]
+    runs: [
+      {
+        databaseId: null,
+        createdAt: "2026-07-10T00:00:10.000Z",
+        headBranch: "main",
+        headSha: "integration-lab-sha",
+        status: "queued",
+        conclusion: "",
+      },
+    ],
   });
 
-  const exitCode = await runHostedExternalConsumerSmoke([
-    "--clarissimi-ref",
-    "v0.1.1"
-  ], harness.runtime);
+  const exitCode = await runHostedExternalConsumerSmoke(
+    ["--clarissimi-ref", "v0.1.1"],
+    harness.runtime,
+  );
 
   assert.equal(exitCode, 1);
   assert.equal(
-    harness.errors.includes("Dispatched clarissimi.yml run is missing a valid databaseId."),
-    true
+    harness.errors.includes(
+      "Dispatched clarissimi.yml run is missing a valid databaseId.",
+    ),
+    true,
   );
   assert.equal(
-    harness.commands.some((entry) => entry.args[0] === "run" && entry.args[1] === "watch"),
-    false
+    harness.commands.some(
+      (entry) => entry.args[0] === "run" && entry.args[1] === "watch",
+    ),
+    false,
   );
 });
 
@@ -216,8 +255,8 @@ function createHarness(options) {
         }
 
         return failure(`unexpected gh args: ${args.join(" ")}`);
-      }
-    }
+      },
+    },
   };
 }
 
@@ -229,7 +268,7 @@ function success(stdout) {
   return {
     exitCode: 0,
     stdout,
-    stderr: ""
+    stderr: "",
   };
 }
 
@@ -237,6 +276,6 @@ function failure(stderr) {
   return {
     exitCode: 1,
     stdout: "",
-    stderr
+    stderr,
   };
 }

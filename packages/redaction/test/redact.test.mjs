@@ -5,14 +5,17 @@ import {
   REDACTION_PLACEHOLDER,
   mergeRedactionReports,
   redactJson,
-  redactText
+  redactText,
 } from "../dist/index.js";
 
 test("redacts email addresses without changing surrounding evidence text", () => {
   const address = `dev@${["example", "invalid"].join(".")}`;
   const result = redactText(`Maintainer note from person at ${address}.`);
 
-  assert.equal(result.text, `Maintainer note from person at ${REDACTION_PLACEHOLDER}.`);
+  assert.equal(
+    result.text,
+    `Maintainer note from person at ${REDACTION_PLACEHOLDER}.`,
+  );
   assert.equal(result.report.changed, true);
   assert.equal(result.report.occurrences[0].kind, "email");
 });
@@ -34,11 +37,11 @@ test("redacts provider token patterns", () => {
 
   assert.equal(
     result.text,
-    `${REDACTION_PLACEHOLDER} ${REDACTION_PLACEHOLDER} ${REDACTION_PLACEHOLDER}`
+    `${REDACTION_PLACEHOLDER} ${REDACTION_PLACEHOLDER} ${REDACTION_PLACEHOLDER}`,
   );
   assert.deepEqual(
     result.report.occurrences.map((occurrence) => occurrence.kind),
-    ["openai_token", "anthropic_token", "gemini_token"]
+    ["openai_token", "anthropic_token", "gemini_token"],
   );
 });
 
@@ -50,8 +53,8 @@ test("redacts private key blocks", () => {
       `-----BEGIN ${marker}-----`,
       "synthetic-key-material",
       `-----END ${marker}-----`,
-      "after"
-    ].join("\n")
+      "after",
+    ].join("\n"),
   );
 
   assert.equal(result.text, `before\n${REDACTION_PLACEHOLDER}\nafter`);
@@ -63,13 +66,13 @@ test("redacts nested JSON values but preserves object shape", () => {
   const result = redactJson({
     title: "Merged PR",
     body: `Reported by ${address}`,
-    labels: ["bug", "TOKEN=synthetic-value"]
+    labels: ["bug", "TOKEN=synthetic-value"],
   });
 
   assert.deepEqual(result.value, {
     title: "Merged PR",
     body: `Reported by ${REDACTION_PLACEHOLDER}`,
-    labels: ["bug", REDACTION_PLACEHOLDER]
+    labels: ["bug", REDACTION_PLACEHOLDER],
   });
   assert.equal(result.report.occurrences.length, 2);
 });
@@ -91,7 +94,9 @@ test("merges reports without leaking matched values", () => {
   assert.equal(merged.changed, true);
   assert.equal(merged.occurrences.length, 2);
   assert.equal(
-    merged.occurrences.every((occurrence) => occurrence.replacement === REDACTION_PLACEHOLDER),
-    true
+    merged.occurrences.every(
+      (occurrence) => occurrence.replacement === REDACTION_PLACEHOLDER,
+    ),
+    true,
   );
 });

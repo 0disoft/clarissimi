@@ -15,11 +15,11 @@ test("validateDocs accepts required docs, local links, and fenced JSON examples"
       "[Guide](docs/guide.md)",
       "",
       "```json",
-      "{\"ok\": true}",
+      '{"ok": true}',
       "```",
-      ""
+      "",
     ].join("\n"),
-    guide: "# Guide\n"
+    guide: "# Guide\n",
   });
   t.after(async () => {
     await rm(repoRoot, { recursive: true, force: true });
@@ -34,14 +34,7 @@ test("validateDocs accepts required docs, local links, and fenced JSON examples"
 
 test("validateDocs rejects invalid fenced JSON examples", async (t) => {
   const repoRoot = await createDocsFixture({
-    readme: [
-      "# Fixture",
-      "",
-      "```json",
-      "{\"ok\": true,}",
-      "```",
-      ""
-    ].join("\n")
+    readme: ["# Fixture", "", "```json", '{"ok": true,}', "```", ""].join("\n"),
   });
   t.after(async () => {
     await rm(repoRoot, { recursive: true, force: true });
@@ -52,15 +45,15 @@ test("validateDocs rejects invalid fenced JSON examples", async (t) => {
   assert.equal(result.ok, false);
   assert.equal(
     result.issues.some((issue) =>
-      issue.startsWith("README.md has invalid json code block 1:")
+      issue.startsWith("README.md has invalid json code block 1:"),
     ),
-    true
+    true,
   );
 });
 
 test("validateDocs rejects missing local markdown links", async (t) => {
   const repoRoot = await createDocsFixture({
-    readme: "# Fixture\n\n[Missing](docs/missing.md)\n"
+    readme: "# Fixture\n\n[Missing](docs/missing.md)\n",
   });
   t.after(async () => {
     await rm(repoRoot, { recursive: true, force: true });
@@ -70,14 +63,16 @@ test("validateDocs rejects missing local markdown links", async (t) => {
 
   assert.equal(result.ok, false);
   assert.equal(
-    result.issues.includes("README.md links to missing local target: docs/missing.md"),
-    true
+    result.issues.includes(
+      "README.md links to missing local target: docs/missing.md",
+    ),
+    true,
   );
 });
 
 test("validateDocs rejects missing required documentation targets", async (t) => {
   const repoRoot = await createDocsFixture({
-    readme: "# Fixture\n"
+    readme: "# Fixture\n",
   });
   t.after(async () => {
     await rm(repoRoot, { recursive: true, force: true });
@@ -88,14 +83,16 @@ test("validateDocs rejects missing required documentation targets", async (t) =>
     requiredPaths: [
       "README.md",
       "docs/cli/agent-assisted-drafts.md",
-      "docs/cli/missing-required.md"
-    ]
+      "docs/cli/missing-required.md",
+    ],
   });
 
   assert.equal(result.ok, false);
   assert.equal(
-    result.issues.includes("missing required documentation target: docs/cli/missing-required.md"),
-    true
+    result.issues.includes(
+      "missing required documentation target: docs/cli/missing-required.md",
+    ),
+    true,
   );
 });
 
@@ -108,12 +105,12 @@ test("validateDocs rejects ADR documents missing from the ADR index", async (t) 
       "## Accepted ADRs",
       "",
       "- `0001-recorded-decision.md`: recorded decision",
-      ""
+      "",
     ].join("\n"),
     adrFiles: {
       "0001-recorded-decision.md": "# Recorded Decision\n",
-      "0002-missing-decision.md": "# Missing Decision\n"
-    }
+      "0002-missing-decision.md": "# Missing Decision\n",
+    },
   });
   t.after(async () => {
     await rm(repoRoot, { recursive: true, force: true });
@@ -123,8 +120,10 @@ test("validateDocs rejects ADR documents missing from the ADR index", async (t) 
 
   assert.equal(result.ok, false);
   assert.equal(
-    result.issues.includes("docs/adr/README.md missing ADR index entry for docs/adr/0002-missing-decision.md"),
-    true
+    result.issues.includes(
+      "docs/adr/README.md missing ADR index entry for docs/adr/0002-missing-decision.md",
+    ),
+    true,
   );
 });
 
@@ -138,11 +137,11 @@ test("validateDocs rejects stale ADR index entries", async (t) => {
       "",
       "- `0001-recorded-decision.md`: recorded decision",
       "- `0002-stale-decision.md`: stale decision",
-      ""
+      "",
     ].join("\n"),
     adrFiles: {
-      "0001-recorded-decision.md": "# Recorded Decision\n"
-    }
+      "0001-recorded-decision.md": "# Recorded Decision\n",
+    },
   });
   t.after(async () => {
     await rm(repoRoot, { recursive: true, force: true });
@@ -152,37 +151,62 @@ test("validateDocs rejects stale ADR index entries", async (t) => {
 
   assert.equal(result.ok, false);
   assert.equal(
-    result.issues.includes("docs/adr/README.md references missing ADR file docs/adr/0002-stale-decision.md"),
-    true
+    result.issues.includes(
+      "docs/adr/README.md references missing ADR file docs/adr/0002-stale-decision.md",
+    ),
+    true,
   );
 });
 
 test("agent-assisted draft guide JSON examples match the assessment schema", async () => {
-  const guideText = await readFile(join(process.cwd(), "docs", "cli", "agent-assisted-drafts.md"), "utf8");
-  const examples = extractJsonCodeBlocks(guideText).map((block) => JSON.parse(block));
+  const guideText = await readFile(
+    join(process.cwd(), "docs", "cli", "agent-assisted-drafts.md"),
+    "utf8",
+  );
+  const examples = extractJsonCodeBlocks(guideText).map((block) =>
+    JSON.parse(block),
+  );
 
   assert.equal(examples.length, 2);
 
   const assessment = examples[0];
   const assessmentResult = validateContributionAssessment(assessment);
-  assert.equal(assessmentResult.ok, true, JSON.stringify(assessmentResult.issues));
+  assert.equal(
+    assessmentResult.ok,
+    true,
+    JSON.stringify(assessmentResult.issues),
+  );
   assert.equal(assessment.source.pullRequestNumber, 42);
-  assert.equal(assessment.evidenceRefs[0].url, "https://github.com/example/project/pull/42");
+  assert.equal(
+    assessment.evidenceRefs[0].url,
+    "https://github.com/example/project/pull/42",
+  );
   assert.equal(Object.hasOwn(assessment, "score"), false);
   assert.equal(Object.hasOwn(assessment, "averageScore"), false);
 
   const envelope = examples[1];
   assert.equal(envelope.schemaVersion, "clarissimi.draft-envelope/v1");
   assert.equal(envelope.draftProvenance.delegatedModel, "example-model");
-  const envelopeAssessmentResult = validateContributionAssessment(envelope.assessment);
-  assert.equal(envelopeAssessmentResult.ok, true, JSON.stringify(envelopeAssessmentResult.issues));
+  const envelopeAssessmentResult = validateContributionAssessment(
+    envelope.assessment,
+  );
+  assert.equal(
+    envelopeAssessmentResult.ok,
+    true,
+    JSON.stringify(envelopeAssessmentResult.issues),
+  );
   assert.equal(Object.hasOwn(envelope.assessment, "score"), false);
   assert.equal(Object.hasOwn(envelope.assessment, "averageScore"), false);
 });
 
 test("ledger format guide JSON example matches the assessment schema", async () => {
-  const guideText = await readFile(join(process.cwd(), "docs", "cli", "ledger-format.md"), "utf8");
-  const examples = extractJsonCodeBlocks(guideText).map((block) => JSON.parse(block));
+  const guideText = await readFile(
+    join(process.cwd(), "docs", "cli", "ledger-format.md"),
+    "utf8",
+  );
+  const examples = extractJsonCodeBlocks(guideText).map((block) =>
+    JSON.parse(block),
+  );
 
   assert.equal(examples.length, 1);
 
@@ -190,7 +214,10 @@ test("ledger format guide JSON example matches the assessment schema", async () 
   const result = validateContributionAssessment(ledgerRecord);
   assert.equal(result.ok, true, JSON.stringify(result.issues));
   assert.equal(ledgerRecord.source.pullRequestNumber, 42);
-  assert.equal(ledgerRecord.evidenceRefs[0].url, "https://github.com/example/project/pull/42");
+  assert.equal(
+    ledgerRecord.evidenceRefs[0].url,
+    "https://github.com/example/project/pull/42",
+  );
   assert.equal(Object.hasOwn(ledgerRecord, "score"), false);
   assert.equal(Object.hasOwn(ledgerRecord, "averageScore"), false);
   assert.equal(Object.hasOwn(ledgerRecord, "rank"), false);
@@ -211,7 +238,11 @@ async function createDocsFixture(options) {
   }
 
   if (options.adrIndex !== undefined) {
-    await writeFile(join(repoRoot, "docs", "adr", "README.md"), options.adrIndex, "utf8");
+    await writeFile(
+      join(repoRoot, "docs", "adr", "README.md"),
+      options.adrIndex,
+      "utf8",
+    );
   }
 
   if (options.adrFiles !== undefined) {

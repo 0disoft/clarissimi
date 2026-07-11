@@ -1,18 +1,23 @@
 import {
   validateClarissimiConfig,
   type ClarissimiConfig,
-  type ValidationIssue
+  type ValidationIssue,
 } from "@clarissimi/schemas";
 import { basename } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { fileExists, parseJsonText, readTextFile, resolveFromCwd } from "./io.js";
+import {
+  fileExists,
+  parseJsonText,
+  readTextFile,
+  resolveFromCwd,
+} from "./io.js";
 
 export type CliConfig = ClarissimiConfig;
 
 const defaultConfigPaths = [
   "clarissimi.config.ts",
-  ".clarissimi/config.json"
+  ".clarissimi/config.json",
 ] as const;
 
 export interface ConfigValidationResult {
@@ -23,13 +28,13 @@ export interface ConfigValidationResult {
 
 export async function validateConfigFile(
   cwd: string,
-  requestedPath?: string
+  requestedPath?: string,
 ): Promise<ConfigValidationResult> {
-  const path = requestedPath ?? await resolveDefaultConfigPath(cwd);
+  const path = requestedPath ?? (await resolveDefaultConfigPath(cwd));
   if (path === undefined) {
     return {
       ok: true,
-      config: {}
+      config: {},
     };
   }
 
@@ -38,7 +43,7 @@ export async function validateConfigFile(
   if (!(await fileExists(resolvedPath))) {
     return {
       ok: true,
-      config: {}
+      config: {},
     };
   }
 
@@ -51,11 +56,13 @@ export async function validateConfigFile(
   return {
     ok: true,
     path,
-    config: result.value
+    config: result.value,
   };
 }
 
-async function resolveDefaultConfigPath(cwd: string): Promise<string | undefined> {
+async function resolveDefaultConfigPath(
+  cwd: string,
+): Promise<string | undefined> {
   const existing = [];
   for (const path of defaultConfigPaths) {
     if (await fileExists(resolveFromCwd(cwd, path))) {
@@ -65,14 +72,17 @@ async function resolveDefaultConfigPath(cwd: string): Promise<string | undefined
 
   if (existing.length > 1) {
     throw new Error(
-      `Multiple Clarissimi config files found (${existing.join(", ")}). Pass --config <path> to choose one.`
+      `Multiple Clarissimi config files found (${existing.join(", ")}). Pass --config <path> to choose one.`,
     );
   }
 
   return existing[0];
 }
 
-async function loadConfigValue(path: string, resolvedPath: string): Promise<unknown> {
+async function loadConfigValue(
+  path: string,
+  resolvedPath: string,
+): Promise<unknown> {
   if (resolvedPath.endsWith(".json")) {
     return parseJsonText(await readTextFile(resolvedPath), path);
   }
@@ -81,10 +91,15 @@ async function loadConfigValue(path: string, resolvedPath: string): Promise<unkn
     return loadTypeScriptConfig(path, resolvedPath);
   }
 
-  throw new Error("Clarissimi config files must be clarissimi.config.ts or .clarissimi/config.json.");
+  throw new Error(
+    "Clarissimi config files must be clarissimi.config.ts or .clarissimi/config.json.",
+  );
 }
 
-async function loadTypeScriptConfig(path: string, resolvedPath: string): Promise<unknown> {
+async function loadTypeScriptConfig(
+  path: string,
+  resolvedPath: string,
+): Promise<unknown> {
   let module;
   try {
     module = await import(pathToFileURL(resolvedPath).href);
@@ -93,7 +108,9 @@ async function loadTypeScriptConfig(path: string, resolvedPath: string): Promise
   }
 
   if (!("default" in module)) {
-    throw new Error(`TypeScript config ${path} must export a default config object.`);
+    throw new Error(
+      `TypeScript config ${path} must export a default config object.`,
+    );
   }
 
   return module.default;
@@ -103,7 +120,9 @@ function isSupportedTypeScriptConfigPath(path: string): boolean {
   return basename(path.replaceAll("\\", "/")) === "clarissimi.config.ts";
 }
 
-function formatConfigValidationIssue(issue: ValidationIssue | undefined): string {
+function formatConfigValidationIssue(
+  issue: ValidationIssue | undefined,
+): string {
   if (issue === undefined) {
     return "Clarissimi config is invalid.";
   }

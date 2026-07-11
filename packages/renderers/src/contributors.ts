@@ -5,12 +5,12 @@ import {
   type ContributorRecognitionProfile,
   type ContributorsJsonDocument,
   type PublicContributionRecord,
-  type PublicRecognitionSummary
+  type PublicRecognitionSummary,
 } from "./types.js";
 import { renderPrettyJson, toPublicContributionRecords } from "./ledger.js";
 
 export function deriveContributorProfiles(
-  values: readonly unknown[]
+  values: readonly unknown[],
 ): readonly ContributorRecognitionProfile[] {
   const records = toPublicContributionRecords(values);
   const grouped = new Map<string, PublicContributionRecord[]>();
@@ -32,11 +32,11 @@ export function deriveContributorProfiles(
 }
 
 export function buildContributorsJsonDocument(
-  values: readonly unknown[]
+  values: readonly unknown[],
 ): ContributorsJsonDocument {
   return {
     schemaVersion: CONTRIBUTORS_JSON_SCHEMA_VERSION,
-    contributors: deriveContributorProfiles(values)
+    contributors: deriveContributorProfiles(values),
   };
 }
 
@@ -44,32 +44,42 @@ export function renderContributorsJson(values: readonly unknown[]): string {
   return renderPrettyJson(buildContributorsJsonDocument(values));
 }
 
-function toContributorProfile(records: readonly PublicContributionRecord[]): ContributorRecognitionProfile {
+function toContributorProfile(
+  records: readonly PublicContributionRecord[],
+): ContributorRecognitionProfile {
   const first = records[0];
   if (first === undefined) {
-    throw new Error("Contributor profile requires at least one contribution record.");
+    throw new Error(
+      "Contributor profile requires at least one contribution record.",
+    );
   }
 
-  const recognitions = records.map(toRecognitionSummary).sort(compareRecognitionSummaries);
+  const recognitions = records
+    .map(toRecognitionSummary)
+    .sort(compareRecognitionSummaries);
 
   return {
     contributor: first.contributor,
     contributionCount: records.length,
-    contributionTypes: uniqueSorted(records.map((record) => record.contributionType)),
+    contributionTypes: uniqueSorted(
+      records.map((record) => record.contributionType),
+    ),
     affectedAreas: uniqueSorted(records.map((record) => record.affectedArea)),
     badges: uniqueSorted(records.map((record) => record.suggestedBadge)),
-    recognitions
+    recognitions,
   };
 }
 
-function toRecognitionSummary(record: PublicContributionRecord): PublicRecognitionSummary {
+function toRecognitionSummary(
+  record: PublicContributionRecord,
+): PublicRecognitionSummary {
   return {
     source: record.source,
     contributionType: record.contributionType,
     affectedArea: record.affectedArea,
     publicRecognitionText: record.publicRecognitionText,
     suggestedBadge: record.suggestedBadge,
-    evidenceRefs: record.evidenceRefs
+    evidenceRefs: record.evidenceRefs,
   };
 }
 
@@ -79,7 +89,7 @@ function contributorKey(record: PublicContributionRecord): string {
 
 function compareContributorProfiles(
   left: ContributorRecognitionProfile,
-  right: ContributorRecognitionProfile
+  right: ContributorRecognitionProfile,
 ): number {
   return (
     left.contributor.login.localeCompare(right.contributor.login) ||
@@ -89,7 +99,7 @@ function compareContributorProfiles(
 
 function compareRecognitionSummaries(
   left: PublicRecognitionSummary,
-  right: PublicRecognitionSummary
+  right: PublicRecognitionSummary,
 ): number {
   return (
     left.source.repository.localeCompare(right.source.repository) ||
@@ -98,6 +108,10 @@ function compareRecognitionSummaries(
   );
 }
 
-function uniqueSorted<T extends string | ContributionType>(values: readonly T[]): readonly T[] {
-  return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right));
+function uniqueSorted<T extends string | ContributionType>(
+  values: readonly T[],
+): readonly T[] {
+  return Array.from(new Set(values)).sort((left, right) =>
+    left.localeCompare(right),
+  );
 }

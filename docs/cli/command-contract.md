@@ -158,16 +158,16 @@ provider resolution, draft writes, or rebuild work begins.
 
 The implemented CLI exit-code taxonomy is:
 
-| Code | Meaning |
-| --- | --- |
-| `0` | success |
-| `1` | usage error |
-| `2` | invalid config |
-| `3` | invalid ledger |
-| `4` | provider or fixture recognition failure |
-| `5` | provider schema validation failure |
-| `6` | policy rejection |
-| `7` | write failure |
+| Code | Meaning                                 |
+| ---- | --------------------------------------- |
+| `0`  | success                                 |
+| `1`  | usage error                             |
+| `2`  | invalid config                          |
+| `3`  | invalid ledger                          |
+| `4`  | provider or fixture recognition failure |
+| `5`  | provider schema validation failure      |
+| `6`  | policy rejection                        |
+| `7`  | write failure                           |
 
 The initial numeric values are recorded in `docs/adr/0014-add-fixture-first-cli-package.md` and
 implemented in `packages/cli/src/exit-codes.ts`.

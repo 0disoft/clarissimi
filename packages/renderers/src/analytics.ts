@@ -6,7 +6,7 @@ import {
   type MaintainerRecentRecognitionShareContributor,
   type MaintainerRecentRecognitionShareDocument,
   type MaintainerRecentRecognitionShareOptions,
-  type PublicContributionRecord
+  type PublicContributionRecord,
 } from "./types.js";
 import { renderPrettyJson, toPublicContributionRecords } from "./ledger.js";
 
@@ -16,12 +16,12 @@ const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
 const IMPACT_LEVEL_RECOGNITION_WEIGHTS: Record<ImpactLevel, number> = {
   low: 1,
   medium: 2,
-  high: 3
+  high: 3,
 };
 
 export function buildMaintainerRecentRecognitionShareDocument(
   values: readonly unknown[],
-  options: MaintainerRecentRecognitionShareOptions = {}
+  options: MaintainerRecentRecognitionShareOptions = {},
 ): MaintainerRecentRecognitionShareDocument {
   const records = toPublicContributionRecords(values);
   const windowDays = normalizeWindowDays(options.windowDays);
@@ -67,31 +67,36 @@ export function buildMaintainerRecentRecognitionShareDocument(
       windowDays,
       includedRecords,
       excludedRecordsWithoutMergedAt,
-      totalRecognitionWeight
+      totalRecognitionWeight,
     },
     contributors: Array.from(grouped.values())
       .map((entry) => toRecentShareContributor(entry, totalRecognitionWeight))
-      .sort(compareRecentShareContributors)
+      .sort(compareRecentShareContributors),
   };
 }
 
 export function renderMaintainerRecentRecognitionShareJson(
   values: readonly unknown[],
-  options: MaintainerRecentRecognitionShareOptions = {}
+  options: MaintainerRecentRecognitionShareOptions = {},
 ): string {
-  return renderPrettyJson(buildMaintainerRecentRecognitionShareDocument(values, options));
+  return renderPrettyJson(
+    buildMaintainerRecentRecognitionShareDocument(values, options),
+  );
 }
 
 function normalizeWindowDays(value: number | undefined): number {
   const windowDays = value ?? DEFAULT_RECENT_WINDOW_DAYS;
   if (!Number.isInteger(windowDays) || windowDays <= 0) {
-    throw new RendererValidationError("Recent recognition share requires a positive integer window.", [
-      {
-        path: "$.windowDays",
-        code: "invalid_window_days",
-        message: "windowDays must be a positive integer."
-      }
-    ]);
+    throw new RendererValidationError(
+      "Recent recognition share requires a positive integer window.",
+      [
+        {
+          path: "$.windowDays",
+          code: "invalid_window_days",
+          message: "windowDays must be a positive integer.",
+        },
+      ],
+    );
   }
 
   return windowDays;
@@ -104,13 +109,16 @@ function normalizeAsOf(value: string | undefined): string {
 
   const parsed = Date.parse(value);
   if (Number.isNaN(parsed)) {
-    throw new RendererValidationError("Recent recognition share requires a valid as-of date.", [
-      {
-        path: "$.asOf",
-        code: "invalid_datetime",
-        message: "asOf must be an ISO-compatible date time."
-      }
-    ]);
+    throw new RendererValidationError(
+      "Recent recognition share requires a valid as-of date.",
+      [
+        {
+          path: "$.asOf",
+          code: "invalid_datetime",
+          message: "asOf must be an ISO-compatible date time.",
+        },
+      ],
+    );
   }
 
   return new Date(parsed).toISOString();
@@ -118,33 +126,36 @@ function normalizeAsOf(value: string | undefined): string {
 
 function toRecentShareContributor(
   entry: ContributorAccumulator,
-  totalRecognitionWeight: number
+  totalRecognitionWeight: number,
 ): MaintainerRecentRecognitionShareContributor {
   return {
     contributor: entry.contributor,
     recognitionCount: entry.recognitionCount,
     recognitionWeight: entry.recognitionWeight,
-    recognitionShare: totalRecognitionWeight === 0
-      ? 0
-      : roundShare(entry.recognitionWeight / totalRecognitionWeight),
+    recognitionShare:
+      totalRecognitionWeight === 0
+        ? 0
+        : roundShare(entry.recognitionWeight / totalRecognitionWeight),
     contributionTypes: uniqueSorted(Array.from(entry.contributionTypes)),
-    affectedAreas: uniqueSorted(Array.from(entry.affectedAreas))
+    affectedAreas: uniqueSorted(Array.from(entry.affectedAreas)),
   };
 }
 
-function createContributorAccumulator(record: PublicContributionRecord): ContributorAccumulator {
+function createContributorAccumulator(
+  record: PublicContributionRecord,
+): ContributorAccumulator {
   return {
     contributor: record.contributor,
     recognitionCount: 0,
     recognitionWeight: 0,
     contributionTypes: new Set(),
-    affectedAreas: new Set()
+    affectedAreas: new Set(),
   };
 }
 
 function compareRecentShareContributors(
   left: MaintainerRecentRecognitionShareContributor,
-  right: MaintainerRecentRecognitionShareContributor
+  right: MaintainerRecentRecognitionShareContributor,
 ): number {
   return (
     right.recognitionWeight - left.recognitionWeight ||
@@ -162,8 +173,12 @@ function contributorKey(record: PublicContributionRecord): string {
   return `${record.contributor.platform}:${record.contributor.id}:${record.contributor.login}`;
 }
 
-function uniqueSorted<T extends string | ContributionType>(values: readonly T[]): readonly T[] {
-  return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right));
+function uniqueSorted<T extends string | ContributionType>(
+  values: readonly T[],
+): readonly T[] {
+  return Array.from(new Set(values)).sort((left, right) =>
+    left.localeCompare(right),
+  );
 }
 
 interface ContributorAccumulator {

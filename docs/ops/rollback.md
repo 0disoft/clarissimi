@@ -25,17 +25,17 @@ Stop the current release, dogfood run, or source-only merge when any of these ha
 
 Choose the narrowest rollback path:
 
-| State | Rollback action |
-| --- | --- |
-| Temporary staging output only | Delete the temporary staging directory. |
-| Local proposal branch only | Delete the local `clarissimi/recognition/<source-kind>-<source-id>` branch. |
-| Published proposal branch without pull request | Delete the remote proposal branch. |
-| Open proposal pull request before merge | Close the proposal pull request and delete the proposal branch. |
-| Failed integration-lab full-write smoke leaves run-scoped resources | Preview `pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`, apply it explicitly, then rerun the orphan audit. |
-| Merged recognition pull request | Revert the recognition pull request and run the rebuild path for derived outputs. |
-| Published Action tag with a normal defect | Keep the tag immutable and publish a corrective patch tag. |
-| Moving `v0` alias fails verification | Restore the recorded previous SHA with a lease, or delete only a newly created alias. |
-| Published Action tag with an urgent security or supply-chain incident | Document impact and recovery, then delete or replace the tag only when continued availability is more dangerous. |
+| State                                                                 | Rollback action                                                                                                                |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Temporary staging output only                                         | Delete the temporary staging directory.                                                                                        |
+| Local proposal branch only                                            | Delete the local `clarissimi/recognition/<source-kind>-<source-id>` branch.                                                    |
+| Published proposal branch without pull request                        | Delete the remote proposal branch.                                                                                             |
+| Open proposal pull request before merge                               | Close the proposal pull request and delete the proposal branch.                                                                |
+| Failed integration-lab full-write smoke leaves run-scoped resources   | Preview `pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`, apply it explicitly, then rerun the orphan audit. |
+| Merged recognition pull request                                       | Revert the recognition pull request and run the rebuild path for derived outputs.                                              |
+| Published Action tag with a normal defect                             | Keep the tag immutable and publish a corrective patch tag.                                                                     |
+| Moving `v0` alias fails verification                                  | Restore the recorded previous SHA with a lease, or delete only a newly created alias.                                          |
+| Published Action tag with an urgent security or supply-chain incident | Document impact and recovery, then delete or replace the tag only when continued availability is more dangerous.               |
 
 ## Procedure
 
@@ -117,7 +117,7 @@ Resume the release or dogfood run only after:
 
 ## Validation
 
-- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
+- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`
 - Release status: versioned Action tags are allowed by ADR 0031 after release gates pass; public
   package publication remains blocked by `docs/ops/release.md`.
 - Recent hosted live-provider evidence is recorded in `docs/ops/release.md`; refresh it with

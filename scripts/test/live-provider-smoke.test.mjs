@@ -3,7 +3,7 @@ import test from "node:test";
 
 import {
   buildLiveProviderSmokeChildEnv,
-  runLiveProviderSmoke
+  runLiveProviderSmoke,
 } from "../live-provider-smoke.mjs";
 
 test("live provider smoke can be imported without executing provider preflight", () => {
@@ -25,11 +25,11 @@ test("live provider smoke child env strips unrelated provider and GitHub credent
     ["UMANS_API" + keySuffix]: "umans-token",
     GITHUB_TOKEN: "github-token",
     GITHUB_PAT: "github-pat",
-    GITHUB_PAT_ODISOFT: "github-pat-odisoft"
+    GITHUB_PAT_ODISOFT: "github-pat-odisoft",
   };
 
   const childEnv = buildLiveProviderSmokeChildEnv(baseEnv, {
-    CLARISSIMI_PROVIDER_TOKEN: "clarissimi-provider-token"
+    CLARISSIMI_PROVIDER_TOKEN: "clarissimi-provider-token",
   });
 
   assert.equal(childEnv.Path, "C:\\Windows\\System32");
@@ -53,11 +53,11 @@ test("live provider smoke child env matches denied names case-insensitively", ()
     {
       github_token: "github-token",
       openai_api_key: "openai-token",
-      TEMP: "C:\\Temp"
+      TEMP: "C:\\Temp",
     },
     {
-      CLARISSIMI_PROVIDER_TOKEN: "clarissimi-provider-token"
-    }
+      CLARISSIMI_PROVIDER_TOKEN: "clarissimi-provider-token",
+    },
   );
 
   assert.equal(childEnv.github_token, undefined);

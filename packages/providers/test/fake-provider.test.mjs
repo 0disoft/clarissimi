@@ -7,27 +7,27 @@ import { validateContributionAssessment } from "@clarissimi/schemas";
 import {
   FakeProviderAssessmentError,
   createFakeAssessment,
-  createFakeContributionDraftProvider
+  createFakeContributionDraftProvider,
 } from "../dist/index.js";
 
 const contributor = {
   platform: "github",
   id: "123456",
   login: "octocat",
-  profileUrl: "https://github.com/octocat"
+  profileUrl: "https://github.com/octocat",
 };
 
 const source = {
   repository: "example/project",
   event: "merged_pull_request",
   pullRequestNumber: 42,
-  mergedAt: "2026-07-08T00:00:00.000Z"
+  mergedAt: "2026-07-08T00:00:00.000Z",
 };
 
 function preparedEvidence(items) {
   return prepareEvidenceForProvider({
     source,
-    items
+    items,
   });
 }
 
@@ -38,13 +38,13 @@ test("creates a deterministic draft assessment from prepared evidence", async ()
       kind: "test",
       id: "tests/parser.test.ts",
       title: "parser regression coverage",
-      text: "Added a regression case for nested parser input."
-    }
+      text: "Added a regression case for nested parser input.",
+    },
   ]);
 
   const assessment = await provider.createAssessment({
     contributor,
-    preparedEvidence: evidence
+    preparedEvidence: evidence,
   });
 
   assert.equal(provider.id, "fake-deterministic");
@@ -61,8 +61,8 @@ test("honors safe maintainer hints without changing source or evidence refs", ()
     {
       kind: "pull_request",
       id: "PR-7",
-      title: "release validation notes"
-    }
+      title: "release validation notes",
+    },
   ]);
 
   const assessment = createFakeAssessment({
@@ -73,8 +73,8 @@ test("honors safe maintainer hints without changing source or evidence refs", ()
       affectedArea: "release checklist",
       impactLevel: "high",
       suggestedBadge: "Release Verifier",
-      confidence: 0.91
-    }
+      confidence: 0.91,
+    },
   });
 
   assert.equal(assessment.contributionType, "release_validation");
@@ -91,8 +91,8 @@ test("keeps ranking language out of generated public narrative fields", () => {
     {
       kind: "file",
       id: "src/maintenance.ts",
-      title: "repository maintenance"
-    }
+      title: "repository maintenance",
+    },
   ]);
 
   const assessment = createFakeAssessment({
@@ -100,14 +100,20 @@ test("keeps ranking language out of generated public narrative fields", () => {
     preparedEvidence: evidence,
     hints: {
       affectedArea: "top 3 contributor scoreboard",
-      suggestedBadge: "Gold Contributor"
-    }
+      suggestedBadge: "Gold Contributor",
+    },
   });
 
   assert.equal(assessment.affectedArea, "repository maintenance");
   assert.equal(assessment.suggestedBadge, "Maintenance Steward");
-  assert.equal(assessment.evidenceSummary.includes("top 3 contributor scoreboard"), false);
-  assert.equal(assessment.publicRecognitionText.includes("top 3 contributor scoreboard"), false);
+  assert.equal(
+    assessment.evidenceSummary.includes("top 3 contributor scoreboard"),
+    false,
+  );
+  assert.equal(
+    assessment.publicRecognitionText.includes("top 3 contributor scoreboard"),
+    false,
+  );
   assert.equal(validateContributionAssessment(assessment).ok, true);
 });
 
@@ -116,8 +122,8 @@ test("keeps contribution share language out of generated public narrative fields
     {
       kind: "file",
       id: "src/maintenance.ts",
-      title: "repository maintenance"
-    }
+      title: "repository maintenance",
+    },
   ]);
 
   const assessment = createFakeAssessment({
@@ -125,8 +131,8 @@ test("keeps contribution share language out of generated public narrative fields
     preparedEvidence: evidence,
     hints: {
       affectedArea: "37% of recent contribution weight",
-      suggestedBadge: "Score Share Leader"
-    }
+      suggestedBadge: "Score Share Leader",
+    },
   });
 
   assert.equal(assessment.affectedArea, "repository maintenance");
@@ -139,15 +145,15 @@ test("keeps contribution share language out of generated public narrative fields
 test("throws when prepared evidence cannot satisfy the schema", () => {
   const evidence = prepareEvidenceForProvider({
     source,
-    items: []
+    items: [],
   });
 
   assert.throws(
     () =>
       createFakeAssessment({
         contributor,
-        preparedEvidence: evidence
+        preparedEvidence: evidence,
       }),
-    FakeProviderAssessmentError
+    FakeProviderAssessmentError,
   );
 });

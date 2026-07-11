@@ -13,8 +13,12 @@ await runJsonCommand({
   expectExitCode: 0,
   validate(output) {
     assertEqual(output.ok, true, "validate-config should succeed.");
-    assertEqual(output.command, "validate-config", "validate-config command name should match.");
-  }
+    assertEqual(
+      output.command,
+      "validate-config",
+      "validate-config command name should match.",
+    );
+  },
 });
 
 await runJsonCommand({
@@ -27,16 +31,32 @@ await runJsonCommand({
     "fixtures/github-merged-pr-basic.json",
     "--mode",
     "dry-run",
-    "--json"
+    "--json",
   ],
   expectExitCode: 0,
   validate(output) {
     assertEqual(output.ok, true, "recognize should succeed.");
-    assertEqual(output.command, "recognize", "recognize command name should match.");
-    assertEqual(output.fixtureKind, "github", "recognize should use the GitHub fixture path.");
-    assertEqual(output.approvalStatus, "draft", "basic GitHub fixture should remain a draft.");
-    assertEqual(output.publicOutputsRendered, false, "draft fixture must not render public outputs.");
-  }
+    assertEqual(
+      output.command,
+      "recognize",
+      "recognize command name should match.",
+    );
+    assertEqual(
+      output.fixtureKind,
+      "github",
+      "recognize should use the GitHub fixture path.",
+    );
+    assertEqual(
+      output.approvalStatus,
+      "draft",
+      "basic GitHub fixture should remain a draft.",
+    );
+    assertEqual(
+      output.publicOutputsRendered,
+      false,
+      "draft fixture must not render public outputs.",
+    );
+  },
 });
 
 await withTempDir("clarissimi-import-draft-smoke-", async (dir) => {
@@ -45,39 +65,43 @@ await withTempDir("clarissimi-import-draft-smoke-", async (dir) => {
   const outDir = join(dir, "out");
   await writeFile(
     draftPath,
-    `${JSON.stringify({
-      schemaVersion: "clarissimi.assessment/v1",
-      contributor: {
-        platform: "github",
-        id: "123456",
-        login: "octocat",
-        profileUrl: "https://github.com/octocat"
+    `${JSON.stringify(
+      {
+        schemaVersion: "clarissimi.assessment/v1",
+        contributor: {
+          platform: "github",
+          id: "123456",
+          login: "octocat",
+          profileUrl: "https://github.com/octocat",
+        },
+        contributionType: "test",
+        affectedArea: "parser regression coverage",
+        impactLevel: "medium",
+        evidenceSummary: "Added regression coverage for parser behavior.",
+        evidenceRefs: [
+          {
+            kind: "pull_request",
+            id: "PR-42",
+            url: "https://github.com/sample/project/pull/42",
+            title: "Add parser regression coverage",
+            excerpt: "Raw PR body should not be rendered.",
+          },
+        ],
+        suggestedBadge: "Regression Shield",
+        publicRecognitionText: "Added regression coverage for the parser.",
+        confidence: 0.82,
+        maintainerApprovalStatus: "approved",
+        source: {
+          repository: "sample/project",
+          event: "merged_pull_request",
+          pullRequestNumber: 42,
+          mergedAt: "2026-07-08T00:00:00.000Z",
+        },
       },
-      contributionType: "test",
-      affectedArea: "parser regression coverage",
-      impactLevel: "medium",
-      evidenceSummary: "Added regression coverage for parser behavior.",
-      evidenceRefs: [
-        {
-          kind: "pull_request",
-          id: "PR-42",
-          url: "https://github.com/sample/project/pull/42",
-          title: "Add parser regression coverage",
-          excerpt: "Raw PR body should not be rendered."
-        }
-      ],
-      suggestedBadge: "Regression Shield",
-      publicRecognitionText: "Added regression coverage for the parser.",
-      confidence: 0.82,
-      maintainerApprovalStatus: "approved",
-      source: {
-        repository: "sample/project",
-        event: "merged_pull_request",
-        pullRequestNumber: 42,
-        mergedAt: "2026-07-08T00:00:00.000Z"
-      }
-    }, null, 2)}\n`,
-    "utf8"
+      null,
+      2,
+    )}\n`,
+    "utf8",
   );
 
   await runJsonCommand({
@@ -92,20 +116,34 @@ await withTempDir("clarissimi-import-draft-smoke-", async (dir) => {
       ledgerPath,
       "--out-dir",
       outDir,
-      "--json"
+      "--json",
     ],
     expectExitCode: 0,
     validate(output) {
       assertEqual(output.ok, true, "import-draft should succeed.");
-      assertEqual(output.command, "import-draft", "import-draft command name should match.");
-      assertEqual(output.records, 1, "import-draft should write one ledger record.");
-      assertEqual(output.wroteDerivedFiles, true, "import-draft should write derived outputs when requested.");
-    }
+      assertEqual(
+        output.command,
+        "import-draft",
+        "import-draft command name should match.",
+      );
+      assertEqual(
+        output.records,
+        1,
+        "import-draft should write one ledger record.",
+      );
+      assertEqual(
+        output.wroteDerivedFiles,
+        true,
+        "import-draft should write derived outputs when requested.",
+      );
+    },
   });
 
   const ledgerText = await readFile(ledgerPath, "utf8");
   if (ledgerText.includes("Raw PR body should not be rendered.")) {
-    throw new Error("import-draft smoke leaked raw evidence excerpt into the public ledger.");
+    throw new Error(
+      "import-draft smoke leaked raw evidence excerpt into the public ledger.",
+    );
   }
 });
 
@@ -114,39 +152,43 @@ await withTempDir("clarissimi-stage-draft-smoke-", async (dir) => {
   const draftsDir = join(dir, ".clarissimi", "drafts");
   await writeFile(
     draftPath,
-    `${JSON.stringify({
-      schemaVersion: "clarissimi.assessment/v1",
-      contributor: {
-        platform: "github",
-        id: "123456",
-        login: "octocat",
-        profileUrl: "https://github.com/octocat"
+    `${JSON.stringify(
+      {
+        schemaVersion: "clarissimi.assessment/v1",
+        contributor: {
+          platform: "github",
+          id: "123456",
+          login: "octocat",
+          profileUrl: "https://github.com/octocat",
+        },
+        contributionType: "test",
+        affectedArea: "parser regression coverage",
+        impactLevel: "medium",
+        evidenceSummary: "Added regression coverage for parser behavior.",
+        evidenceRefs: [
+          {
+            kind: "pull_request",
+            id: "PR-42",
+            url: "https://github.com/sample/project/pull/42",
+            title: "Add parser regression coverage",
+            excerpt: "Raw PR body should not be staged.",
+          },
+        ],
+        suggestedBadge: "Regression Shield",
+        publicRecognitionText: "Added regression coverage for the parser.",
+        confidence: 0.82,
+        maintainerApprovalStatus: "draft",
+        source: {
+          repository: "sample/project",
+          event: "merged_pull_request",
+          pullRequestNumber: 42,
+          mergedAt: "2026-07-08T00:00:00.000Z",
+        },
       },
-      contributionType: "test",
-      affectedArea: "parser regression coverage",
-      impactLevel: "medium",
-      evidenceSummary: "Added regression coverage for parser behavior.",
-      evidenceRefs: [
-        {
-          kind: "pull_request",
-          id: "PR-42",
-          url: "https://github.com/sample/project/pull/42",
-          title: "Add parser regression coverage",
-          excerpt: "Raw PR body should not be staged."
-        }
-      ],
-      suggestedBadge: "Regression Shield",
-      publicRecognitionText: "Added regression coverage for the parser.",
-      confidence: 0.82,
-      maintainerApprovalStatus: "draft",
-      source: {
-        repository: "sample/project",
-        event: "merged_pull_request",
-        pullRequestNumber: 42,
-        mergedAt: "2026-07-08T00:00:00.000Z"
-      }
-    }, null, 2)}\n`,
-    "utf8"
+      null,
+      2,
+    )}\n`,
+    "utf8",
   );
 
   await runJsonCommand({
@@ -159,19 +201,32 @@ await withTempDir("clarissimi-stage-draft-smoke-", async (dir) => {
       draftPath,
       "--drafts-dir",
       draftsDir,
-      "--json"
+      "--json",
     ],
     expectExitCode: 0,
     validate(output) {
       assertEqual(output.ok, true, "stage-draft should succeed.");
-      assertEqual(output.command, "stage-draft", "stage-draft command name should match.");
-      assertEqual(output.approvalStatus, "draft", "stage-draft should keep draft approval status.");
-    }
+      assertEqual(
+        output.command,
+        "stage-draft",
+        "stage-draft command name should match.",
+      );
+      assertEqual(
+        output.approvalStatus,
+        "draft",
+        "stage-draft should keep draft approval status.",
+      );
+    },
   });
 
-  const draftText = await readFile(join(draftsDir, "sample-project-merged_pull_request-42.json"), "utf8");
+  const draftText = await readFile(
+    join(draftsDir, "sample-project-merged_pull_request-42.json"),
+    "utf8",
+  );
   if (draftText.includes("Raw PR body should not be staged.")) {
-    throw new Error("stage-draft smoke leaked raw evidence excerpt into the staged draft.");
+    throw new Error(
+      "stage-draft smoke leaked raw evidence excerpt into the staged draft.",
+    );
   }
 });
 
@@ -181,15 +236,27 @@ await runJsonCommand({
   args: ["packages/action/dist/bin/clarissimi-action.js"],
   env: {
     INPUT_MODE: "dry-run",
-    INPUT_GITHUB_FIXTURE: "fixtures/github-merged-pr-basic.json"
+    INPUT_GITHUB_FIXTURE: "fixtures/github-merged-pr-basic.json",
   },
   expectExitCode: 0,
   validate(output) {
     assertEqual(output.ok, true, "Action dry-run should succeed.");
-    assertEqual(output.mode, "dry-run", "Action explicit dry-run should preserve dry-run mode.");
-    assertEqual(output.inputSource, "github_fixture", "Action dry-run should use the fixture source.");
-    assertEqual(output.proposedEntryCount, 0, "dry-run must not propose public entries.");
-  }
+    assertEqual(
+      output.mode,
+      "dry-run",
+      "Action explicit dry-run should preserve dry-run mode.",
+    );
+    assertEqual(
+      output.inputSource,
+      "github_fixture",
+      "Action dry-run should use the fixture source.",
+    );
+    assertEqual(
+      output.proposedEntryCount,
+      0,
+      "dry-run must not propose public entries.",
+    );
+  },
 });
 
 await runJsonCommand({
@@ -198,15 +265,27 @@ await runJsonCommand({
   args: ["action-dist/index.js"],
   env: {
     INPUT_MODE: "dry-run",
-    INPUT_GITHUB_FIXTURE: "fixtures/github-merged-pr-basic.json"
+    INPUT_GITHUB_FIXTURE: "fixtures/github-merged-pr-basic.json",
   },
   expectExitCode: 0,
   validate(output) {
     assertEqual(output.ok, true, "bundled Action dry-run should succeed.");
-    assertEqual(output.mode, "dry-run", "bundled Action should preserve dry-run mode.");
-    assertEqual(output.inputSource, "github_fixture", "bundled Action should use the fixture source.");
-    assertEqual(output.proposedEntryCount, 0, "bundled dry-run must not propose public entries.");
-  }
+    assertEqual(
+      output.mode,
+      "dry-run",
+      "bundled Action should preserve dry-run mode.",
+    );
+    assertEqual(
+      output.inputSource,
+      "github_fixture",
+      "bundled Action should use the fixture source.",
+    );
+    assertEqual(
+      output.proposedEntryCount,
+      0,
+      "bundled dry-run must not propose public entries.",
+    );
+  },
 });
 
 await runCommand({
@@ -214,15 +293,21 @@ await runCommand({
   command: process.execPath,
   args: ["packages/action/dist/bin/clarissimi-action.js"],
   env: {
-    INPUT_GITHUB_FIXTURE: "fixtures/github-merged-pr-approved.json"
+    INPUT_GITHUB_FIXTURE: "fixtures/github-merged-pr-approved.json",
   },
   expectExitCode: 1,
   validate({ stdout, stderr }) {
-    assertEqual(stdout, "", "default propose token failure should not write stdout.");
+    assertEqual(
+      stdout,
+      "",
+      "default propose token failure should not write stdout.",
+    );
     if (!stderr.includes("GITHUB_TOKEN is required for write modes.")) {
-      throw new Error("default propose token failure should explain the missing GitHub token.");
+      throw new Error(
+        "default propose token failure should explain the missing GitHub token.",
+      );
     }
-  }
+  },
 });
 
 await runCommand({
@@ -233,19 +318,31 @@ await runCommand({
     CLARISSIMI_PROVIDER_TOKEN: "",
     CLARISSIMI_PROVIDER_MODEL: "",
     CLARISSIMI_PROVIDER_ENDPOINT: "",
-    CLARISSIMI_PROVIDER_THINKING: ""
+    CLARISSIMI_PROVIDER_THINKING: "",
   },
   expectExitCode: 2,
   validate({ stdout, stderr }) {
-    assertEqual(stdout, "", "live provider credential preflight should not write stdout.");
-    if (!stderr.includes("live provider smoke requires CLARISSIMI_PROVIDER_TOKEN and CLARISSIMI_PROVIDER_MODEL.")) {
-      throw new Error("live provider credential preflight should explain missing credentials.");
+    assertEqual(
+      stdout,
+      "",
+      "live provider credential preflight should not write stdout.",
+    );
+    if (
+      !stderr.includes(
+        "live provider smoke requires CLARISSIMI_PROVIDER_TOKEN and CLARISSIMI_PROVIDER_MODEL.",
+      )
+    ) {
+      throw new Error(
+        "live provider credential preflight should explain missing credentials.",
+      );
     }
 
     if (!stderr.includes("No provider call was made.")) {
-      throw new Error("live provider credential preflight should confirm no provider call was made.");
+      throw new Error(
+        "live provider credential preflight should confirm no provider call was made.",
+      );
     }
-  }
+  },
 });
 
 await runCommand({
@@ -256,19 +353,31 @@ await runCommand({
     CLARISSIMI_PROVIDER_TOKEN: "synthetic-provider-token",
     CLARISSIMI_PROVIDER_MODEL: "synthetic-model",
     CLARISSIMI_PROVIDER_ENDPOINT: "http://gateway.example/v1/chat/completions",
-    CLARISSIMI_PROVIDER_THINKING: ""
+    CLARISSIMI_PROVIDER_THINKING: "",
   },
   expectExitCode: 2,
   validate({ stdout, stderr }) {
-    assertEqual(stdout, "", "live provider invalid endpoint preflight should not write stdout.");
-    if (!stderr.includes("live provider smoke requires CLARISSIMI_PROVIDER_ENDPOINT to be an https URL when provided.")) {
-      throw new Error("live provider invalid endpoint preflight should explain the invalid endpoint.");
+    assertEqual(
+      stdout,
+      "",
+      "live provider invalid endpoint preflight should not write stdout.",
+    );
+    if (
+      !stderr.includes(
+        "live provider smoke requires CLARISSIMI_PROVIDER_ENDPOINT to be an https URL when provided.",
+      )
+    ) {
+      throw new Error(
+        "live provider invalid endpoint preflight should explain the invalid endpoint.",
+      );
     }
 
     if (!stderr.includes("No provider call was made.")) {
-      throw new Error("live provider invalid endpoint preflight should confirm no provider call was made.");
+      throw new Error(
+        "live provider invalid endpoint preflight should confirm no provider call was made.",
+      );
     }
-  }
+  },
 });
 
 await runCommand({
@@ -279,19 +388,31 @@ await runCommand({
     CLARISSIMI_PROVIDER_TOKEN: "synthetic-provider-token",
     CLARISSIMI_PROVIDER_MODEL: "synthetic-model",
     CLARISSIMI_PROVIDER_ENDPOINT: "",
-    CLARISSIMI_PROVIDER_THINKING: "enabled"
+    CLARISSIMI_PROVIDER_THINKING: "enabled",
   },
   expectExitCode: 2,
   validate({ stdout, stderr }) {
-    assertEqual(stdout, "", "live provider unsupported thinking preflight should not write stdout.");
-    if (!stderr.includes("live provider smoke supports only CLARISSIMI_PROVIDER_THINKING=disabled.")) {
-      throw new Error("live provider unsupported thinking preflight should explain the supported value.");
+    assertEqual(
+      stdout,
+      "",
+      "live provider unsupported thinking preflight should not write stdout.",
+    );
+    if (
+      !stderr.includes(
+        "live provider smoke supports only CLARISSIMI_PROVIDER_THINKING=disabled.",
+      )
+    ) {
+      throw new Error(
+        "live provider unsupported thinking preflight should explain the supported value.",
+      );
     }
 
     if (!stderr.includes("No provider call was made.")) {
-      throw new Error("live provider unsupported thinking preflight should confirm no provider call was made.");
+      throw new Error(
+        "live provider unsupported thinking preflight should confirm no provider call was made.",
+      );
     }
-  }
+  },
 });
 
 await assertWorkspacePackagePackDryRuns();
@@ -307,31 +428,49 @@ async function assertWorkspacePackagePackDryRuns() {
     { dir: "providers" },
     { dir: "renderers" },
     { dir: "cli", requiredFiles: ["dist/bin/clarissimi.js"] },
-    { dir: "action", requiredFiles: ["dist/bin/clarissimi-action.js"] }
+    { dir: "action", requiredFiles: ["dist/bin/clarissimi-action.js"] },
   ];
 
   for (const packageInfo of packages) {
     await runJsonCommand({
       name: `Package pack dry-run ${packageInfo.dir}`,
       command: "pnpm",
-      args: ["--filter", `@clarissimi/${packageInfo.dir}`, "pack", "--dry-run", "--json"],
+      args: [
+        "--filter",
+        `@clarissimi/${packageInfo.dir}`,
+        "pack",
+        "--dry-run",
+        "--json",
+      ],
       expectExitCode: 0,
       validate(output) {
         validatePackagePackDryRun(output, packageInfo);
-      }
+      },
     });
   }
 }
 
 function validatePackagePackDryRun(output, packageInfo) {
-  assertEqual(output.name, `@clarissimi/${packageInfo.dir}`, `${packageInfo.dir} pack name should match.`);
-  assertEqual(output.version, "0.0.0", `${packageInfo.dir} pack version should remain blocked at 0.0.0.`);
+  assertEqual(
+    output.name,
+    `@clarissimi/${packageInfo.dir}`,
+    `${packageInfo.dir} pack name should match.`,
+  );
+  assertEqual(
+    output.version,
+    "0.0.0",
+    `${packageInfo.dir} pack version should remain blocked at 0.0.0.`,
+  );
 
   if (!Array.isArray(output.files)) {
-    throw new Error(`${packageInfo.dir} pack dry-run did not report a files array.`);
+    throw new Error(
+      `${packageInfo.dir} pack dry-run did not report a files array.`,
+    );
   }
 
-  const paths = output.files.map((file) => file?.path).filter((path) => typeof path === "string");
+  const paths = output.files
+    .map((file) => file?.path)
+    .filter((path) => typeof path === "string");
   const pathSet = new Set(paths);
   const requiredFiles = [
     "package.json",
@@ -339,25 +478,29 @@ function validatePackagePackDryRun(output, packageInfo) {
     "LICENSE",
     "dist/index.js",
     "dist/index.d.ts",
-    ...(packageInfo.requiredFiles ?? [])
+    ...(packageInfo.requiredFiles ?? []),
   ];
 
   for (const requiredFile of requiredFiles) {
     if (!pathSet.has(requiredFile)) {
-      throw new Error(`${packageInfo.dir} pack dry-run is missing ${requiredFile}.`);
+      throw new Error(
+        `${packageInfo.dir} pack dry-run is missing ${requiredFile}.`,
+      );
     }
   }
 
   for (const path of paths) {
     if (
-      path === "tsconfig.json"
-      || path.startsWith("src/")
-      || path.startsWith("test/")
-      || path.includes("/test/")
-      || path.includes("node_modules/")
-      || path.endsWith(".tsbuildinfo")
+      path === "tsconfig.json" ||
+      path.startsWith("src/") ||
+      path.startsWith("test/") ||
+      path.includes("/test/") ||
+      path.includes("node_modules/") ||
+      path.endsWith(".tsbuildinfo")
     ) {
-      throw new Error(`${packageInfo.dir} pack dry-run includes non-public file ${path}.`);
+      throw new Error(
+        `${packageInfo.dir} pack dry-run includes non-public file ${path}.`,
+      );
     }
   }
 }
@@ -368,13 +511,15 @@ async function runJsonCommand(options) {
     command: options.command,
     args: options.args,
     env: options.env,
-    expectExitCode: options.expectExitCode
+    expectExitCode: options.expectExitCode,
   });
   let output;
   try {
     output = JSON.parse(result.stdout);
   } catch (error) {
-    throw new Error(`${options.name} did not emit parseable JSON: ${error.message}`);
+    throw new Error(
+      `${options.name} did not emit parseable JSON: ${error.message}`,
+    );
   }
 
   options.validate(output);
@@ -386,9 +531,9 @@ function runCommand(options) {
       cwd: repoRoot,
       env: {
         ...process.env,
-        ...options.env
+        ...options.env,
       },
-      stdio: ["ignore", "pipe", "pipe"]
+      stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "";
     let stderr = "";
@@ -406,8 +551,8 @@ function runCommand(options) {
       if (exitCode !== options.expectExitCode) {
         reject(
           new Error(
-            `${options.name} exited with ${exitCode}, expected ${options.expectExitCode}.\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}`
-          )
+            `${options.name} exited with ${exitCode}, expected ${options.expectExitCode}.\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}`,
+          ),
         );
         return;
       }
@@ -435,6 +580,8 @@ async function withTempDir(prefix, callback) {
 
 function assertEqual(actual, expected, message) {
   if (actual !== expected) {
-    throw new Error(`${message} Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}.`);
+    throw new Error(
+      `${message} Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}.`,
+    );
   }
 }

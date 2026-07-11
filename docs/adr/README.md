@@ -54,6 +54,8 @@ engine.
   public recognition proposal without provider calls or direct default-branch writes
 - `0034-add-v0-major-alias.md`: provide the moving `v0` Action channel with exact-SHA verification
   while immutable patch tags remain fixed
+- `0035-adopt-prettier-format-baseline.md`: adopt a pinned repository-wide Prettier baseline and
+  enforce it in hosted CI
 
 ## Review Blockers
 

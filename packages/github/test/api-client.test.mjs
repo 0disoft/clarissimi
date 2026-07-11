@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  GitHubApiClientError,
-  createGitHubApiClient
-} from "../dist/index.js";
+import { GitHubApiClientError, createGitHubApiClient } from "../dist/index.js";
 
 test("GitHub API client fetches merged pull request evidence surfaces", async () => {
   const requests = [];
@@ -14,7 +11,7 @@ test("GitHub API client fetches merged pull request evidence surfaces", async ()
       requests.push({
         url: String(url),
         method: init.method,
-        authorization: init.headers.Authorization
+        authorization: init.headers.Authorization,
       });
 
       if (String(url).endsWith("/pulls/42")) {
@@ -28,13 +25,13 @@ test("GitHub API client fetches merged pull request evidence surfaces", async ()
           user: {
             id: 123456,
             login: "octocat",
-            html_url: "https://github.com/octocat"
+            html_url: "https://github.com/octocat",
           },
           labels: [
             {
-              name: "tests"
-            }
-          ]
+              name: "tests",
+            },
+          ],
         });
       }
 
@@ -45,8 +42,8 @@ test("GitHub API client fetches merged pull request evidence surfaces", async ()
             status: "added",
             additions: 32,
             deletions: 0,
-            patch: "test(\"parses nested input\", () => {})"
-          }
+            patch: 'test("parses nested input", () => {})',
+          },
         ]);
       }
 
@@ -54,22 +51,23 @@ test("GitHub API client fetches merged pull request evidence surfaces", async ()
         {
           id: 9001,
           body: "Looks covered.",
-          html_url: "https://github.com/sample/project/pull/42#discussion_r9001",
+          html_url:
+            "https://github.com/sample/project/pull/42#discussion_r9001",
           path: "tests/parser.spec.ts",
           diff_hunk: "@@ -0,0 +1,12 @@",
           user: {
             id: 2,
             login: "maintainer",
-            html_url: "https://github.com/maintainer"
-          }
-        }
+            html_url: "https://github.com/maintainer",
+          },
+        },
       ]);
-    }
+    },
   });
 
   const lookup = {
     repository: "sample/project",
-    pullRequestNumber: 42
+    pullRequestNumber: 42,
   };
   const pullRequest = await client.getPullRequest(lookup);
   const files = await client.listPullRequestFiles(lookup);
@@ -83,11 +81,17 @@ test("GitHub API client fetches merged pull request evidence surfaces", async ()
     [
       "https://api.github.com/repos/sample/project/pulls/42",
       "https://api.github.com/repos/sample/project/pulls/42/files?per_page=100",
-      "https://api.github.com/repos/sample/project/pulls/42/comments?per_page=100"
-    ]
+      "https://api.github.com/repos/sample/project/pulls/42/comments?per_page=100",
+    ],
   );
-  assert.equal(requests.every((request) => request.method === "GET"), true);
-  assert.equal(requests.every((request) => request.authorization === "Bearer test-token"), true);
+  assert.equal(
+    requests.every((request) => request.method === "GET"),
+    true,
+  );
+  assert.equal(
+    requests.every((request) => request.authorization === "Bearer test-token"),
+    true,
+  );
 });
 
 test("GitHub API client can make unauthenticated public requests", async () => {
@@ -105,16 +109,16 @@ test("GitHub API client can make unauthenticated public requests", async () => {
         user: {
           id: 123456,
           login: "octocat",
-          html_url: null
+          html_url: null,
         },
-        labels: []
+        labels: [],
       });
-    }
+    },
   });
 
   await client.getPullRequest({
     repository: "sample/project",
-    pullRequestNumber: 42
+    pullRequestNumber: 42,
   });
 
   assert.equal("Authorization" in requests[0], false);
@@ -126,22 +130,22 @@ test("GitHub API client maps permission failures without leaking tokens", async 
     fetch: async () =>
       jsonResponse(
         {
-          message: "Bad credentials"
+          message: "Bad credentials",
         },
-        401
-      )
+        401,
+      ),
   });
 
   await assert.rejects(
     () =>
       client.getPullRequest({
         repository: "sample/project",
-        pullRequestNumber: 42
+        pullRequestNumber: 42,
       }),
     (error) =>
-      error instanceof GitHubApiClientError
-      && error.code === "permission_denied"
-      && !error.message.includes("secret-token")
+      error instanceof GitHubApiClientError &&
+      error.code === "permission_denied" &&
+      !error.message.includes("secret-token"),
   );
 });
 
@@ -151,6 +155,6 @@ function jsonResponse(body, status = 200) {
     status,
     async text() {
       return JSON.stringify(body);
-    }
+    },
   };
 }

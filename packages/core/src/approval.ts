@@ -2,7 +2,7 @@ import {
   validateContributionAssessment,
   type ContributionAssessment,
   type ValidationIssue,
-  type ValidationResult
+  type ValidationResult,
 } from "@clarissimi/schemas";
 
 export interface PublishableAssessment {
@@ -20,7 +20,9 @@ export type PublishableAssessmentResult =
       readonly issues: readonly ValidationIssue[];
     };
 
-export function canPublishAssessment(value: unknown): PublishableAssessmentResult {
+export function canPublishAssessment(
+  value: unknown,
+): PublishableAssessmentResult {
   const validation = validateContributionAssessment(value);
 
   if (!validation.ok) {
@@ -34,27 +36,30 @@ export function canPublishAssessment(value: unknown): PublishableAssessmentResul
         {
           path: "$.maintainerApprovalStatus",
           code: "not_approved",
-          message: "Only approved or auto_approved assessments can become public records."
-        }
-      ]
+          message:
+            "Only approved or auto_approved assessments can become public records.",
+        },
+      ],
     };
   }
 
   return {
     ok: true,
     value: {
-      assessment: validation.value
+      assessment: validation.value,
     },
-    issues: []
+    issues: [],
   };
 }
 
 export function requireValidAssessment(
-  value: unknown
+  value: unknown,
 ): ValidationResult<ContributionAssessment> {
   return validateContributionAssessment(value);
 }
 
-function isPublicApprovalStatus(status: ContributionAssessment["maintainerApprovalStatus"]): boolean {
+function isPublicApprovalStatus(
+  status: ContributionAssessment["maintainerApprovalStatus"],
+): boolean {
   return status === "approved" || status === "auto_approved";
 }

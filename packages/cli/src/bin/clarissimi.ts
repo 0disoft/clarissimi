@@ -8,7 +8,7 @@ const exitCode = await runCli(process.argv.slice(2), {
   },
   stderr: (value) => {
     process.stderr.write(value);
-  }
+  },
 });
 
 process.exitCode = exitCode;

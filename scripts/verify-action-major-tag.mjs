@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 
 const defaults = {
   alias: "v0",
-  repo: "0disoft/clarissimi"
+  repo: "0disoft/clarissimi",
 };
 
 const usageText = [
@@ -14,10 +14,13 @@ const usageText = [
   "  pnpm run verify-action-major-tag -- --release-version v0.1.1 --sha 0123456789abcdef0123456789abcdef01234567",
   "",
   "The command is read-only. It verifies that the moving major alias, immutable version tag,",
-  "and GitHub Release all identify the expected Action commit."
+  "and GitHub Release all identify the expected Action commit.",
 ].join("\n");
 
-export async function runVerifyActionMajorTag(argv, runtime = defaultRuntime()) {
+export async function runVerifyActionMajorTag(
+  argv,
+  runtime = defaultRuntime(),
+) {
   try {
     return await run(argv, runtime);
   } catch (error) {
@@ -43,10 +46,16 @@ async function run(argv, runtime) {
     return usageFailure(runtime, "--repo must use owner/name format.");
   }
   if (alias !== "v0") {
-    return usageFailure(runtime, "--alias must be v0 under the current release policy.");
+    return usageFailure(
+      runtime,
+      "--alias must be v0 under the current release policy.",
+    );
   }
   if (!isV0ReleaseVersion(args.releaseVersion)) {
-    return usageFailure(runtime, "--release-version must be an immutable v0.x.y tag.");
+    return usageFailure(
+      runtime,
+      "--release-version must be an immutable v0.x.y tag.",
+    );
   }
   if (!isCommitSha(args.sha)) {
     return usageFailure(runtime, "--sha must be a 40-character commit SHA.");
@@ -54,7 +63,10 @@ async function run(argv, runtime) {
 
   await requireTools(runtime);
   const remoteUrl = `https://github.com/${repo}.git`;
-  const refs = await readRemoteTags(runtime, remoteUrl, [alias, args.releaseVersion]);
+  const refs = await readRemoteTags(runtime, remoteUrl, [
+    alias,
+    args.releaseVersion,
+  ]);
   assertTagTarget(refs, alias, args.sha);
   assertTagTarget(refs, args.releaseVersion, args.sha);
 
@@ -63,15 +75,22 @@ async function run(argv, runtime) {
     throw new Error(`GitHub Release tag must be ${args.releaseVersion}.`);
   }
   if (release.isDraft !== false) {
-    throw new Error(`GitHub Release ${args.releaseVersion} must not be a draft.`);
+    throw new Error(
+      `GitHub Release ${args.releaseVersion} must not be a draft.`,
+    );
   }
-  if (typeof release.url !== "string" || !release.url.startsWith("https://github.com/")) {
-    throw new Error(`GitHub Release ${args.releaseVersion} is missing a valid URL.`);
+  if (
+    typeof release.url !== "string" ||
+    !release.url.startsWith("https://github.com/")
+  ) {
+    throw new Error(
+      `GitHub Release ${args.releaseVersion} is missing a valid URL.`,
+    );
   }
 
   runtime.log(
-    `Action major alias ${alias} verified at ${args.sha} through immutable tag `
-    + `${args.releaseVersion}: ${release.url}`
+    `Action major alias ${alias} verified at ${args.sha} through immutable tag ` +
+      `${args.releaseVersion}: ${release.url}`,
   );
   return 0;
 }
@@ -93,12 +112,15 @@ function parseArgs(argv, runtime) {
       alias: "alias",
       repo: "repo",
       "release-version": "releaseVersion",
-      sha: "sha"
+      sha: "sha",
     }[key];
     if (property === undefined) {
-      return usageFailure(runtime, key === undefined
-        ? `Unexpected positional argument: ${arg}`
-        : `Unsupported option: ${arg}`);
+      return usageFailure(
+        runtime,
+        key === undefined
+          ? `Unexpected positional argument: ${arg}`
+          : `Unsupported option: ${arg}`,
+      );
     }
 
     const value = argv[index + 1];
@@ -119,11 +141,17 @@ function usageFailure(runtime, message) {
 }
 
 function isGitHubRepositoryName(value) {
-  return typeof value === "string" && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value);
+  return (
+    typeof value === "string" &&
+    /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value)
+  );
 }
 
 function isV0ReleaseVersion(value) {
-  return typeof value === "string" && /^v0\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$/.test(value);
+  return (
+    typeof value === "string" &&
+    /^v0\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$/.test(value)
+  );
 }
 
 function isCommitSha(value) {
@@ -142,16 +170,28 @@ async function requireTools(runtime) {
     const args = command === "git" ? ["--version"] : ["--version"];
     const result = await runtime.runCommand(command, args);
     if (result.exitCode !== 0) {
-      throw new Error(`${command} is required to verify the Action major alias.`);
+      throw new Error(
+        `${command} is required to verify the Action major alias.`,
+      );
     }
   }
 }
 
 async function readRemoteTags(runtime, remoteUrl, tags) {
-  const refs = tags.flatMap((tag) => [`refs/tags/${tag}`, `refs/tags/${tag}^{}`]);
-  const result = await runtime.runCommand("git", ["ls-remote", "--tags", remoteUrl, ...refs]);
+  const refs = tags.flatMap((tag) => [
+    `refs/tags/${tag}`,
+    `refs/tags/${tag}^{}`,
+  ]);
+  const result = await runtime.runCommand("git", [
+    "ls-remote",
+    "--tags",
+    remoteUrl,
+    ...refs,
+  ]);
   if (result.exitCode !== 0) {
-    throw new Error(`Unable to read remote Action tags.\n${boundedOutput(result.stderr)}`);
+    throw new Error(
+      `Unable to read remote Action tags.\n${boundedOutput(result.stderr)}`,
+    );
   }
 
   const parsed = new Map();
@@ -176,7 +216,9 @@ function assertTagTarget(refs, tag, expectedSha) {
     throw new Error(`Remote Action tag ${tag} does not exist.`);
   }
   if (target !== expectedSha.toLowerCase()) {
-    throw new Error(`Remote Action tag ${tag} resolves to ${target}, expected ${expectedSha}.`);
+    throw new Error(
+      `Remote Action tag ${tag} resolves to ${target}, expected ${expectedSha}.`,
+    );
   }
 }
 
@@ -188,16 +230,20 @@ async function readRelease(runtime, repo, version) {
     "--repo",
     repo,
     "--json",
-    "tagName,isDraft,isPrerelease,url"
+    "tagName,isDraft,isPrerelease,url",
   ]);
   if (result.exitCode !== 0) {
-    throw new Error(`Unable to read GitHub Release ${version}.\n${boundedOutput(result.stderr)}`);
+    throw new Error(
+      `Unable to read GitHub Release ${version}.\n${boundedOutput(result.stderr)}`,
+    );
   }
 
   try {
     return JSON.parse(result.stdout);
   } catch (error) {
-    throw new Error(`Unable to parse GitHub Release metadata: ${error.message}`);
+    throw new Error(
+      `Unable to parse GitHub Release metadata: ${error.message}`,
+    );
   }
 }
 
@@ -205,7 +251,7 @@ function defaultRuntime() {
   return {
     log: (message) => console.log(message),
     error: (message) => console.error(message),
-    runCommand
+    runCommand,
   };
 }
 
@@ -215,9 +261,13 @@ function runCommand(command, args) {
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8");
-    child.stdout.on("data", (chunk) => { stdout += chunk; });
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
     child.stderr.setEncoding("utf8");
-    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
     child.on("error", reject);
     child.on("close", (exitCode) => resolve({ exitCode, stdout, stderr }));
   });
@@ -227,7 +277,10 @@ function boundedOutput(value) {
   return value.trim().slice(0, 2000);
 }
 
-if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   const exitCode = await runVerifyActionMajorTag(process.argv.slice(2));
   process.exit(exitCode);
 }

@@ -6,7 +6,7 @@ import {
   ProposalPullRequestCreatorError,
   buildProposalPullRequestBody,
   buildProposalPullRequestTitle,
-  createOrUpdateProposalPullRequest
+  createOrUpdateProposalPullRequest,
 } from "../dist/index.js";
 
 const manifest = {
@@ -15,31 +15,31 @@ const manifest = {
     repository: "sample/project",
     event: "merged_pull_request",
     pullRequestNumber: 42,
-    mergedAt: "2026-07-08T00:00:00.000Z"
+    mergedAt: "2026-07-08T00:00:00.000Z",
   },
   assessmentCount: 1,
   approvalSummary: {
     approved: 1,
-    autoApproved: 0
+    autoApproved: 0,
   },
   redactionMatchCount: 3,
   files: [
     {
       path: ".clarissimi/contributions.jsonl",
       bytes: 10,
-      sha256: "a".repeat(64)
+      sha256: "a".repeat(64),
     },
     {
       path: ".clarissimi/contributors.json",
       bytes: 11,
-      sha256: "b".repeat(64)
+      sha256: "b".repeat(64),
     },
     {
       path: "CONTRIBUTORS.md",
       bytes: 12,
-      sha256: "c".repeat(64)
-    }
-  ]
+      sha256: "c".repeat(64),
+    },
+  ],
 };
 
 const branch = {
@@ -50,9 +50,10 @@ const branch = {
   changedFiles: [
     ".clarissimi/contributions.jsonl",
     ".clarissimi/contributors.json",
-    "CONTRIBUTORS.md"
+    "CONTRIBUTORS.md",
   ],
-  rollbackHint: "Delete branch clarissimi/recognition/merged_pull_request-42 before merge to discard this proposal."
+  rollbackHint:
+    "Delete branch clarissimi/recognition/merged_pull_request-42 before merge to discard this proposal.",
 };
 
 const draftManifest = {
@@ -60,22 +61,25 @@ const draftManifest = {
   mode: "stage-draft",
   approvalSummary: {
     approved: 0,
-    autoApproved: 0
+    autoApproved: 0,
   },
   files: [
     {
       path: ".clarissimi/drafts/sample-project-merged_pull_request-42.json",
       bytes: 10,
-      sha256: "d".repeat(64)
-    }
-  ]
+      sha256: "d".repeat(64),
+    },
+  ],
 };
 
 const draftBranch = {
   ...branch,
   branchName: "clarissimi/drafts/merged_pull_request-42",
-  changedFiles: [".clarissimi/drafts/sample-project-merged_pull_request-42.json"],
-  rollbackHint: "Delete branch clarissimi/drafts/merged_pull_request-42 before merge to discard this proposal."
+  changedFiles: [
+    ".clarissimi/drafts/sample-project-merged_pull_request-42.json",
+  ],
+  rollbackHint:
+    "Delete branch clarissimi/drafts/merged_pull_request-42 before merge to discard this proposal.",
 };
 
 test("creates a proposal pull request through a fake client", async () => {
@@ -84,7 +88,7 @@ test("creates a proposal pull request through a fake client", async () => {
   const result = await createOrUpdateProposalPullRequest({
     client,
     manifest,
-    branch
+    branch,
   });
 
   assert.equal(result.action, "created");
@@ -98,7 +102,7 @@ test("creates a proposal pull request through a fake client", async () => {
     headBranch: "clarissimi/recognition/merged_pull_request-42",
     baseBranch: "main",
     title: result.title,
-    body: result.body
+    body: result.body,
   });
   assert.equal(result.body.includes("- Pull request: #42"), true);
   assert.equal(result.body.includes("- Redaction matches: 3"), true);
@@ -112,17 +116,26 @@ test("creates a draft review pull request without implying public approval", asy
     client,
     manifest: draftManifest,
     branch: draftBranch,
-    maintainerApprovalNote: "Review the staged draft before importing it."
+    maintainerApprovalNote: "Review the staged draft before importing it.",
   });
 
   assert.equal(result.action, "created");
   assert.equal(result.title, "Clarissimi draft review: sample/project#42");
-  assert.equal(result.body.includes("## Clarissimi draft review proposal"), true);
+  assert.equal(
+    result.body.includes("## Clarissimi draft review proposal"),
+    true,
+  );
   assert.equal(result.body.includes("### Staged draft files"), true);
   assert.equal(result.body.includes("- Drafts staged: 1"), true);
   assert.equal(result.body.includes("- Approved: 0"), true);
-  assert.equal(result.body.includes("Review the staged draft before importing it."), true);
-  assert.equal(client.created[0].headBranch, "clarissimi/drafts/merged_pull_request-42");
+  assert.equal(
+    result.body.includes("Review the staged draft before importing it."),
+    true,
+  );
+  assert.equal(
+    client.created[0].headBranch,
+    "clarissimi/drafts/merged_pull_request-42",
+  );
 });
 
 test("updates an existing proposal pull request instead of creating a duplicate", async () => {
@@ -132,15 +145,15 @@ test("updates an existing proposal pull request instead of creating a duplicate"
       url: "https://github.com/sample/project/pull/7",
       headBranch: branch.branchName,
       baseBranch: branch.baseBranch,
-      title: "Clarissimi recognition: old"
-    }
+      title: "Clarissimi recognition: old",
+    },
   });
 
   const result = await createOrUpdateProposalPullRequest({
     client,
     manifest,
     branch,
-    maintainerApprovalNote: "Maintainer review is still required before merge."
+    maintainerApprovalNote: "Maintainer review is still required before merge.",
   });
 
   assert.equal(result.action, "updated");
@@ -151,9 +164,12 @@ test("updates an existing proposal pull request instead of creating a duplicate"
     repository: "sample/project",
     number: 7,
     title: result.title,
-    body: result.body
+    body: result.body,
   });
-  assert.equal(result.body.includes("Maintainer review is still required before merge."), true);
+  assert.equal(
+    result.body.includes("Maintainer review is still required before merge."),
+    true,
+  );
 });
 
 test("can target the runner repository while preserving source repository text", async () => {
@@ -163,7 +179,7 @@ test("can target the runner repository while preserving source repository text",
     client,
     manifest,
     branch,
-    targetRepository: "0disoft/clarissimi"
+    targetRepository: "0disoft/clarissimi",
   });
 
   assert.equal(result.action, "created");
@@ -172,7 +188,7 @@ test("can target the runner repository while preserving source repository text",
     headBranch: "clarissimi/recognition/merged_pull_request-42",
     baseBranch: "main",
     title: result.title,
-    body: result.body
+    body: result.body,
   });
   assert.equal(result.title, "Clarissimi recognition: sample/project#42");
   assert.equal(result.body.includes("- Repository: sample/project"), true);
@@ -183,27 +199,27 @@ test("keeps raw evidence and provider output out of the proposal title and body"
     "RAW_EVIDENCE_SENTINEL",
     "PROVIDER_RAW_SENTINEL",
     "RAW_DIFF_SENTINEL",
-    "PATCH_EXCERPT_SENTINEL"
+    "PATCH_EXCERPT_SENTINEL",
   ];
   const text = [
     buildProposalPullRequestTitle({
       ...manifest,
       rawEvidence: "RAW_EVIDENCE_SENTINEL",
-      rawProviderOutput: "PROVIDER_RAW_SENTINEL"
+      rawProviderOutput: "PROVIDER_RAW_SENTINEL",
     }),
     buildProposalPullRequestBody({
       manifest: {
         ...manifest,
         rawEvidence: "RAW_EVIDENCE_SENTINEL",
-        rawProviderOutput: "PROVIDER_RAW_SENTINEL"
+        rawProviderOutput: "PROVIDER_RAW_SENTINEL",
       },
       branch: {
         ...branch,
         rawDiff: "RAW_DIFF_SENTINEL",
-        patchExcerpt: "PATCH_EXCERPT_SENTINEL"
+        patchExcerpt: "PATCH_EXCERPT_SENTINEL",
       },
-      maintainerApprovalNote: "Maintainers own final approval."
-    })
+      maintainerApprovalNote: "Maintainers own final approval.",
+    }),
   ].join("\n");
 
   for (const value of rawStrings) {
@@ -220,7 +236,7 @@ test("keeps assessment scoring and share signals out of the proposal title and b
     "SCORE_SHARE_SENTINEL",
     "CONTRIBUTION_WEIGHT_SHARE_SENTINEL",
     "IMPACT_WEIGHT_SHARE_SENTINEL",
-    "RECENT_THREE_MONTH_SHARE_SENTINEL"
+    "RECENT_THREE_MONTH_SHARE_SENTINEL",
   ];
   const text = [
     buildProposalPullRequestTitle({
@@ -232,7 +248,7 @@ test("keeps assessment scoring and share signals out of the proposal title and b
       scoreShare: "SCORE_SHARE_SENTINEL",
       contributionWeightShare: "CONTRIBUTION_WEIGHT_SHARE_SENTINEL",
       impactWeightShare: "IMPACT_WEIGHT_SHARE_SENTINEL",
-      recentThreeMonthShare: "RECENT_THREE_MONTH_SHARE_SENTINEL"
+      recentThreeMonthShare: "RECENT_THREE_MONTH_SHARE_SENTINEL",
     }),
     buildProposalPullRequestBody({
       manifest: {
@@ -244,7 +260,7 @@ test("keeps assessment scoring and share signals out of the proposal title and b
         scoreShare: "SCORE_SHARE_SENTINEL",
         contributionWeightShare: "CONTRIBUTION_WEIGHT_SHARE_SENTINEL",
         impactWeightShare: "IMPACT_WEIGHT_SHARE_SENTINEL",
-        recentThreeMonthShare: "RECENT_THREE_MONTH_SHARE_SENTINEL"
+        recentThreeMonthShare: "RECENT_THREE_MONTH_SHARE_SENTINEL",
       },
       branch: {
         ...branch,
@@ -255,9 +271,9 @@ test("keeps assessment scoring and share signals out of the proposal title and b
         scoreShare: "SCORE_SHARE_SENTINEL",
         contributionWeightShare: "CONTRIBUTION_WEIGHT_SHARE_SENTINEL",
         impactWeightShare: "IMPACT_WEIGHT_SHARE_SENTINEL",
-        recentThreeMonthShare: "RECENT_THREE_MONTH_SHARE_SENTINEL"
-      }
-    })
+        recentThreeMonthShare: "RECENT_THREE_MONTH_SHARE_SENTINEL",
+      },
+    }),
   ].join("\n");
 
   for (const value of scoringStrings) {
@@ -268,7 +284,8 @@ test("keeps assessment scoring and share signals out of the proposal title and b
 test("bounds long changed file lists in the proposal body", () => {
   const manyFiles = Array.from(
     { length: 30 },
-    (_, index) => `.clarissimi/generated/file-${String(index).padStart(2, "0")}.json`
+    (_, index) =>
+      `.clarissimi/generated/file-${String(index).padStart(2, "0")}.json`,
   );
   const body = buildProposalPullRequestBody({
     manifest: {
@@ -276,68 +293,27 @@ test("bounds long changed file lists in the proposal body", () => {
       files: manyFiles.map((path) => ({
         path,
         bytes: 1,
-        sha256: "d".repeat(64)
-      }))
+        sha256: "d".repeat(64),
+      })),
     },
     branch: {
       ...branch,
-      changedFiles: manyFiles
-    }
+      changedFiles: manyFiles,
+    },
   });
 
-  assert.equal(body.includes("5 more file(s) omitted from this summary."), true);
+  assert.equal(
+    body.includes("5 more file(s) omitted from this summary."),
+    true,
+  );
 });
 
 test("returns actionable diagnostics for token permission failures", async () => {
   const client = new FakePullRequestClient({
     createError: new ProposalPullRequestClientError(
       "permission_denied",
-      "Resource not accessible by integration"
-    )
-  });
-
-  await assert.rejects(
-    () =>
-      createOrUpdateProposalPullRequest({
-        client,
-        manifest,
-        branch
-      }),
-    (error) =>
-      error instanceof ProposalPullRequestCreatorError
-      && error.code === "pull_request_permission_denied"
-      && error.message.includes("pull-requests: write")
-  );
-});
-
-test("returns actionable diagnostics for repository setting blocks", async () => {
-  const client = new FakePullRequestClient({
-    createError: new ProposalPullRequestClientError(
-      "repository_setting_blocked",
-      "Workflow-created pull requests are disabled"
-    )
-  });
-
-  await assert.rejects(
-    () =>
-      createOrUpdateProposalPullRequest({
-        client,
-        manifest,
-        branch
-      }),
-    (error) =>
-      error instanceof ProposalPullRequestCreatorError
-      && error.code === "pull_request_repository_setting_blocked"
-      && error.message.includes("workflow pull request creation")
-  );
-});
-
-test("returns actionable diagnostics when the target repository is not found", async () => {
-  const client = new FakePullRequestClient({
-    createError: new ProposalPullRequestClientError(
-      "not_found",
-      "Not Found"
-    )
+      "Resource not accessible by integration",
+    ),
   });
 
   await assert.rejects(
@@ -346,12 +322,53 @@ test("returns actionable diagnostics when the target repository is not found", a
         client,
         manifest,
         branch,
-        targetRepository: "0disoft/clarissimi"
       }),
     (error) =>
-      error instanceof ProposalPullRequestCreatorError
-      && error.code === "pull_request_target_not_found"
-      && error.message.includes("GITHUB_REPOSITORY")
+      error instanceof ProposalPullRequestCreatorError &&
+      error.code === "pull_request_permission_denied" &&
+      error.message.includes("pull-requests: write"),
+  );
+});
+
+test("returns actionable diagnostics for repository setting blocks", async () => {
+  const client = new FakePullRequestClient({
+    createError: new ProposalPullRequestClientError(
+      "repository_setting_blocked",
+      "Workflow-created pull requests are disabled",
+    ),
+  });
+
+  await assert.rejects(
+    () =>
+      createOrUpdateProposalPullRequest({
+        client,
+        manifest,
+        branch,
+      }),
+    (error) =>
+      error instanceof ProposalPullRequestCreatorError &&
+      error.code === "pull_request_repository_setting_blocked" &&
+      error.message.includes("workflow pull request creation"),
+  );
+});
+
+test("returns actionable diagnostics when the target repository is not found", async () => {
+  const client = new FakePullRequestClient({
+    createError: new ProposalPullRequestClientError("not_found", "Not Found"),
+  });
+
+  await assert.rejects(
+    () =>
+      createOrUpdateProposalPullRequest({
+        client,
+        manifest,
+        branch,
+        targetRepository: "0disoft/clarissimi",
+      }),
+    (error) =>
+      error instanceof ProposalPullRequestCreatorError &&
+      error.code === "pull_request_target_not_found" &&
+      error.message.includes("GITHUB_REPOSITORY"),
   );
 });
 
@@ -365,10 +382,10 @@ test("rejects missing changed files before calling the fake client", async () =>
         manifest,
         branch: {
           ...branch,
-          changedFiles: []
-        }
+          changedFiles: [],
+        },
       }),
-    ProposalPullRequestCreatorError
+    ProposalPullRequestCreatorError,
   );
   assert.equal(client.created.length, 0);
   assert.equal(client.updated.length, 0);
@@ -400,7 +417,7 @@ class FakePullRequestClient {
       url: "https://github.com/sample/project/pull/1",
       headBranch: input.headBranch,
       baseBranch: input.baseBranch,
-      title: input.title
+      title: input.title,
     };
   }
 
@@ -411,7 +428,7 @@ class FakePullRequestClient {
       url: `https://github.com/sample/project/pull/${input.number}`,
       headBranch: this.#existing?.headBranch ?? branch.branchName,
       baseBranch: this.#existing?.baseBranch ?? branch.baseBranch,
-      title: input.title
+      title: input.title,
     };
   }
 }

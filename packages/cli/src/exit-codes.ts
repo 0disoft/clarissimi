@@ -6,7 +6,7 @@ export const CLI_EXIT_CODES = {
   providerFailure: 4,
   schemaValidationFailure: 5,
   policyRejection: 6,
-  writeFailure: 7
+  writeFailure: 7,
 } as const;
 
 export type CliExitCode = (typeof CLI_EXIT_CODES)[keyof typeof CLI_EXIT_CODES];

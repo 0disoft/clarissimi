@@ -47,17 +47,17 @@ export const requiredDocumentationPaths = [
   "scripts/release-evidence-cleanup.mjs",
   "scripts/release-candidate-evidence-issue.mjs",
   "scripts/release-readiness.mjs",
-  "scripts/verify-action-major-tag.mjs"
+  "scripts/verify-action-major-tag.mjs",
 ];
 
 export async function validateDocs(options = {}) {
   const repoRoot = options.repoRoot ?? defaultRepoRoot;
   const requiredPaths = options.requiredPaths ?? requiredDocumentationPaths;
   const markdownFiles = [
-    ...await listMarkdownFiles(repoRoot, false),
-    ...await listMarkdownFiles(join(repoRoot, "docs"), true),
-    ...await listMarkdownFiles(join(repoRoot, "packages"), true),
-    ...await listMarkdownFiles(join(repoRoot, ".agents"), true)
+    ...(await listMarkdownFiles(repoRoot, false)),
+    ...(await listMarkdownFiles(join(repoRoot, "docs"), true)),
+    ...(await listMarkdownFiles(join(repoRoot, "packages"), true)),
+    ...(await listMarkdownFiles(join(repoRoot, ".agents"), true)),
   ];
   const issues = [];
 
@@ -74,7 +74,9 @@ export async function validateDocs(options = {}) {
         JSON.parse(block.value);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        issues.push(`${toRepoPath(repoRoot, filePath)} has invalid json code block ${block.index}: ${message}`);
+        issues.push(
+          `${toRepoPath(repoRoot, filePath)} has invalid json code block ${block.index}: ${message}`,
+        );
       }
     }
 
@@ -89,7 +91,9 @@ export async function validateDocs(options = {}) {
       }
 
       if (!localTargetExists(repoRoot, filePath, target)) {
-        issues.push(`${toRepoPath(repoRoot, filePath)} links to missing local target: ${link}`);
+        issues.push(
+          `${toRepoPath(repoRoot, filePath)} links to missing local target: ${link}`,
+        );
       }
     }
   }
@@ -99,7 +103,7 @@ export async function validateDocs(options = {}) {
   return {
     ok: issues.length === 0,
     issues,
-    markdownFileCount: markdownFiles.length
+    markdownFileCount: markdownFiles.length,
   };
 }
 
@@ -111,11 +115,16 @@ export async function runValidateDocs(options = {}) {
     return 1;
   }
 
-  console.log(`docs validation passed (${result.markdownFileCount} markdown files)`);
+  console.log(
+    `docs validation passed (${result.markdownFileCount} markdown files)`,
+  );
   return 0;
 }
 
-if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) {
+if (
+  process.argv[1] !== undefined &&
+  pathToFileURL(process.argv[1]).href === import.meta.url
+) {
   process.exitCode = await runValidateDocs();
 }
 
@@ -130,7 +139,7 @@ async function listMarkdownFiles(dir, recursive) {
     const entryPath = join(dir, entry.name);
     if (entry.isDirectory()) {
       if (recursive) {
-        files.push(...await listMarkdownFiles(entryPath, true));
+        files.push(...(await listMarkdownFiles(entryPath, true)));
       }
       continue;
     }
@@ -153,7 +162,9 @@ async function validateAdrIndex(repoRoot, issues) {
   const adrFiles = (await readdir(adrDir, { withFileTypes: true }))
     .filter((entry) => entry.isFile())
     .map((entry) => entry.name)
-    .filter((name) => /^\d{4}-.+\.md$/.test(name) && name !== "0000-template.md")
+    .filter(
+      (name) => /^\d{4}-.+\.md$/.test(name) && name !== "0000-template.md",
+    )
     .sort();
 
   if (adrFiles.length === 0) {
@@ -168,14 +179,18 @@ async function validateAdrIndex(repoRoot, issues) {
   const indexText = await readFile(indexPath, "utf8");
   for (const adrFile of adrFiles) {
     if (!indexText.includes(adrFile)) {
-      issues.push(`docs/adr/README.md missing ADR index entry for docs/adr/${adrFile}`);
+      issues.push(
+        `docs/adr/README.md missing ADR index entry for docs/adr/${adrFile}`,
+      );
     }
   }
 
   const adrFileNames = new Set(adrFiles);
   for (const adrFile of extractAdrIndexEntries(indexText)) {
     if (!adrFileNames.has(adrFile)) {
-      issues.push(`docs/adr/README.md references missing ADR file docs/adr/${adrFile}`);
+      issues.push(
+        `docs/adr/README.md references missing ADR file docs/adr/${adrFile}`,
+      );
     }
   }
 }
@@ -209,7 +224,7 @@ function extractJsonCodeBlocks(text) {
   while ((match = pattern.exec(text)) !== null) {
     blocks.push({
       index: blocks.length + 1,
-      value: match[1]
+      value: match[1],
     });
   }
 
@@ -228,7 +243,7 @@ function stripLinkSuffix(link) {
 function localTargetExists(repoRoot, markdownFile, target) {
   const candidates = [
     resolve(dirname(markdownFile), target),
-    resolve(repoRoot, target)
+    resolve(repoRoot, target),
   ];
 
   return candidates.some((candidate) => {
@@ -242,7 +257,10 @@ function localTargetExists(repoRoot, markdownFile, target) {
 
 function isInsideRepo(repoRoot, path) {
   const relativePath = relative(repoRoot, path);
-  return relativePath === "" || (!relativePath.startsWith("..") && !relativePath.includes(`..${sep}`));
+  return (
+    relativePath === "" ||
+    (!relativePath.startsWith("..") && !relativePath.includes(`..${sep}`))
+  );
 }
 
 function toRepoPath(repoRoot, path) {

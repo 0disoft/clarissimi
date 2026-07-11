@@ -9,92 +9,80 @@ const defaultRepoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 export const requiredPackageScripts = [
   {
     name: "bundle:action",
-    includes: ["pnpm run build", "scripts/bundle-action.mjs"]
+    includes: ["pnpm run build", "scripts/bundle-action.mjs"],
   },
   {
     name: "bundle:action:check",
-    includes: ["pnpm run build", "scripts/bundle-action.mjs --check"]
+    includes: ["pnpm run build", "scripts/bundle-action.mjs --check"],
   },
   {
     name: "docs",
-    includes: ["scripts/validate-docs.mjs"]
+    includes: ["scripts/validate-docs.mjs"],
   },
   {
     name: "smoke",
-    includes: ["scripts/smoke.mjs"]
+    includes: ["scripts/smoke.mjs"],
   },
   {
     name: "lint",
-    includes: ["oxlint . --deny-warnings"]
+    includes: ["oxlint . --deny-warnings"],
+  },
+  {
+    name: "format",
+    includes: ["prettier . --check"],
   },
   {
     name: "check",
-    includes: ["pnpm run typecheck", "pnpm run test"]
+    includes: ["pnpm run typecheck", "pnpm run test"],
   },
   {
     name: "contract",
-    includes: ["pnpm run typecheck", "pnpm run test"]
+    includes: ["pnpm run typecheck", "pnpm run test"],
   },
   {
     name: "release-readiness",
-    includes: ["scripts/release-readiness.mjs"]
+    includes: ["scripts/release-readiness.mjs"],
   },
   {
     name: "live-provider-smoke",
-    includes: ["scripts/live-provider-smoke.mjs"]
+    includes: ["scripts/live-provider-smoke.mjs"],
   },
   {
     name: "hosted-ci-validation",
-    includes: ["scripts/hosted-ci-validation.mjs"]
+    includes: ["scripts/hosted-ci-validation.mjs"],
   },
   {
     name: "hosted-external-consumer-smoke",
-    includes: ["scripts/hosted-external-consumer-smoke.mjs"]
+    includes: ["scripts/hosted-external-consumer-smoke.mjs"],
   },
   {
     name: "hosted-live-provider-smoke",
-    includes: ["scripts/hosted-live-provider-smoke.mjs"]
+    includes: ["scripts/hosted-live-provider-smoke.mjs"],
   },
   {
     name: "verify-action-major-tag",
-    includes: ["scripts/verify-action-major-tag.mjs"]
+    includes: ["scripts/verify-action-major-tag.mjs"],
   },
   {
     name: "release-candidate-evidence-orchestrator",
-    includes: ["scripts/release-candidate-evidence-orchestrator.mjs"]
+    includes: ["scripts/release-candidate-evidence-orchestrator.mjs"],
   },
   {
     name: "release-evidence-cleanup",
-    includes: ["scripts/release-evidence-cleanup.mjs"]
+    includes: ["scripts/release-evidence-cleanup.mjs"],
   },
   {
     name: "release-candidate-evidence-issue",
-    includes: ["scripts/release-candidate-evidence-issue.mjs"]
-  }
+    includes: ["scripts/release-candidate-evidence-issue.mjs"],
+  },
 ];
 
 export const deferredPackageScripts = [
   {
-    name: "format",
-    requiredSnippets: [
-      "format is not configured",
-      "process.exit(1)"
-    ],
-    forbiddenSnippets: [
-      "oxfmt",
-      "prettier",
-      "biome",
-      "dprint"
-    ]
-  },
-  {
     name: "migration-check",
-    requiredSnippets: [
-      "migration-check is not configured",
-      "process.exit(1)"
-    ],
-    forbiddenSnippets: []
-  }
+    requiredSnippets: ["migration-check is not configured", "process.exit(1)"],
+    forbiddenSnippets: [],
+  },
 ];
 
 export const requiredTestGlobs = [
@@ -106,17 +94,38 @@ export const requiredTestGlobs = [
   "packages/renderers/test/*.test.mjs",
   "packages/cli/test/*.test.mjs",
   "packages/action/test/*.test.mjs",
-  "scripts/test/*.test.mjs"
+  "scripts/test/*.test.mjs",
 ];
 
 export const packageReleasePolicy = {
   private: true,
-  version: "0.0.0"
+  version: "0.0.0",
 };
 
 export const rootPackageManagerContract = {
   path: "package.json",
-  packageManager: "pnpm@11.7.0"
+  packageManager: "pnpm@11.7.0",
+};
+
+export const formatterContract = {
+  dependency: "prettier",
+  version: "3.9.5",
+  configPath: ".prettierrc.json",
+  config: {
+    endOfLine: "lf",
+    proseWrap: "preserve",
+  },
+  ignorePath: ".prettierignore",
+  requiredIgnoreEntries: [
+    "action-dist/",
+    "dist/",
+    "build/",
+    "coverage/",
+    "node_modules/",
+    ".cache/",
+    ".tmp/",
+    "tmp/",
+  ],
 };
 
 export const releasePolicyDocumentContract = {
@@ -129,7 +138,7 @@ export const releasePolicyDocumentContract = {
     "Do not bump package versions,",
     "create another moving major alias",
     "Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,",
-    "`pnpm run lint`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and repository hygiene",
+    "`pnpm run lint`, `pnpm run format`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and",
     "- Public package publication: blocked.",
     "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0031",
     "- Moving GitHub Action major alias: `v0` is allowed under ADR 0034",
@@ -149,11 +158,11 @@ export const releasePolicyDocumentContract = {
     "Do not make an evidence-only commit after final candidate validation",
     "docs/ops/release-candidate-evidence.md",
     "public product-positioning guardrails",
-    "intentionally fail-closed `format` and `migration-check`",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`",
+    "repository-wide `format` and intentionally fail-closed `migration-check`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
     "Release status: immutable `v0.x.y` Action tags are allowed by ADR 0031",
-    "package publication and GitHub Marketplace publication remain blocked"
-  ]
+    "package publication and GitHub Marketplace publication remain blocked",
+  ],
 };
 
 export const productPositioningContract = {
@@ -165,14 +174,14 @@ export const productPositioningContract = {
         "Clarissimi is not a contributor scoring leaderboard, an HR scorecard, or an AI code review tool.",
         "AI is used as a drafter that reads repository evidence and prepares a structured recognition draft.",
         "Maintainers remain the approval authority.",
-        "Public output should read like contribution history, not a scoreboard."
+        "Public output should read like contribution history, not a scoreboard.",
       ],
       forbiddenSnippets: [
         "Clarissimi is a contributor scoring tool",
         "Clarissimi is a public leaderboard",
         "Clarissimi ranks contributors",
-        "Clarissimi scores contributors"
-      ]
+        "Clarissimi scores contributors",
+      ],
     },
     {
       path: "docs/product/02-spec.md",
@@ -184,16 +193,16 @@ export const productPositioningContract = {
         "- a public leaderboard",
         "Public output must not show a contributor's percentage share of recent total impact weight, score,",
         "Clarissimi may expose this kind of metric only through a",
-        "maintainer-only analytics view unless a future ADR accepts a safer public framing."
+        "maintainer-only analytics view unless a future ADR accepts a safer public framing.",
       ],
       forbiddenSnippets: [
         "Clarissimi must be described as a contributor scoring tool.",
         "Clarissimi must be described as a public leaderboard.",
         "Public output should show contributor scores.",
-        "Public output should show contributor ranks."
-      ]
-    }
-  ]
+        "Public output should show contributor ranks.",
+      ],
+    },
+  ],
 };
 
 export const readmeValidationContract = {
@@ -203,10 +212,11 @@ export const readmeValidationContract = {
     "repository write modes such as direct `commit`",
     "comment updates or default-branch mutation",
     "Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
-    "`pnpm run smoke`, `pnpm run check`, and `pnpm run contract`, plus repository hygiene checks.",
+    "`pnpm run format`, `pnpm run smoke`, `pnpm run check`, and `pnpm run contract`",
     "- `pnpm run docs`",
     "- `pnpm run release-readiness`",
     "- `pnpm run lint`",
+    "- `pnpm run format`",
     "- `pnpm run smoke`",
     "- `pnpm run check`",
     "- `pnpm run contract`",
@@ -219,78 +229,76 @@ export const readmeValidationContract = {
     "- `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
     "Release-only credentialed checks are:",
     "- `pnpm run hosted-live-provider-smoke -- --model <provider-model>`",
-    "`format` intentionally fails closed",
-    "`oxlint` is",
-    "the current lint gate; `oxfmt` is not wired into the repository formatter surface yet",
-    "`migration-check` intentionally fails until configured"
-  ]
+    "`format` runs the repository-wide Prettier baseline accepted by ADR 0035",
+    "`oxlint` remains the JavaScript and TypeScript lint gate",
+    "`migration-check` intentionally fails until configured",
+  ],
 };
 
 export const docsValidationScriptContract = {
   path: "scripts/validate-docs.mjs",
   requiredSnippets: [
-    "\"README.md\"",
-    "\"action.yml\"",
-    "\"VALIDATION.md\"",
-    "\"docs/product/00-product-brief.md\"",
-    "\"docs/product/01-roadmap.md\"",
-    "\"docs/product/02-spec.md\"",
-    "\"docs/product/03-risk-register.md\"",
-    "\"docs/cli/README.md\"",
-    "\"docs/cli/agent-assisted-drafts.md\"",
-    "\"docs/cli/configuration.md\"",
-    "\"docs/cli/ledger-format.md\"",
-    "\"docs/cli/output-and-exit-codes.md\"",
-    "\"docs/product/04-implementation-tracker.md\"",
-    "\"docs/github-action/README.md\"",
-    "\"docs/github-action/action-contract.md\"",
-    "\"docs/github-action/permissions.md\"",
-    "\"docs/ops/ci.md\"",
-    "\"docs/ops/disaster-recovery.md\"",
-    "\"docs/ops/incident-response.md\"",
-    "\"docs/ops/release-candidate-evidence.md\"",
-    "\"docs/ops/release.md\"",
-    "\"docs/ops/rollback.md\"",
-    "\"packages/action/README.md\"",
-    "\"packages/cli/README.md\"",
-    "\"packages/core/README.md\"",
-    "\"packages/github/README.md\"",
-    "\"packages/providers/README.md\"",
-    "\"packages/redaction/README.md\"",
-    "\"packages/renderers/README.md\"",
-    "\"packages/schemas/README.md\"",
-    "\".github/workflows/ci.yml\"",
-    "\".github/workflows/clarissimi-dry-run.yml\"",
-    "\".github/workflows/clarissimi-live-provider-smoke.yml\"",
-    "\".github/workflows/clarissimi-propose-fixture.yml\"",
-    "\".github/workflows/clarissimi-stage-draft-fixture.yml\"",
-    "\"scripts/hosted-external-consumer-smoke.mjs\"",
-    "\"scripts/hosted-live-provider-smoke.mjs\"",
-    "\"scripts/release-candidate-evidence-orchestrator.mjs\"",
-    "\"scripts/release-evidence-cleanup.mjs\"",
-    "\"scripts/release-candidate-evidence-issue.mjs\"",
-    "\"scripts/release-readiness.mjs\"",
-    "\"scripts/verify-action-major-tag.mjs\""
-  ]
+    '"README.md"',
+    '"action.yml"',
+    '"VALIDATION.md"',
+    '"docs/product/00-product-brief.md"',
+    '"docs/product/01-roadmap.md"',
+    '"docs/product/02-spec.md"',
+    '"docs/product/03-risk-register.md"',
+    '"docs/cli/README.md"',
+    '"docs/cli/agent-assisted-drafts.md"',
+    '"docs/cli/configuration.md"',
+    '"docs/cli/ledger-format.md"',
+    '"docs/cli/output-and-exit-codes.md"',
+    '"docs/product/04-implementation-tracker.md"',
+    '"docs/github-action/README.md"',
+    '"docs/github-action/action-contract.md"',
+    '"docs/github-action/permissions.md"',
+    '"docs/ops/ci.md"',
+    '"docs/ops/disaster-recovery.md"',
+    '"docs/ops/incident-response.md"',
+    '"docs/ops/release-candidate-evidence.md"',
+    '"docs/ops/release.md"',
+    '"docs/ops/rollback.md"',
+    '"packages/action/README.md"',
+    '"packages/cli/README.md"',
+    '"packages/core/README.md"',
+    '"packages/github/README.md"',
+    '"packages/providers/README.md"',
+    '"packages/redaction/README.md"',
+    '"packages/renderers/README.md"',
+    '"packages/schemas/README.md"',
+    '".github/workflows/ci.yml"',
+    '".github/workflows/clarissimi-dry-run.yml"',
+    '".github/workflows/clarissimi-live-provider-smoke.yml"',
+    '".github/workflows/clarissimi-propose-fixture.yml"',
+    '".github/workflows/clarissimi-stage-draft-fixture.yml"',
+    '"scripts/hosted-external-consumer-smoke.mjs"',
+    '"scripts/hosted-live-provider-smoke.mjs"',
+    '"scripts/release-candidate-evidence-orchestrator.mjs"',
+    '"scripts/release-evidence-cleanup.mjs"',
+    '"scripts/release-candidate-evidence-issue.mjs"',
+    '"scripts/release-readiness.mjs"',
+    '"scripts/verify-action-major-tag.mjs"',
+  ],
 };
 
 export const lintAndFormatDecisionDocumentContract = {
-  path: "docs/adr/0027-add-lint-gate-and-defer-format-baseline.md",
+  path: "docs/adr/0035-adopt-prettier-format-baseline.md",
   requiredSnippets: [
-    "Use `oxlint` as the first real lint gate.",
-    "run `oxlint . --deny-warnings`",
-    "fail on warnings",
+    "Adopt exactly pinned `prettier@3.9.5` as the repository formatter.",
+    "run `prettier . --check`",
+    "cover maintained TypeScript, JavaScript, JSON, Markdown, and YAML files",
+    "use `.prettierrc.json`",
+    "use `.prettierignore`",
+    "exclude `action-dist/`",
     "run in hosted CI as its own validation step",
-    "be covered by `release-readiness` contract checks",
-    "Keep `format` intentionally unconfigured for now.",
-    "The placeholder must continue to fail instead of",
-    "`oxfmt` is not selected as the repository formatter",
-    "choose a formatter that covers the repository file types it claims to own",
-    "include the formatter config, ignore rules, and lockfile change in the same commit",
-    "run the formatter across the selected baseline once",
-    "avoid mixing baseline style rewrites with product, schema, provider, or Action behavior changes",
-    "`format` remains a known gap, not a fake success."
-  ]
+    "be protected by `release-readiness` checks",
+    "Future changes must",
+    "pass check mode; CI must never rewrite source files.",
+    "Generated `action-dist/index.js`",
+    "remains outside the formatter surface",
+  ],
 };
 
 export const ledgerFormatDocumentContract = {
@@ -309,8 +317,8 @@ export const ledgerFormatDocumentContract = {
     "CLI draft commands sanitize public records so provenance does not",
     "The MVP keeps one canonical ledger file",
     "yearly partitions plus an index",
-    "Monthly partitions remain"
-  ]
+    "Monthly partitions remain",
+  ],
 };
 
 export const cliCommandContract = {
@@ -325,17 +333,17 @@ export const cliCommandContract = {
     "writes files only when `--out-dir`",
     "Calculates maintainer-only recent recognition share from approved ledger records.",
     "must not write `.clarissimi/contributors.json`, `CONTRIBUTORS.md`, static public JSON",
-    "accepts only `maintainerApprovalStatus: \"draft\"`",
+    'accepts only `maintainerApprovalStatus: "draft"`',
     "refuses to overwrite an existing staged draft by default",
-    "with `maintainerApprovalStatus: \"approved\"`",
+    'with `maintainerApprovalStatus: "approved"`',
     "Use `import-draft` after this command to publish the approved",
     "rejects non-public approval states, appends the sanitized public",
     "does not call providers, read provider tokens, fetch GitHub evidence",
     "it is not an MVP monthly or yearly partition mode",
     "Unexpected positional arguments must fail as usage errors before config loading",
-    "| `7` | write failure |",
-    "A command writes public recognition without approval or configured policy."
-  ]
+    "| `7`  | write failure",
+    "A command writes public recognition without approval or configured policy.",
+  ],
 };
 
 export const cliOutputExitCodesDocumentContract = {
@@ -360,8 +368,8 @@ export const cliOutputExitCodesDocumentContract = {
     "Output implies a recognition entry was approved when it is only a draft.",
     "Output calls a contributor high, medium, or low quality.",
     "JSON output leaks raw evidence.",
-    "Exit behavior changes without CLI tests."
-  ]
+    "Exit behavior changes without CLI tests.",
+  ],
 };
 
 export const cliConfigurationDocumentContract = {
@@ -388,8 +396,8 @@ export const cliConfigurationDocumentContract = {
     "Provider API keys and GitHub tokens must not be stored in config files.",
     "The CLI reads `CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.",
     "Config examples include fake tokens or real-looking secrets.",
-    "Config bypasses redaction before provider calls."
-  ]
+    "Config bypasses redaction before provider calls.",
+  ],
 };
 
 export const agentAssistedDraftsDocumentContract = {
@@ -414,8 +422,8 @@ export const agentAssistedDraftsDocumentContract = {
     "clarissimi.draft-envelope/v1",
     "records only the validated",
     "The public ledger does not store AI agent, model, prompt, token, or",
-    "provider provenance."
-  ]
+    "provider provenance.",
+  ],
 };
 
 export const ciOperationalDocumentContract = {
@@ -423,13 +431,13 @@ export const ciOperationalDocumentContract = {
   requiredSnippets: [
     "The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and",
     "manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,",
-    "`lint`, `smoke`, `check`, and `contract` with Node.js 24",
+    "`lint`, `format`, `smoke`, `check`, and `contract` with Node.js 24",
     "`pnpm run hosted-ci-validation`",
     "uses `gh run list` to find the `CI` workflow run",
     "The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`",
     "to pass with strict up-to-date status checks. Administrator enforcement is disabled",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"
-  ]
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+  ],
 };
 
 export const operationalContractDocumentContract = {
@@ -437,8 +445,8 @@ export const operationalContractDocumentContract = {
   requiredSnippets: [
     "Correctness gate: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
     "`pnpm run smoke`, `pnpm run check`, and `pnpm run contract` must pass before source-only merges.",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"
-  ]
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+  ],
 };
 
 export const observabilityDocumentContract = {
@@ -449,16 +457,16 @@ export const observabilityDocumentContract = {
     "Maintainers should preserve workflow URLs and PR URLs in",
     "- `pnpm run release-readiness`",
     "- `pnpm run lint`",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"
-  ]
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+  ],
 };
 
 export const serviceLevelsDocumentContract = {
   path: "docs/ops/service-levels.md",
   requiredSnippets: [
     "Source-only merge readiness | Local `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`, and hygiene checks pass before push.",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"
-  ]
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+  ],
 };
 
 export const secretsDocumentContract = {
@@ -466,8 +474,8 @@ export const secretsDocumentContract = {
   requiredSnippets: [
     "Rerun secret scan, `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
     "`pnpm run smoke`, `pnpm run check`, and `pnpm run contract`.",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"
-  ]
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+  ],
 };
 
 export const backupRestoreDocumentContract = {
@@ -480,8 +488,8 @@ export const backupRestoreDocumentContract = {
     "- `pnpm run check`",
     "- `pnpm run contract`",
     "secret scan for committed provider tokens, GitHub tokens, private keys, and environment files",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"
-  ]
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+  ],
 };
 
 export const incidentResponseDocumentContract = {
@@ -490,10 +498,10 @@ export const incidentResponseDocumentContract = {
     "Incident response is repository-local for the MVP.",
     "unsafe recognition",
     "publication, token exposure, branch mutation, and release-gate failures",
-    "| SEV-1 | Token, private key, raw provider output, raw diff, or sensitive evidence is public.",
-    "| SEV-2 | Default branch or canonical ledger is mutated incorrectly.",
-    "| SEV-3 | Proposal pull request, Action output, or docs contain incorrect but non-sensitive recognition text.",
-    "| SEV-4 | Local validation, hosted CI, or dogfood workflow is flaky without unsafe output.",
+    "Token, private key, raw provider output, raw diff, or sensitive evidence is public.",
+    "Default branch or canonical ledger is mutated incorrectly.",
+    "Proposal pull request, Action output, or docs contain incorrect but non-sensitive recognition text.",
+    "Local validation, hosted CI, or dogfood workflow is flaky without unsafe output.",
     "Capture commit SHA, workflow run URL, PR URL, and local command output.",
     "Stop affected release or dogfood activity.",
     "Use `docs/ops/secrets.md` for credential exposure.",
@@ -501,8 +509,8 @@ export const incidentResponseDocumentContract = {
     "Rerun required validation before resuming.",
     "Add or update tests when the incident was preventable by validation.",
     "Do not publish or promote a versioned Action tag while any required release gate is failing.",
-    "Primary owner: Repository maintainers"
-  ]
+    "Primary owner: Repository maintainers",
+  ],
 };
 
 export const disasterRecoveryDocumentContract = {
@@ -524,8 +532,8 @@ export const disasterRecoveryDocumentContract = {
     "exact commit SHA and branch",
     "workflow run URL and job logs",
     "redacted summary of any exposed secret or sensitive evidence",
-    "Primary owner: Repository maintainers"
-  ]
+    "Primary owner: Repository maintainers",
+  ],
 };
 
 export const actionInputsOutputsDocumentContract = {
@@ -555,8 +563,8 @@ export const actionInputsOutputsDocumentContract = {
     "- `summary-json-path` when `summary-path` is set",
     "Outputs must not include raw provider output, raw diff text, raw issue text, tokens, private keys",
     "Step summary content follows the same",
-    "raw-evidence exclusion rules as action outputs."
-  ]
+    "raw-evidence exclusion rules as action outputs.",
+  ],
 };
 
 export const actionContractDocumentContract = {
@@ -601,8 +609,8 @@ export const actionContractDocumentContract = {
     "- Default behavior requires broad write permissions.",
     "- Provider secrets are modeled as plain action inputs.",
     "- The Action runs untrusted PR head code.",
-    "- `stage-draft` mode writes public recognition outputs or implies maintainer approval."
-  ]
+    "- `stage-draft` mode writes public recognition outputs or implies maintainer approval.",
+  ],
 };
 
 export const actionPermissionsDocumentContract = {
@@ -633,8 +641,8 @@ export const actionPermissionsDocumentContract = {
     "Avoid default `pull_request_target` examples.",
     "Do not checkout or execute untrusted pull request head",
     "Secrets are exposed to untrusted fork code.",
-    "Permission changes are not reflected in examples and tests."
-  ]
+    "Permission changes are not reflected in examples and tests.",
+  ],
 };
 
 export const opsValidationFooterContract = {
@@ -642,11 +650,11 @@ export const opsValidationFooterContract = {
     "docs/ops/config-and-env.md",
     "docs/ops/disaster-recovery.md",
     "docs/ops/incident-response.md",
-    "docs/ops/rollback.md"
+    "docs/ops/rollback.md",
   ],
   requiredSnippets: [
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`"
-  ]
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+  ],
 };
 
 export const engineeringValidationDocumentContract = {
@@ -660,12 +668,12 @@ export const engineeringValidationDocumentContract = {
     "docs/engineering/06-dependency-and-change-policy.md",
     "docs/engineering/07-operability-and-failure-standard.md",
     "docs/engineering/08-threat-model.md",
-    "docs/engineering/09-data-integrity.md"
+    "docs/engineering/09-data-integrity.md",
   ],
   requiredSnippets: [
     "Merge-blocking validation: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
-    "`pnpm run smoke`, `pnpm run check`, `pnpm run contract`"
-  ]
+    "`pnpm run smoke`, `pnpm run check`, `pnpm run contract`",
+  ],
 };
 
 export const monorepoValidationDocumentContract = {
@@ -673,7 +681,7 @@ export const monorepoValidationDocumentContract = {
     "docs/monorepo/README.md",
     "docs/monorepo/change-coordination.md",
     "docs/monorepo/package-ownership.md",
-    "docs/monorepo/workspace-boundaries.md"
+    "docs/monorepo/workspace-boundaries.md",
   ],
   requiredSnippets: [
     "Monorepo validation evidence:",
@@ -681,8 +689,8 @@ export const monorepoValidationDocumentContract = {
     "lint",
     "smoke",
     "check",
-    "contract"
-  ]
+    "contract",
+  ],
 };
 
 export const packageOwnershipContract = {
@@ -706,15 +714,15 @@ export const packageOwnershipContract = {
     "docs/adr/0026-add-maintainer-recent-share-analytics.md",
     "docs/adr/0028-add-native-typescript-config-loading.md",
     "docs/adr/0029-add-explicit-action-config-path.md",
-    "docs/adr/0030-add-action-summary-artifact.md"
-  ]
+    "docs/adr/0030-add-action-summary-artifact.md",
+  ],
 };
 
 export const workspaceContract = {
   path: "pnpm-workspace.yaml",
   requiredPackageGlob: '"packages/*"',
   requiredBuildAllow: "  esbuild: true",
-  packageNameScope: "@clarissimi"
+  packageNameScope: "@clarissimi",
 };
 
 export const workspacePackageManifestSurfaceContract = {
@@ -724,27 +732,27 @@ export const workspacePackageManifestSurfaceContract = {
   license: "Apache-2.0",
   repository: {
     type: "git",
-    url: "git+https://github.com/0disoft/clarissimi.git"
+    url: "git+https://github.com/0disoft/clarissimi.git",
   },
   homepage: "https://github.com/0disoft/clarissimi#readme",
   bugs: {
-    url: "https://github.com/0disoft/clarissimi/issues"
+    url: "https://github.com/0disoft/clarissimi/issues",
   },
   engines: {
-    node: ">=24"
+    node: ">=24",
   },
   scripts: {
     build: "tsc -b",
-    typecheck: "tsc -b --pretty false"
+    typecheck: "tsc -b --pretty false",
   },
   binsByPackageDir: {
     action: {
-      "clarissimi-action": "./dist/bin/clarissimi-action.js"
+      "clarissimi-action": "./dist/bin/clarissimi-action.js",
     },
     cli: {
-      clarissimi: "./dist/bin/clarissimi.js"
-    }
-  }
+      clarissimi: "./dist/bin/clarissimi.js",
+    },
+  },
 };
 
 export const smokePackCandidateContract = {
@@ -756,14 +764,14 @@ export const smokePackCandidateContract = {
     "pack",
     "--dry-run",
     "--json",
-    "{ dir: \"schemas\" }",
-    "{ dir: \"redaction\" }",
-    "{ dir: \"core\" }",
-    "{ dir: \"github\" }",
-    "{ dir: \"providers\" }",
-    "{ dir: \"renderers\" }",
-    "{ dir: \"cli\", requiredFiles: [\"dist/bin/clarissimi.js\"] }",
-    "{ dir: \"action\", requiredFiles: [\"dist/bin/clarissimi-action.js\"] }",
+    '{ dir: "schemas" }',
+    '{ dir: "redaction" }',
+    '{ dir: "core" }',
+    '{ dir: "github" }',
+    '{ dir: "providers" }',
+    '{ dir: "renderers" }',
+    '{ dir: "cli", requiredFiles: ["dist/bin/clarissimi.js"] }',
+    '{ dir: "action", requiredFiles: ["dist/bin/clarissimi-action.js"] }',
     "package.json",
     "README.md",
     "LICENSE",
@@ -773,8 +781,8 @@ export const smokePackCandidateContract = {
     "test/",
     "tsconfig.json",
     "node_modules/",
-    ".tsbuildinfo"
-  ]
+    ".tsbuildinfo",
+  ],
 };
 
 export const workspaceInternalDependencyContract = {
@@ -788,13 +796,13 @@ export const workspaceInternalDependencyContract = {
     providers: ["core", "schemas"],
     redaction: [],
     renderers: ["core", "schemas"],
-    schemas: []
-  }
+    schemas: [],
+  },
 };
 
 export const tsconfigBuildGraphContract = {
   path: "tsconfig.json",
-  packageReferencePrefix: "./packages/"
+  packageReferencePrefix: "./packages/",
 };
 
 export const trackedGeneratedOutputContract = {
@@ -805,11 +813,9 @@ export const trackedGeneratedOutputContract = {
     "/.cache/",
     "/.tmp/",
     "/tmp/",
-    "/node_modules/"
+    "/node_modules/",
   ],
-  forbiddenPathSuffixes: [
-    ".tsbuildinfo"
-  ]
+  forbiddenPathSuffixes: [".tsbuildinfo"],
 };
 
 export const credentialedReleaseEvidenceContract = {
@@ -825,30 +831,35 @@ export const credentialedReleaseEvidenceContract = {
     "CLARISSIMI_PROVIDER_TOKEN",
     "CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini",
     "`pnpm run hosted-live-provider-smoke -- --model <provider-model>`",
-    "attach the final run URL outside the repository commit"
+    "attach the final run URL outside the repository commit",
   ],
   requiredPatterns: [
     {
       description: "a numeric hosted live-provider workflow run id",
-      pattern: /Recent hosted live-provider evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/
+      pattern:
+        /Recent hosted live-provider evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/,
     },
     {
       description: "a hosted live-provider workflow timestamp",
-      pattern: /Recent hosted live-provider evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/
+      pattern:
+        /Recent hosted live-provider evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/,
     },
     {
       description: "a hosted live-provider validated source commit SHA",
-      pattern: /Recent hosted live-provider evidence:[\s\S]*validated source commit[\s\S]*`[0-9a-f]{40}`/
+      pattern:
+        /Recent hosted live-provider evidence:[\s\S]*validated source commit[\s\S]*`[0-9a-f]{40}`/,
     },
     {
       description: "a hosted live-provider workflow run URL",
-      pattern: /Recent hosted live-provider evidence:[\s\S]*Run URL:\s*`https:\/\/github\.com\/0disoft\/clarissimi\/actions\/runs\/[0-9]{8,}`\.[\s\S]*Refresh this evidence/
+      pattern:
+        /Recent hosted live-provider evidence:[\s\S]*Run URL:\s*`https:\/\/github\.com\/0disoft\/clarissimi\/actions\/runs\/[0-9]{8,}`\.[\s\S]*Refresh this evidence/,
     },
     {
       description: "a hosted live-provider release-candidate refresh command",
-      pattern: /Recent hosted live-provider evidence:[\s\S]*Refresh this evidence[\s\S]*`pnpm run hosted-live-provider-smoke -- --model <provider-model>`[\s\S]*for the exact[\s\S]*release-candidate commit[\s\S]*attach[\s\S]*outside the repository commit/
-    }
-  ]
+      pattern:
+        /Recent hosted live-provider evidence:[\s\S]*Refresh this evidence[\s\S]*`pnpm run hosted-live-provider-smoke -- --model <provider-model>`[\s\S]*for the exact[\s\S]*release-candidate commit[\s\S]*attach[\s\S]*outside the repository commit/,
+    },
+  ],
 };
 
 export const writeModeDogfoodEvidenceContract = {
@@ -866,26 +877,29 @@ export const writeModeDogfoodEvidenceContract = {
     "clarissimi/recognition/merged_pull_request-42",
     "clarissimi/drafts/merged_pull_request-42",
     "not intended to merge into the real repository ledger",
-    "not intended to merge into the real repository draft inbox"
+    "not intended to merge into the real repository draft inbox",
   ],
   requiredPatterns: [
     {
       description: "a numeric propose fixture workflow run id",
-      pattern: /Current dogfood evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/
+      pattern: /Current dogfood evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/,
     },
     {
       description: "a propose fixture workflow timestamp",
-      pattern: /Current dogfood evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/
+      pattern:
+        /Current dogfood evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/,
     },
     {
       description: "a numeric stage-draft fixture workflow run id",
-      pattern: /Current draft dogfood evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/
+      pattern:
+        /Current draft dogfood evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/,
     },
     {
       description: "a stage-draft fixture workflow timestamp",
-      pattern: /Current draft dogfood evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/
-    }
-  ]
+      pattern:
+        /Current draft dogfood evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/,
+    },
+  ],
 };
 
 export const dryRunDogfoodEvidenceContract = {
@@ -894,18 +908,20 @@ export const dryRunDogfoodEvidenceContract = {
     "Current dry-run dogfood evidence: `Clarissimi dry run` workflow run",
     "summary artifact validation",
     "77f3fcbbeb25e3338ee2a4bba3c8efbfc46e5cfb",
-    "https://github.com/0disoft/clarissimi/actions/runs/29031384775"
+    "https://github.com/0disoft/clarissimi/actions/runs/29031384775",
   ],
   requiredPatterns: [
     {
       description: "a numeric dry-run dogfood workflow run id",
-      pattern: /Current dry-run dogfood evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/
+      pattern:
+        /Current dry-run dogfood evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/,
     },
     {
       description: "a dry-run dogfood workflow timestamp",
-      pattern: /Current dry-run dogfood evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/
-    }
-  ]
+      pattern:
+        /Current dry-run dogfood evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/,
+    },
+  ],
 };
 
 export const hostedCiEvidenceContract = {
@@ -914,26 +930,30 @@ export const hostedCiEvidenceContract = {
     "Recent hosted CI validation evidence: `CI` workflow run",
     "`release-readiness`, `lint`, `smoke`, `check`, and `contract`",
     "`pnpm run hosted-ci-validation` for the exact release-candidate commit",
-    "attach the final run URL outside the repository commit"
+    "attach the final run URL outside the repository commit",
   ],
   requiredPatterns: [
     {
       description: "a numeric hosted CI workflow run id",
-      pattern: /Recent hosted CI validation evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/
+      pattern:
+        /Recent hosted CI validation evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/,
     },
     {
       description: "a hosted CI workflow timestamp",
-      pattern: /Recent hosted CI validation evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/
+      pattern:
+        /Recent hosted CI validation evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/,
     },
     {
       description: "a hosted CI validated source commit sha",
-      pattern: /Recent hosted CI validation evidence:[\s\S]*validated source commit[\s\S]*`[0-9a-f]{40}`/
+      pattern:
+        /Recent hosted CI validation evidence:[\s\S]*validated source commit[\s\S]*`[0-9a-f]{40}`/,
     },
     {
       description: "a direct hosted CI workflow run URL",
-      pattern: /Recent hosted CI validation evidence:[\s\S]*Run URL:\s*`https:\/\/github\.com\/0disoft\/clarissimi\/actions\/runs\/[0-9]{8,}`\.[\s\S]*Refresh this evidence[\s\S]*attach[\s\S]*outside the repository commit/
-    }
-  ]
+      pattern:
+        /Recent hosted CI validation evidence:[\s\S]*Run URL:\s*`https:\/\/github\.com\/0disoft\/clarissimi\/actions\/runs\/[0-9]{8,}`\.[\s\S]*Refresh this evidence[\s\S]*attach[\s\S]*outside the repository commit/,
+    },
+  ],
 };
 
 export const rollbackProcedureContract = {
@@ -960,8 +980,8 @@ export const rollbackProcedureContract = {
     "old SHA, replacement SHA, affected users, and verification evidence",
     "No database rollback exists in the MVP.",
     ".clarissimi/contributions.jsonl",
-    "Derived files should be regenerated from approved contribution records"
-  ]
+    "Derived files should be regenerated from approved contribution records",
+  ],
 };
 
 export const highRiskSecretEnvNames = [
@@ -976,7 +996,7 @@ export const highRiskSecretEnvNames = [
   "UMANS_API_" + "KEY",
   "GITHUB_TOKEN",
   "GITHUB_PAT",
-  "GITHUB_PAT_ODISOFT"
+  "GITHUB_PAT_ODISOFT",
 ];
 
 export const hostedLiveProviderWorkflowContract = {
@@ -985,7 +1005,7 @@ export const hostedLiveProviderWorkflowContract = {
     { name: "provider-model", required: true },
     { name: "provider-endpoint", required: false },
     { name: "provider-thinking", required: false },
-    { name: "evidence-id", required: false }
+    { name: "evidence-id", required: false },
   ],
   requiredSnippets: [
     "workflow_dispatch:",
@@ -1001,7 +1021,7 @@ export const hostedLiveProviderWorkflowContract = {
     "CLARISSIMI_PROVIDER_MODEL: ${{ inputs.provider-model }}",
     "CLARISSIMI_PROVIDER_ENDPOINT: ${{ inputs.provider-endpoint }}",
     "CLARISSIMI_PROVIDER_THINKING: ${{ inputs.provider-thinking }}",
-    "EVIDENCE_ID: ${{ inputs.evidence-id }}"
+    "EVIDENCE_ID: ${{ inputs.evidence-id }}",
   ],
   requiredOrder: [
     "Verify provider inputs",
@@ -1010,39 +1030,28 @@ export const hostedLiveProviderWorkflowContract = {
     "Checkout repository",
     "Set up Node.js",
     "Install dependencies",
-    "Run live provider smoke"
+    "Run live provider smoke",
   ],
   forbiddenSnippets: [
     "push:",
     "pull_request:",
     "contents: write",
     "pull-requests: write",
-    "issues: write"
+    "issues: write",
   ],
   secretName: "CLARISSIMI_PROVIDER_TOKEN",
-  runCommand: "pnpm run live-provider-smoke"
+  runCommand: "pnpm run live-provider-smoke",
 };
 
 export const workflowTrustBoundaryContract = {
-  requiredSnippets: [
-    "permissions:"
-  ],
-  forbiddenSnippets: [
-    "pull_request_target:",
-    "write-all"
-  ]
+  requiredSnippets: ["permissions:"],
+  forbiddenSnippets: ["pull_request_target:", "write-all"],
 };
 
 export const ciWorkflowContract = {
   path: ".github/workflows/ci.yml",
-  requiredTriggers: [
-    "push:",
-    "pull_request:",
-    "workflow_dispatch:"
-  ],
-  requiredPermissions: [
-    "contents: read"
-  ],
+  requiredTriggers: ["push:", "pull_request:", "workflow_dispatch:"],
+  requiredPermissions: ["contents: read"],
   requiredSnippets: [
     "ACTIONLINT_LINUX_AMD64_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8",
     "ACTIONLINT_VERSION: 1.7.12",
@@ -1052,18 +1061,19 @@ export const ciWorkflowContract = {
     "uses: actions/setup-node@v6",
     "node-version: 24",
     "corepack enable",
-    "npm install --global \"ssealed@${SSEALED_VERSION}\"",
-    "sha256sum --check -"
+    'npm install --global "ssealed@${SSEALED_VERSION}"',
+    "sha256sum --check -",
   ],
   requiredCommands: [
     "pnpm install --frozen-lockfile",
     "pnpm run docs",
     "pnpm run release-readiness",
     "pnpm run lint",
+    "pnpm run format",
     "pnpm run smoke",
     "pnpm run check",
-    "pnpm run contract"
-  ]
+    "pnpm run contract",
+  ],
 };
 
 export const actionManifestContract = {
@@ -1082,12 +1092,12 @@ export const actionManifestContract = {
     { name: "provider" },
     { name: "provider-model" },
     { name: "provider-endpoint" },
-    { name: "provider-thinking" }
+    { name: "provider-thinking" },
   ],
   forbiddenInputs: [
     "github-token",
     "provider-token",
-    "clarissimi-provider-token"
+    "clarissimi-provider-token",
   ],
   requiredOutputs: [
     "draft-count",
@@ -1103,7 +1113,7 @@ export const actionManifestContract = {
     "proposal-pull-request-number",
     "proposal-pull-request-url",
     "proposal-pull-request-action",
-    "summary-json-path"
+    "summary-json-path",
   ],
   requiredEnvMappings: [
     "GITHUB_TOKEN: ${{ (inputs.mode == 'propose' || inputs.mode == 'stage-draft' || inputs.mode == 'promote-draft') && github.token || '' }}",
@@ -1121,17 +1131,15 @@ export const actionManifestContract = {
     "INPUT_PROVIDER_MODEL: ${{ inputs.provider-model }}",
     "INPUT_PROVIDER_ENDPOINT: ${{ inputs.provider-endpoint }}",
     "INPUT_PROVIDER_THINKING: ${{ inputs.provider-thinking }}",
-    "CLARISSIMI_PROVIDER_TOKEN: ${{ env.CLARISSIMI_PROVIDER_TOKEN }}"
+    "CLARISSIMI_PROVIDER_TOKEN: ${{ env.CLARISSIMI_PROVIDER_TOKEN }}",
   ],
-  requiredCommands: [
-    "node \"$GITHUB_ACTION_PATH/action-dist/index.js\""
-  ],
+  requiredCommands: ['node "$GITHUB_ACTION_PATH/action-dist/index.js"'],
   forbiddenCommands: [
     "corepack enable",
-    "pnpm --dir \"$GITHUB_ACTION_PATH\" install",
-    "pnpm --dir \"$GITHUB_ACTION_PATH\" --filter @clarissimi/action build",
-    "node \"$GITHUB_ACTION_PATH/packages/action/dist/bin/clarissimi-action.js\""
-  ]
+    'pnpm --dir "$GITHUB_ACTION_PATH" install',
+    'pnpm --dir "$GITHUB_ACTION_PATH" --filter @clarissimi/action build',
+    'node "$GITHUB_ACTION_PATH/packages/action/dist/bin/clarissimi-action.js"',
+  ],
 };
 
 export const dogfoodWorkflowContracts = [
@@ -1144,18 +1152,15 @@ export const dogfoodWorkflowContracts = [
       "github-fixture: fixtures/github-merged-pr-basic.json",
       "summary-path: .clarissimi/dogfood-fixture-summary.json",
       "event-path: fixtures/github-pull-request-merged-event.json",
-      "test \"${{ steps.fixture.outputs.mode }}\" = \"dry-run\"",
-      "test \"${{ steps.event.outputs.mode }}\" = \"dry-run\"",
-      "test \"${{ steps.fixture.outputs.input-source }}\" = \"github_fixture\"",
-      "test \"${{ steps.event.outputs.input-source }}\" = \"github_event_path\"",
-      "test -n \"${{ steps.fixture.outputs.summary-json-path }}\"",
-      "test -f \"${{ steps.fixture.outputs.summary-json-path }}\"",
-      "Summary artifact leaked raw fixture evidence."
+      'test "${{ steps.fixture.outputs.mode }}" = "dry-run"',
+      'test "${{ steps.event.outputs.mode }}" = "dry-run"',
+      'test "${{ steps.fixture.outputs.input-source }}" = "github_fixture"',
+      'test "${{ steps.event.outputs.input-source }}" = "github_event_path"',
+      'test -n "${{ steps.fixture.outputs.summary-json-path }}"',
+      'test -f "${{ steps.fixture.outputs.summary-json-path }}"',
+      "Summary artifact leaked raw fixture evidence.",
     ],
-    forbiddenSnippets: [
-      "contents: write",
-      "pull-requests: write"
-    ]
+    forbiddenSnippets: ["contents: write", "pull-requests: write"],
   },
   {
     path: ".github/workflows/clarissimi-propose-fixture.yml",
@@ -1168,16 +1173,13 @@ export const dogfoodWorkflowContracts = [
       "mode: propose",
       "github-fixture: fixtures/github-merged-pr-approved.json",
       "base-branch: ${{ inputs.base-branch }}",
-      "test \"${{ steps.propose.outputs.proposed-entry-count }}\" = \"1\"",
-      "test \"${{ steps.propose.outputs.mode }}\" = \"propose\"",
-      "test \"${{ steps.propose.outputs.approval-status }}\" = \"approved\"",
-      "test \"${{ steps.propose.outputs.staged-file-count }}\" = \"4\"",
-      "test -n \"${{ steps.propose.outputs.proposal-pull-request-url }}\""
+      'test "${{ steps.propose.outputs.proposed-entry-count }}" = "1"',
+      'test "${{ steps.propose.outputs.mode }}" = "propose"',
+      'test "${{ steps.propose.outputs.approval-status }}" = "approved"',
+      'test "${{ steps.propose.outputs.staged-file-count }}" = "4"',
+      'test -n "${{ steps.propose.outputs.proposal-pull-request-url }}"',
     ],
-    forbiddenSnippets: [
-      "push:",
-      "pull_request:"
-    ]
+    forbiddenSnippets: ["push:", "pull_request:"],
   },
   {
     path: ".github/workflows/clarissimi-stage-draft-fixture.yml",
@@ -1190,16 +1192,13 @@ export const dogfoodWorkflowContracts = [
       "mode: stage-draft",
       "github-fixture: fixtures/github-merged-pr-basic.json",
       "base-branch: ${{ inputs.base-branch }}",
-      "test \"${{ steps.stage.outputs.proposed-entry-count }}\" = \"0\"",
-      "test \"${{ steps.stage.outputs.mode }}\" = \"stage-draft\"",
-      "test \"${{ steps.stage.outputs.approval-status }}\" = \"draft\"",
-      "test \"${{ steps.stage.outputs.staged-file-count }}\" = \"1\"",
-      "test -n \"${{ steps.stage.outputs.proposal-pull-request-url }}\""
+      'test "${{ steps.stage.outputs.proposed-entry-count }}" = "0"',
+      'test "${{ steps.stage.outputs.mode }}" = "stage-draft"',
+      'test "${{ steps.stage.outputs.approval-status }}" = "draft"',
+      'test "${{ steps.stage.outputs.staged-file-count }}" = "1"',
+      'test -n "${{ steps.stage.outputs.proposal-pull-request-url }}"',
     ],
-    forbiddenSnippets: [
-      "push:",
-      "pull_request:"
-    ]
+    forbiddenSnippets: ["push:", "pull_request:"],
   },
   {
     path: ".github/workflows/clarissimi-promote-draft-fixture.yml",
@@ -1212,34 +1211,39 @@ export const dogfoodWorkflowContracts = [
       "mode: promote-draft",
       "draft-path: .clarissimi/drafts/sample-project-merged_pull_request-42.json",
       "base-branch: ${{ inputs.base-branch }}",
-      "test \"${{ steps.promote.outputs.proposed-entry-count }}\" = \"1\"",
-      "test \"${{ steps.promote.outputs.mode }}\" = \"promote-draft\"",
-      "test \"${{ steps.promote.outputs.input-source }}\" = \"approved_draft\"",
-      "test \"${{ steps.promote.outputs.approval-status }}\" = \"approved\"",
-      "test \"${{ steps.promote.outputs.staged-file-count }}\" = \"4\"",
-      "test -n \"${{ steps.promote.outputs.proposal-pull-request-url }}\""
+      'test "${{ steps.promote.outputs.proposed-entry-count }}" = "1"',
+      'test "${{ steps.promote.outputs.mode }}" = "promote-draft"',
+      'test "${{ steps.promote.outputs.input-source }}" = "approved_draft"',
+      'test "${{ steps.promote.outputs.approval-status }}" = "approved"',
+      'test "${{ steps.promote.outputs.staged-file-count }}" = "4"',
+      'test -n "${{ steps.promote.outputs.proposal-pull-request-url }}"',
     ],
-    forbiddenSnippets: [
-      "push:",
-      "pull_request:"
-    ]
-  }
+    forbiddenSnippets: ["push:", "pull_request:"],
+  },
 ];
 
 export async function runReleaseReadiness(options = {}) {
   const repoRoot = options.repoRoot ?? defaultRepoRoot;
   const workflowDir = join(repoRoot, ".github", "workflows");
-  const workflowFiles = await listFiles(workflowDir, (name) => name.endsWith(".yml") || name.endsWith(".yaml"), repoRoot);
-  const yamlFiles = ["action.yml", ...workflowFiles.map((file) => toRepoPath(repoRoot, file))];
+  const workflowFiles = await listFiles(
+    workflowDir,
+    (name) => name.endsWith(".yml") || name.endsWith(".yaml"),
+    repoRoot,
+  );
+  const yamlFiles = [
+    "action.yml",
+    ...workflowFiles.map((file) => toRepoPath(repoRoot, file)),
+  ];
 
   await runCheck({
     repoRoot,
     name: "docs validation",
     command: process.execPath,
-    args: ["scripts/validate-docs.mjs"]
+    args: ["scripts/validate-docs.mjs"],
   });
 
   await runPackageScriptRegistrationCheck(repoRoot);
+  await runFormatterContractCheck(repoRoot);
   await runRootPackageManagerContractCheck(repoRoot);
   await runSmokePackCandidateContractCheck(repoRoot);
   await runWorkspaceContractCheck(repoRoot);
@@ -1288,20 +1292,22 @@ export async function runReleaseReadiness(options = {}) {
       try {
         result = JSON.parse(stdout);
       } catch (error) {
-        throw new Error(`ssealed doctor did not emit parseable JSON: ${error.message}`);
+        throw new Error(
+          `ssealed doctor did not emit parseable JSON: ${error.message}`,
+        );
       }
 
       if (result.ok !== true) {
         throw new Error("ssealed doctor reported ok=false.");
       }
-    }
+    },
   });
 
   await runCheck({
     repoRoot,
     name: "workflow actionlint",
     command: "actionlint",
-    args: workflowFiles.map((file) => toRepoPath(repoRoot, file))
+    args: workflowFiles.map((file) => toRepoPath(repoRoot, file)),
   });
 
   for (const file of yamlFiles) {
@@ -1310,7 +1316,7 @@ export async function runReleaseReadiness(options = {}) {
       name: `yaml parse: ${file}`,
       command: "yq",
       args: ["eval", ".", file],
-      redactOutput: true
+      redactOutput: true,
     });
   }
 
@@ -1324,37 +1330,52 @@ export async function runReleaseReadiness(options = {}) {
     repoRoot,
     name: "Action bundle freshness",
     command: "pnpm",
-    args: ["run", "bundle:action:check"]
+    args: ["run", "bundle:action:check"],
   });
 
   await runCheck({
     repoRoot,
     name: "git diff whitespace check",
     command: "git",
-    args: ["diff", "--check"]
+    args: ["diff", "--check"],
   });
 
   await runTrackedGeneratedOutputCheck(repoRoot);
   await runSecretScan(repoRoot);
 
   console.log("release readiness static gates passed");
-  console.log("hosted CI, dry-run, write-mode, and credentialed release evidence recorded in docs/ops/release.md");
-  console.log("immutable v0.x.y Action tags are allowed by ADR 0031 after all release gates pass");
-  console.log("moving Action alias v0 is allowed by ADR 0034 after exact-SHA post-promotion verification");
-  console.log("public package publication and GitHub Marketplace publication remain blocked by release policy");
+  console.log(
+    "hosted CI, dry-run, write-mode, and credentialed release evidence recorded in docs/ops/release.md",
+  );
+  console.log(
+    "immutable v0.x.y Action tags are allowed by ADR 0031 after all release gates pass",
+  );
+  console.log(
+    "moving Action alias v0 is allowed by ADR 0034 after exact-SHA post-promotion verification",
+  );
+  console.log(
+    "public package publication and GitHub Marketplace publication remain blocked by release policy",
+  );
 }
 
-if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) {
+if (
+  process.argv[1] !== undefined &&
+  pathToFileURL(process.argv[1]).href === import.meta.url
+) {
   await runReleaseReadiness();
 }
 
 async function runCheck(options) {
-  const result = await runCommand(options.command, options.args, options.repoRoot);
+  const result = await runCommand(
+    options.command,
+    options.args,
+    options.repoRoot,
+  );
   if (result.exitCode !== 0) {
     const stdout = options.redactOutput ? "[redacted]" : result.stdout.trim();
     const stderr = options.redactOutput ? "[redacted]" : result.stderr.trim();
     throw new Error(
-      `${options.name} failed with exit code ${result.exitCode}.\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}`
+      `${options.name} failed with exit code ${result.exitCode}.\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}`,
     );
   }
 
@@ -1369,7 +1390,7 @@ function runCommand(command, args, repoRoot) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: repoRoot,
-      stdio: ["ignore", "pipe", "pipe"]
+      stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "";
     let stderr = "";
@@ -1412,20 +1433,26 @@ async function runSecretScan(repoRoot) {
   }
 
   if (hits.length > 0) {
-    throw new Error(`secret scan found high-risk patterns:\n${hits.join("\n")}`);
+    throw new Error(
+      `secret scan found high-risk patterns:\n${hits.join("\n")}`,
+    );
   }
 
   console.log("secret scan passed");
 }
 
 export function findHighRiskSecretLines(repoPath, text) {
-  const highRiskEnvAssignments = highRiskSecretEnvNames.map((name) => `${escapeRegExp(name)}\\s*=`);
-  const pattern = new RegExp([
-    "sk-(proj|live|test|ant|svc|admin|user|org|key)-[A-Za-z0-9_-]{8,}",
-    "ghp_[A-Za-z0-9]{20,}",
-    "BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY",
-    ...highRiskEnvAssignments
-  ].join("|"));
+  const highRiskEnvAssignments = highRiskSecretEnvNames.map(
+    (name) => `${escapeRegExp(name)}\\s*=`,
+  );
+  const pattern = new RegExp(
+    [
+      "sk-(proj|live|test|ant|svc|admin|user|org|key)-[A-Za-z0-9_-]{8,}",
+      "ghp_[A-Za-z0-9]{20,}",
+      "BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY",
+      ...highRiskEnvAssignments,
+    ].join("|"),
+  );
   const lines = text.split(/\r?\n/);
   const hits = [];
 
@@ -1438,20 +1465,27 @@ export function findHighRiskSecretLines(repoPath, text) {
   return hits;
 }
 
-export function validateHostedLiveProviderWorkflowContract(text, contract = hostedLiveProviderWorkflowContract) {
+export function validateHostedLiveProviderWorkflowContract(
+  text,
+  contract = hostedLiveProviderWorkflowContract,
+) {
   const issues = [];
 
   for (const input of contract.requiredInputs) {
     const block = findYamlMappingBlock(text, input.name);
     if (block === undefined) {
-      issues.push(`${contract.path} must define workflow_dispatch input ${input.name}.`);
+      issues.push(
+        `${contract.path} must define workflow_dispatch input ${input.name}.`,
+      );
       continue;
     }
 
     const requiredValue = findYamlScalarValue(block, "required");
     const expected = String(input.required);
     if (requiredValue !== expected) {
-      issues.push(`${contract.path} input ${input.name} must set required: ${expected}.`);
+      issues.push(
+        `${contract.path} input ${input.name} must set required: ${expected}.`,
+      );
     }
   }
 
@@ -1475,7 +1509,9 @@ export function validateHostedLiveProviderWorkflowContract(text, contract = host
     }
   }
 
-  issues.push(...validateSnippetOrder(text, contract.path, contract.requiredOrder));
+  issues.push(
+    ...validateSnippetOrder(text, contract.path, contract.requiredOrder),
+  );
 
   return issues;
 }
@@ -1483,7 +1519,7 @@ export function validateHostedLiveProviderWorkflowContract(text, contract = host
 export function validateWorkflowTrustBoundaryContract(
   text,
   path,
-  contract = workflowTrustBoundaryContract
+  contract = workflowTrustBoundaryContract,
 ) {
   const issues = [];
 
@@ -1502,7 +1538,10 @@ export function validateWorkflowTrustBoundaryContract(
   return issues;
 }
 
-export function validateRollbackProcedureContract(text, contract = rollbackProcedureContract) {
+export function validateRollbackProcedureContract(
+  text,
+  contract = rollbackProcedureContract,
+) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1514,7 +1553,10 @@ export function validateRollbackProcedureContract(text, contract = rollbackProce
   return issues;
 }
 
-export function validateReleasePolicyDocumentContract(text, contract = releasePolicyDocumentContract) {
+export function validateReleasePolicyDocumentContract(
+  text,
+  contract = releasePolicyDocumentContract,
+) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1526,13 +1568,18 @@ export function validateReleasePolicyDocumentContract(text, contract = releasePo
   return issues;
 }
 
-export function validateProductPositioningContract(textsByPath, contract = productPositioningContract) {
+export function validateProductPositioningContract(
+  textsByPath,
+  contract = productPositioningContract,
+) {
   const issues = [];
 
   for (const document of contract.documents) {
     const text = textsByPath[document.path];
     if (typeof text !== "string") {
-      issues.push(`${document.path} must be readable for product positioning contract.`);
+      issues.push(
+        `${document.path} must be readable for product positioning contract.`,
+      );
       continue;
     }
 
@@ -1552,7 +1599,10 @@ export function validateProductPositioningContract(textsByPath, contract = produ
   return issues;
 }
 
-export function validateReadmeValidationContract(text, contract = readmeValidationContract) {
+export function validateReadmeValidationContract(
+  text,
+  contract = readmeValidationContract,
+) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1564,7 +1614,10 @@ export function validateReadmeValidationContract(text, contract = readmeValidati
   return issues;
 }
 
-export function validateDocsValidationScriptContract(text, contract = docsValidationScriptContract) {
+export function validateDocsValidationScriptContract(
+  text,
+  contract = docsValidationScriptContract,
+) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1578,7 +1631,7 @@ export function validateDocsValidationScriptContract(text, contract = docsValida
 
 export function validateLintAndFormatDecisionDocumentContract(
   text,
-  contract = lintAndFormatDecisionDocumentContract
+  contract = lintAndFormatDecisionDocumentContract,
 ) {
   const issues = [];
 
@@ -1591,7 +1644,10 @@ export function validateLintAndFormatDecisionDocumentContract(
   return issues;
 }
 
-export function validateLedgerFormatDocumentContract(text, contract = ledgerFormatDocumentContract) {
+export function validateLedgerFormatDocumentContract(
+  text,
+  contract = ledgerFormatDocumentContract,
+) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1603,7 +1659,10 @@ export function validateLedgerFormatDocumentContract(text, contract = ledgerForm
   return issues;
 }
 
-export function validateCliCommandContract(text, contract = cliCommandContract) {
+export function validateCliCommandContract(
+  text,
+  contract = cliCommandContract,
+) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1617,7 +1676,7 @@ export function validateCliCommandContract(text, contract = cliCommandContract) 
 
 export function validateCliOutputExitCodesDocumentContract(
   text,
-  contract = cliOutputExitCodesDocumentContract
+  contract = cliOutputExitCodesDocumentContract,
 ) {
   const issues = [];
 
@@ -1632,7 +1691,7 @@ export function validateCliOutputExitCodesDocumentContract(
 
 export function validateCliConfigurationDocumentContract(
   text,
-  contract = cliConfigurationDocumentContract
+  contract = cliConfigurationDocumentContract,
 ) {
   const issues = [];
 
@@ -1647,7 +1706,7 @@ export function validateCliConfigurationDocumentContract(
 
 export function validateAgentAssistedDraftsDocumentContract(
   text,
-  contract = agentAssistedDraftsDocumentContract
+  contract = agentAssistedDraftsDocumentContract,
 ) {
   const issues = [];
 
@@ -1660,7 +1719,10 @@ export function validateAgentAssistedDraftsDocumentContract(
   return issues;
 }
 
-export function validateCiOperationalDocumentContract(text, contract = ciOperationalDocumentContract) {
+export function validateCiOperationalDocumentContract(
+  text,
+  contract = ciOperationalDocumentContract,
+) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1672,7 +1734,10 @@ export function validateCiOperationalDocumentContract(text, contract = ciOperati
   return issues;
 }
 
-export function validateOperationalContractDocumentContract(text, contract = operationalContractDocumentContract) {
+export function validateOperationalContractDocumentContract(
+  text,
+  contract = operationalContractDocumentContract,
+) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1684,7 +1749,10 @@ export function validateOperationalContractDocumentContract(text, contract = ope
   return issues;
 }
 
-export function validateObservabilityDocumentContract(text, contract = observabilityDocumentContract) {
+export function validateObservabilityDocumentContract(
+  text,
+  contract = observabilityDocumentContract,
+) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1696,7 +1764,10 @@ export function validateObservabilityDocumentContract(text, contract = observabi
   return issues;
 }
 
-export function validateServiceLevelsDocumentContract(text, contract = serviceLevelsDocumentContract) {
+export function validateServiceLevelsDocumentContract(
+  text,
+  contract = serviceLevelsDocumentContract,
+) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1710,7 +1781,7 @@ export function validateServiceLevelsDocumentContract(text, contract = serviceLe
 
 export function validateIncidentResponseDocumentContract(
   text,
-  contract = incidentResponseDocumentContract
+  contract = incidentResponseDocumentContract,
 ) {
   const issues = [];
 
@@ -1725,7 +1796,7 @@ export function validateIncidentResponseDocumentContract(
 
 export function validateDisasterRecoveryDocumentContract(
   text,
-  contract = disasterRecoveryDocumentContract
+  contract = disasterRecoveryDocumentContract,
 ) {
   const issues = [];
 
@@ -1738,7 +1809,10 @@ export function validateDisasterRecoveryDocumentContract(
   return issues;
 }
 
-export function validateSecretsDocumentContract(text, contract = secretsDocumentContract) {
+export function validateSecretsDocumentContract(
+  text,
+  contract = secretsDocumentContract,
+) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1750,7 +1824,10 @@ export function validateSecretsDocumentContract(text, contract = secretsDocument
   return issues;
 }
 
-export function validateBackupRestoreDocumentContract(text, contract = backupRestoreDocumentContract) {
+export function validateBackupRestoreDocumentContract(
+  text,
+  contract = backupRestoreDocumentContract,
+) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1762,7 +1839,10 @@ export function validateBackupRestoreDocumentContract(text, contract = backupRes
   return issues;
 }
 
-export function validateActionInputsOutputsDocumentContract(text, contract = actionInputsOutputsDocumentContract) {
+export function validateActionInputsOutputsDocumentContract(
+  text,
+  contract = actionInputsOutputsDocumentContract,
+) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1774,7 +1854,10 @@ export function validateActionInputsOutputsDocumentContract(text, contract = act
   return issues;
 }
 
-export function validateActionContractDocumentContract(text, contract = actionContractDocumentContract) {
+export function validateActionContractDocumentContract(
+  text,
+  contract = actionContractDocumentContract,
+) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1786,11 +1869,21 @@ export function validateActionContractDocumentContract(text, contract = actionCo
   return issues;
 }
 
-export function validateActionPermissionsDocumentContract(text, contract = actionPermissionsDocumentContract) {
+export function validateActionPermissionsDocumentContract(
+  text,
+  contract = actionPermissionsDocumentContract,
+) {
   const issues = [];
+  const normalizedTableRows = text
+    .split(/\r?\n/)
+    .filter((line) => line.trim().startsWith("|"))
+    .map(normalizeMarkdownTableRow);
 
   for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
+    const present = snippet.startsWith("|")
+      ? normalizedTableRows.includes(normalizeMarkdownTableRow(snippet))
+      : text.includes(snippet);
+    if (!present) {
       issues.push(`${contract.path} must include ${snippet}.`);
     }
   }
@@ -1798,13 +1891,26 @@ export function validateActionPermissionsDocumentContract(text, contract = actio
   return issues;
 }
 
-export function validateOpsValidationFooterContract(textsByPath, contract = opsValidationFooterContract) {
+function normalizeMarkdownTableRow(line) {
+  return line
+    .trim()
+    .split("|")
+    .map((cell) => cell.trim())
+    .join(" | ");
+}
+
+export function validateOpsValidationFooterContract(
+  textsByPath,
+  contract = opsValidationFooterContract,
+) {
   const issues = [];
 
   for (const documentPath of contract.documents) {
     const text = textsByPath[documentPath];
     if (typeof text !== "string") {
-      issues.push(`${documentPath} must be readable for ops validation footer contract.`);
+      issues.push(
+        `${documentPath} must be readable for ops validation footer contract.`,
+      );
       continue;
     }
 
@@ -1820,14 +1926,16 @@ export function validateOpsValidationFooterContract(textsByPath, contract = opsV
 
 export function validateEngineeringValidationDocumentContract(
   textsByPath,
-  contract = engineeringValidationDocumentContract
+  contract = engineeringValidationDocumentContract,
 ) {
   const issues = [];
 
   for (const documentPath of contract.documents) {
     const text = textsByPath[documentPath];
     if (typeof text !== "string") {
-      issues.push(`${documentPath} must be readable for engineering validation document contract.`);
+      issues.push(
+        `${documentPath} must be readable for engineering validation document contract.`,
+      );
       continue;
     }
 
@@ -1843,14 +1951,16 @@ export function validateEngineeringValidationDocumentContract(
 
 export function validateMonorepoValidationDocumentContract(
   textsByPath,
-  contract = monorepoValidationDocumentContract
+  contract = monorepoValidationDocumentContract,
 ) {
   const issues = [];
 
   for (const documentPath of contract.documents) {
     const text = textsByPath[documentPath];
     if (typeof text !== "string") {
-      issues.push(`${documentPath} must be readable for monorepo validation document contract.`);
+      issues.push(
+        `${documentPath} must be readable for monorepo validation document contract.`,
+      );
       continue;
     }
 
@@ -1864,7 +1974,10 @@ export function validateMonorepoValidationDocumentContract(
   return issues;
 }
 
-export function validateCiWorkflowContract(text, contract = ciWorkflowContract) {
+export function validateCiWorkflowContract(
+  text,
+  contract = ciWorkflowContract,
+) {
   const issues = [];
 
   for (const trigger of contract.requiredTriggers) {
@@ -1894,13 +2007,29 @@ export function validateCiWorkflowContract(text, contract = ciWorkflowContract) 
   return issues;
 }
 
-export function validateActionManifestContract(text, contract = actionManifestContract) {
+export function validateActionManifestContract(
+  text,
+  contract = actionManifestContract,
+) {
   const issues = [];
-  const inputsBlock = findRequiredYamlMappingBlock(text, contract.path, "inputs", issues);
-  const outputsBlock = findRequiredYamlMappingBlock(text, contract.path, "outputs", issues);
+  const inputsBlock = findRequiredYamlMappingBlock(
+    text,
+    contract.path,
+    "inputs",
+    issues,
+  );
+  const outputsBlock = findRequiredYamlMappingBlock(
+    text,
+    contract.path,
+    "outputs",
+    issues,
+  );
 
   for (const input of contract.requiredInputs) {
-    const block = inputsBlock === undefined ? undefined : findYamlMappingBlock(inputsBlock, input.name);
+    const block =
+      inputsBlock === undefined
+        ? undefined
+        : findYamlMappingBlock(inputsBlock, input.name);
     if (block === undefined) {
       issues.push(`${contract.path} must define input ${input.name}.`);
       continue;
@@ -1909,19 +2038,29 @@ export function validateActionManifestContract(text, contract = actionManifestCo
     if (input.default !== undefined) {
       const defaultValue = findYamlScalarValue(block, "default");
       if (defaultValue !== input.default) {
-        issues.push(`${contract.path} input ${input.name} must set default: ${input.default}.`);
+        issues.push(
+          `${contract.path} input ${input.name} must set default: ${input.default}.`,
+        );
       }
     }
   }
 
   for (const inputName of contract.forbiddenInputs) {
-    if (inputsBlock !== undefined && findYamlMappingBlock(inputsBlock, inputName) !== undefined) {
-      issues.push(`${contract.path} must not expose ${inputName} as an action input.`);
+    if (
+      inputsBlock !== undefined &&
+      findYamlMappingBlock(inputsBlock, inputName) !== undefined
+    ) {
+      issues.push(
+        `${contract.path} must not expose ${inputName} as an action input.`,
+      );
     }
   }
 
   for (const output of contract.requiredOutputs) {
-    const block = outputsBlock === undefined ? undefined : findYamlMappingBlock(outputsBlock, output);
+    const block =
+      outputsBlock === undefined
+        ? undefined
+        : findYamlMappingBlock(outputsBlock, output);
     if (block === undefined) {
       issues.push(`${contract.path} must define output ${output}.`);
       continue;
@@ -1930,7 +2069,9 @@ export function validateActionManifestContract(text, contract = actionManifestCo
     const expectedValue = `\${{ steps.clarissimi.outputs.${output} }}`;
     const value = findYamlScalarValue(block, "value");
     if (value !== expectedValue) {
-      issues.push(`${contract.path} output ${output} must map to ${expectedValue}.`);
+      issues.push(
+        `${contract.path} output ${output} must map to ${expectedValue}.`,
+      );
     }
   }
 
@@ -2001,7 +2142,9 @@ async function runActionManifestContractCheck(repoRoot) {
   try {
     text = await readFile(actionPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${actionManifestContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${actionManifestContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateActionManifestContract(text);
@@ -2028,7 +2171,9 @@ async function runWorkflowTrustBoundaryContractCheck(repoRoot, workflowFiles) {
   }
 
   if (issues.length > 0) {
-    throw new Error(`workflow trust boundary contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `workflow trust boundary contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("workflow trust boundary contract passed");
@@ -2040,7 +2185,9 @@ async function runCiWorkflowContractCheck(repoRoot) {
   try {
     text = await readFile(workflowPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${ciWorkflowContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${ciWorkflowContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateCiWorkflowContract(text);
@@ -2057,12 +2204,16 @@ async function runHostedLiveProviderWorkflowContractCheck(repoRoot) {
   try {
     text = await readFile(workflowPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${hostedLiveProviderWorkflowContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${hostedLiveProviderWorkflowContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateHostedLiveProviderWorkflowContract(text);
   if (issues.length > 0) {
-    throw new Error(`hosted live provider workflow contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `hosted live provider workflow contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("hosted live provider workflow contract passed");
@@ -2074,20 +2225,20 @@ async function runToolAvailabilityCheck(repoRoot) {
       name: "ssealed",
       command: "ssealed",
       args: ["--version"],
-      installHint: "Install ssealed before running release readiness."
+      installHint: "Install ssealed before running release readiness.",
     },
     {
       name: "actionlint",
       command: "actionlint",
       args: ["-version"],
-      installHint: "Install actionlint before running release readiness."
+      installHint: "Install actionlint before running release readiness.",
     },
     {
       name: "yq",
       command: "yq",
       args: ["--version"],
-      installHint: "Install mikefarah/yq before running release readiness."
-    }
+      installHint: "Install mikefarah/yq before running release readiness.",
+    },
   ];
 
   for (const tool of tools) {
@@ -2095,13 +2246,15 @@ async function runToolAvailabilityCheck(repoRoot) {
     try {
       result = await runCommand(tool.command, tool.args, repoRoot);
     } catch (error) {
-      throw new Error(`${tool.name} is required but could not be started. ${tool.installHint} ${error.message}`);
+      throw new Error(
+        `${tool.name} is required but could not be started. ${tool.installHint} ${error.message}`,
+      );
     }
 
     if (result.exitCode !== 0) {
       throw new Error(
         `${tool.name} availability check failed with exit code ${result.exitCode}. ${tool.installHint}\n` +
-        `STDERR:\n${result.stderr.trim()}`
+          `STDERR:\n${result.stderr.trim()}`,
       );
     }
   }
@@ -2115,12 +2268,16 @@ async function runRollbackProcedureContractCheck(repoRoot) {
   try {
     text = await readFile(rollbackPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${rollbackProcedureContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${rollbackProcedureContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateRollbackProcedureContract(text);
   if (issues.length > 0) {
-    throw new Error(`rollback procedure contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `rollback procedure contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("rollback procedure contract passed");
@@ -2137,7 +2294,9 @@ async function runPackageScriptRegistrationCheck(repoRoot) {
 
   const issues = validatePackageScriptRegistration(packageJson);
   if (issues.length > 0) {
-    throw new Error(`package.json script registration failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `package.json script registration failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("package script registration passed");
@@ -2149,15 +2308,48 @@ async function runRootPackageManagerContractCheck(repoRoot) {
   try {
     packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
   } catch (error) {
-    throw new Error(`${rootPackageManagerContract.path} is not parseable JSON: ${error.message}`);
+    throw new Error(
+      `${rootPackageManagerContract.path} is not parseable JSON: ${error.message}`,
+    );
   }
 
   const issues = validateRootPackageManager(packageJson);
   if (issues.length > 0) {
-    throw new Error(`root package manager contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `root package manager contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("root package manager contract passed");
+}
+
+async function runFormatterContractCheck(repoRoot) {
+  let packageJson;
+  let config;
+  let ignoreText;
+  try {
+    packageJson = JSON.parse(
+      await readFile(join(repoRoot, "package.json"), "utf8"),
+    );
+    config = JSON.parse(
+      await readFile(join(repoRoot, formatterContract.configPath), "utf8"),
+    );
+    ignoreText = await readFile(
+      join(repoRoot, formatterContract.ignorePath),
+      "utf8",
+    );
+  } catch (error) {
+    throw new Error(
+      `formatter contract files are invalid or unreadable: ${error.message}`,
+    );
+  }
+
+  const issues = validateFormatterContract(packageJson, config, ignoreText);
+  if (issues.length > 0) {
+    throw new Error(`formatter contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("formatter contract passed");
 }
 
 async function runPackageReleasePolicyCheck(repoRoot) {
@@ -2171,7 +2363,9 @@ async function runPackageReleasePolicyCheck(repoRoot) {
 
   const issues = validatePackageReleasePolicy(packageJson);
   if (issues.length > 0) {
-    throw new Error(`package.json release policy failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `package.json release policy failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("package release policy passed");
@@ -2183,12 +2377,16 @@ async function runReleasePolicyDocumentContractCheck(repoRoot) {
   try {
     text = await readFile(releasePath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${releasePolicyDocumentContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${releasePolicyDocumentContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateReleasePolicyDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(`release policy document contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `release policy document contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("release policy document contract passed");
@@ -2208,7 +2406,9 @@ async function runProductPositioningContractCheck(repoRoot) {
 
   const issues = validateProductPositioningContract(textsByPath);
   if (issues.length > 0) {
-    throw new Error(`product positioning contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `product positioning contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("product positioning contract passed");
@@ -2220,7 +2420,9 @@ async function runReadmeValidationContractCheck(repoRoot) {
   try {
     text = await readFile(readmePath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${readmeValidationContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${readmeValidationContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateReadmeValidationContract(text);
@@ -2237,29 +2439,40 @@ async function runDocsValidationScriptContractCheck(repoRoot) {
   try {
     text = await readFile(docsValidationPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${docsValidationScriptContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${docsValidationScriptContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateDocsValidationScriptContract(text);
   if (issues.length > 0) {
-    throw new Error(`docs validation script contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `docs validation script contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("docs validation script contract passed");
 }
 
 async function runLintAndFormatDecisionDocumentContractCheck(repoRoot) {
-  const lintAndFormatPath = join(repoRoot, lintAndFormatDecisionDocumentContract.path);
+  const lintAndFormatPath = join(
+    repoRoot,
+    lintAndFormatDecisionDocumentContract.path,
+  );
   let text;
   try {
     text = await readFile(lintAndFormatPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${lintAndFormatDecisionDocumentContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${lintAndFormatDecisionDocumentContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateLintAndFormatDecisionDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(`lint and format decision document contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `lint and format decision document contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("lint and format decision document contract passed");
@@ -2271,12 +2484,16 @@ async function runLedgerFormatDocumentContractCheck(repoRoot) {
   try {
     text = await readFile(ledgerFormatPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${ledgerFormatDocumentContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${ledgerFormatDocumentContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateLedgerFormatDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(`ledger format document contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `ledger format document contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("ledger format document contract passed");
@@ -2288,7 +2505,9 @@ async function runCliCommandContractCheck(repoRoot) {
   try {
     text = await readFile(commandContractPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${cliCommandContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${cliCommandContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateCliCommandContract(text);
@@ -2300,51 +2519,72 @@ async function runCliCommandContractCheck(repoRoot) {
 }
 
 async function runCliOutputExitCodesDocumentContractCheck(repoRoot) {
-  const outputExitCodesPath = join(repoRoot, cliOutputExitCodesDocumentContract.path);
+  const outputExitCodesPath = join(
+    repoRoot,
+    cliOutputExitCodesDocumentContract.path,
+  );
   let text;
   try {
     text = await readFile(outputExitCodesPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${cliOutputExitCodesDocumentContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${cliOutputExitCodesDocumentContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateCliOutputExitCodesDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(`CLI output and exit codes document contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `CLI output and exit codes document contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("CLI output and exit codes document contract passed");
 }
 
 async function runCliConfigurationDocumentContractCheck(repoRoot) {
-  const configurationPath = join(repoRoot, cliConfigurationDocumentContract.path);
+  const configurationPath = join(
+    repoRoot,
+    cliConfigurationDocumentContract.path,
+  );
   let text;
   try {
     text = await readFile(configurationPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${cliConfigurationDocumentContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${cliConfigurationDocumentContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateCliConfigurationDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(`CLI configuration document contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `CLI configuration document contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("CLI configuration document contract passed");
 }
 
 async function runAgentAssistedDraftsDocumentContractCheck(repoRoot) {
-  const agentAssistedDraftsPath = join(repoRoot, agentAssistedDraftsDocumentContract.path);
+  const agentAssistedDraftsPath = join(
+    repoRoot,
+    agentAssistedDraftsDocumentContract.path,
+  );
   let text;
   try {
     text = await readFile(agentAssistedDraftsPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${agentAssistedDraftsDocumentContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${agentAssistedDraftsDocumentContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateAgentAssistedDraftsDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(`agent-assisted drafts document contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `agent-assisted drafts document contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("agent-assisted drafts document contract passed");
@@ -2356,29 +2596,40 @@ async function runCiOperationalDocumentContractCheck(repoRoot) {
   try {
     text = await readFile(ciPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${ciOperationalDocumentContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${ciOperationalDocumentContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateCiOperationalDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(`CI operational document contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `CI operational document contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("CI operational document contract passed");
 }
 
 async function runOperationalContractDocumentContractCheck(repoRoot) {
-  const operationalContractPath = join(repoRoot, operationalContractDocumentContract.path);
+  const operationalContractPath = join(
+    repoRoot,
+    operationalContractDocumentContract.path,
+  );
   let text;
   try {
     text = await readFile(operationalContractPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${operationalContractDocumentContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${operationalContractDocumentContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateOperationalContractDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(`operational contract document contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `operational contract document contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("operational contract document contract passed");
@@ -2390,12 +2641,16 @@ async function runObservabilityDocumentContractCheck(repoRoot) {
   try {
     text = await readFile(observabilityPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${observabilityDocumentContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${observabilityDocumentContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateObservabilityDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(`observability document contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `observability document contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("observability document contract passed");
@@ -2407,12 +2662,16 @@ async function runServiceLevelsDocumentContractCheck(repoRoot) {
   try {
     text = await readFile(serviceLevelsPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${serviceLevelsDocumentContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${serviceLevelsDocumentContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateServiceLevelsDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(`service levels document contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `service levels document contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("service levels document contract passed");
@@ -2424,7 +2683,9 @@ async function runSecretsDocumentContractCheck(repoRoot) {
   try {
     text = await readFile(secretsPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${secretsDocumentContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${secretsDocumentContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateSecretsDocumentContract(text);
@@ -2441,97 +2702,136 @@ async function runBackupRestoreDocumentContractCheck(repoRoot) {
   try {
     text = await readFile(backupRestorePath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${backupRestoreDocumentContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${backupRestoreDocumentContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateBackupRestoreDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(`backup and restore document contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `backup and restore document contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("backup and restore document contract passed");
 }
 
 async function runIncidentResponseDocumentContractCheck(repoRoot) {
-  const incidentResponsePath = join(repoRoot, incidentResponseDocumentContract.path);
+  const incidentResponsePath = join(
+    repoRoot,
+    incidentResponseDocumentContract.path,
+  );
   let text;
   try {
     text = await readFile(incidentResponsePath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${incidentResponseDocumentContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${incidentResponseDocumentContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateIncidentResponseDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(`incident response document contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `incident response document contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("incident response document contract passed");
 }
 
 async function runDisasterRecoveryDocumentContractCheck(repoRoot) {
-  const disasterRecoveryPath = join(repoRoot, disasterRecoveryDocumentContract.path);
+  const disasterRecoveryPath = join(
+    repoRoot,
+    disasterRecoveryDocumentContract.path,
+  );
   let text;
   try {
     text = await readFile(disasterRecoveryPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${disasterRecoveryDocumentContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${disasterRecoveryDocumentContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateDisasterRecoveryDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(`disaster recovery document contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `disaster recovery document contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("disaster recovery document contract passed");
 }
 
 async function runActionInputsOutputsDocumentContractCheck(repoRoot) {
-  const inputsOutputsPath = join(repoRoot, actionInputsOutputsDocumentContract.path);
+  const inputsOutputsPath = join(
+    repoRoot,
+    actionInputsOutputsDocumentContract.path,
+  );
   let text;
   try {
     text = await readFile(inputsOutputsPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${actionInputsOutputsDocumentContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${actionInputsOutputsDocumentContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateActionInputsOutputsDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(`Action inputs and outputs document contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `Action inputs and outputs document contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("Action inputs and outputs document contract passed");
 }
 
 async function runActionContractDocumentContractCheck(repoRoot) {
-  const actionContractPath = join(repoRoot, actionContractDocumentContract.path);
+  const actionContractPath = join(
+    repoRoot,
+    actionContractDocumentContract.path,
+  );
   let text;
   try {
     text = await readFile(actionContractPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${actionContractDocumentContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${actionContractDocumentContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateActionContractDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(`Action contract document contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `Action contract document contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("Action contract document contract passed");
 }
 
 async function runActionPermissionsDocumentContractCheck(repoRoot) {
-  const actionPermissionsPath = join(repoRoot, actionPermissionsDocumentContract.path);
+  const actionPermissionsPath = join(
+    repoRoot,
+    actionPermissionsDocumentContract.path,
+  );
   let text;
   try {
     text = await readFile(actionPermissionsPath, "utf8");
   } catch (error) {
-    throw new Error(`Unable to read ${actionPermissionsDocumentContract.path}: ${error.message}`);
+    throw new Error(
+      `Unable to read ${actionPermissionsDocumentContract.path}: ${error.message}`,
+    );
   }
 
   const issues = validateActionPermissionsDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(`Action permissions document contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `Action permissions document contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("Action permissions document contract passed");
@@ -2542,7 +2842,10 @@ async function runOpsValidationFooterContractCheck(repoRoot) {
 
   for (const documentPath of opsValidationFooterContract.documents) {
     try {
-      textsByPath[documentPath] = await readFile(join(repoRoot, documentPath), "utf8");
+      textsByPath[documentPath] = await readFile(
+        join(repoRoot, documentPath),
+        "utf8",
+      );
     } catch (error) {
       throw new Error(`Unable to read ${documentPath}: ${error.message}`);
     }
@@ -2550,7 +2853,9 @@ async function runOpsValidationFooterContractCheck(repoRoot) {
 
   const issues = validateOpsValidationFooterContract(textsByPath);
   if (issues.length > 0) {
-    throw new Error(`ops validation footer contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `ops validation footer contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("ops validation footer contract passed");
@@ -2561,7 +2866,10 @@ async function runEngineeringValidationDocumentContractCheck(repoRoot) {
 
   for (const documentPath of engineeringValidationDocumentContract.documents) {
     try {
-      textsByPath[documentPath] = await readFile(join(repoRoot, documentPath), "utf8");
+      textsByPath[documentPath] = await readFile(
+        join(repoRoot, documentPath),
+        "utf8",
+      );
     } catch (error) {
       throw new Error(`Unable to read ${documentPath}: ${error.message}`);
     }
@@ -2569,7 +2877,9 @@ async function runEngineeringValidationDocumentContractCheck(repoRoot) {
 
   const issues = validateEngineeringValidationDocumentContract(textsByPath);
   if (issues.length > 0) {
-    throw new Error(`engineering validation document contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `engineering validation document contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("engineering validation document contract passed");
@@ -2580,7 +2890,10 @@ async function runMonorepoValidationDocumentContractCheck(repoRoot) {
 
   for (const documentPath of monorepoValidationDocumentContract.documents) {
     try {
-      textsByPath[documentPath] = await readFile(join(repoRoot, documentPath), "utf8");
+      textsByPath[documentPath] = await readFile(
+        join(repoRoot, documentPath),
+        "utf8",
+      );
     } catch (error) {
       throw new Error(`Unable to read ${documentPath}: ${error.message}`);
     }
@@ -2588,7 +2901,9 @@ async function runMonorepoValidationDocumentContractCheck(repoRoot) {
 
   const issues = validateMonorepoValidationDocumentContract(textsByPath);
   if (issues.length > 0) {
-    throw new Error(`monorepo validation document contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `monorepo validation document contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("monorepo validation document contract passed");
@@ -2600,12 +2915,16 @@ async function runSmokePackCandidateContractCheck(repoRoot) {
   try {
     text = await readFile(smokePath, "utf8");
   } catch (error) {
-    throw new Error(`${smokePackCandidateContract.path} is not readable: ${error.message}`);
+    throw new Error(
+      `${smokePackCandidateContract.path} is not readable: ${error.message}`,
+    );
   }
 
   const issues = validateSmokePackCandidateContract(text);
   if (issues.length > 0) {
-    throw new Error(`smoke package pack candidate contract failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `smoke package pack candidate contract failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("smoke package pack candidate contract passed");
@@ -2625,14 +2944,40 @@ async function runWorkspacePackageReleasePolicyCheck(repoRoot) {
       continue;
     }
 
-    issues.push(...validatePackageReleasePolicy(packageJson, packageReleasePolicy, repoPath));
-    issues.push(...validateWorkspacePackageManifest(packageJson, workspaceDirFromManifestPath(repoRoot, packageJsonPath), repoPath));
-    issues.push(...validateWorkspacePackageManifestSurface(packageJson, workspaceDirFromManifestPath(repoRoot, packageJsonPath), repoPath));
-    issues.push(...validateWorkspaceInternalDependencies(packageJson, workspaceDirFromManifestPath(repoRoot, packageJsonPath), repoPath));
+    issues.push(
+      ...validatePackageReleasePolicy(
+        packageJson,
+        packageReleasePolicy,
+        repoPath,
+      ),
+    );
+    issues.push(
+      ...validateWorkspacePackageManifest(
+        packageJson,
+        workspaceDirFromManifestPath(repoRoot, packageJsonPath),
+        repoPath,
+      ),
+    );
+    issues.push(
+      ...validateWorkspacePackageManifestSurface(
+        packageJson,
+        workspaceDirFromManifestPath(repoRoot, packageJsonPath),
+        repoPath,
+      ),
+    );
+    issues.push(
+      ...validateWorkspaceInternalDependencies(
+        packageJson,
+        workspaceDirFromManifestPath(repoRoot, packageJsonPath),
+        repoPath,
+      ),
+    );
   }
 
   if (issues.length > 0) {
-    throw new Error(`workspace package release policy failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `workspace package release policy failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("workspace package release policy passed");
@@ -2642,14 +2987,16 @@ async function runTrackedGeneratedOutputCheck(repoRoot) {
   const result = await runCommand("git", ["ls-files"], repoRoot);
   if (result.exitCode !== 0) {
     throw new Error(
-      `tracked generated output check failed to list tracked files.\nSTDOUT:\n${result.stdout.trim()}\nSTDERR:\n${result.stderr.trim()}`
+      `tracked generated output check failed to list tracked files.\nSTDOUT:\n${result.stdout.trim()}\nSTDERR:\n${result.stderr.trim()}`,
     );
   }
 
   const paths = result.stdout.split(/\r?\n/).filter((line) => line.length > 0);
   const issues = validateTrackedGeneratedOutputPaths(paths);
   if (issues.length > 0) {
-    throw new Error(`tracked generated output check failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `tracked generated output check failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("tracked generated output check passed");
@@ -2661,15 +3008,24 @@ async function runTsconfigBuildGraphCheck(repoRoot) {
 
   let rootTsconfig;
   try {
-    rootTsconfig = JSON.parse(await readFile(join(repoRoot, tsconfigBuildGraphContract.path), "utf8"));
+    rootTsconfig = JSON.parse(
+      await readFile(join(repoRoot, tsconfigBuildGraphContract.path), "utf8"),
+    );
   } catch (error) {
-    throw new Error(`${tsconfigBuildGraphContract.path} is not parseable JSON: ${error.message}`);
+    throw new Error(
+      `${tsconfigBuildGraphContract.path} is not parseable JSON: ${error.message}`,
+    );
   }
 
   issues.push(...validateRootTsconfigReferences(rootTsconfig, packageDirs));
 
   for (const packageDir of packageDirs) {
-    const tsconfigPath = join(repoRoot, "packages", packageDir, "tsconfig.json");
+    const tsconfigPath = join(
+      repoRoot,
+      "packages",
+      packageDir,
+      "tsconfig.json",
+    );
     const repoPath = toRepoPath(repoRoot, tsconfigPath);
     let tsconfig;
     try {
@@ -2679,7 +3035,13 @@ async function runTsconfigBuildGraphCheck(repoRoot) {
       continue;
     }
 
-    issues.push(...validateWorkspacePackageTsconfigReferences(tsconfig, packageDir, repoPath));
+    issues.push(
+      ...validateWorkspacePackageTsconfigReferences(
+        tsconfig,
+        packageDir,
+        repoPath,
+      ),
+    );
   }
 
   if (issues.length > 0) {
@@ -2695,7 +3057,9 @@ async function runWorkspaceContractCheck(repoRoot) {
   try {
     text = await readFile(workspacePath, "utf8");
   } catch (error) {
-    throw new Error(`${workspaceContract.path} is not readable: ${error.message}`);
+    throw new Error(
+      `${workspaceContract.path} is not readable: ${error.message}`,
+    );
   }
 
   const issues = validateWorkspaceContract(text);
@@ -2713,7 +3077,9 @@ async function runPackageOwnershipContractCheck(repoRoot) {
   try {
     text = await readFile(ownershipPath, "utf8");
   } catch (error) {
-    throw new Error(`${packageOwnershipContract.path} is not readable: ${error.message}`);
+    throw new Error(
+      `${packageOwnershipContract.path} is not readable: ${error.message}`,
+    );
   }
 
   const issues = validatePackageOwnershipContract(text, packageDirs);
@@ -2730,12 +3096,16 @@ async function runCredentialedReleaseEvidenceCheck(repoRoot) {
   try {
     text = await readFile(evidencePath, "utf8");
   } catch (error) {
-    throw new Error(`${credentialedReleaseEvidenceContract.path} is not readable: ${error.message}`);
+    throw new Error(
+      `${credentialedReleaseEvidenceContract.path} is not readable: ${error.message}`,
+    );
   }
 
   const issues = validateCredentialedReleaseEvidence(text);
   if (issues.length > 0) {
-    throw new Error(`credentialed release evidence record failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `credentialed release evidence record failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("credentialed release evidence record passed");
@@ -2747,12 +3117,16 @@ async function runWriteModeDogfoodEvidenceCheck(repoRoot) {
   try {
     text = await readFile(evidencePath, "utf8");
   } catch (error) {
-    throw new Error(`${writeModeDogfoodEvidenceContract.path} is not readable: ${error.message}`);
+    throw new Error(
+      `${writeModeDogfoodEvidenceContract.path} is not readable: ${error.message}`,
+    );
   }
 
   const issues = validateWriteModeDogfoodEvidence(text);
   if (issues.length > 0) {
-    throw new Error(`write-mode dogfood evidence record failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `write-mode dogfood evidence record failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("write-mode dogfood evidence record passed");
@@ -2764,12 +3138,16 @@ async function runDryRunDogfoodEvidenceCheck(repoRoot) {
   try {
     text = await readFile(evidencePath, "utf8");
   } catch (error) {
-    throw new Error(`${dryRunDogfoodEvidenceContract.path} is not readable: ${error.message}`);
+    throw new Error(
+      `${dryRunDogfoodEvidenceContract.path} is not readable: ${error.message}`,
+    );
   }
 
   const issues = validateDryRunDogfoodEvidence(text);
   if (issues.length > 0) {
-    throw new Error(`dry-run dogfood evidence record failed:\n${issues.join("\n")}`);
+    throw new Error(
+      `dry-run dogfood evidence record failed:\n${issues.join("\n")}`,
+    );
   }
 
   console.log("dry-run dogfood evidence record passed");
@@ -2781,7 +3159,9 @@ async function runHostedCiEvidenceCheck(repoRoot) {
   try {
     text = await readFile(evidencePath, "utf8");
   } catch (error) {
-    throw new Error(`${hostedCiEvidenceContract.path} is not readable: ${error.message}`);
+    throw new Error(
+      `${hostedCiEvidenceContract.path} is not readable: ${error.message}`,
+    );
   }
 
   const issues = validateHostedCiEvidence(text);
@@ -2795,7 +3175,11 @@ async function runHostedCiEvidenceCheck(repoRoot) {
 export function validatePackageScriptRegistration(packageJson) {
   const issues = [];
   const scripts = packageJson?.scripts;
-  if (scripts === null || typeof scripts !== "object" || Array.isArray(scripts)) {
+  if (
+    scripts === null ||
+    typeof scripts !== "object" ||
+    Array.isArray(scripts)
+  ) {
     return ["package.json scripts must be configured."];
   }
 
@@ -2808,7 +3192,9 @@ export function validatePackageScriptRegistration(packageJson) {
 
     for (const expected of script.includes) {
       if (!value.includes(expected)) {
-        issues.push(`package.json scripts.${script.name} must include ${expected}.`);
+        issues.push(
+          `package.json scripts.${script.name} must include ${expected}.`,
+        );
       }
     }
   }
@@ -2816,19 +3202,25 @@ export function validatePackageScriptRegistration(packageJson) {
   for (const script of deferredPackageScripts) {
     const value = scripts[script.name];
     if (typeof value !== "string") {
-      issues.push(`package.json scripts.${script.name} must remain explicitly fail-closed until configured.`);
+      issues.push(
+        `package.json scripts.${script.name} must remain explicitly fail-closed until configured.`,
+      );
       continue;
     }
 
     for (const expected of script.requiredSnippets) {
       if (!value.includes(expected)) {
-        issues.push(`package.json scripts.${script.name} must include ${expected}.`);
+        issues.push(
+          `package.json scripts.${script.name} must include ${expected}.`,
+        );
       }
     }
 
     for (const forbidden of script.forbiddenSnippets) {
       if (value.includes(forbidden)) {
-        issues.push(`package.json scripts.${script.name} must not use ${forbidden} until a formatter baseline is accepted.`);
+        issues.push(
+          `package.json scripts.${script.name} must not use ${forbidden} until a formatter baseline is accepted.`,
+        );
       }
     }
   }
@@ -2848,11 +3240,55 @@ export function validatePackageScriptRegistration(packageJson) {
   return issues;
 }
 
-export function validateRootPackageManager(packageJson, contract = rootPackageManagerContract) {
+export function validateRootPackageManager(
+  packageJson,
+  contract = rootPackageManagerContract,
+) {
   const issues = [];
 
   if (packageJson?.packageManager !== contract.packageManager) {
-    issues.push(`${contract.path} packageManager must remain ${contract.packageManager}.`);
+    issues.push(
+      `${contract.path} packageManager must remain ${contract.packageManager}.`,
+    );
+  }
+
+  return issues;
+}
+
+export function validateFormatterContract(
+  packageJson,
+  config,
+  ignoreText,
+  contract = formatterContract,
+) {
+  const issues = [];
+
+  if (
+    packageJson?.devDependencies?.[contract.dependency] !== contract.version
+  ) {
+    issues.push(
+      `package.json devDependencies.${contract.dependency} must remain exactly ${contract.version}.`,
+    );
+  }
+
+  for (const [name, expected] of Object.entries(contract.config)) {
+    if (config?.[name] !== expected) {
+      issues.push(
+        `${contract.configPath} ${name} must remain ${JSON.stringify(expected)}.`,
+      );
+    }
+  }
+
+  const ignoreEntries = new Set(
+    ignoreText
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith("#")),
+  );
+  for (const entry of contract.requiredIgnoreEntries) {
+    if (!ignoreEntries.has(entry)) {
+      issues.push(`${contract.ignorePath} must include ${entry}.`);
+    }
   }
 
   return issues;
@@ -2861,22 +3297,29 @@ export function validateRootPackageManager(packageJson, contract = rootPackageMa
 export function validatePackageReleasePolicy(
   packageJson,
   policy = packageReleasePolicy,
-  manifestPath = "package.json"
+  manifestPath = "package.json",
 ) {
   const issues = [];
 
   if (packageJson?.private !== policy.private) {
-    issues.push(`${manifestPath} private must remain ${String(policy.private)} while public package publication is blocked.`);
+    issues.push(
+      `${manifestPath} private must remain ${String(policy.private)} while public package publication is blocked.`,
+    );
   }
 
   if (packageJson?.version !== policy.version) {
-    issues.push(`${manifestPath} version must remain ${policy.version} while public package publication is blocked.`);
+    issues.push(
+      `${manifestPath} version must remain ${policy.version} while public package publication is blocked.`,
+    );
   }
 
   return issues;
 }
 
-export function validateSmokePackCandidateContract(text, contract = smokePackCandidateContract) {
+export function validateSmokePackCandidateContract(
+  text,
+  contract = smokePackCandidateContract,
+) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -2892,11 +3335,15 @@ export function validateWorkspaceContract(text, contract = workspaceContract) {
   const issues = [];
 
   if (!text.includes(contract.requiredPackageGlob)) {
-    issues.push(`${contract.path} must include workspace package glob ${contract.requiredPackageGlob}.`);
+    issues.push(
+      `${contract.path} must include workspace package glob ${contract.requiredPackageGlob}.`,
+    );
   }
 
   if (!text.includes(contract.requiredBuildAllow)) {
-    issues.push(`${contract.path} must explicitly allow the pinned esbuild install script.`);
+    issues.push(
+      `${contract.path} must explicitly allow the pinned esbuild install script.`,
+    );
   }
 
   return issues;
@@ -2906,7 +3353,7 @@ export function validateWorkspacePackageManifest(
   packageJson,
   packageDir,
   manifestPath,
-  contract = workspaceContract
+  contract = workspaceContract,
 ) {
   const issues = [];
   const expectedName = `${contract.packageNameScope}/${packageDir}`;
@@ -2926,7 +3373,7 @@ export function validateWorkspacePackageManifestSurface(
   packageJson,
   packageDir,
   manifestPath,
-  contract = workspacePackageManifestSurfaceContract
+  contract = workspacePackageManifestSurfaceContract,
 ) {
   const issues = [];
 
@@ -2939,28 +3386,47 @@ export function validateWorkspacePackageManifestSurface(
   }
 
   const exportRoot = packageJson?.exports?.["."];
-  if (exportRoot === null || typeof exportRoot !== "object" || Array.isArray(exportRoot)) {
-    issues.push(`${manifestPath} exports["."] must define types and default entrypoints.`);
+  if (
+    exportRoot === null ||
+    typeof exportRoot !== "object" ||
+    Array.isArray(exportRoot)
+  ) {
+    issues.push(
+      `${manifestPath} exports["."] must define types and default entrypoints.`,
+    );
   } else {
     if (exportRoot.types !== contract.types) {
-      issues.push(`${manifestPath} exports["."].types must remain ${contract.types}.`);
+      issues.push(
+        `${manifestPath} exports["."].types must remain ${contract.types}.`,
+      );
     }
 
     if (exportRoot.default !== contract.main) {
-      issues.push(`${manifestPath} exports["."].default must remain ${contract.main}.`);
+      issues.push(
+        `${manifestPath} exports["."].default must remain ${contract.main}.`,
+      );
     }
   }
 
   if (!arraysEqual(packageJson?.files, contract.files)) {
-    issues.push(`${manifestPath} files must remain ${JSON.stringify(contract.files)}.`);
+    issues.push(
+      `${manifestPath} files must remain ${JSON.stringify(contract.files)}.`,
+    );
   }
 
   if (packageJson?.license !== contract.license) {
     issues.push(`${manifestPath} license must remain ${contract.license}.`);
   }
 
-  if (!objectsEqual(packageJson?.repository, expectedPackageRepository(packageDir, contract))) {
-    issues.push(`${manifestPath} repository metadata must point at packages/${packageDir}.`);
+  if (
+    !objectsEqual(
+      packageJson?.repository,
+      expectedPackageRepository(packageDir, contract),
+    )
+  ) {
+    issues.push(
+      `${manifestPath} repository metadata must point at packages/${packageDir}.`,
+    );
   }
 
   if (packageJson?.homepage !== contract.homepage) {
@@ -2968,16 +3434,22 @@ export function validateWorkspacePackageManifestSurface(
   }
 
   if (!objectsEqual(packageJson?.bugs, contract.bugs)) {
-    issues.push(`${manifestPath} bugs metadata must remain ${JSON.stringify(contract.bugs)}.`);
+    issues.push(
+      `${manifestPath} bugs metadata must remain ${JSON.stringify(contract.bugs)}.`,
+    );
   }
 
   if (!objectsEqual(packageJson?.engines, contract.engines)) {
-    issues.push(`${manifestPath} engines must remain ${JSON.stringify(contract.engines)}.`);
+    issues.push(
+      `${manifestPath} engines must remain ${JSON.stringify(contract.engines)}.`,
+    );
   }
 
   for (const [scriptName, expectedValue] of Object.entries(contract.scripts)) {
     if (packageJson?.scripts?.[scriptName] !== expectedValue) {
-      issues.push(`${manifestPath} scripts.${scriptName} must remain ${expectedValue}.`);
+      issues.push(
+        `${manifestPath} scripts.${scriptName} must remain ${expectedValue}.`,
+      );
     }
   }
 
@@ -2987,7 +3459,9 @@ export function validateWorkspacePackageManifestSurface(
       issues.push(`${manifestPath} must not expose package bin entries.`);
     }
   } else if (!objectsEqual(packageJson?.bin, expectedBin)) {
-    issues.push(`${manifestPath} bin must remain ${JSON.stringify(expectedBin)}.`);
+    issues.push(
+      `${manifestPath} bin must remain ${JSON.stringify(expectedBin)}.`,
+    );
   }
 
   return issues;
@@ -2996,7 +3470,7 @@ export function validateWorkspacePackageManifestSurface(
 function expectedPackageRepository(packageDir, contract) {
   return {
     ...contract.repository,
-    directory: `packages/${packageDir}`
+    directory: `packages/${packageDir}`,
   };
 }
 
@@ -3004,42 +3478,62 @@ export function validateWorkspaceInternalDependencies(
   packageJson,
   packageDir,
   manifestPath,
-  contract = workspaceInternalDependencyContract
+  contract = workspaceInternalDependencyContract,
 ) {
   const issues = [];
   const allowedDirs = contract.dependenciesByPackageDir[packageDir];
   if (allowedDirs === undefined) {
-    issues.push(`${manifestPath} has no internal dependency contract for packages/${packageDir}.`);
+    issues.push(
+      `${manifestPath} has no internal dependency contract for packages/${packageDir}.`,
+    );
     return issues;
   }
 
-  const expectedNames = allowedDirs.map((dir) => `${workspaceContract.packageNameScope}/${dir}`);
+  const expectedNames = allowedDirs.map(
+    (dir) => `${workspaceContract.packageNameScope}/${dir}`,
+  );
   const expectedSet = new Set(expectedNames);
   const runtimeDependencies = dependencyEntries(packageJson?.dependencies);
-  const declaredRuntimeInternal = runtimeDependencies.filter(([name]) => name.startsWith(contract.internalScope));
-  const declaredRuntimeNames = new Set(declaredRuntimeInternal.map(([name]) => name));
+  const declaredRuntimeInternal = runtimeDependencies.filter(([name]) =>
+    name.startsWith(contract.internalScope),
+  );
+  const declaredRuntimeNames = new Set(
+    declaredRuntimeInternal.map(([name]) => name),
+  );
 
   for (const name of expectedNames) {
     if (!declaredRuntimeNames.has(name)) {
-      issues.push(`${manifestPath} dependencies must include ${name}: ${contract.workspaceRange}.`);
+      issues.push(
+        `${manifestPath} dependencies must include ${name}: ${contract.workspaceRange}.`,
+      );
     }
   }
 
   for (const [name, version] of declaredRuntimeInternal) {
     if (!expectedSet.has(name)) {
-      issues.push(`${manifestPath} dependencies must not include undeclared internal dependency ${name}.`);
+      issues.push(
+        `${manifestPath} dependencies must not include undeclared internal dependency ${name}.`,
+      );
       continue;
     }
 
     if (version !== contract.workspaceRange) {
-      issues.push(`${manifestPath} dependency ${name} must use ${contract.workspaceRange}.`);
+      issues.push(
+        `${manifestPath} dependency ${name} must use ${contract.workspaceRange}.`,
+      );
     }
   }
 
-  for (const sectionName of ["devDependencies", "peerDependencies", "optionalDependencies"]) {
+  for (const sectionName of [
+    "devDependencies",
+    "peerDependencies",
+    "optionalDependencies",
+  ]) {
     for (const [name] of dependencyEntries(packageJson?.[sectionName])) {
       if (name.startsWith(contract.internalScope)) {
-        issues.push(`${manifestPath} ${sectionName} must not declare internal dependency ${name}; use dependencies.`);
+        issues.push(
+          `${manifestPath} ${sectionName} must not declare internal dependency ${name}; use dependencies.`,
+        );
       }
     }
   }
@@ -3049,20 +3543,26 @@ export function validateWorkspaceInternalDependencies(
 
 export function validateTrackedGeneratedOutputPaths(
   paths,
-  contract = trackedGeneratedOutputContract
+  contract = trackedGeneratedOutputContract,
 ) {
   const issues = [];
 
   for (const rawPath of paths) {
     const path = rawPath.replaceAll("\\", "/");
 
-    if (contract.forbiddenPathSuffixes.some((suffix) => path.endsWith(suffix))) {
+    if (
+      contract.forbiddenPathSuffixes.some((suffix) => path.endsWith(suffix))
+    ) {
       issues.push(`tracked generated output must not include ${path}.`);
       continue;
     }
 
     const boundedPath = `/${path}`;
-    if (contract.forbiddenPathFragments.some((fragment) => boundedPath.includes(fragment))) {
+    if (
+      contract.forbiddenPathFragments.some((fragment) =>
+        boundedPath.includes(fragment),
+      )
+    ) {
       issues.push(`tracked generated output must not include ${path}.`);
     }
   }
@@ -3073,11 +3573,17 @@ export function validateTrackedGeneratedOutputPaths(
 export function validateRootTsconfigReferences(
   tsconfig,
   packageDirs,
-  contract = tsconfigBuildGraphContract
+  contract = tsconfigBuildGraphContract,
 ) {
   const issues = [];
-  const referencePaths = tsconfigReferencePaths(tsconfig?.references, contract.path, issues);
-  const expectedPaths = packageDirs.map((dir) => `${contract.packageReferencePrefix}${dir}`);
+  const referencePaths = tsconfigReferencePaths(
+    tsconfig?.references,
+    contract.path,
+    issues,
+  );
+  const expectedPaths = packageDirs.map(
+    (dir) => `${contract.packageReferencePrefix}${dir}`,
+  );
   const expectedSet = new Set(expectedPaths);
   const declaredSet = new Set(referencePaths);
 
@@ -3089,7 +3595,9 @@ export function validateRootTsconfigReferences(
 
   for (const referencePath of referencePaths) {
     if (!expectedSet.has(referencePath)) {
-      issues.push(`${contract.path} references must not include undeclared project reference ${referencePath}.`);
+      issues.push(
+        `${contract.path} references must not include undeclared project reference ${referencePath}.`,
+      );
     }
   }
 
@@ -3100,20 +3608,28 @@ export function validateWorkspacePackageTsconfigReferences(
   tsconfig,
   packageDir,
   tsconfigPath,
-  contract = workspaceInternalDependencyContract
+  contract = workspaceInternalDependencyContract,
 ) {
   const issues = [];
   const allowedDirs = contract.dependenciesByPackageDir[packageDir];
   if (allowedDirs === undefined) {
-    issues.push(`${tsconfigPath} has no internal dependency contract for packages/${packageDir}.`);
+    issues.push(
+      `${tsconfigPath} has no internal dependency contract for packages/${packageDir}.`,
+    );
     return issues;
   }
 
   if (tsconfig?.compilerOptions?.composite !== true) {
-    issues.push(`${tsconfigPath} compilerOptions.composite must remain true for TypeScript project references.`);
+    issues.push(
+      `${tsconfigPath} compilerOptions.composite must remain true for TypeScript project references.`,
+    );
   }
 
-  const referencePaths = tsconfigReferencePaths(tsconfig?.references, tsconfigPath, issues);
+  const referencePaths = tsconfigReferencePaths(
+    tsconfig?.references,
+    tsconfigPath,
+    issues,
+  );
   const expectedPaths = allowedDirs.map((dir) => `../${dir}`);
   const expectedSet = new Set(expectedPaths);
   const declaredSet = new Set(referencePaths);
@@ -3126,7 +3642,9 @@ export function validateWorkspacePackageTsconfigReferences(
 
   for (const referencePath of referencePaths) {
     if (!expectedSet.has(referencePath)) {
-      issues.push(`${tsconfigPath} references must not include undeclared project reference ${referencePath}.`);
+      issues.push(
+        `${tsconfigPath} references must not include undeclared project reference ${referencePath}.`,
+      );
     }
   }
 
@@ -3136,26 +3654,36 @@ export function validateWorkspacePackageTsconfigReferences(
 export function validatePackageOwnershipContract(
   text,
   packageDirs,
-  contract = packageOwnershipContract
+  contract = packageOwnershipContract,
 ) {
   const issues = [];
   const tableEntries = extractPackageOwnershipEntries(text);
-  const documentedPackages = new Set(tableEntries.map((entry) => entry.packagePath));
-  const workspacePackages = new Set(packageDirs.map((dir) => `packages/${dir}`));
+  const documentedPackages = new Set(
+    tableEntries.map((entry) => entry.packagePath),
+  );
+  const workspacePackages = new Set(
+    packageDirs.map((dir) => `packages/${dir}`),
+  );
 
   for (const packagePath of workspacePackages) {
     if (!documentedPackages.has(packagePath)) {
-      issues.push(`${contract.path} missing Package Table entry for ${packagePath}.`);
+      issues.push(
+        `${contract.path} missing Package Table entry for ${packagePath}.`,
+      );
     }
   }
 
   for (const entry of tableEntries) {
     if (!workspacePackages.has(entry.packagePath)) {
-      issues.push(`${contract.path} references missing workspace package ${entry.packagePath}.`);
+      issues.push(
+        `${contract.path} references missing workspace package ${entry.packagePath}.`,
+      );
     }
 
     if (entry.status !== "Implemented") {
-      issues.push(`${contract.path} Package Table entry for ${entry.packagePath} must have status Implemented.`);
+      issues.push(
+        `${contract.path} Package Table entry for ${entry.packagePath} must have status Implemented.`,
+      );
     }
   }
 
@@ -3168,19 +3696,31 @@ export function validatePackageOwnershipContract(
   return issues;
 }
 
-export function validateCredentialedReleaseEvidence(text, contract = credentialedReleaseEvidenceContract) {
+export function validateCredentialedReleaseEvidence(
+  text,
+  contract = credentialedReleaseEvidenceContract,
+) {
   return validateReleaseEvidenceText(text, contract);
 }
 
-export function validateWriteModeDogfoodEvidence(text, contract = writeModeDogfoodEvidenceContract) {
+export function validateWriteModeDogfoodEvidence(
+  text,
+  contract = writeModeDogfoodEvidenceContract,
+) {
   return validateReleaseEvidenceText(text, contract);
 }
 
-export function validateDryRunDogfoodEvidence(text, contract = dryRunDogfoodEvidenceContract) {
+export function validateDryRunDogfoodEvidence(
+  text,
+  contract = dryRunDogfoodEvidenceContract,
+) {
   return validateReleaseEvidenceText(text, contract);
 }
 
-export function validateHostedCiEvidence(text, contract = hostedCiEvidenceContract) {
+export function validateHostedCiEvidence(
+  text,
+  contract = hostedCiEvidenceContract,
+) {
   return validateReleaseEvidenceText(text, contract);
 }
 
@@ -3209,7 +3749,8 @@ function escapeRegExp(value) {
 function extractPackageOwnershipEntries(text) {
   const entries = [];
   const lines = extractMarkdownSection(text, "Package Table").split(/\r?\n/);
-  const pattern = /^\| `(?<packagePath>packages\/[^`]+)` \| (?<status>[^|]+) \|/;
+  const pattern =
+    /^\|\s*`(?<packagePath>packages\/[^`]+)`\s*\|\s*(?<status>[^|]+?)\s*\|/;
 
   for (const line of lines) {
     const match = pattern.exec(line);
@@ -3219,7 +3760,7 @@ function extractPackageOwnershipEntries(text) {
 
     entries.push({
       packagePath: match.groups.packagePath.trim(),
-      status: match.groups.status.trim()
+      status: match.groups.status.trim(),
     });
   }
 
@@ -3296,13 +3837,21 @@ function tsconfigReferencePaths(value, path, issues) {
 
   const paths = [];
   for (const reference of value) {
-    if (reference === null || typeof reference !== "object" || Array.isArray(reference)) {
-      issues.push(`${path} references entries must be objects with a path string.`);
+    if (
+      reference === null ||
+      typeof reference !== "object" ||
+      Array.isArray(reference)
+    ) {
+      issues.push(
+        `${path} references entries must be objects with a path string.`,
+      );
       continue;
     }
 
     if (typeof reference.path !== "string" || reference.path.length === 0) {
-      issues.push(`${path} references entries must include a non-empty path string.`);
+      issues.push(
+        `${path} references entries must include a non-empty path string.`,
+      );
       continue;
     }
 
@@ -3376,7 +3925,9 @@ function validateSnippetOrder(text, path, snippets) {
     }
 
     if (next <= cursor) {
-      issues.push(`${path} must keep ${snippet} after the previous release-check step.`);
+      issues.push(
+        `${path} must keep ${snippet} after the previous release-check step.`,
+      );
       continue;
     }
 
@@ -3387,12 +3938,14 @@ function validateSnippetOrder(text, path, snippets) {
 }
 
 function shouldSkipSecretScanPath(repoPath) {
-  return repoPath === ".git"
-    || repoPath.startsWith(".git/")
-    || repoPath === "node_modules"
-    || repoPath.includes("/node_modules/")
-    || repoPath.includes("/dist/")
-    || repoPath.endsWith(".tsbuildinfo");
+  return (
+    repoPath === ".git" ||
+    repoPath.startsWith(".git/") ||
+    repoPath === "node_modules" ||
+    repoPath.includes("/node_modules/") ||
+    repoPath.includes("/dist/") ||
+    repoPath.endsWith(".tsbuildinfo")
+  );
 }
 
 async function listFiles(dir, predicate, repoRoot) {
@@ -3409,7 +3962,7 @@ async function listFiles(dir, predicate, repoRoot) {
         continue;
       }
 
-      files.push(...await listFiles(entryPath, predicate, repoRoot));
+      files.push(...(await listFiles(entryPath, predicate, repoRoot)));
       continue;
     }
 
@@ -3425,7 +3978,7 @@ async function listWorkspacePackageManifests(repoRoot) {
   return listFiles(
     join(repoRoot, "packages"),
     (name) => name === "package.json",
-    repoRoot
+    repoRoot,
   );
 }
 
@@ -3437,7 +3990,10 @@ async function listWorkspacePackageDirs(repoRoot) {
 }
 
 function workspaceDirFromManifestPath(repoRoot, manifestPath) {
-  return relative(join(repoRoot, "packages"), dirname(manifestPath)).replaceAll(sep, "/");
+  return relative(join(repoRoot, "packages"), dirname(manifestPath)).replaceAll(
+    sep,
+    "/",
+  );
 }
 
 function shouldSkipTraversalPath(repoRoot, path) {

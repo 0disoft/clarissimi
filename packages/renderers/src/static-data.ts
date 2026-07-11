@@ -1,28 +1,32 @@
 import {
   STATIC_DATA_SCHEMA_VERSION,
   type StaticContributionRecord,
-  type StaticContributionsDocument
+  type StaticContributionsDocument,
 } from "./types.js";
 import { deriveContributorProfiles } from "./contributors.js";
 import { renderPrettyJson, toPublicContributionRecords } from "./ledger.js";
 
 export function buildStaticContributionsDocument(
-  values: readonly unknown[]
+  values: readonly unknown[],
 ): StaticContributionsDocument {
   const records = toPublicContributionRecords(values);
 
   return {
     schemaVersion: STATIC_DATA_SCHEMA_VERSION,
     contributions: records.map(toStaticContributionRecord),
-    contributors: deriveContributorProfiles(records)
+    contributors: deriveContributorProfiles(records),
   };
 }
 
-export function renderStaticContributionsJson(values: readonly unknown[]): string {
+export function renderStaticContributionsJson(
+  values: readonly unknown[],
+): string {
   return renderPrettyJson(buildStaticContributionsDocument(values));
 }
 
-function toStaticContributionRecord(record: ReturnType<typeof toPublicContributionRecords>[number]): StaticContributionRecord {
+function toStaticContributionRecord(
+  record: ReturnType<typeof toPublicContributionRecords>[number],
+): StaticContributionRecord {
   return {
     contributor: record.contributor,
     source: record.source,
@@ -30,6 +34,6 @@ function toStaticContributionRecord(record: ReturnType<typeof toPublicContributi
     affectedArea: record.affectedArea,
     publicRecognitionText: record.publicRecognitionText,
     suggestedBadge: record.suggestedBadge,
-    evidenceRefs: record.evidenceRefs
+    evidenceRefs: record.evidenceRefs,
   };
 }

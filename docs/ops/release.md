@@ -20,8 +20,8 @@ GitHub Marketplace until a separate accepted release decision changes those boun
 ## Release Types
 
 - Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,
-  `pnpm run lint`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and repository hygiene
-  checks pass.
+  `pnpm run lint`, `pnpm run format`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and
+  repository hygiene checks pass.
 - Dogfood workflow update: allowed when Action examples, permissions, `actionlint`, and root
   `action.yml` parsing pass.
 - Public package publication: blocked.
@@ -124,7 +124,7 @@ the blocked root and workspace package publication policy, public product-positi
 workspace package publish surface, release policy document Action-release coverage, release tool
 availability, package ownership table coverage, internal workspace dependency graph, package
 publication metadata, TypeScript project-reference build graph, recorded dry-run and write-mode
-dogfood evidence, the intentionally fail-closed `format` and `migration-check` placeholders, CI
+dogfood evidence, repository-wide `format` and intentionally fail-closed `migration-check`, CI
 runtime and release-tool pin drift,
 rollback procedure coverage, `ssealed doctor`, workflow `actionlint`, YAML parsing with `yq`,
 Action manifest contract drift, hosted CI workflow contract drift, dogfood workflow contract drift,
@@ -252,7 +252,7 @@ reviewing that output, then rerun the read-only orphan audit.
 
 ## Validation
 
-- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
+- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`
 - Release status: immutable `v0.x.y` Action tags are allowed by ADR 0031 and moving major alias
   `v0` is allowed by ADR 0034 after exact-SHA verification; public package publication and GitHub Marketplace publication remain blocked
 - Recent hosted CI validation evidence: `CI` workflow run `29052254866` passed on

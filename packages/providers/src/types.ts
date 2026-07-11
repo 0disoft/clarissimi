@@ -3,12 +3,14 @@ import type {
   ContributionAssessment,
   ContributionType,
   ContributorIdentity,
-  ImpactLevel
+  ImpactLevel,
 } from "@clarissimi/schemas";
 
 export interface ContributionDraftProvider {
   readonly id: string;
-  createAssessment(input: ProviderAssessmentInput): Promise<ContributionAssessment>;
+  createAssessment(
+    input: ProviderAssessmentInput,
+  ): Promise<ContributionAssessment>;
 }
 
 export interface ProviderAssessmentInput {

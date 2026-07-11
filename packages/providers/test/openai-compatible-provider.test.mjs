@@ -5,21 +5,21 @@ import { prepareEvidenceForProvider } from "@clarissimi/core";
 
 import {
   OpenAiCompatibleProviderError,
-  createOpenAiCompatibleContributionDraftProvider
+  createOpenAiCompatibleContributionDraftProvider,
 } from "../dist/index.js";
 
 const contributor = {
   platform: "github",
   id: "123456",
   login: "octocat",
-  profileUrl: "https://github.com/octocat"
+  profileUrl: "https://github.com/octocat",
 };
 
 const source = {
   repository: "example/project",
   event: "merged_pull_request",
   pullRequestNumber: 42,
-  mergedAt: "2026-07-08T00:00:00.000Z"
+  mergedAt: "2026-07-08T00:00:00.000Z",
 };
 
 function preparedEvidence() {
@@ -31,14 +31,14 @@ function preparedEvidence() {
         id: "PR-42",
         url: "https://github.com/example/project/pull/42",
         title: "Add parser regression coverage",
-        text: "Maintainer contact person@example.com confirmed the regression."
+        text: "Maintainer contact person@example.com confirmed the regression.",
       },
       {
         kind: "test",
         id: "tests/parser.test.ts",
-        title: "parser regression test"
-      }
-    ]
+        title: "parser regression test",
+      },
+    ],
   });
 }
 
@@ -52,7 +52,7 @@ test("creates a draft assessment from an OpenAI-compatible response", async () =
       requests.push({
         url: String(url),
         headers: init.headers,
-        body: JSON.parse(init.body)
+        body: JSON.parse(init.body),
       });
       return jsonResponse({
         choices: [
@@ -62,35 +62,37 @@ test("creates a draft assessment from an OpenAI-compatible response", async () =
                 contributionType: "test",
                 affectedArea: "parser regression coverage",
                 impactLevel: "medium",
-                evidenceSummary: "Added regression coverage based on the merged pull request and test evidence.",
+                evidenceSummary:
+                  "Added regression coverage based on the merged pull request and test evidence.",
                 suggestedBadge: "Regression Shield",
-                publicRecognitionText: "Added regression coverage for the parser.",
+                publicRecognitionText:
+                  "Added regression coverage for the parser.",
                 confidence: 0.82,
                 maintainerApprovalStatus: "approved",
                 contributor: {
                   platform: "github",
                   id: "999",
                   login: "changed",
-                  profileUrl: "https://github.com/changed"
+                  profileUrl: "https://github.com/changed",
                 },
                 source: {
                   repository: "other/repo",
                   event: "merged_pull_request",
-                  pullRequestNumber: 99
+                  pullRequestNumber: 99,
                 },
-                evidenceRefs: []
-              })
-            }
-          }
-        ]
+                evidenceRefs: [],
+              }),
+            },
+          },
+        ],
       });
-    }
+    },
   });
   const evidence = preparedEvidence();
 
   const assessment = await provider.createAssessment({
     contributor,
-    preparedEvidence: evidence
+    preparedEvidence: evidence,
   });
 
   assert.equal(provider.id, "openai-compatible");
@@ -105,8 +107,16 @@ test("creates a draft assessment from an OpenAI-compatible response", async () =
   assert.equal(requests[0].body.model, "clarissimi-test-model");
   assert.equal(requests[0].body.response_format.type, "json_object");
   assert.equal(requests[0].body.thinking, undefined);
-  assert.equal(requests[0].body.messages[0].content.includes("score shares"), true);
-  assert.equal(requests[0].body.messages[0].content.includes("recent time-window contribution percentages"), true);
+  assert.equal(
+    requests[0].body.messages[0].content.includes("score shares"),
+    true,
+  );
+  assert.equal(
+    requests[0].body.messages[0].content.includes(
+      "recent time-window contribution percentages",
+    ),
+    true,
+  );
   const requestText = JSON.stringify(requests[0].body);
   assert.equal(requestText.includes("person@example.com"), false);
   assert.equal(requestText.includes("[REDACTED]"), true);
@@ -121,7 +131,7 @@ test("can disable provider thinking for OpenAI-compatible providers that support
     fetch: async (url, init) => {
       requests.push({
         url: String(url),
-        body: JSON.parse(init.body)
+        body: JSON.parse(init.body),
       });
       return jsonResponse({
         choices: [
@@ -131,21 +141,23 @@ test("can disable provider thinking for OpenAI-compatible providers that support
                 contributionType: "test",
                 affectedArea: "parser regression coverage",
                 impactLevel: "medium",
-                evidenceSummary: "Added regression coverage based on test evidence.",
+                evidenceSummary:
+                  "Added regression coverage based on test evidence.",
                 suggestedBadge: "Regression Shield",
-                publicRecognitionText: "Added regression coverage for the parser.",
-                confidence: 0.76
-              })
-            }
-          }
-        ]
+                publicRecognitionText:
+                  "Added regression coverage for the parser.",
+                confidence: 0.76,
+              }),
+            },
+          },
+        ],
       });
-    }
+    },
   });
 
   const assessment = await provider.createAssessment({
     contributor,
-    preparedEvidence: preparedEvidence()
+    preparedEvidence: preparedEvidence(),
   });
 
   assert.equal(assessment.confidence, 0.76);
@@ -168,22 +180,24 @@ test("supports text-array message content", async () => {
                     contributionType: "test",
                     affectedArea: "parser regression coverage",
                     impactLevel: "medium",
-                    evidenceSummary: "Added regression coverage based on test evidence.",
+                    evidenceSummary:
+                      "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
-                    publicRecognitionText: "Added regression coverage for the parser.",
-                    confidence: 0.74
-                  })
-                }
-              ]
-            }
-          }
-        ]
-      })
+                    publicRecognitionText:
+                      "Added regression coverage for the parser.",
+                    confidence: 0.74,
+                  }),
+                },
+              ],
+            },
+          },
+        ],
+      }),
   });
 
   const assessment = await provider.createAssessment({
     contributor,
-    preparedEvidence: preparedEvidence()
+    preparedEvidence: preparedEvidence(),
   });
 
   assert.equal(assessment.confidence, 0.74);
@@ -204,22 +218,24 @@ test("accepts markdown-fenced JSON message content from compatible providers", a
                   contributionType: "test",
                   affectedArea: "parser regression coverage",
                   impactLevel: "medium",
-                  evidenceSummary: "Added regression coverage based on test evidence.",
+                  evidenceSummary:
+                    "Added regression coverage based on test evidence.",
                   suggestedBadge: "Regression Shield",
-                  publicRecognitionText: "Added regression coverage for the parser.",
-                  confidence: 0.71
+                  publicRecognitionText:
+                    "Added regression coverage for the parser.",
+                  confidence: 0.71,
                 }),
-                "```"
-              ].join("\n")
-            }
-          }
-        ]
-      })
+                "```",
+              ].join("\n"),
+            },
+          },
+        ],
+      }),
   });
 
   const assessment = await provider.createAssessment({
     contributor,
-    preparedEvidence: preparedEvidence()
+    preparedEvidence: preparedEvidence(),
   });
 
   assert.equal(assessment.confidence, 0.71);
@@ -233,24 +249,24 @@ test("does not expose raw provider error bodies", async () => {
       jsonResponse(
         {
           error: {
-            message: "RAW_PROVIDER_ERROR_BODY"
-          }
+            message: "RAW_PROVIDER_ERROR_BODY",
+          },
         },
-        500
-      )
+        500,
+      ),
   });
 
   await assert.rejects(
     () =>
       provider.createAssessment({
         contributor,
-        preparedEvidence: preparedEvidence()
+        preparedEvidence: preparedEvidence(),
       }),
     (error) =>
-      error instanceof OpenAiCompatibleProviderError
-      && error.code === "http_error"
-      && error.message.includes("500")
-      && !error.message.includes("RAW_PROVIDER_ERROR_BODY")
+      error instanceof OpenAiCompatibleProviderError &&
+      error.code === "http_error" &&
+      error.message.includes("500") &&
+      !error.message.includes("RAW_PROVIDER_ERROR_BODY"),
   );
 });
 
@@ -267,27 +283,28 @@ test("rejects invalid model drafts after schema validation", async () => {
                 contributionType: "test",
                 affectedArea: "parser regression coverage",
                 impactLevel: "medium",
-                evidenceSummary: "Added regression coverage based on test evidence.",
+                evidenceSummary:
+                  "Added regression coverage based on test evidence.",
                 suggestedBadge: "Regression Shield",
                 publicRecognitionText: "Top 1 contributor on the leaderboard.",
-                confidence: 0.9
-              })
-            }
-          }
-        ]
-      })
+                confidence: 0.9,
+              }),
+            },
+          },
+        ],
+      }),
   });
 
   await assert.rejects(
     () =>
       provider.createAssessment({
         contributor,
-        preparedEvidence: preparedEvidence()
+        preparedEvidence: preparedEvidence(),
       }),
     (error) =>
-      error instanceof OpenAiCompatibleProviderError
-      && error.code === "invalid_assessment"
-      && error.issues.some((issue) => issue.code === "public_ranking_language")
+      error instanceof OpenAiCompatibleProviderError &&
+      error.code === "invalid_assessment" &&
+      error.issues.some((issue) => issue.code === "public_ranking_language"),
   );
 });
 
@@ -304,27 +321,29 @@ test("rejects model drafts that include public contribution share language", asy
                 contributionType: "test",
                 affectedArea: "parser regression coverage",
                 impactLevel: "medium",
-                evidenceSummary: "Held a 22 percent share of the last 3 months contribution weight.",
+                evidenceSummary:
+                  "Held a 22 percent share of the last 3 months contribution weight.",
                 suggestedBadge: "Regression Shield",
-                publicRecognitionText: "Added regression coverage for the parser.",
-                confidence: 0.9
-              })
-            }
-          }
-        ]
-      })
+                publicRecognitionText:
+                  "Added regression coverage for the parser.",
+                confidence: 0.9,
+              }),
+            },
+          },
+        ],
+      }),
   });
 
   await assert.rejects(
     () =>
       provider.createAssessment({
         contributor,
-        preparedEvidence: preparedEvidence()
+        preparedEvidence: preparedEvidence(),
       }),
     (error) =>
-      error instanceof OpenAiCompatibleProviderError
-      && error.code === "invalid_assessment"
-      && error.issues.some((issue) => issue.code === "public_ranking_language")
+      error instanceof OpenAiCompatibleProviderError &&
+      error.code === "invalid_assessment" &&
+      error.issues.some((issue) => issue.code === "public_ranking_language"),
   );
 });
 
@@ -333,12 +352,12 @@ test("rejects missing credentials without reading environment variables", () => 
     () =>
       createOpenAiCompatibleContributionDraftProvider({
         model: "clarissimi-test-model",
-        token: " "
+        token: " ",
       }),
     (error) =>
-      error instanceof OpenAiCompatibleProviderError
-      && error.code === "invalid_options"
-      && error.message.includes("token")
+      error instanceof OpenAiCompatibleProviderError &&
+      error.code === "invalid_options" &&
+      error.message.includes("token"),
   );
 });
 
@@ -348,12 +367,12 @@ test("rejects unsupported thinking modes without reading environment variables",
       createOpenAiCompatibleContributionDraftProvider({
         model: "clarissimi-test-model",
         token: "unit-token",
-        thinking: "enabled"
+        thinking: "enabled",
       }),
     (error) =>
-      error instanceof OpenAiCompatibleProviderError
-      && error.code === "invalid_options"
-      && error.message.includes("thinking")
+      error instanceof OpenAiCompatibleProviderError &&
+      error.code === "invalid_options" &&
+      error.message.includes("thinking"),
   );
 });
 
@@ -363,6 +382,6 @@ function jsonResponse(body, status = 200) {
     status,
     async text() {
       return JSON.stringify(body);
-    }
+    },
   };
 }

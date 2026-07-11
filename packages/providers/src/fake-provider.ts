@@ -7,13 +7,13 @@ import {
   type ContributionType,
   type EvidenceKind,
   type ImpactLevel,
-  type ValidationIssue
+  type ValidationIssue,
 } from "@clarissimi/schemas";
 
 import type {
   ContributionDraftProvider,
   ProviderAssessmentHints,
-  ProviderAssessmentInput
+  ProviderAssessmentInput,
 } from "./types.js";
 
 const DEFAULT_PROVIDER_ID = "fake-deterministic";
@@ -37,54 +37,70 @@ export class FakeProviderAssessmentError extends Error {
 }
 
 export function createFakeContributionDraftProvider(
-  options: FakeProviderOptions = {}
+  options: FakeProviderOptions = {},
 ): ContributionDraftProvider {
   return {
     id: options.id ?? DEFAULT_PROVIDER_ID,
-    async createAssessment(input: ProviderAssessmentInput): Promise<ContributionAssessment> {
+    async createAssessment(
+      input: ProviderAssessmentInput,
+    ): Promise<ContributionAssessment> {
       return createFakeAssessment(input, options.defaults);
-    }
+    },
   };
 }
 
 export function createFakeAssessment(
   input: ProviderAssessmentInput,
-  defaults: ProviderAssessmentHints = {}
+  defaults: ProviderAssessmentHints = {},
 ): ContributionAssessment {
   const hints = input.hints ?? {};
   const contributionType =
-    hints.contributionType ?? defaults.contributionType ?? inferContributionType(input.preparedEvidence);
+    hints.contributionType ??
+    defaults.contributionType ??
+    inferContributionType(input.preparedEvidence);
   const affectedArea = safePublicNarrative(
     firstNonEmpty(
       hints.affectedArea,
       defaults.affectedArea,
-      inferAffectedArea(input.preparedEvidence)
+      inferAffectedArea(input.preparedEvidence),
     ),
-    DEFAULT_AFFECTED_AREA
+    DEFAULT_AFFECTED_AREA,
   );
-  const impactLevel = hints.impactLevel ?? defaults.impactLevel ?? inferImpactLevel(input.preparedEvidence);
+  const impactLevel =
+    hints.impactLevel ??
+    defaults.impactLevel ??
+    inferImpactLevel(input.preparedEvidence);
   const suggestedBadge = safePublicNarrative(
     firstNonEmpty(
       hints.suggestedBadge,
       defaults.suggestedBadge,
-      inferSuggestedBadge(contributionType)
+      inferSuggestedBadge(contributionType),
     ),
-    inferSuggestedBadge(contributionType)
+    inferSuggestedBadge(contributionType),
   );
-  const confidence = clampConfidence(hints.confidence ?? defaults.confidence ?? DEFAULT_CONFIDENCE);
+  const confidence = clampConfidence(
+    hints.confidence ?? defaults.confidence ?? DEFAULT_CONFIDENCE,
+  );
   const assessment = {
     schemaVersion: ASSESSMENT_SCHEMA_VERSION,
     contributor: input.contributor,
     contributionType,
     affectedArea,
     impactLevel,
-    evidenceSummary: buildEvidenceSummary(input.preparedEvidence, contributionType, affectedArea),
+    evidenceSummary: buildEvidenceSummary(
+      input.preparedEvidence,
+      contributionType,
+      affectedArea,
+    ),
     evidenceRefs: input.preparedEvidence.evidenceRefs,
     suggestedBadge,
-    publicRecognitionText: buildPublicRecognitionText(contributionType, affectedArea),
+    publicRecognitionText: buildPublicRecognitionText(
+      contributionType,
+      affectedArea,
+    ),
     confidence,
     maintainerApprovalStatus: "draft",
-    source: input.preparedEvidence.source
+    source: input.preparedEvidence.source,
   } satisfies ContributionAssessment;
 
   const result = validateContributionAssessment(assessment);
@@ -95,7 +111,9 @@ export function createFakeAssessment(
   return result.value;
 }
 
-function inferContributionType(evidence: PreparedProviderEvidence): ContributionType {
+function inferContributionType(
+  evidence: PreparedProviderEvidence,
+): ContributionType {
   if (hasEvidenceKind(evidence, "test")) {
     return "test";
   }
@@ -152,14 +170,20 @@ function inferSuggestedBadge(contributionType: ContributionType): string {
 function buildEvidenceSummary(
   evidence: PreparedProviderEvidence,
   contributionType: ContributionType,
-  affectedArea: string
+  affectedArea: string,
 ): string {
   const primary = evidence.items[0];
-  const primaryLabel = primary === undefined ? "provided evidence" : `${primary.kind} ${primary.id}`;
+  const primaryLabel =
+    primary === undefined
+      ? "provided evidence"
+      : `${primary.kind} ${primary.id}`;
   return `Drafted ${contributionType} recognition for ${affectedArea} from ${primaryLabel}.`;
 }
 
-function buildPublicRecognitionText(contributionType: ContributionType, affectedArea: string): string {
+function buildPublicRecognitionText(
+  contributionType: ContributionType,
+  affectedArea: string,
+): string {
   switch (contributionType) {
     case "test":
       return `Added regression coverage for ${affectedArea}.`;
@@ -174,7 +198,10 @@ function buildPublicRecognitionText(contributionType: ContributionType, affected
   }
 }
 
-function hasEvidenceKind(evidence: PreparedProviderEvidence, kind: EvidenceKind): boolean {
+function hasEvidenceKind(
+  evidence: PreparedProviderEvidence,
+  kind: EvidenceKind,
+): boolean {
   return evidence.items.some((item) => item.kind === kind);
 }
 

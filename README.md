@@ -257,13 +257,15 @@ before code is generated.
 ## Validation
 
 Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,
-`pnpm run smoke`, `pnpm run check`, and `pnpm run contract`, plus repository hygiene checks.
+`pnpm run format`, `pnpm run smoke`, `pnpm run check`, and `pnpm run contract`, plus repository
+hygiene checks.
 
 The current executable checks are:
 
 - `pnpm run typecheck`
 - `pnpm run test`
 - `pnpm run lint`
+- `pnpm run format`
 - `pnpm run contract`
 - `pnpm run smoke`
 - `pnpm run docs`
@@ -284,8 +286,9 @@ Release-only credentialed checks are:
 - `pnpm run live-provider-smoke`
 - `pnpm run hosted-live-provider-smoke -- --model <provider-model>`
 
-`format` intentionally fails closed until maintainers accept a formatter baseline ADR. `oxlint` is
-the current lint gate; `oxfmt` is not wired into the repository formatter surface yet.
+`format` runs the repository-wide Prettier baseline accepted by ADR 0035. It checks maintained
+TypeScript, JavaScript, JSON, Markdown, and YAML sources while ignoring generated Action bundles
+and build/cache output. `oxlint` remains the JavaScript and TypeScript lint gate.
 `migration-check` intentionally fails until configured.
 
 `package.json` is project-owned after the first implementation package. `ssealed doctor` remains

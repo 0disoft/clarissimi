@@ -4,7 +4,7 @@ import type {
   LiveGitHubPullRequest,
   LiveGitHubPullRequestFile,
   LiveGitHubPullRequestLookup,
-  LiveGitHubReviewComment
+  LiveGitHubReviewComment,
 } from "./live.js";
 
 const DEFAULT_GITHUB_API_URL = "https://api.github.com";
@@ -26,24 +26,36 @@ export class GitHubApiClientError extends Error {
   }
 }
 
-export function createGitHubApiClient(options: GitHubApiClientOptions = {}): LiveGitHubClient {
+export function createGitHubApiClient(
+  options: GitHubApiClientOptions = {},
+): LiveGitHubClient {
   const apiUrl = normalizeApiUrl(options.apiUrl);
   const fetchImpl = options.fetch ?? fetch;
 
   return {
-    async getPullRequest(input: LiveGitHubPullRequestLookup): Promise<LiveGitHubPullRequest> {
-      const response = await requestJson(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}`);
+    async getPullRequest(
+      input: LiveGitHubPullRequestLookup,
+    ): Promise<LiveGitHubPullRequest> {
+      const response = await requestJson(
+        fetchImpl,
+        options.token,
+        `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}`,
+      );
       return parsePullRequest(response);
     },
 
     async listPullRequestFiles(
-      input: LiveGitHubPullRequestLookup
+      input: LiveGitHubPullRequestLookup,
     ): Promise<readonly LiveGitHubPullRequestFile[]> {
-      const response = await requestJson(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/files?per_page=${DEFAULT_PAGE_SIZE}`);
+      const response = await requestJson(
+        fetchImpl,
+        options.token,
+        `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/files?per_page=${DEFAULT_PAGE_SIZE}`,
+      );
       if (!Array.isArray(response)) {
         throw new GitHubApiClientError(
           "unexpected_response",
-          "GitHub pull request files response must be an array."
+          "GitHub pull request files response must be an array.",
         );
       }
 
@@ -51,29 +63,33 @@ export function createGitHubApiClient(options: GitHubApiClientOptions = {}): Liv
     },
 
     async listPullRequestReviewComments(
-      input: LiveGitHubPullRequestLookup
+      input: LiveGitHubPullRequestLookup,
     ): Promise<readonly LiveGitHubReviewComment[]> {
-      const response = await requestJson(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/comments?per_page=${DEFAULT_PAGE_SIZE}`);
+      const response = await requestJson(
+        fetchImpl,
+        options.token,
+        `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/comments?per_page=${DEFAULT_PAGE_SIZE}`,
+      );
       if (!Array.isArray(response)) {
         throw new GitHubApiClientError(
           "unexpected_response",
-          "GitHub pull request review comments response must be an array."
+          "GitHub pull request review comments response must be an array.",
         );
       }
 
       return response.map(parseReviewComment);
-    }
+    },
   };
 }
 
 async function requestJson(
   fetchImpl: typeof fetch,
   token: string | undefined,
-  url: string
+  url: string,
 ): Promise<unknown> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
-    "X-GitHub-Api-Version": "2022-11-28"
+    "X-GitHub-Api-Version": "2022-11-28",
   };
   const normalizedToken = token?.trim();
   if (normalizedToken !== undefined && normalizedToken.length > 0) {
@@ -82,7 +98,7 @@ async function requestJson(
 
   const response = await fetchImpl(url, {
     method: "GET",
-    headers
+    headers,
   });
   const text = await response.text();
   const body = parseOptionalJson(text);
@@ -99,24 +115,36 @@ function parsePullRequest(value: unknown): LiveGitHubPullRequest {
 
   const user: LiveGitHubPullRequest["user"] = {
     id: expectStringOrNumber(value.user.id, "user.id"),
-    login: expectString(value.user.login, "user.login")
+    login: expectString(value.user.login, "user.login"),
   };
-  assignOptional(user, "htmlUrl", expectOptionalNullableString(value.user.html_url, "user.html_url"));
+  assignOptional(
+    user,
+    "htmlUrl",
+    expectOptionalNullableString(value.user.html_url, "user.html_url"),
+  );
 
   const pullRequest: LiveGitHubPullRequest = {
     number: expectNumber(value.number, "number"),
     title: expectString(value.title, "title"),
     htmlUrl: expectString(value.html_url, "html_url"),
     user,
-    labels: parseLabels(value.labels)
+    labels: parseLabels(value.labels),
   };
 
-  assignOptional(pullRequest, "body", expectOptionalNullableString(value.body, "body"));
-  assignOptional(pullRequest, "mergedAt", expectOptionalNullableString(value.merged_at, "merged_at"));
+  assignOptional(
+    pullRequest,
+    "body",
+    expectOptionalNullableString(value.body, "body"),
+  );
+  assignOptional(
+    pullRequest,
+    "mergedAt",
+    expectOptionalNullableString(value.merged_at, "merged_at"),
+  );
   assignOptional(
     pullRequest,
     "mergeCommitSha",
-    expectOptionalNullableString(value.merge_commit_sha, "merge_commit_sha")
+    expectOptionalNullableString(value.merge_commit_sha, "merge_commit_sha"),
   );
 
   return pullRequest;
@@ -126,33 +154,69 @@ function parsePullRequestFile(value: unknown): LiveGitHubPullRequestFile {
   assertRecord(value, "pull request file");
 
   const file: LiveGitHubPullRequestFile = {
-    filename: expectString(value.filename, "filename")
+    filename: expectString(value.filename, "filename"),
   };
 
-  assignOptional(file, "status", expectOptionalNullableString(value.status, "status"));
-  assignOptional(file, "additions", expectOptionalNullableNumber(value.additions, "additions"));
-  assignOptional(file, "deletions", expectOptionalNullableNumber(value.deletions, "deletions"));
-  assignOptional(file, "patch", expectOptionalNullableString(value.patch, "patch"));
+  assignOptional(
+    file,
+    "status",
+    expectOptionalNullableString(value.status, "status"),
+  );
+  assignOptional(
+    file,
+    "additions",
+    expectOptionalNullableNumber(value.additions, "additions"),
+  );
+  assignOptional(
+    file,
+    "deletions",
+    expectOptionalNullableNumber(value.deletions, "deletions"),
+  );
+  assignOptional(
+    file,
+    "patch",
+    expectOptionalNullableString(value.patch, "patch"),
+  );
   return file;
 }
 
 function parseReviewComment(value: unknown): LiveGitHubReviewComment {
   assertRecord(value, "review comment");
   const comment: LiveGitHubReviewComment = {
-    id: expectStringOrNumber(value.id, "id")
+    id: expectStringOrNumber(value.id, "id"),
   };
 
-  assignOptional(comment, "body", expectOptionalNullableString(value.body, "body"));
-  assignOptional(comment, "htmlUrl", expectOptionalNullableString(value.html_url, "html_url"));
-  assignOptional(comment, "path", expectOptionalNullableString(value.path, "path"));
-  assignOptional(comment, "diffHunk", expectOptionalNullableString(value.diff_hunk, "diff_hunk"));
+  assignOptional(
+    comment,
+    "body",
+    expectOptionalNullableString(value.body, "body"),
+  );
+  assignOptional(
+    comment,
+    "htmlUrl",
+    expectOptionalNullableString(value.html_url, "html_url"),
+  );
+  assignOptional(
+    comment,
+    "path",
+    expectOptionalNullableString(value.path, "path"),
+  );
+  assignOptional(
+    comment,
+    "diffHunk",
+    expectOptionalNullableString(value.diff_hunk, "diff_hunk"),
+  );
 
   if (isRecord(value.user)) {
     const user: LiveGitHubActor = {
       id: expectStringOrNumber(value.user.id, "user.id"),
-      login: expectString(value.user.login, "user.login")
+      login: expectString(value.user.login, "user.login"),
     };
-    assignOptional(user, "htmlUrl", expectOptionalNullableString(value.user.html_url, "user.html_url"));
+    assignOptional(
+      user,
+      "htmlUrl",
+      expectOptionalNullableString(value.user.html_url, "user.html_url"),
+    );
     assignOptional(comment, "user", user);
   }
 
@@ -165,18 +229,24 @@ function parseLabels(value: unknown): readonly { readonly name: string }[] {
   }
 
   if (!Array.isArray(value)) {
-    throw new GitHubApiClientError("unexpected_response", "Pull request labels must be an array.");
+    throw new GitHubApiClientError(
+      "unexpected_response",
+      "Pull request labels must be an array.",
+    );
   }
 
   return value.map((entry) => {
     assertRecord(entry, "label");
     return {
-      name: expectString(entry.name, "label.name")
+      name: expectString(entry.name, "label.name"),
     };
   });
 }
 
-function mapGitHubApiError(status: number, body: unknown): GitHubApiClientError {
+function mapGitHubApiError(
+  status: number,
+  body: unknown,
+): GitHubApiClientError {
   const message = githubMessage(body);
   if (status === 401 || status === 403) {
     return new GitHubApiClientError("permission_denied", message);
@@ -209,7 +279,7 @@ function parseOptionalJson(text: string): unknown {
     return JSON.parse(text) as unknown;
   } catch {
     return {
-      message: text
+      message: text,
     };
   }
 }
@@ -226,14 +296,17 @@ function expectString(value: unknown, field: string): string {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new GitHubApiClientError(
       "unexpected_response",
-      `GitHub API response field ${field} must be a non-empty string.`
+      `GitHub API response field ${field} must be a non-empty string.`,
     );
   }
 
   return value;
 }
 
-function expectOptionalNullableString(value: unknown, field: string): string | null | undefined {
+function expectOptionalNullableString(
+  value: unknown,
+  field: string,
+): string | null | undefined {
   if (value === undefined || value === null) {
     return value;
   }
@@ -245,14 +318,17 @@ function expectNumber(value: unknown, field: string): number {
   if (typeof value !== "number" || !Number.isInteger(value)) {
     throw new GitHubApiClientError(
       "unexpected_response",
-      `GitHub API response field ${field} must be an integer.`
+      `GitHub API response field ${field} must be an integer.`,
     );
   }
 
   return value;
 }
 
-function expectOptionalNullableNumber(value: unknown, field: string): number | null | undefined {
+function expectOptionalNullableNumber(
+  value: unknown,
+  field: string,
+): number | null | undefined {
   if (value === undefined || value === null) {
     return value;
   }
@@ -264,18 +340,21 @@ function expectStringOrNumber(value: unknown, field: string): string | number {
   if (typeof value !== "string" && typeof value !== "number") {
     throw new GitHubApiClientError(
       "unexpected_response",
-      `GitHub API response field ${field} must be a string or number.`
+      `GitHub API response field ${field} must be a string or number.`,
     );
   }
 
   return value;
 }
 
-function assertRecord(value: unknown, name: string): asserts value is Record<string, unknown> {
+function assertRecord(
+  value: unknown,
+  name: string,
+): asserts value is Record<string, unknown> {
   if (!isRecord(value)) {
     throw new GitHubApiClientError(
       "unexpected_response",
-      `GitHub API ${name} response must be an object.`
+      `GitHub API ${name} response must be an object.`,
     );
   }
 }
@@ -287,7 +366,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function assignOptional<T extends object, K extends keyof T>(
   target: T,
   key: K,
-  value: T[K] | undefined
+  value: T[K] | undefined,
 ): void {
   if (value !== undefined) {
     target[key] = value;

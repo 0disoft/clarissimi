@@ -2,12 +2,12 @@ import type { EvidenceItemInput } from "@clarissimi/core";
 
 import {
   collectMergedPullRequestEvidence,
-  GitHubEvidenceCollectionError
+  GitHubEvidenceCollectionError,
 } from "./merged-pr.js";
 import type {
   CollectedGitHubEvidence,
   GitHubChangedFileFixture,
-  GitHubMergedPullRequestFixture
+  GitHubMergedPullRequestFixture,
 } from "./types.js";
 
 const DEFAULT_REVIEW_COMMENT_LIMIT = 25;
@@ -24,10 +24,14 @@ export interface LiveGitHubMergedPullRequestInput {
 }
 
 export interface LiveGitHubClient {
-  getPullRequest(input: LiveGitHubPullRequestLookup): Promise<LiveGitHubPullRequest>;
-  listPullRequestFiles(input: LiveGitHubPullRequestLookup): Promise<readonly LiveGitHubPullRequestFile[]>;
+  getPullRequest(
+    input: LiveGitHubPullRequestLookup,
+  ): Promise<LiveGitHubPullRequest>;
+  listPullRequestFiles(
+    input: LiveGitHubPullRequestLookup,
+  ): Promise<readonly LiveGitHubPullRequestFile[]>;
   listPullRequestReviewComments(
-    input: LiveGitHubPullRequestLookup
+    input: LiveGitHubPullRequestLookup,
   ): Promise<readonly LiveGitHubReviewComment[]>;
 }
 
@@ -85,122 +89,155 @@ export class LiveGitHubCollectionError extends Error {
 }
 
 export async function collectLiveMergedPullRequestEvidence(
-  input: LiveGitHubMergedPullRequestInput
+  input: LiveGitHubMergedPullRequestInput,
 ): Promise<CollectedGitHubEvidence> {
   validateLiveInput(input);
 
   const lookup = {
     repository: input.repository,
-    pullRequestNumber: input.pullRequestNumber
+    pullRequestNumber: input.pullRequestNumber,
   };
   const [pullRequest, files, reviewComments] = await Promise.all([
     input.client.getPullRequest(lookup),
     input.client.listPullRequestFiles(lookup),
-    input.client.listPullRequestReviewComments(lookup)
+    input.client.listPullRequestReviewComments(lookup),
   ]);
 
   if (pullRequest.number !== input.pullRequestNumber) {
     throw new LiveGitHubCollectionError(
       "pull_request_number_mismatch",
-      "Live GitHub collector received a pull request for a different number."
+      "Live GitHub collector received a pull request for a different number.",
     );
   }
 
   if (normalizeOptionalString(pullRequest.mergedAt) === undefined) {
     throw new LiveGitHubCollectionError(
       "pull_request_not_merged",
-      "Live GitHub collector requires a merged pull request."
+      "Live GitHub collector requires a merged pull request.",
     );
   }
 
-  const fixture = toMergedPullRequestFixture(input.repository, pullRequest, files);
+  const fixture = toMergedPullRequestFixture(
+    input.repository,
+    pullRequest,
+    files,
+  );
   const collected = collectMergedPullRequestEvidence(fixture);
   const extraItems = [
     ...buildLinkedIssueItems(
       pullRequest,
-      input.linkedIssueLimit ?? DEFAULT_LINKED_ISSUE_LIMIT
+      input.linkedIssueLimit ?? DEFAULT_LINKED_ISSUE_LIMIT,
     ),
     ...buildReviewCommentItems(
       reviewComments,
-      input.reviewCommentLimit ?? DEFAULT_REVIEW_COMMENT_LIMIT
-    )
+      input.reviewCommentLimit ?? DEFAULT_REVIEW_COMMENT_LIMIT,
+    ),
   ];
 
   return {
     contributor: collected.contributor,
     evidence: {
       source: collected.evidence.source,
-      items: dedupeEvidenceItems([...collected.evidence.items, ...extraItems])
-    }
+      items: dedupeEvidenceItems([...collected.evidence.items, ...extraItems]),
+    },
   };
 }
 
 function toMergedPullRequestFixture(
   repository: string,
   pullRequest: LiveGitHubPullRequest,
-  files: readonly LiveGitHubPullRequestFile[]
+  files: readonly LiveGitHubPullRequestFile[],
 ): GitHubMergedPullRequestFixture {
   const fixture: GitHubMergedPullRequestFixture = {
     repository: {
-      fullName: repository
+      fullName: repository,
     },
     pullRequest: {
       number: pullRequest.number,
       title: pullRequest.title,
       htmlUrl: pullRequest.htmlUrl,
-      mergedAt: normalizeRequiredString(pullRequest.mergedAt, "pullRequest.mergedAt"),
+      mergedAt: normalizeRequiredString(
+        pullRequest.mergedAt,
+        "pullRequest.mergedAt",
+      ),
       user: {
         id: pullRequest.user.id,
-        login: pullRequest.user.login
+        login: pullRequest.user.login,
       },
       labels: (pullRequest.labels ?? []).map((label) => ({ name: label.name })),
-      changedFiles: files.map(toChangedFileFixture)
-    }
+      changedFiles: files.map(toChangedFileFixture),
+    },
   };
 
-  assignOptional(fixture.pullRequest, "body", normalizeOptionalString(pullRequest.body));
-  assignOptional(fixture.pullRequest.user, "htmlUrl", normalizeOptionalString(pullRequest.user.htmlUrl));
+  assignOptional(
+    fixture.pullRequest,
+    "body",
+    normalizeOptionalString(pullRequest.body),
+  );
+  assignOptional(
+    fixture.pullRequest.user,
+    "htmlUrl",
+    normalizeOptionalString(pullRequest.user.htmlUrl),
+  );
   assignOptional(
     fixture.pullRequest,
     "mergeCommitSha",
-    normalizeOptionalString(pullRequest.mergeCommitSha)
+    normalizeOptionalString(pullRequest.mergeCommitSha),
   );
 
   return fixture;
 }
 
-function toChangedFileFixture(file: LiveGitHubPullRequestFile): GitHubChangedFileFixture {
+function toChangedFileFixture(
+  file: LiveGitHubPullRequestFile,
+): GitHubChangedFileFixture {
   const changedFile: GitHubChangedFileFixture = {
-    filename: file.filename
+    filename: file.filename,
   };
 
   assignOptional(changedFile, "status", normalizeOptionalString(file.status));
-  assignOptional(changedFile, "additions", normalizeOptionalNonNegativeInteger(file.additions));
-  assignOptional(changedFile, "deletions", normalizeOptionalNonNegativeInteger(file.deletions));
-  assignOptional(changedFile, "patchExcerpt", normalizeOptionalExcerpt(file.patch));
+  assignOptional(
+    changedFile,
+    "additions",
+    normalizeOptionalNonNegativeInteger(file.additions),
+  );
+  assignOptional(
+    changedFile,
+    "deletions",
+    normalizeOptionalNonNegativeInteger(file.deletions),
+  );
+  assignOptional(
+    changedFile,
+    "patchExcerpt",
+    normalizeOptionalExcerpt(file.patch),
+  );
   return changedFile;
 }
 
 function buildLinkedIssueItems(
   pullRequest: LiveGitHubPullRequest,
-  limit: number
+  limit: number,
 ): EvidenceItemInput[] {
   const references = collectLinkedIssueRefs(
     `${pullRequest.title}\n${pullRequest.body ?? ""}`,
-    limit
+    limit,
   );
 
   return references.map((reference) => ({
     kind: "issue",
     id: reference,
-    title: `Linked issue candidate ${reference}`
+    title: `Linked issue candidate ${reference}`,
   }));
 }
 
-function collectLinkedIssueRefs(value: string, limit: number): readonly string[] {
+function collectLinkedIssueRefs(
+  value: string,
+  limit: number,
+): readonly string[] {
   const refs: string[] = [];
   const seen = new Set<string>();
-  const pattern = /(?:^|[\s([:{])(?:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)?#([1-9][0-9]{0,8})\b/g;
+  const pattern =
+    /(?:^|[\s([:{])(?:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)?#([1-9][0-9]{0,8})\b/g;
   let match: RegExpExecArray | null;
 
   while ((match = pattern.exec(value)) !== null && refs.length < limit) {
@@ -216,19 +253,26 @@ function collectLinkedIssueRefs(value: string, limit: number): readonly string[]
 
 function buildReviewCommentItems(
   comments: readonly LiveGitHubReviewComment[],
-  limit: number
+  limit: number,
 ): EvidenceItemInput[] {
   return comments.slice(0, limit).map((comment) => {
     const id = `review-comment:${String(comment.id)}`;
     const path = normalizeOptionalString(comment.path);
-    const title = path === undefined ? `Review comment ${comment.id}` : `Review comment on ${path}`;
+    const title =
+      path === undefined
+        ? `Review comment ${comment.id}`
+        : `Review comment on ${path}`;
     const item: EvidenceItemInput = {
       kind: "review",
       id,
-      title
+      title,
     };
 
-    assignOptional(item, "url", normalizeOptionalHttpsUrl(comment.htmlUrl, "reviewComment.htmlUrl"));
+    assignOptional(
+      item,
+      "url",
+      normalizeOptionalHttpsUrl(comment.htmlUrl, "reviewComment.htmlUrl"),
+    );
     assignOptional(item, "excerpt", normalizeOptionalExcerpt(comment.body));
     return item;
   });
@@ -238,14 +282,17 @@ function validateLiveInput(input: LiveGitHubMergedPullRequestInput): void {
   if (!REPOSITORY_NAME_PATTERN.test(input.repository)) {
     throw new LiveGitHubCollectionError(
       "invalid_repository",
-      "Live GitHub collector repository must use owner/name format."
+      "Live GitHub collector repository must use owner/name format.",
     );
   }
 
-  if (!Number.isInteger(input.pullRequestNumber) || input.pullRequestNumber <= 0) {
+  if (
+    !Number.isInteger(input.pullRequestNumber) ||
+    input.pullRequestNumber <= 0
+  ) {
     throw new LiveGitHubCollectionError(
       "invalid_pull_request_number",
-      "Live GitHub collector pull request number must be a positive integer."
+      "Live GitHub collector pull request number must be a positive integer.",
     );
   }
 
@@ -261,24 +308,29 @@ function validateLimit(value: number | undefined, code: string): void {
   if (!Number.isInteger(value) || value < 0 || value > 100) {
     throw new LiveGitHubCollectionError(
       code,
-      "Live GitHub collector limits must be integers between 0 and 100."
+      "Live GitHub collector limits must be integers between 0 and 100.",
     );
   }
 }
 
 function normalizeRequiredString(
   value: string | null | undefined,
-  field: string
+  field: string,
 ): string {
   const normalized = normalizeOptionalString(value);
   if (normalized === undefined) {
-    throw new GitHubEvidenceCollectionError(field, `${field} must be a non-empty string.`);
+    throw new GitHubEvidenceCollectionError(
+      field,
+      `${field} must be a non-empty string.`,
+    );
   }
 
   return normalized;
 }
 
-function normalizeOptionalString(value: string | null | undefined): string | undefined {
+function normalizeOptionalString(
+  value: string | null | undefined,
+): string | undefined {
   if (value === undefined || value === null) {
     return undefined;
   }
@@ -287,7 +339,9 @@ function normalizeOptionalString(value: string | null | undefined): string | und
   return normalized.length === 0 ? undefined : normalized;
 }
 
-function normalizeOptionalExcerpt(value: string | null | undefined): string | undefined {
+function normalizeOptionalExcerpt(
+  value: string | null | undefined,
+): string | undefined {
   const normalized = normalizeOptionalString(value);
   if (normalized === undefined) {
     return undefined;
@@ -300,7 +354,7 @@ function normalizeOptionalExcerpt(value: string | null | undefined): string | un
 
 function normalizeOptionalHttpsUrl(
   value: string | null | undefined,
-  field: string
+  field: string,
 ): string | undefined {
   const normalized = normalizeOptionalString(value);
   if (normalized === undefined) {
@@ -310,20 +364,28 @@ function normalizeOptionalHttpsUrl(
   try {
     const parsed = new URL(normalized);
     if (parsed.protocol !== "https:") {
-      throw new GitHubEvidenceCollectionError(field, `${field} must use https.`);
+      throw new GitHubEvidenceCollectionError(
+        field,
+        `${field} must use https.`,
+      );
     }
   } catch (error) {
     if (error instanceof GitHubEvidenceCollectionError) {
       throw error;
     }
 
-    throw new GitHubEvidenceCollectionError(field, `${field} must be a valid URL.`);
+    throw new GitHubEvidenceCollectionError(
+      field,
+      `${field} must be a valid URL.`,
+    );
   }
 
   return normalized;
 }
 
-function normalizeOptionalNonNegativeInteger(value: number | null | undefined): number | undefined {
+function normalizeOptionalNonNegativeInteger(
+  value: number | null | undefined,
+): number | undefined {
   if (value === undefined || value === null) {
     return undefined;
   }
@@ -331,14 +393,16 @@ function normalizeOptionalNonNegativeInteger(value: number | null | undefined): 
   if (!Number.isInteger(value) || value < 0) {
     throw new GitHubEvidenceCollectionError(
       "pullRequest.changedFiles[]",
-      "Changed file additions and deletions must be non-negative integers when provided."
+      "Changed file additions and deletions must be non-negative integers when provided.",
     );
   }
 
   return value;
 }
 
-function dedupeEvidenceItems(items: readonly EvidenceItemInput[]): EvidenceItemInput[] {
+function dedupeEvidenceItems(
+  items: readonly EvidenceItemInput[],
+): EvidenceItemInput[] {
   const seen = new Set<string>();
   const deduped: EvidenceItemInput[] = [];
 
@@ -358,7 +422,7 @@ function dedupeEvidenceItems(items: readonly EvidenceItemInput[]): EvidenceItemI
 function assignOptional<T extends object, K extends keyof T>(
   target: T,
   key: K,
-  value: T[K] | undefined
+  value: T[K] | undefined,
 ): void {
   if (value !== undefined) {
     target[key] = value;

@@ -37,12 +37,12 @@ SLOs are local and repository-scoped:
 
 Dependency tiers:
 
-| Tier | Dependency | Failure response |
-| --- | --- | --- |
-| Tier 0 | Git repository and `.clarissimi/contributions.jsonl` | Stop publication, restore or revert repository state. |
+| Tier   | Dependency                                                | Failure response                                                           |
+| ------ | --------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Tier 0 | Git repository and `.clarissimi/contributions.jsonl`      | Stop publication, restore or revert repository state.                      |
 | Tier 1 | GitHub Actions, branch protection, proposal pull requests | Stop write-mode dogfood, use local validation until hosted checks recover. |
-| Tier 2 | Provider APIs and maintainer-owned credentials | Disable live-provider smoke and use fake-provider correctness checks. |
-| Tier 3 | Derived Markdown and static JSON outputs | Rebuild from the canonical ledger. |
+| Tier 2 | Provider APIs and maintainer-owned credentials            | Disable live-provider smoke and use fake-provider correctness checks.      |
+| Tier 3 | Derived Markdown and static JSON outputs                  | Rebuild from the canonical ledger.                                         |
 
 ## Owners
 
@@ -52,7 +52,7 @@ Dependency tiers:
 
 ## Validation
 
-- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
+- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`
 - Release status: versioned Action tags are allowed by ADR 0031 after release gates pass; public
   package publication remains blocked by `docs/ops/release.md`.
 - Recent hosted live-provider evidence is recorded in `docs/ops/release.md`; refresh it with

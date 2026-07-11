@@ -54,14 +54,14 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
   return {
     ...(command === undefined ? {} : { command }),
     flags,
-    positionals
+    positionals,
   };
 }
 
 export function getStringFlag(
   args: ParsedArgs,
   name: string,
-  fallback?: string
+  fallback?: string,
 ): string | undefined {
   const value = args.flags.get(name);
   if (value === undefined) {

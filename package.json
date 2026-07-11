@@ -8,7 +8,7 @@
     "build": "tsc -b",
     "bundle:action": "pnpm run build && node scripts/bundle-action.mjs",
     "bundle:action:check": "pnpm run build && node scripts/bundle-action.mjs --check",
-    "format": "node -e \"console.error('format is not configured. Configure this validation before relying on pnpm run format.'); process.exit(1)\"",
+    "format": "prettier . --check",
     "lint": "oxlint . --deny-warnings --ignore-pattern=action-dist/**",
     "typecheck": "tsc -b --pretty false",
     "test": "pnpm run build && node --test packages/schemas/test/*.test.mjs packages/redaction/test/*.test.mjs packages/core/test/*.test.mjs packages/github/test/*.test.mjs packages/providers/test/*.test.mjs packages/renderers/test/*.test.mjs packages/cli/test/*.test.mjs packages/action/test/*.test.mjs scripts/test/*.test.mjs",
@@ -31,6 +31,7 @@
     "@types/node": "24.13.2",
     "esbuild": "0.28.1",
     "oxlint": "1.73.0",
+    "prettier": "3.9.5",
     "typescript": "^6.0.3"
   }
 }

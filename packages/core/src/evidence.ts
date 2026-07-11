@@ -3,12 +3,12 @@ import {
   redactJson,
   redactText,
   type RedactableJson,
-  type RedactionReport
+  type RedactionReport,
 } from "@clarissimi/redaction";
 import type {
   EvidenceKind,
   EvidenceRef,
-  RecognitionSource
+  RecognitionSource,
 } from "@clarissimi/schemas";
 
 export interface EvidenceItemInput {
@@ -45,18 +45,18 @@ export interface PreparedProviderEvidence {
 }
 
 export function prepareEvidenceForProvider(
-  input: EvidenceBundleInput
+  input: EvidenceBundleInput,
 ): PreparedProviderEvidence {
   const items = input.items.map(prepareEvidenceItem);
   const redactionReport = mergeRedactionReports(
-    items.map((item) => item.redactionReport)
+    items.map((item) => item.redactionReport),
   );
 
   return {
     source: input.source,
     items,
     evidenceRefs: items.map(toEvidenceRef),
-    redactionReport
+    redactionReport,
   };
 }
 
@@ -70,7 +70,7 @@ function prepareEvidenceItem(input: EvidenceItemInput): PreparedEvidenceItem {
   const item: PreparedEvidenceItem = {
     kind: input.kind,
     id: input.id,
-    redactionReport: mergeRedactionReports(reports)
+    redactionReport: mergeRedactionReports(reports),
   };
 
   assignOptional(item, "url", input.url);
@@ -85,7 +85,7 @@ function prepareEvidenceItem(input: EvidenceItemInput): PreparedEvidenceItem {
 function toEvidenceRef(item: PreparedEvidenceItem): EvidenceRef {
   const ref: EvidenceRef = {
     kind: item.kind,
-    id: item.id
+    id: item.id,
   };
 
   assignOptional(ref, "url", item.url);
@@ -97,7 +97,7 @@ function toEvidenceRef(item: PreparedEvidenceItem): EvidenceRef {
 
 function redactOptionalText(
   value: string | undefined,
-  reports: RedactionReport[]
+  reports: RedactionReport[],
 ): string | undefined {
   if (value === undefined) {
     return undefined;
@@ -110,7 +110,7 @@ function redactOptionalText(
 
 function redactOptionalJson(
   value: RedactableJson | undefined,
-  reports: RedactionReport[]
+  reports: RedactionReport[],
 ): RedactableJson | undefined {
   if (value === undefined) {
     return undefined;
@@ -124,7 +124,7 @@ function redactOptionalJson(
 function assignOptional<T extends object, K extends keyof T>(
   target: T,
   key: K,
-  value: T[K] | undefined
+  value: T[K] | undefined,
 ): void {
   if (value !== undefined) {
     target[key] = value;

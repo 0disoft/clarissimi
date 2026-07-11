@@ -7,13 +7,13 @@ import test from "node:test";
 import {
   ActionUsageError,
   runActionDryRun,
-  runActionFromEnvironment
+  runActionFromEnvironment,
 } from "../dist/index.js";
 
 function githubFixture(overrides = {}) {
   return {
     repository: {
-      fullName: "sample/project"
+      fullName: "sample/project",
     },
     pullRequest: {
       number: 42,
@@ -24,12 +24,12 @@ function githubFixture(overrides = {}) {
       user: {
         id: 123456,
         login: "octocat",
-        htmlUrl: "https://github.com/octocat"
+        htmlUrl: "https://github.com/octocat",
       },
       labels: [
         {
-          name: "tests"
-        }
+          name: "tests",
+        },
       ],
       changedFiles: [
         {
@@ -37,19 +37,19 @@ function githubFixture(overrides = {}) {
           status: "added",
           additions: 32,
           deletions: 0,
-          patchExcerpt: "test(\"parses nested input\", () => {})"
-        }
+          patchExcerpt: 'test("parses nested input", () => {})',
+        },
       ],
       mergeCommitSha: "abc123def4567890",
-      ...overrides
-    }
+      ...overrides,
+    },
   };
 }
 
 function pullRequestEvent(overrides = {}) {
   return {
     repository: {
-      full_name: "sample/project"
+      full_name: "sample/project",
     },
     pull_request: {
       number: 42,
@@ -61,15 +61,15 @@ function pullRequestEvent(overrides = {}) {
       user: {
         id: 123456,
         login: "octocat",
-        html_url: "https://github.com/octocat"
+        html_url: "https://github.com/octocat",
       },
       labels: [
         {
-          name: "tests"
-        }
+          name: "tests",
+        },
       ],
-      ...overrides
-    }
+      ...overrides,
+    },
   };
 }
 
@@ -88,13 +88,13 @@ class FakeLiveGitHubClient {
       user: {
         id: 123456,
         login: "octocat",
-        htmlUrl: "https://github.com/octocat"
+        htmlUrl: "https://github.com/octocat",
       },
       labels: [
         {
-          name: "tests"
-        }
-      ]
+          name: "tests",
+        },
+      ],
     };
   }
 
@@ -106,8 +106,8 @@ class FakeLiveGitHubClient {
         status: "added",
         additions: 32,
         deletions: 0,
-        patch: "test(\"parses nested input\", () => {})"
-      }
+        patch: 'test("parses nested input", () => {})',
+      },
     ];
   }
 
@@ -119,8 +119,8 @@ class FakeLiveGitHubClient {
         body: "LIVE_REVIEW_BODY_SENTINEL",
         htmlUrl: "https://github.com/sample/project/pull/42#discussion_r9001",
         path: "tests/parser.spec.ts",
-        diffHunk: "@@ -0,0 +1,12 @@"
-      }
+        diffHunk: "@@ -0,0 +1,12 @@",
+      },
     ];
   }
 }
@@ -140,7 +140,7 @@ test("creates a dry-run summary from a GitHub fixture path", async () => {
     await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
 
     const summary = await runActionDryRun({
-      githubFixturePath: fixturePath
+      githubFixturePath: fixturePath,
     });
 
     assert.equal(summary.ok, true);
@@ -150,8 +150,14 @@ test("creates a dry-run summary from a GitHub fixture path", async () => {
     assert.equal(summary.proposedEntryCount, 0);
     assert.equal(summary.publicOutputsRendered, false);
     assert.equal(summary.assessment.contributor.login, "octocat");
-    assert.equal(JSON.stringify(summary).includes("Adds a failing parser case"), false);
-    assert.equal(JSON.stringify(summary).includes("parses nested input"), false);
+    assert.equal(
+      JSON.stringify(summary).includes("Adds a failing parser case"),
+      false,
+    );
+    assert.equal(
+      JSON.stringify(summary).includes("parses nested input"),
+      false,
+    );
   });
 });
 
@@ -161,7 +167,7 @@ test("maps a merged pull request event from GITHUB_EVENT_PATH", async () => {
     await writeFile(eventPath, JSON.stringify(pullRequestEvent()), "utf8");
 
     const summary = await runActionDryRun({
-      eventPath
+      eventPath,
     });
 
     assert.equal(summary.inputSource, "github_event_path");
@@ -179,7 +185,7 @@ test("uses an injected live GitHub collector for merged pull request events", as
 
     const summary = await runActionDryRun({
       eventPath,
-      liveGitHubClient
+      liveGitHubClient,
     });
 
     assert.equal(summary.inputSource, "github_event_path");
@@ -189,38 +195,58 @@ test("uses an injected live GitHub collector for merged pull request events", as
       [
         "getPullRequest",
         "listPullRequestFiles",
-        "listPullRequestReviewComments"
-      ]
+        "listPullRequestReviewComments",
+      ],
     );
-    assert.equal(summary.assessment.evidenceRefs.some((ref) => ref.kind === "review"), true);
-    assert.equal(summary.assessment.evidenceRefs.some((ref) => ref.kind === "issue"), true);
-    assert.equal(JSON.stringify(summary).includes("LIVE_REVIEW_BODY_SENTINEL"), false);
+    assert.equal(
+      summary.assessment.evidenceRefs.some((ref) => ref.kind === "review"),
+      true,
+    );
+    assert.equal(
+      summary.assessment.evidenceRefs.some((ref) => ref.kind === "issue"),
+      true,
+    );
+    assert.equal(
+      JSON.stringify(summary).includes("LIVE_REVIEW_BODY_SENTINEL"),
+      false,
+    );
     assert.equal(JSON.stringify(summary).includes("@@ -0,0 +1,12 @@"), false);
   });
 });
 
 test("maps the repository merged pull request event fixture", async () => {
-  const eventPath = join(process.cwd(), "fixtures", "github-pull-request-merged-event.json");
+  const eventPath = join(
+    process.cwd(),
+    "fixtures",
+    "github-pull-request-merged-event.json",
+  );
   const eventText = await readFile(eventPath, "utf8");
   const summary = await runActionDryRun({
-    eventPath
+    eventPath,
   });
 
   assert.equal(summary.inputSource, "github_event_path");
   assert.equal(summary.draftCount, 1);
   assert.equal(summary.assessment.source.repository, "sample/project");
-  assert.equal(JSON.stringify(summary).includes(JSON.parse(eventText).pull_request.body), false);
+  assert.equal(
+    JSON.stringify(summary).includes(JSON.parse(eventText).pull_request.body),
+    false,
+  );
 });
 
 test("environment runner accepts GITHUB_EVENT_PATH", async () => {
-  const eventPath = join(process.cwd(), "fixtures", "github-pull-request-merged-event.json");
+  const eventPath = join(
+    process.cwd(),
+    "fixtures",
+    "github-pull-request-merged-event.json",
+  );
   let stdout = "";
   let stderr = "";
 
   const exitCode = await runActionFromEnvironment(
     {
       GITHUB_EVENT_PATH: eventPath,
-      INPUT_MODE: "dry-run"
+      INPUT_MODE: "dry-run",
     },
     {
       stdout: (value) => {
@@ -228,8 +254,8 @@ test("environment runner accepts GITHUB_EVENT_PATH", async () => {
       },
       stderr: (value) => {
         stderr += value;
-      }
-    }
+      },
+    },
   );
 
   assert.equal(exitCode, 0);
@@ -247,11 +273,11 @@ test("environment runner can use the OpenAI-compatible provider when explicitly 
         githubFixture({
           pullRequest: {
             ...githubFixture().pullRequest,
-            body: "Maintainer person@example.com confirmed the regression."
-          }
-        })
+            body: "Maintainer person@example.com confirmed the regression.",
+          },
+        }),
       ),
-      "utf8"
+      "utf8",
     );
     let stdout = "";
     let stderr = "";
@@ -263,7 +289,7 @@ test("environment runner can use the OpenAI-compatible provider when explicitly 
         INPUT_PROVIDER: "openai-compatible",
         INPUT_PROVIDER_MODEL: "clarissimi-test-model",
         INPUT_PROVIDER_THINKING: "disabled",
-        CLARISSIMI_PROVIDER_TOKEN: "unit-token"
+        CLARISSIMI_PROVIDER_TOKEN: "unit-token",
       },
       {
         stdout: (value) => {
@@ -271,13 +297,13 @@ test("environment runner can use the OpenAI-compatible provider when explicitly 
         },
         stderr: (value) => {
           stderr += value;
-        }
+        },
       },
       {
         fetch: async (url, init) => {
           requests.push({
             url: String(url),
-            body: JSON.parse(init.body)
+            body: JSON.parse(init.body),
           });
           return jsonResponse({
             choices: [
@@ -287,26 +313,34 @@ test("environment runner can use the OpenAI-compatible provider when explicitly 
                     contributionType: "test",
                     affectedArea: "parser regression coverage",
                     impactLevel: "medium",
-                    evidenceSummary: "Added regression coverage based on test evidence.",
+                    evidenceSummary:
+                      "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
-                    publicRecognitionText: "Added regression coverage for the parser.",
-                    confidence: 0.8
-                  })
-                }
-              }
-            ]
+                    publicRecognitionText:
+                      "Added regression coverage for the parser.",
+                    confidence: 0.8,
+                  }),
+                },
+              },
+            ],
           });
-        }
-      }
+        },
+      },
     );
     const parsed = JSON.parse(stdout);
 
     assert.equal(exitCode, 0);
     assert.equal(stderr, "");
-    assert.equal(parsed.assessment.publicRecognitionText, "Added regression coverage for the parser.");
+    assert.equal(
+      parsed.assessment.publicRecognitionText,
+      "Added regression coverage for the parser.",
+    );
     assert.equal(requests.length, 1);
     assert.deepEqual(requests[0].body.thinking, { type: "disabled" });
-    assert.equal(JSON.stringify(requests[0].body).includes("person@example.com"), false);
+    assert.equal(
+      JSON.stringify(requests[0].body).includes("person@example.com"),
+      false,
+    );
   });
 });
 
@@ -322,9 +356,9 @@ test("environment runner can use OpenAI-compatible provider values from JSON con
       JSON.stringify({
         provider: "openai-compatible",
         providerModel: "action-config-model",
-        providerThinking: "disabled"
+        providerThinking: "disabled",
       }),
-      "utf8"
+      "utf8",
     );
     let stdout = "";
     let stderr = "";
@@ -335,7 +369,7 @@ test("environment runner can use OpenAI-compatible provider values from JSON con
         INPUT_CONFIG_PATH: ".clarissimi/config.json",
         INPUT_GITHUB_FIXTURE: fixturePath,
         INPUT_MODE: "dry-run",
-        CLARISSIMI_PROVIDER_TOKEN: "unit-token"
+        CLARISSIMI_PROVIDER_TOKEN: "unit-token",
       },
       {
         stdout: (value) => {
@@ -343,13 +377,13 @@ test("environment runner can use OpenAI-compatible provider values from JSON con
         },
         stderr: (value) => {
           stderr += value;
-        }
+        },
       },
       {
         fetch: async (url, init) => {
           requests.push({
             url: String(url),
-            body: JSON.parse(init.body)
+            body: JSON.parse(init.body),
           });
           return jsonResponse({
             choices: [
@@ -359,17 +393,19 @@ test("environment runner can use OpenAI-compatible provider values from JSON con
                     contributionType: "test",
                     affectedArea: "parser regression coverage",
                     impactLevel: "medium",
-                    evidenceSummary: "Added regression coverage based on test evidence.",
+                    evidenceSummary:
+                      "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
-                    publicRecognitionText: "Added regression coverage for the parser.",
-                    confidence: 0.8
-                  })
-                }
-              }
-            ]
+                    publicRecognitionText:
+                      "Added regression coverage for the parser.",
+                    confidence: 0.8,
+                  }),
+                },
+              },
+            ],
           });
-        }
-      }
+        },
+      },
     );
 
     assert.equal(exitCode, 0);
@@ -389,16 +425,16 @@ test("environment runner can use provider values from TypeScript config-path", a
     await writeFile(
       join(dir, "clarissimi.config.ts"),
       [
-        "import type { ClarissimiConfig } from \"@clarissimi/schemas\";",
+        'import type { ClarissimiConfig } from "@clarissimi/schemas";',
         "const config = {",
-        "  provider: \"openai-compatible\",",
-        "  providerModel: \"action-ts-config-model\",",
-        "  providerThinking: \"disabled\",",
+        '  provider: "openai-compatible",',
+        '  providerModel: "action-ts-config-model",',
+        '  providerThinking: "disabled",',
         "} satisfies ClarissimiConfig;",
         "export default config;",
-        ""
+        "",
       ].join("\n"),
-      "utf8"
+      "utf8",
     );
     let stdout = "";
     let stderr = "";
@@ -409,7 +445,7 @@ test("environment runner can use provider values from TypeScript config-path", a
         INPUT_CONFIG_PATH: "clarissimi.config.ts",
         INPUT_GITHUB_FIXTURE: fixturePath,
         INPUT_MODE: "dry-run",
-        CLARISSIMI_PROVIDER_TOKEN: "unit-token"
+        CLARISSIMI_PROVIDER_TOKEN: "unit-token",
       },
       {
         stdout: (value) => {
@@ -417,13 +453,13 @@ test("environment runner can use provider values from TypeScript config-path", a
         },
         stderr: (value) => {
           stderr += value;
-        }
+        },
       },
       {
         fetch: async (url, init) => {
           requests.push({
             url: String(url),
-            body: JSON.parse(init.body)
+            body: JSON.parse(init.body),
           });
           return jsonResponse({
             choices: [
@@ -433,17 +469,19 @@ test("environment runner can use provider values from TypeScript config-path", a
                     contributionType: "test",
                     affectedArea: "parser regression coverage",
                     impactLevel: "medium",
-                    evidenceSummary: "Added regression coverage based on test evidence.",
+                    evidenceSummary:
+                      "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
-                    publicRecognitionText: "Added regression coverage for the parser.",
-                    confidence: 0.8
-                  })
-                }
-              }
-            ]
+                    publicRecognitionText:
+                      "Added regression coverage for the parser.",
+                    confidence: 0.8,
+                  }),
+                },
+              },
+            ],
           });
-        }
-      }
+        },
+      },
     );
 
     assert.equal(exitCode, 0);
@@ -464,9 +502,9 @@ test("environment runner lets explicit provider inputs override config-path valu
       join(configDir, "config.json"),
       JSON.stringify({
         provider: "fake",
-        providerModel: "config-model"
+        providerModel: "config-model",
       }),
-      "utf8"
+      "utf8",
     );
     let stdout = "";
     let stderr = "";
@@ -479,7 +517,7 @@ test("environment runner lets explicit provider inputs override config-path valu
         INPUT_MODE: "dry-run",
         INPUT_PROVIDER: "openai-compatible",
         INPUT_PROVIDER_MODEL: "explicit-model",
-        CLARISSIMI_PROVIDER_TOKEN: "unit-token"
+        CLARISSIMI_PROVIDER_TOKEN: "unit-token",
       },
       {
         stdout: (value) => {
@@ -487,13 +525,13 @@ test("environment runner lets explicit provider inputs override config-path valu
         },
         stderr: (value) => {
           stderr += value;
-        }
+        },
       },
       {
         fetch: async (url, init) => {
           requests.push({
             url: String(url),
-            body: JSON.parse(init.body)
+            body: JSON.parse(init.body),
           });
           return jsonResponse({
             choices: [
@@ -503,17 +541,19 @@ test("environment runner lets explicit provider inputs override config-path valu
                     contributionType: "test",
                     affectedArea: "parser regression coverage",
                     impactLevel: "medium",
-                    evidenceSummary: "Added regression coverage based on test evidence.",
+                    evidenceSummary:
+                      "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
-                    publicRecognitionText: "Added regression coverage for the parser.",
-                    confidence: 0.8
-                  })
-                }
-              }
-            ]
+                    publicRecognitionText:
+                      "Added regression coverage for the parser.",
+                    confidence: 0.8,
+                  }),
+                },
+              },
+            ],
           });
-        }
-      }
+        },
+      },
     );
 
     assert.equal(exitCode, 0);
@@ -538,7 +578,7 @@ test("environment runner rejects unsupported provider thinking values", async ()
         INPUT_PROVIDER: "openai-compatible",
         INPUT_PROVIDER_MODEL: "clarissimi-test-model",
         INPUT_PROVIDER_THINKING: "enabled",
-        CLARISSIMI_PROVIDER_TOKEN: "unit-token"
+        CLARISSIMI_PROVIDER_TOKEN: "unit-token",
       },
       {
         stdout: (value) => {
@@ -546,8 +586,8 @@ test("environment runner rejects unsupported provider thinking values", async ()
         },
         stderr: (value) => {
           stderr += value;
-        }
-      }
+        },
+      },
     );
 
     assert.equal(exitCode, 1);
@@ -568,7 +608,7 @@ test("environment runner requires a provider token for OpenAI-compatible provide
         INPUT_GITHUB_FIXTURE: fixturePath,
         INPUT_MODE: "dry-run",
         INPUT_PROVIDER: "openai-compatible",
-        INPUT_PROVIDER_MODEL: "clarissimi-test-model"
+        INPUT_PROVIDER_MODEL: "clarissimi-test-model",
       },
       {
         stdout: (value) => {
@@ -576,8 +616,8 @@ test("environment runner requires a provider token for OpenAI-compatible provide
         },
         stderr: (value) => {
           stderr += value;
-        }
-      }
+        },
+      },
     );
 
     assert.equal(exitCode, 1);
@@ -599,7 +639,7 @@ test("environment runner ignores blank optional inputs and writes GitHub outputs
         GITHUB_OUTPUT: outputPath,
         INPUT_EVENT_PATH: "",
         INPUT_GITHUB_FIXTURE: fixturePath,
-        INPUT_MODE: "dry-run"
+        INPUT_MODE: "dry-run",
       },
       {
         stdout: (value) => {
@@ -607,8 +647,8 @@ test("environment runner ignores blank optional inputs and writes GitHub outputs
         },
         stderr: (value) => {
           stderr += value;
-        }
-      }
+        },
+      },
     );
     const outputText = await readFile(outputPath, "utf8");
 
@@ -634,7 +674,7 @@ test("environment runner writes a sanitized JSON summary artifact inside the wor
         GITHUB_WORKSPACE: dir,
         INPUT_GITHUB_FIXTURE: fixturePath,
         INPUT_MODE: "dry-run",
-        INPUT_SUMMARY_PATH: "artifacts/clarissimi-summary.json"
+        INPUT_SUMMARY_PATH: "artifacts/clarissimi-summary.json",
       },
       {
         stdout: (value) => {
@@ -642,8 +682,8 @@ test("environment runner writes a sanitized JSON summary artifact inside the wor
         },
         stderr: (value) => {
           stderr += value;
-        }
-      }
+        },
+      },
     );
     const outputText = await readFile(outputPath, "utf8");
     const summaryJsonPath = join(dir, "artifacts", "clarissimi-summary.json");
@@ -654,7 +694,10 @@ test("environment runner writes a sanitized JSON summary artifact inside the wor
     assert.equal(stderr, "");
     assert.equal(JSON.parse(stdout).draftCount, 1);
     assert.equal(summary.draftCount, 1);
-    assert.equal(outputText.includes(`summary-json-path=${summaryJsonPath}`), true);
+    assert.equal(
+      outputText.includes(`summary-json-path=${summaryJsonPath}`),
+      true,
+    );
     assert.equal(summaryText.includes("Adds a failing parser case"), false);
     assert.equal(summaryText.includes("parses nested input"), false);
   });
@@ -676,7 +719,7 @@ test("environment runner rejects summary artifact paths outside the workspace be
         INPUT_PROVIDER: "openai-compatible",
         INPUT_PROVIDER_MODEL: "clarissimi-test-model",
         INPUT_SUMMARY_PATH: "../clarissimi-summary.json",
-        CLARISSIMI_PROVIDER_TOKEN: "unit-token"
+        CLARISSIMI_PROVIDER_TOKEN: "unit-token",
       },
       {
         stdout: (value) => {
@@ -684,19 +727,22 @@ test("environment runner rejects summary artifact paths outside the workspace be
         },
         stderr: (value) => {
           stderr += value;
-        }
+        },
       },
       {
         fetch: async () => {
           requests.push("provider-call");
           return jsonResponse({});
-        }
-      }
+        },
+      },
     );
 
     assert.equal(exitCode, 1);
     assert.equal(stdout, "");
-    assert.equal(stderr, "INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.\n");
+    assert.equal(
+      stderr,
+      "INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.\n",
+    );
     assert.deepEqual(requests, []);
   });
 });
@@ -707,7 +753,7 @@ function jsonResponse(body, status = 200) {
     status,
     async text() {
       return JSON.stringify(body);
-    }
+    },
   };
 }
 
@@ -723,7 +769,7 @@ test("environment runner writes a bounded GitHub step summary", async () => {
       {
         GITHUB_STEP_SUMMARY: summaryPath,
         INPUT_GITHUB_FIXTURE: fixturePath,
-        INPUT_MODE: "dry-run"
+        INPUT_MODE: "dry-run",
       },
       {
         stdout: (value) => {
@@ -731,8 +777,8 @@ test("environment runner writes a bounded GitHub step summary", async () => {
         },
         stderr: (value) => {
           stderr += value;
-        }
-      }
+        },
+      },
     );
     const summaryText = await readFile(summaryPath, "utf8");
 
@@ -741,7 +787,10 @@ test("environment runner writes a bounded GitHub step summary", async () => {
     assert.equal(JSON.parse(stdout).draftCount, 1);
     assert.equal(summaryText.includes("## Clarissimi dry-run summary"), true);
     assert.equal(summaryText.includes("| Drafts | 1 |"), true);
-    assert.equal(summaryText.includes("| Input source | github_fixture |"), true);
+    assert.equal(
+      summaryText.includes("| Input source | github_fixture |"),
+      true,
+    );
     assert.equal(summaryText.includes("Adds a failing parser case"), false);
     assert.equal(summaryText.includes("parses nested input"), false);
   });
@@ -760,7 +809,7 @@ test("environment runner prefers explicit fixture over implicit GitHub event pat
       {
         GITHUB_EVENT_PATH: eventPath,
         INPUT_GITHUB_FIXTURE: fixturePath,
-        INPUT_MODE: "dry-run"
+        INPUT_MODE: "dry-run",
       },
       {
         stdout: (value) => {
@@ -768,8 +817,8 @@ test("environment runner prefers explicit fixture over implicit GitHub event pat
         },
         stderr: (value) => {
           stderr += value;
-        }
-      }
+        },
+      },
     );
 
     assert.equal(exitCode, 0);
@@ -784,7 +833,7 @@ test("environment runner returns usage failure for missing input source", async 
 
   const exitCode = await runActionFromEnvironment(
     {
-      INPUT_MODE: "dry-run"
+      INPUT_MODE: "dry-run",
     },
     {
       stdout: (value) => {
@@ -792,15 +841,15 @@ test("environment runner returns usage failure for missing input source", async 
       },
       stderr: (value) => {
         stderr += value;
-      }
-    }
+      },
+    },
   );
 
   assert.equal(exitCode, 1);
   assert.equal(stdout, "");
   assert.equal(
     stderr,
-    "The action skeleton requires GITHUB_EVENT_PATH or INPUT_GITHUB_FIXTURE.\n"
+    "The action skeleton requires GITHUB_EVENT_PATH or INPUT_GITHUB_FIXTURE.\n",
   );
 });
 
@@ -811,7 +860,7 @@ test("environment runner returns usage failure for unsupported mode", async () =
   const exitCode = await runActionFromEnvironment(
     {
       INPUT_GITHUB_FIXTURE: "unused.json",
-      INPUT_MODE: "commit"
+      INPUT_MODE: "commit",
     },
     {
       stdout: (value) => {
@@ -819,8 +868,8 @@ test("environment runner returns usage failure for unsupported mode", async () =
       },
       stderr: (value) => {
         stderr += value;
-      }
-    }
+      },
+    },
   );
 
   assert.equal(exitCode, 1);
@@ -835,7 +884,7 @@ test("environment runner rejects unsupported Markdown summary inputs", async () 
   const exitCode = await runActionFromEnvironment(
     {
       INPUT_MODE: "dry-run",
-      INPUT_MARKDOWN_SUMMARY: "grid"
+      INPUT_MARKDOWN_SUMMARY: "grid",
     },
     {
       stdout: (value) => {
@@ -843,8 +892,8 @@ test("environment runner rejects unsupported Markdown summary inputs", async () 
       },
       stderr: (value) => {
         stderr += value;
-      }
-    }
+      },
+    },
   );
 
   assert.equal(exitCode, 1);
@@ -860,7 +909,7 @@ test("environment runner validates unsupported mode before resolving provider cr
     {
       INPUT_GITHUB_FIXTURE: "unused.json",
       INPUT_MODE: "commit",
-      INPUT_PROVIDER: "openai-compatible"
+      INPUT_PROVIDER: "openai-compatible",
     },
     {
       stdout: (value) => {
@@ -868,8 +917,8 @@ test("environment runner validates unsupported mode before resolving provider cr
       },
       stderr: (value) => {
         stderr += value;
-      }
-    }
+      },
+    },
   );
 
   assert.equal(exitCode, 1);
@@ -881,8 +930,8 @@ test("environment runner validates unsupported mode before loading config-path",
   await withTempDir(async (dir) => {
     await writeFile(
       join(dir, "clarissimi.config.ts"),
-      "throw new Error(\"CONFIG_SHOULD_NOT_LOAD\");\nexport default { provider: \"fake\" };\n",
-      "utf8"
+      'throw new Error("CONFIG_SHOULD_NOT_LOAD");\nexport default { provider: "fake" };\n',
+      "utf8",
     );
     let stdout = "";
     let stderr = "";
@@ -892,7 +941,7 @@ test("environment runner validates unsupported mode before loading config-path",
         GITHUB_WORKSPACE: dir,
         INPUT_CONFIG_PATH: "clarissimi.config.ts",
         INPUT_GITHUB_FIXTURE: "unused.json",
-        INPUT_MODE: "commit"
+        INPUT_MODE: "commit",
       },
       {
         stdout: (value) => {
@@ -900,8 +949,8 @@ test("environment runner validates unsupported mode before loading config-path",
         },
         stderr: (value) => {
           stderr += value;
-        }
-      }
+        },
+      },
     );
 
     assert.equal(exitCode, 1);
@@ -914,8 +963,8 @@ test("promote-draft skips provider config and rejects draft paths outside the in
   await withTempDir(async (dir) => {
     await writeFile(
       join(dir, "clarissimi.config.ts"),
-      "throw new Error(\"CONFIG_SHOULD_NOT_LOAD\");\nexport default { provider: \"fake\" };\n",
-      "utf8"
+      'throw new Error("CONFIG_SHOULD_NOT_LOAD");\nexport default { provider: "fake" };\n',
+      "utf8",
     );
     let stdout = "";
     let stderr = "";
@@ -926,7 +975,7 @@ test("promote-draft skips provider config and rejects draft paths outside the in
         GITHUB_WORKSPACE: dir,
         INPUT_CONFIG_PATH: "clarissimi.config.ts",
         INPUT_DRAFT_PATH: "../approved.json",
-        INPUT_MODE: "promote-draft"
+        INPUT_MODE: "promote-draft",
       },
       {
         stdout: (value) => {
@@ -934,13 +983,16 @@ test("promote-draft skips provider config and rejects draft paths outside the in
         },
         stderr: (value) => {
           stderr += value;
-        }
-      }
+        },
+      },
     );
 
     assert.equal(exitCode, 1);
     assert.equal(stdout, "");
-    assert.equal(stderr, "INPUT_DRAFT_PATH must point inside .clarissimi/drafts/.\n");
+    assert.equal(
+      stderr,
+      "INPUT_DRAFT_PATH must point inside .clarissimi/drafts/.\n",
+    );
   });
 });
 
@@ -952,7 +1004,7 @@ test("promote-draft rejects event and fixture inputs", async () => {
     {
       INPUT_DRAFT_PATH: ".clarissimi/drafts/approved.json",
       INPUT_GITHUB_FIXTURE: "fixture.json",
-      INPUT_MODE: "promote-draft"
+      INPUT_MODE: "promote-draft",
     },
     {
       stdout: (value) => {
@@ -960,13 +1012,16 @@ test("promote-draft rejects event and fixture inputs", async () => {
       },
       stderr: (value) => {
         stderr += value;
-      }
-    }
+      },
+    },
   );
 
   assert.equal(exitCode, 1);
   assert.equal(stdout, "");
-  assert.equal(stderr, "promote-draft accepts draft-path instead of event-path or github-fixture.\n");
+  assert.equal(
+    stderr,
+    "promote-draft accepts draft-path instead of event-path or github-fixture.\n",
+  );
 });
 
 test("environment runner requires a GitHub token before propose mode writes outputs", async () => {
@@ -981,7 +1036,7 @@ test("environment runner requires a GitHub token before propose mode writes outp
         GITHUB_OUTPUT: outputPath,
         GITHUB_STEP_SUMMARY: summaryPath,
         INPUT_GITHUB_FIXTURE: "unused.json",
-        INPUT_MODE: "propose"
+        INPUT_MODE: "propose",
       },
       {
         stdout: (value) => {
@@ -989,8 +1044,8 @@ test("environment runner requires a GitHub token before propose mode writes outp
         },
         stderr: (value) => {
           stderr += value;
-        }
-      }
+        },
+      },
     );
 
     assert.equal(exitCode, 1);
@@ -1012,7 +1067,7 @@ test("environment runner defaults to propose mode", async () => {
       {
         GITHUB_OUTPUT: outputPath,
         GITHUB_STEP_SUMMARY: summaryPath,
-        INPUT_GITHUB_FIXTURE: "unused.json"
+        INPUT_GITHUB_FIXTURE: "unused.json",
       },
       {
         stdout: (value) => {
@@ -1020,8 +1075,8 @@ test("environment runner defaults to propose mode", async () => {
         },
         stderr: (value) => {
           stderr += value;
-        }
-      }
+        },
+      },
     );
 
     assert.equal(exitCode, 1);
@@ -1045,7 +1100,7 @@ test("environment runner returns usage failure for explicit source conflict", as
       {
         INPUT_EVENT_PATH: eventPath,
         INPUT_GITHUB_FIXTURE: fixturePath,
-        INPUT_MODE: "dry-run"
+        INPUT_MODE: "dry-run",
       },
       {
         stdout: (value) => {
@@ -1053,13 +1108,16 @@ test("environment runner returns usage failure for explicit source conflict", as
         },
         stderr: (value) => {
           stderr += value;
-        }
-      }
+        },
+      },
     );
 
     assert.equal(exitCode, 1);
     assert.equal(stdout, "");
-    assert.equal(stderr, "Use only one action input source: eventPath or githubFixturePath.\n");
+    assert.equal(
+      stderr,
+      "Use only one action input source: eventPath or githubFixturePath.\n",
+    );
   });
 });
 
@@ -1073,7 +1131,7 @@ test("environment runner returns unexpected failure for malformed event JSON", a
     const exitCode = await runActionFromEnvironment(
       {
         GITHUB_EVENT_PATH: eventPath,
-        INPUT_MODE: "dry-run"
+        INPUT_MODE: "dry-run",
       },
       {
         stdout: (value) => {
@@ -1081,8 +1139,8 @@ test("environment runner returns unexpected failure for malformed event JSON", a
         },
         stderr: (value) => {
           stderr += value;
-        }
-      }
+        },
+      },
     );
 
     assert.equal(exitCode, 4);
@@ -1097,11 +1155,11 @@ test("skips an unmerged pull request event without drafting", async () => {
     await writeFile(
       eventPath,
       JSON.stringify(pullRequestEvent({ merged_at: null })),
-      "utf8"
+      "utf8",
     );
 
     const summary = await runActionDryRun({
-      eventPath
+      eventPath,
     });
 
     assert.equal(summary.draftCount, 0);
@@ -1117,7 +1175,7 @@ test("environment runner treats unmerged pull request events as skipped success"
     await writeFile(
       eventPath,
       JSON.stringify(pullRequestEvent({ merged_at: null })),
-      "utf8"
+      "utf8",
     );
     let stdout = "";
     let stderr = "";
@@ -1126,7 +1184,7 @@ test("environment runner treats unmerged pull request events as skipped success"
       {
         GITHUB_EVENT_PATH: eventPath,
         GITHUB_STEP_SUMMARY: summaryPath,
-        INPUT_MODE: "dry-run"
+        INPUT_MODE: "dry-run",
       },
       {
         stdout: (value) => {
@@ -1134,8 +1192,8 @@ test("environment runner treats unmerged pull request events as skipped success"
         },
         stderr: (value) => {
           stderr += value;
-        }
-      }
+        },
+      },
     );
     const parsed = JSON.parse(stdout);
     const summaryText = await readFile(summaryPath, "utf8");
@@ -1144,12 +1202,15 @@ test("environment runner treats unmerged pull request events as skipped success"
     assert.equal(stderr, "");
     assert.equal(parsed.draftCount, 0);
     assert.equal(parsed.skippedEntryCount, 1);
-    assert.equal(parsed.skippedReason, "GitHub pull request event is not a merged pull request.");
+    assert.equal(
+      parsed.skippedReason,
+      "GitHub pull request event is not a merged pull request.",
+    );
     assert.equal(
       summaryText.includes(
-        "| Skipped reason | GitHub pull request event is not a merged pull request. |"
+        "| Skipped reason | GitHub pull request event is not a merged pull request. |",
       ),
-      true
+      true,
     );
   });
 });
@@ -1159,9 +1220,9 @@ test("rejects non-dry-run modes in the action skeleton", async () => {
     () =>
       runActionDryRun({
         mode: "propose",
-        githubFixturePath: "unused.json"
+        githubFixturePath: "unused.json",
       }),
-    ActionUsageError
+    ActionUsageError,
   );
 });
 
@@ -1175,7 +1236,7 @@ test("environment runner writes JSON summary and returns success", async () => {
     const exitCode = await runActionFromEnvironment(
       {
         INPUT_GITHUB_FIXTURE: fixturePath,
-        INPUT_MODE: "dry-run"
+        INPUT_MODE: "dry-run",
       },
       {
         stdout: (value) => {
@@ -1183,8 +1244,8 @@ test("environment runner writes JSON summary and returns success", async () => {
         },
         stderr: (value) => {
           stderr += value;
-        }
-      }
+        },
+      },
     );
 
     assert.equal(exitCode, 0);

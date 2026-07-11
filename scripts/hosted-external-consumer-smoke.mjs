@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 const defaults = {
   repo: "0disoft/integration-lab",
   workflow: "clarissimi.yml",
-  workflowRef: "main"
+  workflowRef: "main",
 };
 
 const usageText = [
@@ -17,10 +17,13 @@ const usageText = [
   "  pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha 0123456789abcdef0123456789abcdef01234567",
   "",
   "When --clarissimi-ref is omitted, the script tests the current Clarissimi HEAD SHA.",
-  "The moving v0 alias is accepted only with --expected-sha so the consumer checkout can prove its target."
+  "The moving v0 alias is accepted only with --expected-sha so the consumer checkout can prove its target.",
 ].join("\n");
 
-export async function runHostedExternalConsumerSmoke(argv, runtime = defaultRuntime()) {
+export async function runHostedExternalConsumerSmoke(
+  argv,
+  runtime = defaultRuntime(),
+) {
   try {
     return await run(argv, runtime);
   } catch (error) {
@@ -44,7 +47,8 @@ async function run(argv, runtime) {
   const repo = args.repo ?? defaults.repo;
   const workflow = args.workflow ?? defaults.workflow;
   const workflowRef = args.workflowRef ?? defaults.workflowRef;
-  const clarissimiRef = args.clarissimiRef ?? await readCurrentHeadSha(runtime);
+  const clarissimiRef =
+    args.clarissimiRef ?? (await readCurrentHeadSha(runtime));
   const expectedSha = args.expectedSha;
 
   if (!isGitHubRepositoryName(repo)) {
@@ -62,19 +66,28 @@ async function run(argv, runtime) {
   if (!isImmutableClarissimiRef(clarissimiRef) && clarissimiRef !== "v0") {
     return usageFailure(
       runtime,
-      "--clarissimi-ref must be an immutable semantic version tag, 40-character commit SHA, or v0."
+      "--clarissimi-ref must be an immutable semantic version tag, 40-character commit SHA, or v0.",
     );
   }
 
   if (expectedSha !== undefined && !isCommitSha(expectedSha)) {
-    return usageFailure(runtime, "--expected-sha must be a 40-character commit SHA.");
+    return usageFailure(
+      runtime,
+      "--expected-sha must be a 40-character commit SHA.",
+    );
   }
 
   if (clarissimiRef === "v0" && expectedSha === undefined) {
-    return usageFailure(runtime, "--expected-sha is required when --clarissimi-ref is v0.");
+    return usageFailure(
+      runtime,
+      "--expected-sha is required when --clarissimi-ref is v0.",
+    );
   }
   if (args.evidenceId !== undefined && !isEvidenceId(args.evidenceId)) {
-    return usageFailure(runtime, "--evidence-id must be 32 lowercase hexadecimal characters.");
+    return usageFailure(
+      runtime,
+      "--evidence-id must be 32 lowercase hexadecimal characters.",
+    );
   }
 
   await requireGh(runtime);
@@ -86,7 +99,7 @@ async function run(argv, runtime) {
     workflowRef,
     clarissimiRef,
     expectedSha,
-    evidenceId: args.evidenceId
+    evidenceId: args.evidenceId,
   });
 
   const runId = await findDispatchedRun(runtime, {
@@ -95,14 +108,14 @@ async function run(argv, runtime) {
     workflowRef,
     dispatchedAfter,
     clarissimiRef,
-    evidenceId: args.evidenceId
+    evidenceId: args.evidenceId,
   });
 
   runtime.log(`watching hosted external consumer smoke run ${runId}`);
   await watchRun(runtime, repo, runId);
   runtime.log(
-    `hosted external consumer smoke passed for Clarissimi ${clarissimiRef}: `
-    + `https://github.com/${repo}/actions/runs/${runId}`
+    `hosted external consumer smoke passed for Clarissimi ${clarissimiRef}: ` +
+      `https://github.com/${repo}/actions/runs/${runId}`,
   );
   return 0;
 }
@@ -131,7 +144,7 @@ function parseArgs(argv, runtime) {
       "evidence-id": "evidenceId",
       repo: "repo",
       workflow: "workflow",
-      "workflow-ref": "workflowRef"
+      "workflow-ref": "workflowRef",
     }[key];
     if (property === undefined) {
       return usageFailure(runtime, `Unsupported option: ${arg}`);
@@ -160,8 +173,10 @@ function isGitHubRepositoryName(value) {
 }
 
 function isImmutableClarissimiRef(value) {
-  return /^[a-fA-F0-9]{40}$/.test(value)
-    || /^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/.test(value);
+  return (
+    /^[a-fA-F0-9]{40}$/.test(value) ||
+    /^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/.test(value)
+  );
 }
 
 function isCommitSha(value) {
@@ -194,7 +209,9 @@ class UsageError extends Error {
 async function readCurrentHeadSha(runtime) {
   const result = await runtime.runCommand("git", ["rev-parse", "HEAD"]);
   if (result.exitCode !== 0) {
-    throw new Error(`Unable to resolve current HEAD SHA.\n${boundedOutput(result.stderr)}`);
+    throw new Error(
+      `Unable to resolve current HEAD SHA.\n${boundedOutput(result.stderr)}`,
+    );
   }
 
   return result.stdout.trim();
@@ -203,7 +220,9 @@ async function readCurrentHeadSha(runtime) {
 async function requireGh(runtime) {
   const result = await runtime.runCommand("gh", ["--version"]);
   if (result.exitCode !== 0) {
-    throw new Error("GitHub CLI is required to run hosted external consumer smoke.");
+    throw new Error(
+      "GitHub CLI is required to run hosted external consumer smoke.",
+    );
   }
 }
 
@@ -217,7 +236,7 @@ async function dispatchWorkflow(runtime, options) {
     "--ref",
     options.workflowRef,
     "-f",
-    `clarissimi-ref=${options.clarissimiRef}`
+    `clarissimi-ref=${options.clarissimiRef}`,
   ];
   if (options.expectedSha !== undefined) {
     dispatchArgs.push("-f", `expected-sha=${options.expectedSha}`);
@@ -227,13 +246,17 @@ async function dispatchWorkflow(runtime, options) {
   }
   const result = await runtime.runCommand("gh", dispatchArgs);
   if (result.exitCode !== 0) {
-    throw new Error(`Unable to dispatch ${options.workflow}.\n${boundedOutput(result.stderr)}`);
+    throw new Error(
+      `Unable to dispatch ${options.workflow}.\n${boundedOutput(result.stderr)}`,
+    );
   }
 
   runtime.log(
-    `dispatched ${options.workflow} on ${options.repo}@${options.workflowRef} `
-    + `for Clarissimi ${options.clarissimiRef}`
-    + (options.expectedSha === undefined ? "" : ` at expected SHA ${options.expectedSha}`)
+    `dispatched ${options.workflow} on ${options.repo}@${options.workflowRef} ` +
+      `for Clarissimi ${options.clarissimiRef}` +
+      (options.expectedSha === undefined
+        ? ""
+        : ` at expected SHA ${options.expectedSha}`),
   );
 }
 
@@ -257,10 +280,12 @@ async function findDispatchedRun(runtime, options) {
       "--limit",
       "5",
       "--json",
-      "databaseId,createdAt,displayTitle,headBranch,headSha,status,conclusion"
+      "databaseId,createdAt,displayTitle,headBranch,headSha,status,conclusion",
     ]);
     if (result.exitCode !== 0) {
-      throw new Error(`Unable to list dispatched workflow runs.\n${boundedOutput(result.stderr)}`);
+      throw new Error(
+        `Unable to list dispatched workflow runs.\n${boundedOutput(result.stderr)}`,
+      );
     }
 
     let runs;
@@ -276,16 +301,22 @@ async function findDispatchedRun(runtime, options) {
 
     const runInfo = runs.find((candidate) => {
       const createdAt = Date.parse(candidate.createdAt);
-      const expectedTitle = options.evidenceId === undefined
-        ? undefined
-        : `Clarissimi external consumer · ${options.clarissimiRef} · ${options.evidenceId}`;
-      return Number.isFinite(createdAt)
-        && createdAt >= options.dispatchedAfter.getTime()
-        && (expectedTitle === undefined || candidate.displayTitle === expectedTitle);
+      const expectedTitle =
+        options.evidenceId === undefined
+          ? undefined
+          : `Clarissimi external consumer · ${options.clarissimiRef} · ${options.evidenceId}`;
+      return (
+        Number.isFinite(createdAt) &&
+        createdAt >= options.dispatchedAfter.getTime() &&
+        (expectedTitle === undefined ||
+          candidate.displayTitle === expectedTitle)
+      );
     });
     if (runInfo !== undefined) {
       if (!isPositiveRunId(runInfo.databaseId)) {
-        throw new Error(`Dispatched ${options.workflow} run is missing a valid databaseId.`);
+        throw new Error(
+          `Dispatched ${options.workflow} run is missing a valid databaseId.`,
+        );
       }
 
       return String(runInfo.databaseId);
@@ -295,24 +326,23 @@ async function findDispatchedRun(runtime, options) {
   }
 
   throw new Error(
-    `Unable to find dispatched ${options.workflow} run for `
-    + `${options.repo}@${options.workflowRef}.`
+    `Unable to find dispatched ${options.workflow} run for ` +
+      `${options.repo}@${options.workflowRef}.`,
   );
 }
 
 async function watchRun(runtime, repo, runId) {
-  const result = await runtime.runCommand("gh", [
-    "run",
-    "watch",
-    runId,
-    "--repo",
-    repo,
-    "--exit-status"
-  ], {
-    inherit: true
-  });
+  const result = await runtime.runCommand(
+    "gh",
+    ["run", "watch", runId, "--repo", repo, "--exit-status"],
+    {
+      inherit: true,
+    },
+  );
   if (result.exitCode !== 0) {
-    throw new Error(`Hosted external consumer smoke failed with exit code ${result.exitCode}.`);
+    throw new Error(
+      `Hosted external consumer smoke failed with exit code ${result.exitCode}.`,
+    );
   }
 }
 
@@ -322,14 +352,14 @@ function defaultRuntime() {
     delay,
     log: (message) => console.log(message),
     error: (message) => console.error(message),
-    runCommand
+    runCommand,
   };
 }
 
 function runCommand(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
-      stdio: options.inherit ? "inherit" : ["ignore", "pipe", "pipe"]
+      stdio: options.inherit ? "inherit" : ["ignore", "pipe", "pipe"],
     });
     let stdout = "";
     let stderr = "";
@@ -362,7 +392,10 @@ function delay(ms) {
   });
 }
 
-if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   const exitCode = await runHostedExternalConsumerSmoke(process.argv.slice(2));
   process.exit(exitCode);
 }

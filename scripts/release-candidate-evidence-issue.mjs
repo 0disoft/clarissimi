@@ -13,17 +13,17 @@ const defaults = {
   externalWriteJobNames: [
     "Stage, approve, and promote (ubuntu-latest)",
     "Stage, approve, and promote (macos-latest)",
-    "Stage, approve, and promote (windows-latest)"
+    "Stage, approve, and promote (windows-latest)",
   ],
   externalWriteRequiredSteps: [
     "Stage synthetic draft",
     "Approve and merge the draft proposal",
     "Promote approved draft",
     "Verify recognition proposal",
-    "Clean up smoke pull requests and branches"
+    "Clean up smoke pull requests and branches",
   ],
   liveWorkflowName: "Clarissimi live provider smoke",
-  secretName: "CLARISSIMI_PROVIDER_TOKEN"
+  secretName: "CLARISSIMI_PROVIDER_TOKEN",
 };
 
 const usageText = [
@@ -35,10 +35,13 @@ const usageText = [
   "  pnpm run release-candidate-evidence-issue -- --release-type versioned-action-tag --release-version v0.1.0 --sha 0123456789abcdef0123456789abcdef01234567 --ci-run 12345 --live-run 67890 --external-run 24680 --external-write-run 13579 --provider-model minimax-m3 --provider-endpoint https://example.com/v1/chat/completions --provider-thinking disabled --print",
   "",
   "The script validates hosted CI, hosted live-provider, external consumer, and full-write run metadata before creating the release evidence issue.",
-  "It records secret names only and never reads or prints provider token values."
+  "It records secret names only and never reads or prints provider token values.",
 ].join("\n");
 
-export async function runReleaseCandidateEvidenceIssue(argv, runtime = defaultRuntime()) {
+export async function runReleaseCandidateEvidenceIssue(
+  argv,
+  runtime = defaultRuntime(),
+) {
   try {
     return await run(argv, runtime);
   } catch (error) {
@@ -76,40 +79,73 @@ async function run(argv, runtime) {
   }
 
   if (!isPositiveRunId(args.ciRun)) {
-    return usageFailure(runtime, "--ci-run requires a positive numeric workflow run id.");
+    return usageFailure(
+      runtime,
+      "--ci-run requires a positive numeric workflow run id.",
+    );
   }
 
   if (!isPositiveRunId(args.liveRun)) {
-    return usageFailure(runtime, "--live-run requires a positive numeric workflow run id.");
+    return usageFailure(
+      runtime,
+      "--live-run requires a positive numeric workflow run id.",
+    );
   }
 
-  if (args.providerModel === undefined || args.providerModel.trim().length === 0) {
-    return usageFailure(runtime, "--provider-model requires a non-empty value.");
+  if (
+    args.providerModel === undefined ||
+    args.providerModel.trim().length === 0
+  ) {
+    return usageFailure(
+      runtime,
+      "--provider-model requires a non-empty value.",
+    );
   }
 
-  if (args.providerEndpoint !== undefined && !isHttpsUrl(args.providerEndpoint)) {
+  if (
+    args.providerEndpoint !== undefined &&
+    !isHttpsUrl(args.providerEndpoint)
+  ) {
     return usageFailure(runtime, "--provider-endpoint must be an https URL.");
   }
 
-  if (args.providerThinking !== undefined && args.providerThinking !== "disabled") {
+  if (
+    args.providerThinking !== undefined &&
+    args.providerThinking !== "disabled"
+  ) {
     return usageFailure(runtime, "--provider-thinking supports only disabled.");
   }
 
   if (args.evidenceId !== undefined && !isEvidenceId(args.evidenceId)) {
-    return usageFailure(runtime, "--evidence-id must be 32 lowercase hexadecimal characters.");
+    return usageFailure(
+      runtime,
+      "--evidence-id must be 32 lowercase hexadecimal characters.",
+    );
   }
 
   const releaseType = args.releaseType ?? defaults.releaseType;
   if (!["source-only", "versioned-action-tag"].includes(releaseType)) {
-    return usageFailure(runtime, "--release-type supports source-only or versioned-action-tag.");
+    return usageFailure(
+      runtime,
+      "--release-type supports source-only or versioned-action-tag.",
+    );
   }
 
-  if (releaseType === "versioned-action-tag" && !isVersionTag(args.releaseVersion)) {
-    return usageFailure(runtime, "--release-version requires a v0.1.x tag authorized by ADR 0031.");
+  if (
+    releaseType === "versioned-action-tag" &&
+    !isVersionTag(args.releaseVersion)
+  ) {
+    return usageFailure(
+      runtime,
+      "--release-version requires a v0.1.x tag authorized by ADR 0031.",
+    );
   }
 
   if (releaseType === "source-only" && args.releaseVersion !== undefined) {
-    return usageFailure(runtime, "--release-version is valid only with --release-type versioned-action-tag.");
+    return usageFailure(
+      runtime,
+      "--release-version is valid only with --release-type versioned-action-tag.",
+    );
   }
 
   if (args.title !== undefined && args.title.trim().length === 0) {
@@ -117,32 +153,47 @@ async function run(argv, runtime) {
   }
 
   if (!isPositiveRunId(args.externalRun)) {
-    return usageFailure(runtime, "--external-run requires a positive numeric workflow run id.");
+    return usageFailure(
+      runtime,
+      "--external-run requires a positive numeric workflow run id.",
+    );
   }
 
   if (!isPositiveRunId(args.externalWriteRun)) {
-    return usageFailure(runtime, "--external-write-run requires a positive numeric workflow run id.");
+    return usageFailure(
+      runtime,
+      "--external-write-run requires a positive numeric workflow run id.",
+    );
   }
 
-  const sha = args.sha ?? await readCurrentHeadSha(runtime);
+  const sha = args.sha ?? (await readCurrentHeadSha(runtime));
   if (!isCommitSha(sha)) {
     return usageFailure(runtime, "--sha must be a 40-character commit SHA.");
   }
 
-  const externalRef = args.externalRef ?? (releaseType === "versioned-action-tag"
-    ? args.releaseVersion
-    : sha);
+  const externalRef =
+    args.externalRef ??
+    (releaseType === "versioned-action-tag" ? args.releaseVersion : sha);
   if (!isImmutableClarissimiRef(externalRef)) {
     return usageFailure(
       runtime,
-      "--external-ref must be a semantic version tag or 40-character commit SHA."
+      "--external-ref must be a semantic version tag or 40-character commit SHA.",
     );
   }
   if (releaseType === "source-only" && externalRef !== sha) {
-    return usageFailure(runtime, "source-only evidence requires --external-ref to equal --sha.");
+    return usageFailure(
+      runtime,
+      "source-only evidence requires --external-ref to equal --sha.",
+    );
   }
-  if (releaseType === "versioned-action-tag" && externalRef !== args.releaseVersion) {
-    return usageFailure(runtime, "versioned Action evidence requires --external-ref to equal --release-version.");
+  if (
+    releaseType === "versioned-action-tag" &&
+    externalRef !== args.releaseVersion
+  ) {
+    return usageFailure(
+      runtime,
+      "versioned Action evidence requires --external-ref to equal --release-version.",
+    );
   }
 
   await requireGh(runtime);
@@ -153,7 +204,7 @@ async function run(argv, runtime) {
     runId: args.ciRun,
     sha,
     branch,
-    workflowName: defaults.ciWorkflowName
+    workflowName: defaults.ciWorkflowName,
   });
 
   const liveRun = await readRun(runtime, repo, args.liveRun);
@@ -163,28 +214,35 @@ async function run(argv, runtime) {
     sha,
     branch,
     workflowName: defaults.liveWorkflowName,
-    displayTitle: args.evidenceId === undefined
-      ? undefined
-      : `${defaults.liveWorkflowName} · ${args.evidenceId}`
+    displayTitle:
+      args.evidenceId === undefined
+        ? undefined
+        : `${defaults.liveWorkflowName} · ${args.evidenceId}`,
   });
 
   const externalRun = await readRun(runtime, externalRepo, args.externalRun);
   validateExternalRun(externalRun, {
     runId: args.externalRun,
     externalRef,
-    evidenceId: args.evidenceId
+    evidenceId: args.evidenceId,
   });
 
-  const externalWriteRun = await readRun(runtime, externalRepo, args.externalWriteRun);
+  const externalWriteRun = await readRun(
+    runtime,
+    externalRepo,
+    args.externalWriteRun,
+  );
   validateExternalWriteRun(externalWriteRun, {
     runId: args.externalWriteRun,
     externalRef,
-    evidenceId: args.evidenceId
+    evidenceId: args.evidenceId,
   });
 
-  const title = args.title ?? (releaseType === "versioned-action-tag"
-    ? `Release candidate evidence for ${args.releaseVersion} at ${sha.slice(0, 7)}`
-    : `Release candidate evidence for ${sha.slice(0, 7)}`);
+  const title =
+    args.title ??
+    (releaseType === "versioned-action-tag"
+      ? `Release candidate evidence for ${args.releaseVersion} at ${sha.slice(0, 7)}`
+      : `Release candidate evidence for ${sha.slice(0, 7)}`);
   const body = renderIssueBody({
     repo,
     branch,
@@ -200,7 +258,7 @@ async function run(argv, runtime) {
     releaseVersion: args.releaseVersion,
     providerModel: args.providerModel,
     providerEndpoint: args.providerEndpoint,
-    providerThinking: args.providerThinking
+    providerThinking: args.providerThinking,
   });
 
   if (args.print) {
@@ -208,24 +266,23 @@ async function run(argv, runtime) {
     return 0;
   }
 
-  const result = await runtime.runCommand("gh", [
-    "issue",
-    "create",
-    "--repo",
-    repo,
-    "--title",
-    title,
-    "--body-file",
-    "-"
-  ], {
-    input: body
-  });
+  const result = await runtime.runCommand(
+    "gh",
+    ["issue", "create", "--repo", repo, "--title", title, "--body-file", "-"],
+    {
+      input: body,
+    },
+  );
 
   if (result.exitCode !== 0) {
-    throw new Error(`Unable to create release candidate evidence issue.\n${boundedOutput(result.stderr)}`);
+    throw new Error(
+      `Unable to create release candidate evidence issue.\n${boundedOutput(result.stderr)}`,
+    );
   }
 
-  runtime.log(`release candidate evidence issue created: ${result.stdout.trim()}`);
+  runtime.log(
+    `release candidate evidence issue created: ${result.stdout.trim()}`,
+  );
   return 0;
 }
 
@@ -252,24 +309,26 @@ function parseArgs(argv, runtime) {
       return usageFailure(runtime, `Unexpected positional argument: ${arg}`);
     }
 
-    if (![
-      "repo",
-      "branch",
-      "sha",
-      "ci-run",
-      "external-ref",
-      "evidence-id",
-      "external-repo",
-      "external-run",
-      "external-write-run",
-      "live-run",
-      "provider-model",
-      "provider-endpoint",
-      "provider-thinking",
-      "release-type",
-      "release-version",
-      "title"
-    ].includes(key)) {
+    if (
+      ![
+        "repo",
+        "branch",
+        "sha",
+        "ci-run",
+        "external-ref",
+        "evidence-id",
+        "external-repo",
+        "external-run",
+        "external-write-run",
+        "live-run",
+        "provider-model",
+        "provider-endpoint",
+        "provider-thinking",
+        "release-type",
+        "release-version",
+        "title",
+      ].includes(key)
+    ) {
       return usageFailure(runtime, `Unsupported option: ${arg}`);
     }
 
@@ -316,13 +375,15 @@ function isEvidenceId(value) {
 }
 
 function isVersionTag(value) {
-  return typeof value === "string"
-    && /^v0\.1\.(?:0|[1-9][0-9]*)$/.test(value);
+  return typeof value === "string" && /^v0\.1\.(?:0|[1-9][0-9]*)$/.test(value);
 }
 
 function isImmutableClarissimiRef(value) {
-  return isCommitSha(value)
-    || (typeof value === "string" && /^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/.test(value));
+  return (
+    isCommitSha(value) ||
+    (typeof value === "string" &&
+      /^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/.test(value))
+  );
 }
 
 function isPositiveRunId(value) {
@@ -343,7 +404,9 @@ class UsageError extends Error {
 async function readCurrentHeadSha(runtime) {
   const result = await runtime.runCommand("git", ["rev-parse", "HEAD"]);
   if (result.exitCode !== 0) {
-    throw new Error(`Unable to resolve current HEAD SHA.\n${boundedOutput(result.stderr)}`);
+    throw new Error(
+      `Unable to resolve current HEAD SHA.\n${boundedOutput(result.stderr)}`,
+    );
   }
 
   return result.stdout.trim();
@@ -352,7 +415,9 @@ async function readCurrentHeadSha(runtime) {
 async function requireGh(runtime) {
   const result = await runtime.runCommand("gh", ["--version"]);
   if (result.exitCode !== 0) {
-    throw new Error("GitHub CLI is required to create release candidate evidence issues.");
+    throw new Error(
+      "GitHub CLI is required to create release candidate evidence issues.",
+    );
   }
 }
 
@@ -364,146 +429,207 @@ async function readRun(runtime, repo, runId) {
     "--repo",
     repo,
     "--json",
-    "databaseId,createdAt,displayTitle,headSha,headBranch,url,status,conclusion,workflowName,event,jobs"
+    "databaseId,createdAt,displayTitle,headSha,headBranch,url,status,conclusion,workflowName,event,jobs",
   ]);
 
   if (result.exitCode !== 0) {
-    throw new Error(`Unable to inspect workflow run ${runId}.\n${boundedOutput(result.stderr)}`);
+    throw new Error(
+      `Unable to inspect workflow run ${runId}.\n${boundedOutput(result.stderr)}`,
+    );
   }
 
   try {
     return JSON.parse(result.stdout);
   } catch (error) {
-    throw new Error(`Unable to parse workflow run ${runId} metadata: ${error.message}`);
+    throw new Error(
+      `Unable to parse workflow run ${runId} metadata: ${error.message}`,
+    );
   }
 }
 
 function validateRun(run, options) {
   if (String(run?.databaseId) !== String(options.runId)) {
-    throw new Error(`${options.label} run ${options.runId} metadata has mismatched databaseId.`);
+    throw new Error(
+      `${options.label} run ${options.runId} metadata has mismatched databaseId.`,
+    );
   }
 
   if (run.workflowName !== options.workflowName) {
-    throw new Error(`${options.label} run ${options.runId} must be workflow ${options.workflowName}.`);
+    throw new Error(
+      `${options.label} run ${options.runId} must be workflow ${options.workflowName}.`,
+    );
   }
 
-  if (options.displayTitle !== undefined && run.displayTitle !== options.displayTitle) {
-    throw new Error(`${options.label} run ${options.runId} must have displayTitle=${options.displayTitle}.`);
+  if (
+    options.displayTitle !== undefined &&
+    run.displayTitle !== options.displayTitle
+  ) {
+    throw new Error(
+      `${options.label} run ${options.runId} must have displayTitle=${options.displayTitle}.`,
+    );
   }
 
   if (run.headSha !== options.sha) {
-    throw new Error(`${options.label} run ${options.runId} validates ${run.headSha ?? "unknown"}, not ${options.sha}.`);
+    throw new Error(
+      `${options.label} run ${options.runId} validates ${run.headSha ?? "unknown"}, not ${options.sha}.`,
+    );
   }
 
   if (run.headBranch !== options.branch) {
-    throw new Error(`${options.label} run ${options.runId} must be on branch ${options.branch}.`);
+    throw new Error(
+      `${options.label} run ${options.runId} must be on branch ${options.branch}.`,
+    );
   }
 
   if (run.status !== "completed" || run.conclusion !== "success") {
     throw new Error(
       `${options.label} run ${options.runId} must be completed successfully; ` +
-      `status=${run.status ?? "unknown"} conclusion=${run.conclusion ?? "unknown"}.`
+        `status=${run.status ?? "unknown"} conclusion=${run.conclusion ?? "unknown"}.`,
     );
   }
 
-  if (typeof run.createdAt !== "string" || Number.isNaN(Date.parse(run.createdAt))) {
-    throw new Error(`${options.label} run ${options.runId} is missing a valid createdAt timestamp.`);
+  if (
+    typeof run.createdAt !== "string" ||
+    Number.isNaN(Date.parse(run.createdAt))
+  ) {
+    throw new Error(
+      `${options.label} run ${options.runId} is missing a valid createdAt timestamp.`,
+    );
   }
 
-  if (typeof run.url !== "string" || !run.url.startsWith("https://github.com/")) {
-    throw new Error(`${options.label} run ${options.runId} is missing a GitHub Actions run URL.`);
+  if (
+    typeof run.url !== "string" ||
+    !run.url.startsWith("https://github.com/")
+  ) {
+    throw new Error(
+      `${options.label} run ${options.runId} is missing a GitHub Actions run URL.`,
+    );
   }
 }
 
 function validateExternalRun(run, options) {
   const label = "external consumer smoke";
   if (String(run?.databaseId) !== String(options.runId)) {
-    throw new Error(`${label} run ${options.runId} metadata has mismatched databaseId.`);
+    throw new Error(
+      `${label} run ${options.runId} metadata has mismatched databaseId.`,
+    );
   }
 
   if (run.workflowName !== defaults.externalWorkflowName) {
     throw new Error(
-      `${label} run ${options.runId} must be workflow ${defaults.externalWorkflowName}.`
+      `${label} run ${options.runId} must be workflow ${defaults.externalWorkflowName}.`,
     );
   }
 
   if (run.headBranch !== defaults.externalBranch) {
-    throw new Error(`${label} run ${options.runId} must be on branch ${defaults.externalBranch}.`);
+    throw new Error(
+      `${label} run ${options.runId} must be on branch ${defaults.externalBranch}.`,
+    );
   }
 
   if (run.event !== "workflow_dispatch") {
-    throw new Error(`${label} run ${options.runId} must use workflow_dispatch.`);
+    throw new Error(
+      `${label} run ${options.runId} must use workflow_dispatch.`,
+    );
   }
 
-  const expectedTitle = options.evidenceId === undefined
-    ? `${defaults.externalWorkflowName} · ${options.externalRef}`
-    : `${defaults.externalWorkflowName} · ${options.externalRef} · ${options.evidenceId}`;
+  const expectedTitle =
+    options.evidenceId === undefined
+      ? `${defaults.externalWorkflowName} · ${options.externalRef}`
+      : `${defaults.externalWorkflowName} · ${options.externalRef} · ${options.evidenceId}`;
   if (run.displayTitle !== expectedTitle) {
     throw new Error(
-      `${label} run ${options.runId} must validate Clarissimi ${options.externalRef}; `
-      + `displayTitle=${run.displayTitle ?? "unknown"}.`
+      `${label} run ${options.runId} must validate Clarissimi ${options.externalRef}; ` +
+        `displayTitle=${run.displayTitle ?? "unknown"}.`,
     );
   }
 
   if (run.status !== "completed" || run.conclusion !== "success") {
     throw new Error(
-      `${label} run ${options.runId} must be completed successfully; `
-      + `status=${run.status ?? "unknown"} conclusion=${run.conclusion ?? "unknown"}.`
+      `${label} run ${options.runId} must be completed successfully; ` +
+        `status=${run.status ?? "unknown"} conclusion=${run.conclusion ?? "unknown"}.`,
     );
   }
 
-  if (typeof run.createdAt !== "string" || Number.isNaN(Date.parse(run.createdAt))) {
-    throw new Error(`${label} run ${options.runId} is missing a valid createdAt timestamp.`);
+  if (
+    typeof run.createdAt !== "string" ||
+    Number.isNaN(Date.parse(run.createdAt))
+  ) {
+    throw new Error(
+      `${label} run ${options.runId} is missing a valid createdAt timestamp.`,
+    );
   }
 
-  if (typeof run.url !== "string" || !run.url.startsWith("https://github.com/")) {
-    throw new Error(`${label} run ${options.runId} is missing a GitHub Actions run URL.`);
+  if (
+    typeof run.url !== "string" ||
+    !run.url.startsWith("https://github.com/")
+  ) {
+    throw new Error(
+      `${label} run ${options.runId} is missing a GitHub Actions run URL.`,
+    );
   }
 }
 
 function validateExternalWriteRun(run, options) {
   const label = "external full-write smoke";
   if (String(run?.databaseId) !== String(options.runId)) {
-    throw new Error(`${label} run ${options.runId} metadata has mismatched databaseId.`);
+    throw new Error(
+      `${label} run ${options.runId} metadata has mismatched databaseId.`,
+    );
   }
 
   if (run.workflowName !== defaults.externalWriteWorkflowName) {
     throw new Error(
-      `${label} run ${options.runId} must be workflow ${defaults.externalWriteWorkflowName}.`
+      `${label} run ${options.runId} must be workflow ${defaults.externalWriteWorkflowName}.`,
     );
   }
 
   if (run.headBranch !== defaults.externalBranch) {
-    throw new Error(`${label} run ${options.runId} must be on branch ${defaults.externalBranch}.`);
+    throw new Error(
+      `${label} run ${options.runId} must be on branch ${defaults.externalBranch}.`,
+    );
   }
 
   if (run.event !== "workflow_dispatch") {
-    throw new Error(`${label} run ${options.runId} must use workflow_dispatch.`);
+    throw new Error(
+      `${label} run ${options.runId} must use workflow_dispatch.`,
+    );
   }
 
-  const expectedTitle = options.evidenceId === undefined
-    ? `${defaults.externalWriteWorkflowName} · ${options.externalRef} · ${options.runId}`
-    : `${defaults.externalWriteWorkflowName} · ${options.externalRef} · ${options.evidenceId} · ${options.runId}`;
+  const expectedTitle =
+    options.evidenceId === undefined
+      ? `${defaults.externalWriteWorkflowName} · ${options.externalRef} · ${options.runId}`
+      : `${defaults.externalWriteWorkflowName} · ${options.externalRef} · ${options.evidenceId} · ${options.runId}`;
   if (run.displayTitle !== expectedTitle) {
     throw new Error(
-      `${label} run ${options.runId} must validate Clarissimi ${options.externalRef}; `
-      + `displayTitle=${run.displayTitle ?? "unknown"}.`
+      `${label} run ${options.runId} must validate Clarissimi ${options.externalRef}; ` +
+        `displayTitle=${run.displayTitle ?? "unknown"}.`,
     );
   }
 
   if (run.status !== "completed" || run.conclusion !== "success") {
     throw new Error(
-      `${label} run ${options.runId} must be completed successfully; `
-      + `status=${run.status ?? "unknown"} conclusion=${run.conclusion ?? "unknown"}.`
+      `${label} run ${options.runId} must be completed successfully; ` +
+        `status=${run.status ?? "unknown"} conclusion=${run.conclusion ?? "unknown"}.`,
     );
   }
 
-  if (typeof run.createdAt !== "string" || Number.isNaN(Date.parse(run.createdAt))) {
-    throw new Error(`${label} run ${options.runId} is missing a valid createdAt timestamp.`);
+  if (
+    typeof run.createdAt !== "string" ||
+    Number.isNaN(Date.parse(run.createdAt))
+  ) {
+    throw new Error(
+      `${label} run ${options.runId} is missing a valid createdAt timestamp.`,
+    );
   }
 
-  if (typeof run.url !== "string" || !run.url.startsWith("https://github.com/")) {
-    throw new Error(`${label} run ${options.runId} is missing a GitHub Actions run URL.`);
+  if (
+    typeof run.url !== "string" ||
+    !run.url.startsWith("https://github.com/")
+  ) {
+    throw new Error(
+      `${label} run ${options.runId} is missing a GitHub Actions run URL.`,
+    );
   }
 
   if (!Array.isArray(run.jobs)) {
@@ -514,23 +640,27 @@ function validateExternalWriteRun(run, options) {
   for (const jobName of defaults.externalWriteJobNames) {
     const job = jobsByName.get(jobName);
     if (job === undefined) {
-      throw new Error(`${label} run ${options.runId} is missing job ${jobName}.`);
+      throw new Error(
+        `${label} run ${options.runId} is missing job ${jobName}.`,
+      );
     }
     if (job.status !== "completed" || job.conclusion !== "success") {
       throw new Error(
-        `${label} run ${options.runId} job ${jobName} must be completed successfully; `
-        + `status=${job.status ?? "unknown"} conclusion=${job.conclusion ?? "unknown"}.`
+        `${label} run ${options.runId} job ${jobName} must be completed successfully; ` +
+          `status=${job.status ?? "unknown"} conclusion=${job.conclusion ?? "unknown"}.`,
       );
     }
     if (!Array.isArray(job.steps)) {
-      throw new Error(`${label} run ${options.runId} job ${jobName} is missing step metadata.`);
+      throw new Error(
+        `${label} run ${options.runId} job ${jobName} is missing step metadata.`,
+      );
     }
     const stepsByName = new Map(job.steps.map((step) => [step.name, step]));
     for (const stepName of defaults.externalWriteRequiredSteps) {
       const step = stepsByName.get(stepName);
       if (step?.status !== "completed" || step?.conclusion !== "success") {
         throw new Error(
-          `${label} run ${options.runId} job ${jobName} step ${stepName} must succeed.`
+          `${label} run ${options.runId} job ${jobName} step ${stepName} must succeed.`,
         );
       }
     }
@@ -542,31 +672,52 @@ function renderIssueBody(options) {
     "pnpm run hosted-live-provider-smoke --",
     `--model ${options.providerModel}`,
     `--ref ${options.branch}`,
-    options.providerEndpoint === undefined ? undefined : `--endpoint ${options.providerEndpoint}`,
-    options.providerThinking === undefined ? undefined : `--thinking ${options.providerThinking}`,
-    options.evidenceId === undefined ? undefined : `--evidence-id ${options.evidenceId}`
-  ].filter(Boolean).join(" ");
+    options.providerEndpoint === undefined
+      ? undefined
+      : `--endpoint ${options.providerEndpoint}`,
+    options.providerThinking === undefined
+      ? undefined
+      : `--thinking ${options.providerThinking}`,
+    options.evidenceId === undefined
+      ? undefined
+      : `--evidence-id ${options.evidenceId}`,
+  ]
+    .filter(Boolean)
+    .join(" ");
   const externalConsumerCommand = [
     "pnpm run hosted-external-consumer-smoke --",
     `--clarissimi-ref ${options.externalRef}`,
-    options.evidenceId === undefined ? undefined : `--evidence-id ${options.evidenceId}`,
-    options.externalRepo === defaults.externalRepo ? undefined : `--repo ${options.externalRepo}`
-  ].filter(Boolean).join(" ");
+    options.evidenceId === undefined
+      ? undefined
+      : `--evidence-id ${options.evidenceId}`,
+    options.externalRepo === defaults.externalRepo
+      ? undefined
+      : `--repo ${options.externalRepo}`,
+  ]
+    .filter(Boolean)
+    .join(" ");
   const externalWriteCommand = [
     `gh workflow run clarissimi-full-write-smoke.yml --repo ${options.externalRepo}`,
     `--ref ${defaults.externalBranch}`,
     `-f clarissimi-ref=${options.externalRef}`,
-    options.evidenceId === undefined ? undefined : `-f evidence-id=${options.evidenceId}`
-  ].filter(Boolean).join(" ");
-  const releaseType = options.releaseType === "versioned-action-tag"
-    ? `versioned Action tag \`${options.releaseVersion}\` under ADR 0031`
-    : "source-only merge evidence";
-  const releaseDecision = options.releaseType === "versioned-action-tag"
-    ? "ADR 0031"
-    : "`docs/ops/release.md` source-only merge policy";
-  const releasePolicyConclusion = options.releaseType === "versioned-action-tag"
-    ? `This evidence supports publishing immutable tag \`${options.releaseVersion}\` at \`${options.sha}\` and creating its GitHub pre-release. Do not create a moving \`v0\` alias.`
-    : "This evidence supports a source-only merge. A versioned Action tag requires the release type and version to be recorded explicitly.";
+    options.evidenceId === undefined
+      ? undefined
+      : `-f evidence-id=${options.evidenceId}`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const releaseType =
+    options.releaseType === "versioned-action-tag"
+      ? `versioned Action tag \`${options.releaseVersion}\` under ADR 0031`
+      : "source-only merge evidence";
+  const releaseDecision =
+    options.releaseType === "versioned-action-tag"
+      ? "ADR 0031"
+      : "`docs/ops/release.md` source-only merge policy";
+  const releasePolicyConclusion =
+    options.releaseType === "versioned-action-tag"
+      ? `This evidence supports publishing immutable tag \`${options.releaseVersion}\` at \`${options.sha}\` and creating its GitHub pre-release. Do not create a moving \`v0\` alias.`
+      : "This evidence supports a source-only merge. A versioned Action tag requires the release type and version to be recorded explicitly.";
 
   return [
     `Release candidate evidence for \`${options.sha}\` on \`${options.branch}\`.`,
@@ -635,7 +786,7 @@ function renderIssueBody(options) {
     "## Release Policy",
     "",
     releasePolicyConclusion,
-    ""
+    "",
   ].join("\n");
 }
 
@@ -643,14 +794,17 @@ function defaultRuntime() {
   return {
     log: (message) => console.log(message),
     error: (message) => console.error(message),
-    runCommand
+    runCommand,
   };
 }
 
 function runCommand(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
-      stdio: options.input === undefined ? ["ignore", "pipe", "pipe"] : ["pipe", "pipe", "pipe"]
+      stdio:
+        options.input === undefined
+          ? ["ignore", "pipe", "pipe"]
+          : ["pipe", "pipe", "pipe"],
     });
     let stdout = "";
     let stderr = "";
@@ -679,7 +833,12 @@ function boundedOutput(value) {
   return value.trim().slice(0, 2000);
 }
 
-if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const exitCode = await runReleaseCandidateEvidenceIssue(process.argv.slice(2));
+if (
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  const exitCode = await runReleaseCandidateEvidenceIssue(
+    process.argv.slice(2),
+  );
   process.exit(exitCode);
 }

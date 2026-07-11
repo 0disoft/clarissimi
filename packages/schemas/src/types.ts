@@ -6,7 +6,8 @@ export type ConfigProvider = (typeof CONFIG_PROVIDERS)[number];
 
 export const CONFIG_PROVIDER_THINKING_VALUES = ["disabled"] as const;
 
-export type ConfigProviderThinking = (typeof CONFIG_PROVIDER_THINKING_VALUES)[number];
+export type ConfigProviderThinking =
+  (typeof CONFIG_PROVIDER_THINKING_VALUES)[number];
 
 export const CONFIG_MODES = ["dry-run", "propose", "commit"] as const;
 
@@ -30,7 +31,7 @@ export const CONTRIBUTION_TYPES = [
   "translation",
   "release_validation",
   "example",
-  "other"
+  "other",
 ] as const;
 
 export type ContributionType = (typeof CONTRIBUTION_TYPES)[number];
@@ -44,7 +45,7 @@ export const APPROVAL_STATUSES = [
   "auto_approved",
   "approved",
   "rejected",
-  "skipped"
+  "skipped",
 ] as const;
 
 export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number];
@@ -59,7 +60,7 @@ export const EVIDENCE_KINDS = [
   "label",
   "test",
   "maintainer_note",
-  "advisory"
+  "advisory",
 ] as const;
 
 export type EvidenceKind = (typeof EVIDENCE_KINDS)[number];

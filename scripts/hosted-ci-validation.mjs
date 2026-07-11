@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 const defaults = {
   repo: "0disoft/clarissimi",
   branch: "main",
-  workflow: "CI"
+  workflow: "CI",
 };
 
 const usageText = [
@@ -16,7 +16,7 @@ const usageText = [
   "  pnpm run hosted-ci-validation -- --sha 0123456789abcdef0123456789abcdef01234567",
   "",
   "The script checks the hosted GitHub Actions workflow result for a commit. It does not read secrets.",
-  "`--ref` is accepted as a compatibility alias for `--branch`."
+  "`--ref` is accepted as a compatibility alias for `--branch`.",
 ].join("\n");
 
 export async function runHostedCiValidation(argv, runtime = defaultRuntime()) {
@@ -41,8 +41,15 @@ async function run(argv, runtime) {
   }
 
   const repo = args.repo ?? defaults.repo;
-  if (args.branch !== undefined && args.ref !== undefined && args.branch !== args.ref) {
-    return usageFailure(runtime, "--branch and --ref must match when both are provided.");
+  if (
+    args.branch !== undefined &&
+    args.ref !== undefined &&
+    args.branch !== args.ref
+  ) {
+    return usageFailure(
+      runtime,
+      "--branch and --ref must match when both are provided.",
+    );
   }
 
   const branch = args.branch ?? args.ref ?? defaults.branch;
@@ -60,7 +67,7 @@ async function run(argv, runtime) {
     return usageFailure(runtime, "--workflow requires a non-empty value.");
   }
 
-  const sha = args.sha ?? await readCurrentHeadSha(runtime);
+  const sha = args.sha ?? (await readCurrentHeadSha(runtime));
   if (!isCommitSha(sha)) {
     return usageFailure(runtime, "--sha must be a 40-character commit SHA.");
   }
@@ -71,7 +78,7 @@ async function run(argv, runtime) {
     repo,
     branch,
     workflow,
-    sha
+    sha,
   });
 
   if (runInfo.status === "completed") {
@@ -81,7 +88,7 @@ async function run(argv, runtime) {
     }
 
     throw new Error(
-      `Hosted CI validation failed for ${sha}: conclusion=${runInfo.conclusion || "unknown"} (${runInfo.url}).`
+      `Hosted CI validation failed for ${sha}: conclusion=${runInfo.conclusion || "unknown"} (${runInfo.url}).`,
     );
   }
 
@@ -161,7 +168,9 @@ class UsageError extends Error {
 async function readCurrentHeadSha(runtime) {
   const result = await runtime.runCommand("git", ["rev-parse", "HEAD"]);
   if (result.exitCode !== 0) {
-    throw new Error(`Unable to resolve current HEAD SHA.\n${boundedOutput(result.stderr)}`);
+    throw new Error(
+      `Unable to resolve current HEAD SHA.\n${boundedOutput(result.stderr)}`,
+    );
   }
 
   return result.stdout.trim();
@@ -192,10 +201,12 @@ async function findWorkflowRun(runtime, options) {
       "--limit",
       "20",
       "--json",
-      "databaseId,status,conclusion,headSha,url,createdAt"
+      "databaseId,status,conclusion,headSha,url,createdAt",
     ]);
     if (result.exitCode !== 0) {
-      throw new Error(`Unable to list hosted CI workflow runs.\n${boundedOutput(result.stderr)}`);
+      throw new Error(
+        `Unable to list hosted CI workflow runs.\n${boundedOutput(result.stderr)}`,
+      );
     }
 
     let runs;
@@ -218,43 +229,61 @@ async function findWorkflowRun(runtime, options) {
   }
 
   throw new Error(
-    `Unable to find ${options.workflow} workflow run for ${options.repo}@${options.branch} and ${options.sha}.`
+    `Unable to find ${options.workflow} workflow run for ${options.repo}@${options.branch} and ${options.sha}.`,
   );
 }
 
 function validateRunInfo(runInfo, workflow, sha) {
   if (!isPositiveRunId(runInfo.databaseId)) {
-    throw new Error(`${workflow} workflow run for ${sha} is missing a valid databaseId.`);
+    throw new Error(
+      `${workflow} workflow run for ${sha} is missing a valid databaseId.`,
+    );
   }
 
-  if (runInfo.url === undefined || typeof runInfo.url !== "string" || !runInfo.url.startsWith("https://")) {
-    throw new Error(`${workflow} workflow run for ${sha} is missing an https URL.`);
+  if (
+    runInfo.url === undefined ||
+    typeof runInfo.url !== "string" ||
+    !runInfo.url.startsWith("https://")
+  ) {
+    throw new Error(
+      `${workflow} workflow run for ${sha} is missing an https URL.`,
+    );
   }
 
-  if (runInfo.status !== "completed" && runInfo.status !== "queued" && runInfo.status !== "in_progress") {
-    throw new Error(`${workflow} workflow run for ${sha} has unsupported status=${runInfo.status}.`);
+  if (
+    runInfo.status !== "completed" &&
+    runInfo.status !== "queued" &&
+    runInfo.status !== "in_progress"
+  ) {
+    throw new Error(
+      `${workflow} workflow run for ${sha} has unsupported status=${runInfo.status}.`,
+    );
   }
 
-  if (runInfo.status === "completed" && typeof runInfo.conclusion !== "string") {
-    throw new Error(`${workflow} workflow run for ${sha} is completed without a string conclusion.`);
+  if (
+    runInfo.status === "completed" &&
+    typeof runInfo.conclusion !== "string"
+  ) {
+    throw new Error(
+      `${workflow} workflow run for ${sha} is completed without a string conclusion.`,
+    );
   }
 
   return runInfo;
 }
 
 async function watchRun(runtime, repo, runId) {
-  const result = await runtime.runCommand("gh", [
-    "run",
-    "watch",
-    runId,
-    "--repo",
-    repo,
-    "--exit-status"
-  ], {
-    inherit: true
-  });
+  const result = await runtime.runCommand(
+    "gh",
+    ["run", "watch", runId, "--repo", repo, "--exit-status"],
+    {
+      inherit: true,
+    },
+  );
   if (result.exitCode !== 0) {
-    throw new Error(`Hosted CI validation failed with exit code ${result.exitCode}.`);
+    throw new Error(
+      `Hosted CI validation failed with exit code ${result.exitCode}.`,
+    );
   }
 }
 
@@ -264,14 +293,14 @@ function defaultRuntime() {
     delay,
     log: (message) => console.log(message),
     error: (message) => console.error(message),
-    runCommand
+    runCommand,
   };
 }
 
 function runCommand(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
-      stdio: options.inherit ? "inherit" : ["ignore", "pipe", "pipe"]
+      stdio: options.inherit ? "inherit" : ["ignore", "pipe", "pipe"],
     });
     let stdout = "";
     let stderr = "";
@@ -304,7 +333,10 @@ function delay(ms) {
   });
 }
 
-if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   const exitCode = await runHostedCiValidation(process.argv.slice(2));
   process.exit(exitCode);
 }

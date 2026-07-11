@@ -1,0 +1,8 @@
+action-dist/
+dist/
+build/
+coverage/
+node_modules/
+.cache/
+.tmp/
+tmp/

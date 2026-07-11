@@ -8,20 +8,20 @@ import test from "node:test";
 import {
   RendererValidationError,
   RENDERED_OUTPUT_PATHS,
-  renderRecognitionOutputs
+  renderRecognitionOutputs,
 } from "@clarissimi/renderers";
 
 import {
   ProposalOutputStagingError,
   stageProposalDraftReviewOutput,
-  stageProposalRecognitionOutputs
+  stageProposalRecognitionOutputs,
 } from "../dist/index.js";
 
 const source = {
   repository: "sample/project",
   event: "merged_pull_request",
   pullRequestNumber: 42,
-  mergedAt: "2026-07-08T00:00:00.000Z"
+  mergedAt: "2026-07-08T00:00:00.000Z",
 };
 
 function assessment(overrides = {}) {
@@ -31,7 +31,7 @@ function assessment(overrides = {}) {
       platform: "github",
       id: "123456",
       login: "octocat",
-      profileUrl: "https://github.com/octocat"
+      profileUrl: "https://github.com/octocat",
     },
     contributionType: "test",
     affectedArea: "parser regression coverage",
@@ -42,15 +42,15 @@ function assessment(overrides = {}) {
         kind: "pull_request",
         id: "PR-42",
         url: "https://github.com/sample/project/pull/42",
-        title: "Add parser regression coverage"
-      }
+        title: "Add parser regression coverage",
+      },
     ],
     suggestedBadge: "Regression Shield",
     publicRecognitionText: "Added regression coverage for the parser crash.",
     confidence: 0.82,
     maintainerApprovalStatus: "approved",
     source,
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -69,14 +69,23 @@ test("stages renderer outputs with deterministic file metadata", async () => {
     const result = await stageProposalRecognitionOutputs({
       outputDir: dir,
       assessments: [approved],
-      redactionMatchCount: 2
+      redactionMatchCount: 2,
     });
     const expectedOutputs = renderRecognitionOutputs([approved]);
     const expected = new Map([
-      [RENDERED_OUTPUT_PATHS.contributionsJsonl, expectedOutputs.contributionsJsonl],
-      [RENDERED_OUTPUT_PATHS.contributorsJson, expectedOutputs.contributorsJson],
-      [RENDERED_OUTPUT_PATHS.contributorsMarkdown, expectedOutputs.contributorsMarkdown],
-      [RENDERED_OUTPUT_PATHS.staticDataJson, expectedOutputs.staticDataJson]
+      [
+        RENDERED_OUTPUT_PATHS.contributionsJsonl,
+        expectedOutputs.contributionsJsonl,
+      ],
+      [
+        RENDERED_OUTPUT_PATHS.contributorsJson,
+        expectedOutputs.contributorsJson,
+      ],
+      [
+        RENDERED_OUTPUT_PATHS.contributorsMarkdown,
+        expectedOutputs.contributorsMarkdown,
+      ],
+      [RENDERED_OUTPUT_PATHS.staticDataJson, expectedOutputs.staticDataJson],
     ]);
 
     assert.equal(result.outputDir, dir);
@@ -85,12 +94,12 @@ test("stages renderer outputs with deterministic file metadata", async () => {
     assert.equal(result.manifest.assessmentCount, 1);
     assert.deepEqual(result.manifest.approvalSummary, {
       approved: 1,
-      autoApproved: 0
+      autoApproved: 0,
     });
     assert.equal(result.manifest.redactionMatchCount, 2);
     assert.deepEqual(
       result.manifest.files.map((file) => file.path),
-      Array.from(expected.keys())
+      Array.from(expected.keys()),
     );
 
     for (const file of result.manifest.files) {
@@ -101,7 +110,7 @@ test("stages renderer outputs with deterministic file metadata", async () => {
       assert.equal(file.bytes, Buffer.byteLength(content, "utf8"));
       assert.equal(
         file.sha256,
-        createHash("sha256").update(content, "utf8").digest("hex")
+        createHash("sha256").update(content, "utf8").digest("hex"),
       );
     }
   });
@@ -113,13 +122,21 @@ test("stages the optional contributor summary table", async () => {
       outputDir: dir,
       assessments: [assessment()],
       redactionMatchCount: 0,
-      markdownSummary: "table"
+      markdownSummary: "table",
     });
-    const markdown = await readFile(join(dir, RENDERED_OUTPUT_PATHS.contributorsMarkdown), "utf8");
+    const markdown = await readFile(
+      join(dir, RENDERED_OUTPUT_PATHS.contributorsMarkdown),
+      "utf8",
+    );
 
     assert.equal(result.manifest.mode, "propose");
     assert.equal(markdown.includes("| Contributor | Total | Types |"), true);
-    assert.equal(markdown.includes("| [@octocat](https://github.com/octocat) | 1 | test 1 |"), true);
+    assert.equal(
+      markdown.includes(
+        "| [@octocat](https://github.com/octocat) | 1 | test 1 |",
+      ),
+      true,
+    );
     assert.equal(markdown.includes("## octocat"), true);
   });
 });
@@ -131,9 +148,9 @@ test("rejects draft assessments before staging public files", async () => {
         stageProposalRecognitionOutputs({
           outputDir: dir,
           assessments: [assessment({ maintainerApprovalStatus: "draft" })],
-          redactionMatchCount: 0
+          redactionMatchCount: 0,
         }),
-      ProposalOutputStagingError
+      ProposalOutputStagingError,
     );
 
     assert.deepEqual(await readdir(dir), []);
@@ -153,26 +170,31 @@ test("stages draft review output without public recognition files", async () => 
               id: "PR-42",
               url: "https://github.com/sample/project/pull/42",
               title: "Add parser regression coverage",
-              excerpt: "PATCH_EXCERPT_SENTINEL"
-            }
+              excerpt: "PATCH_EXCERPT_SENTINEL",
+            },
           ],
-          rawProviderOutput: "PROVIDER_RAW_SENTINEL"
-        })
+          rawProviderOutput: "PROVIDER_RAW_SENTINEL",
+        }),
       ],
-      redactionMatchCount: 4
+      redactionMatchCount: 4,
     });
     const filePaths = result.manifest.files.map((file) => file.path);
     const draftText = await readFile(join(dir, filePaths[0]), "utf8");
 
     assert.equal(result.manifest.mode, "stage-draft");
-    assert.deepEqual(filePaths, [".clarissimi/drafts/sample-project-merged_pull_request-42.json"]);
+    assert.deepEqual(filePaths, [
+      ".clarissimi/drafts/sample-project-merged_pull_request-42.json",
+    ]);
     assert.equal(result.manifest.assessmentCount, 1);
     assert.deepEqual(result.manifest.approvalSummary, {
       approved: 0,
-      autoApproved: 0
+      autoApproved: 0,
     });
     assert.equal(result.manifest.redactionMatchCount, 4);
-    assert.equal(draftText.includes('"maintainerApprovalStatus": "draft"'), true);
+    assert.equal(
+      draftText.includes('"maintainerApprovalStatus": "draft"'),
+      true,
+    );
     assert.equal(draftText.includes("PATCH_EXCERPT_SENTINEL"), false);
     assert.equal(draftText.includes("PROVIDER_RAW_SENTINEL"), false);
     assert.deepEqual(await readdir(join(dir, ".clarissimi")), ["drafts"]);
@@ -186,9 +208,9 @@ test("rejects approved assessments before staging draft review output", async ()
         stageProposalDraftReviewOutput({
           outputDir: dir,
           assessments: [assessment()],
-          redactionMatchCount: 0
+          redactionMatchCount: 0,
         }),
-      RendererValidationError
+      RendererValidationError,
     );
 
     assert.deepEqual(await readdir(dir), []);
@@ -202,7 +224,7 @@ test("keeps raw evidence and provider output out of staged metadata and files", 
       "PROVIDER_RAW_SENTINEL",
       "SENSITIVE_VALUE_SENTINEL",
       "RAW_DIFF_SENTINEL",
-      "PATCH_EXCERPT_SENTINEL"
+      "PATCH_EXCERPT_SENTINEL",
     ];
     const result = await stageProposalRecognitionOutputs({
       outputDir: dir,
@@ -214,20 +236,22 @@ test("keeps raw evidence and provider output out of staged metadata and files", 
               id: "PR-42",
               url: "https://github.com/sample/project/pull/42",
               title: "Add parser regression coverage",
-              excerpt: "PATCH_EXCERPT_SENTINEL"
-            }
+              excerpt: "PATCH_EXCERPT_SENTINEL",
+            },
           ],
           rawEvidence: "RAW_EVIDENCE_SENTINEL",
           rawProviderOutput: "PROVIDER_RAW_SENTINEL",
           sensitiveValue: "SENSITIVE_VALUE_SENTINEL",
-          rawDiff: "RAW_DIFF_SENTINEL"
-        })
+          rawDiff: "RAW_DIFF_SENTINEL",
+        }),
       ],
-      redactionMatchCount: 3
+      redactionMatchCount: 3,
     });
     const manifestText = JSON.stringify(result.manifest);
     const stagedContent = await Promise.all(
-      result.manifest.files.map((file) => readFile(join(dir, file.path), "utf8"))
+      result.manifest.files.map((file) =>
+        readFile(join(dir, file.path), "utf8"),
+      ),
     );
     const stagedText = stagedContent.join("\n");
 
@@ -249,13 +273,13 @@ test("rejects mixed source events in one proposal manifest", async () => {
             assessment({
               source: {
                 ...source,
-                pullRequestNumber: 43
-              }
-            })
+                pullRequestNumber: 43,
+              },
+            }),
           ],
-          redactionMatchCount: 0
+          redactionMatchCount: 0,
         }),
-      ProposalOutputStagingError
+      ProposalOutputStagingError,
     );
   });
 });

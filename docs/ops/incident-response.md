@@ -12,12 +12,12 @@ hosted service is down.
 
 Severity:
 
-| Severity | Definition | Response |
-| --- | --- | --- |
-| SEV-1 | Token, private key, raw provider output, raw diff, or sensitive evidence is public. | Stop release, rotate credentials, close or revert unsafe artifacts, rerun full validation. |
-| SEV-2 | Default branch or canonical ledger is mutated incorrectly. | Stop write-mode runs, revert or restore ledger, rebuild derived outputs. |
-| SEV-3 | Proposal pull request, Action output, or docs contain incorrect but non-sensitive recognition text. | Close or update proposal, correct docs or generated files, rerun targeted validation. |
-| SEV-4 | Local validation, hosted CI, or dogfood workflow is flaky without unsafe output. | Capture logs, fix or document the gate before release work continues. |
+| Severity | Definition                                                                                          | Response                                                                                   |
+| -------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| SEV-1    | Token, private key, raw provider output, raw diff, or sensitive evidence is public.                 | Stop release, rotate credentials, close or revert unsafe artifacts, rerun full validation. |
+| SEV-2    | Default branch or canonical ledger is mutated incorrectly.                                          | Stop write-mode runs, revert or restore ledger, rebuild derived outputs.                   |
+| SEV-3    | Proposal pull request, Action output, or docs contain incorrect but non-sensitive recognition text. | Close or update proposal, correct docs or generated files, rerun targeted validation.      |
+| SEV-4    | Local validation, hosted CI, or dogfood workflow is flaky without unsafe output.                    | Capture logs, fix or document the gate before release work continues.                      |
 
 First response:
 
@@ -42,7 +42,7 @@ Post-incident follow-up:
 
 ## Validation
 
-- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
+- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`
 - Release status: versioned Action tags are allowed by ADR 0031 after release gates pass; public
   package publication remains blocked by `docs/ops/release.md`.
 - Recent hosted live-provider evidence is recorded in `docs/ops/release.md`; refresh it with

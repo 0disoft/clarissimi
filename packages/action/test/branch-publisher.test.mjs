@@ -9,14 +9,14 @@ import {
   ProposalBranchPublisherError,
   publishProposalBranch,
   stageProposalRecognitionOutputs,
-  writeProposalBranch
+  writeProposalBranch,
 } from "../dist/index.js";
 
 const source = {
   repository: "sample/project",
   event: "merged_pull_request",
   pullRequestNumber: 42,
-  mergedAt: "2026-07-08T00:00:00.000Z"
+  mergedAt: "2026-07-08T00:00:00.000Z",
 };
 
 function assessment() {
@@ -26,7 +26,7 @@ function assessment() {
       platform: "github",
       id: "123456",
       login: "octocat",
-      profileUrl: "https://github.com/octocat"
+      profileUrl: "https://github.com/octocat",
     },
     contributionType: "test",
     affectedArea: "parser regression coverage",
@@ -37,14 +37,14 @@ function assessment() {
         kind: "pull_request",
         id: "PR-42",
         url: "https://github.com/sample/project/pull/42",
-        title: "Add parser regression coverage"
-      }
+        title: "Add parser regression coverage",
+      },
     ],
     suggestedBadge: "Regression Shield",
     publicRecognitionText: "Added regression coverage for the parser crash.",
     confidence: 0.82,
     maintainerApprovalStatus: "approved",
-    source
+    source,
   };
 }
 
@@ -63,30 +63,43 @@ test("publishes a proposal branch without mutating remote main", async () => {
     const repositoryDir = join(dir, "repo");
     const stagedOutputDir = join(dir, "staged");
     await initRepositoryWithRemote(repositoryDir, remoteDir);
-    const remoteMainSha = await git(repositoryDir, ["ls-remote", "origin", "refs/heads/main"]);
+    const remoteMainSha = await git(repositoryDir, [
+      "ls-remote",
+      "origin",
+      "refs/heads/main",
+    ]);
     const staging = await stageProposalRecognitionOutputs({
       outputDir: stagedOutputDir,
       assessments: [assessment()],
-      redactionMatchCount: 1
+      redactionMatchCount: 1,
     });
     const branch = await writeProposalBranch({
       repositoryDir,
       stagedOutputDir,
       manifest: staging.manifest,
-      baseBranch: "main"
+      baseBranch: "main",
     });
 
     const result = await publishProposalBranch({
       repositoryDir,
-      branch
+      branch,
     });
 
     assert.equal(result.remoteName, "origin");
     assert.equal(result.branchName, branch.branchName);
     assert.equal(result.commitSha, branch.commitSha);
-    assert.equal(await remoteBranchSha(repositoryDir, branch.branchName), branch.commitSha);
-    assert.equal(await git(repositoryDir, ["ls-remote", "origin", "refs/heads/main"]), remoteMainSha);
-    assert.equal(result.rollbackHint.includes(`origin/${branch.branchName}`), true);
+    assert.equal(
+      await remoteBranchSha(repositoryDir, branch.branchName),
+      branch.commitSha,
+    );
+    assert.equal(
+      await git(repositoryDir, ["ls-remote", "origin", "refs/heads/main"]),
+      remoteMainSha,
+    );
+    assert.equal(
+      result.rollbackHint.includes(`origin/${branch.branchName}`),
+      true,
+    );
   });
 });
 
@@ -99,30 +112,38 @@ test("rejects publishing when the local branch no longer matches the writer resu
     const staging = await stageProposalRecognitionOutputs({
       outputDir: stagedOutputDir,
       assessments: [assessment()],
-      redactionMatchCount: 0
+      redactionMatchCount: 0,
     });
     const branch = await writeProposalBranch({
       repositoryDir,
       stagedOutputDir,
       manifest: staging.manifest,
-      baseBranch: "main"
+      baseBranch: "main",
     });
 
     await git(repositoryDir, ["checkout", branch.branchName]);
-    await writeFile(join(repositoryDir, "CONTRIBUTORS.md"), "# Manual edit\n", "utf8");
+    await writeFile(
+      join(repositoryDir, "CONTRIBUTORS.md"),
+      "# Manual edit\n",
+      "utf8",
+    );
     await git(repositoryDir, ["add", "CONTRIBUTORS.md"]);
-    await git(repositoryDir, ["commit", "-m", "Change proposal branch after writer"]);
+    await git(repositoryDir, [
+      "commit",
+      "-m",
+      "Change proposal branch after writer",
+    ]);
     await git(repositoryDir, ["checkout", "main"]);
 
     await assert.rejects(
       () =>
         publishProposalBranch({
           repositoryDir,
-          branch
+          branch,
         }),
       (error) =>
-        error instanceof ProposalBranchPublisherError
-        && error.code === "branch_commit_mismatch"
+        error instanceof ProposalBranchPublisherError &&
+        error.code === "branch_commit_mismatch",
     );
   });
 });
@@ -138,10 +159,10 @@ test("rejects missing publisher metadata before git push", async () => {
           baseCommitSha: "1".repeat(40),
           commitSha: "2".repeat(40),
           changedFiles: ["CONTRIBUTORS.md"],
-          rollbackHint: "Delete branch."
-        }
+          rollbackHint: "Delete branch.",
+        },
       }),
-    ProposalBranchPublisherError
+    ProposalBranchPublisherError,
   );
 });
 
@@ -149,8 +170,16 @@ async function initRepositoryWithRemote(repositoryDir, remoteDir) {
   await mkdir(repositoryDir);
   await git(repositoryDir, ["init", "-b", "main"]);
   await git(repositoryDir, ["config", "user.name", "Clarissimi Tests"]);
-  await git(repositoryDir, ["config", "user.email", "clarissimi-tests.invalid"]);
-  await writeFile(join(repositoryDir, "README.md"), "# Fixture Repository\n", "utf8");
+  await git(repositoryDir, [
+    "config",
+    "user.email",
+    "clarissimi-tests.invalid",
+  ]);
+  await writeFile(
+    join(repositoryDir, "README.md"),
+    "# Fixture Repository\n",
+    "utf8",
+  );
   await git(repositoryDir, ["add", "README.md"]);
   await git(repositoryDir, ["commit", "-m", "Initial commit"]);
   await git(repositoryDir, ["init", "--bare", remoteDir]);
@@ -159,7 +188,11 @@ async function initRepositoryWithRemote(repositoryDir, remoteDir) {
 }
 
 async function remoteBranchSha(repositoryDir, branchName) {
-  const output = await git(repositoryDir, ["ls-remote", "origin", `refs/heads/${branchName}`]);
+  const output = await git(repositoryDir, [
+    "ls-remote",
+    "origin",
+    `refs/heads/${branchName}`,
+  ]);
   return output.split(/\s+/)[0];
 }
 
@@ -167,7 +200,7 @@ function git(repositoryDir, args) {
   return new Promise((resolve, reject) => {
     const child = spawn("git", args, {
       cwd: repositoryDir,
-      stdio: ["ignore", "pipe", "pipe"]
+      stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "";
     let stderr = "";

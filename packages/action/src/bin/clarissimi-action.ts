@@ -7,7 +7,7 @@ const exitCode = await runActionFromEnvironment(process.env, {
   },
   stderr: (value) => {
     process.stderr.write(value);
-  }
+  },
 });
 
 process.exitCode = exitCode;

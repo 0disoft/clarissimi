@@ -12,15 +12,15 @@ hosted Clarissimi service exists yet.
 
 Service levels:
 
-| Area | Target |
-| --- | --- |
+| Area                        | Target                                                                                                        |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | Source-only merge readiness | Local `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`, and hygiene checks pass before push. |
-| Hosted validation | `Validation` check passes on `main` after push. |
-| Write-mode dogfood | Manual propose, stage-draft, and promote-draft workflows pass before release evidence claims support. |
-| Live provider release gate | Local live-provider smoke plus hosted manual live-provider smoke pass with maintainer-owned credentials. |
-| Versioned Action release | Immutable tag points to the exact validated SHA and its GitHub pre-release links the evidence issue. |
-| Unsafe output response | Stop release or dogfood immediately and follow rollback or incident-response docs. |
-| Ledger recovery | Restore or revert the canonical ledger before rebuilding derived outputs. |
+| Hosted validation           | `Validation` check passes on `main` after push.                                                               |
+| Write-mode dogfood          | Manual propose, stage-draft, and promote-draft workflows pass before release evidence claims support.         |
+| Live provider release gate  | Local live-provider smoke plus hosted manual live-provider smoke pass with maintainer-owned credentials.      |
+| Versioned Action release    | Immutable tag points to the exact validated SHA and its GitHub pre-release links the evidence issue.          |
+| Unsafe output response      | Stop release or dogfood immediately and follow rollback or incident-response docs.                            |
+| Ledger recovery             | Restore or revert the canonical ledger before rebuilding derived outputs.                                     |
 
 Severity and response are owned by `docs/ops/incident-response.md`. Rollback procedure is owned by
 `docs/ops/rollback.md`. Secrets response is owned by `docs/ops/secrets.md`.
@@ -33,7 +33,7 @@ Severity and response are owned by `docs/ops/incident-response.md`. Rollback pro
 
 ## Validation
 
-- Required validation names: `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`
+- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`
 - Release status: versioned Action tags are allowed by ADR 0031 after release gates pass; public
   package publication remains blocked by `docs/ops/release.md`.
 - Recent hosted live-provider evidence is recorded in `docs/ops/release.md`; refresh it with

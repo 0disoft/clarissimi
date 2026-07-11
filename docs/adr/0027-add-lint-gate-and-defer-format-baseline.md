@@ -25,7 +25,7 @@ Formatter revalidation on 2026-07-10 kept this decision in place:
 - `npm view oxfmt version description license repository --json` reported `oxfmt@0.58.0`,
   "Formatter for the JavaScript Oxidation Compiler", MIT license, and the `oxc` repository.
 - `pnpm dlx oxfmt@0.58.0 --check packages scripts action.yml .github --ignore-path=.gitignore
-  --no-error-on-unmatched-pattern` reported format issues in 78 JavaScript-family package and script
+--no-error-on-unmatched-pattern` reported format issues in 78 JavaScript-family package and script
   files.
 - `pnpm dlx prettier@3.9.5 --check "**/*.{md,json,yml,yaml,ts,mjs}" --ignore-path .gitignore`
   reported style drift in 82 files across Markdown, JSON, YAML, TypeScript, and script surfaces.

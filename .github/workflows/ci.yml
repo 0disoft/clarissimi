@@ -73,6 +73,9 @@ jobs:
       - name: Run lint validation
         run: pnpm run lint
 
+      - name: Run format validation
+        run: pnpm run format
+
       - name: Run smoke validation
         run: pnpm run smoke
 

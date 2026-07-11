@@ -1,9 +1,17 @@
-import type { ConfigMarkdownSummary, ContributionAssessment } from "@clarissimi/schemas";
+import type {
+  ConfigMarkdownSummary,
+  ContributionAssessment,
+} from "@clarissimi/schemas";
 import type { LiveGitHubClient } from "@clarissimi/github";
 import type { ContributionDraftProvider } from "@clarissimi/providers";
 import type { ProposalPullRequestClient } from "./pull-request.js";
 
-export const ACTION_MODES = ["dry-run", "propose", "stage-draft", "promote-draft"] as const;
+export const ACTION_MODES = [
+  "dry-run",
+  "propose",
+  "stage-draft",
+  "promote-draft",
+] as const;
 
 export type ActionMode = (typeof ACTION_MODES)[number];
 
@@ -11,7 +19,8 @@ export function isActionMode(value: string): value is ActionMode {
   return (ACTION_MODES as readonly string[]).includes(value);
 }
 
-export type ActionInputSource = "github_event_path" | "github_fixture" | "approved_draft";
+export type ActionInputSource =
+  "github_event_path" | "github_fixture" | "approved_draft";
 
 export interface ActionDryRunInput {
   readonly mode?: ActionMode | string;
@@ -32,7 +41,10 @@ export interface ActionProposeInput extends ActionDryRunInput {
   readonly pullRequestClient: ProposalPullRequestClient;
 }
 
-export interface ActionStageDraftInput extends Omit<ActionProposeInput, "mode"> {
+export interface ActionStageDraftInput extends Omit<
+  ActionProposeInput,
+  "mode"
+> {
   readonly mode: "stage-draft";
 }
 
@@ -52,7 +64,8 @@ export interface ActionDryRunSummary {
   readonly proposedEntryCount: 0;
   readonly skippedEntryCount: number;
   readonly publicOutputsRendered: false;
-  readonly approvalStatus: ContributionAssessment["maintainerApprovalStatus"] | null;
+  readonly approvalStatus:
+    ContributionAssessment["maintainerApprovalStatus"] | null;
   readonly redactionChanged: boolean;
   readonly redactionMatchCount: number;
   readonly assessment?: SanitizedContributionAssessment;
@@ -80,7 +93,10 @@ export interface ActionProposeSummary {
 
 export type ActionRunSummary = ActionDryRunSummary | ActionProposeSummary;
 
-export type SanitizedContributionAssessment = Omit<ContributionAssessment, "evidenceRefs"> & {
+export type SanitizedContributionAssessment = Omit<
+  ContributionAssessment,
+  "evidenceRefs"
+> & {
   readonly evidenceRefs: readonly SanitizedEvidenceRef[];
 };
 

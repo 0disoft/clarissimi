@@ -10,13 +10,13 @@ Workflow examples must use explicit `permissions`. A workflow must not use `writ
 
 ## Permission Matrix
 
-| Mode | `contents` | `pull-requests` | `issues` | Writes repository files | Opens pull request |
-| --- | --- | --- | --- | --- | --- |
-| `dry-run` | `read` | `read` | `read` | No | No |
-| `propose` | `write` | `write` | `read` | Proposal branch only | Yes |
-| `stage-draft` | `write` | `write` | `read` | Draft proposal branch only | Yes |
-| `promote-draft` | `write` | `write` | `read` | Recognition proposal branch only | Yes |
-| `commit` | `write` | `read` | `read` | Current branch | No |
+| Mode            | `contents` | `pull-requests` | `issues` | Writes repository files          | Opens pull request |
+| --------------- | ---------- | --------------- | -------- | -------------------------------- | ------------------ |
+| `dry-run`       | `read`     | `read`          | `read`   | No                               | No                 |
+| `propose`       | `write`    | `write`         | `read`   | Proposal branch only             | Yes                |
+| `stage-draft`   | `write`    | `write`         | `read`   | Draft proposal branch only       | Yes                |
+| `promote-draft` | `write`    | `write`         | `read`   | Recognition proposal branch only | Yes                |
+| `commit`        | `write`    | `read`          | `read`   | Current branch                   | No                 |
 
 Any permission not listed in a workflow should remain unset, which GitHub treats as `none` when
 the workflow uses an explicit `permissions` block.

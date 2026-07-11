@@ -405,14 +405,12 @@ Completed deliverables:
 - release-readiness verifies that the hosted CI validation wrapper remains registered as a
   release-critical package script
 - release-readiness verifies that `pnpm run lint` remains backed by `oxlint . --deny-warnings`
-- release-readiness verifies that `pnpm run format` remains intentionally fail-closed until a
-  formatter baseline ADR accepts the rewrite
-- release-readiness validates that ADR 0027 keeps `oxlint` as the current lint gate and keeps
-  `format` fail-closed until a separate formatter baseline rewrite is accepted
-- formatter gate revalidation on 2026-07-10 confirmed `oxfmt@0.58.0` still reports JavaScript-family
-  drift only, while Prettier reports broader Markdown, JSON, YAML, TypeScript, and script drift; the
-  `format` validation remains fail-closed instead of pretending repository-wide formatting is
-  enforced
+- release-readiness verifies that `pnpm run format` uses the exactly pinned Prettier baseline and
+  that hosted CI runs it as a merge gate
+- ADR 0035 accepts the isolated repository-wide formatter rewrite required by ADR 0027 and covers
+  maintained Markdown, JSON, YAML, TypeScript, and JavaScript sources
+- generated Action bundles and build/cache output remain excluded from formatting; the existing
+  bundle freshness check continues to own `action-dist/index.js`
 - release-readiness verifies that `pnpm run migration-check` remains intentionally fail-closed
   until a real migration validation owner and command are accepted
 - release-readiness verifies that package test globs still include package and script test suites
@@ -453,8 +451,7 @@ Completed deliverables:
   `dist`, `build`, `coverage`, cache directories, `node_modules`, or `.tsbuildinfo`
 - release-readiness secret scan covers committed provider gateway token assignments including
   Clarissimi, OpenCode Go, UMANS, DeepSeek, Node auth, and GitHub PAT environment names
-- ADR 0027 records the `oxlint` merge gate decision and keeps `format` fail-closed until a separate
-  formatter baseline rewrite is accepted
+- ADR 0027 records the `oxlint` merge gate and ADR 0035 accepts the separate Prettier baseline
 - agent-assisted draft guide documents a copyable assessment template, PR source fields, evidence
   refs, impact/confidence semantics, and delegated model envelopes
 - ledger format guide documents public ledger fields, PR number and URL placement, draft-versus-ledger

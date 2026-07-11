@@ -14,7 +14,7 @@ Required validation by change type:
 - GitHub Action changes: Action tests, `actionlint`, workflow YAML parsing, `pnpm run smoke`,
   `pnpm run check`, `pnpm run contract`.
 - Provider adapter changes: fake-fetch tests, no live credentials in correctness tests, `pnpm run
-  check`, `pnpm run contract`.
+check`, `pnpm run contract`.
 - Renderer or ledger changes: renderer tests, rebuild/import tests, no-public-ranking checks.
 - Release readiness changes: local validation plus relevant hosted workflow evidence.
 

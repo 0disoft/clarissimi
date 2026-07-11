@@ -16,7 +16,6 @@ implementation packages described by the source-of-truth documents.
 - cli-tool: This repository type owns command behavior, arguments, flags, config loading, exit codes, terminal output, JSON output, runtime compatibility, and shell integration contracts.
 - github-action: This repository type owns action inputs, outputs, permissions, token handling, and runner compatibility.
 
-
 ## Source of Truth
 
 - Product scope: docs/product/02-spec.md

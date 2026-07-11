@@ -26,16 +26,19 @@ export class ProposalBranchPublisherError extends Error {
 }
 
 export async function publishProposalBranch(
-  input: ProposalBranchPublisherInput
+  input: ProposalBranchPublisherInput,
 ): Promise<ProposalBranchPublishResult> {
   validatePublisherInput(input);
 
   const remoteName = input.remoteName ?? "origin";
-  const localSha = await git(input.repositoryDir, ["rev-parse", input.branch.branchName]);
+  const localSha = await git(input.repositoryDir, [
+    "rev-parse",
+    input.branch.branchName,
+  ]);
   if (localSha !== input.branch.commitSha) {
     throw new ProposalBranchPublisherError(
       "branch_commit_mismatch",
-      "Proposal branch publisher refuses to push when the local branch no longer matches the branch writer result."
+      "Proposal branch publisher refuses to push when the local branch no longer matches the branch writer result.",
     );
   }
 
@@ -43,14 +46,14 @@ export async function publishProposalBranch(
     "push",
     "--force-with-lease",
     remoteName,
-    `${input.branch.branchName}:${input.branch.branchName}`
+    `${input.branch.branchName}:${input.branch.branchName}`,
   ]);
 
   return {
     remoteName,
     branchName: input.branch.branchName,
     commitSha: input.branch.commitSha,
-    rollbackHint: `Delete remote branch ${remoteName}/${input.branch.branchName} before merge to discard this proposal.`
+    rollbackHint: `Delete remote branch ${remoteName}/${input.branch.branchName} before merge to discard this proposal.`,
   };
 }
 
@@ -58,41 +61,41 @@ function validatePublisherInput(input: ProposalBranchPublisherInput): void {
   if (input.repositoryDir.trim().length === 0) {
     throw new ProposalBranchPublisherError(
       "missing_repository_dir",
-      "Proposal branch publishing requires a repository directory."
+      "Proposal branch publishing requires a repository directory.",
     );
   }
 
   if (input.branch.branchName.trim().length === 0) {
     throw new ProposalBranchPublisherError(
       "missing_branch",
-      "Proposal branch publishing requires a proposal branch name."
+      "Proposal branch publishing requires a proposal branch name.",
     );
   }
 
   if (input.branch.commitSha.trim().length === 0) {
     throw new ProposalBranchPublisherError(
       "missing_commit_sha",
-      "Proposal branch publishing requires a proposal branch commit sha."
+      "Proposal branch publishing requires a proposal branch commit sha.",
     );
   }
 
   if (input.remoteName !== undefined && input.remoteName.trim().length === 0) {
     throw new ProposalBranchPublisherError(
       "missing_remote",
-      "Proposal branch publishing requires a non-empty remote name."
+      "Proposal branch publishing requires a non-empty remote name.",
     );
   }
 }
 
 async function git(
   repositoryDir: string,
-  args: readonly string[]
+  args: readonly string[],
 ): Promise<string> {
   const result = await runGit(repositoryDir, args);
   if (result.exitCode !== 0) {
     throw new ProposalBranchPublisherError(
       "git_command_failed",
-      result.stderr.trim() || `git ${args.join(" ")} failed.`
+      result.stderr.trim() || `git ${args.join(" ")} failed.`,
     );
   }
 
@@ -101,7 +104,7 @@ async function git(
 
 function runGit(
   repositoryDir: string,
-  args: readonly string[]
+  args: readonly string[],
 ): Promise<{
   readonly exitCode: number;
   readonly stdout: string;
@@ -110,7 +113,7 @@ function runGit(
   return new Promise((resolve, reject) => {
     const child = spawn("git", args, {
       cwd: repositoryDir,
-      stdio: ["ignore", "pipe", "pipe"]
+      stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "";
     let stderr = "";
@@ -128,7 +131,7 @@ function runGit(
       resolve({
         exitCode: exitCode ?? 1,
         stdout,
-        stderr
+        stderr,
       });
     });
   });

@@ -18,7 +18,7 @@ import {
   type ContributionType,
   type EvidenceKind,
   type ValidationIssue,
-  type ValidationResult
+  type ValidationResult,
 } from "./types.js";
 
 const RANKING_LANGUAGE_PATTERNS: readonly RegExp[] = [
@@ -44,7 +44,7 @@ const RANKING_LANGUAGE_PATTERNS: readonly RegExp[] = [
   /\b(?:gold|silver|bronze)\s+contributor\b/i,
   /\bmedium\s+contributor\b/i,
   /\bmedium\s+quality\b/i,
-  /\blow-quality\s+contributor\b/i
+  /\blow-quality\s+contributor\b/i,
 ];
 
 const PUBLIC_SCORE_FIELD_NAMES = new Set([
@@ -69,7 +69,7 @@ const PUBLIC_SCORE_FIELD_NAMES = new Set([
   "leaderboardposition",
   "contributortier",
   "tier",
-  "points"
+  "points",
 ]);
 
 const PUBLIC_SCORE_FIELD_SUFFIXES = [
@@ -84,7 +84,7 @@ const PUBLIC_SCORE_FIELD_SUFFIXES = [
   "pointspercent",
   "impactweightpercent",
   "contributionweightpercent",
-  "contributionpercent"
+  "contributionpercent",
 ] as const;
 
 export function isContributionType(value: string): value is ContributionType {
@@ -95,7 +95,9 @@ export function isConfigProvider(value: string): value is ConfigProvider {
   return (CONFIG_PROVIDERS as readonly string[]).includes(value);
 }
 
-export function isConfigProviderThinking(value: string): value is ConfigProviderThinking {
+export function isConfigProviderThinking(
+  value: string,
+): value is ConfigProviderThinking {
   return (CONFIG_PROVIDER_THINKING_VALUES as readonly string[]).includes(value);
 }
 
@@ -103,11 +105,15 @@ export function isConfigMode(value: string): value is ConfigMode {
   return (CONFIG_MODES as readonly string[]).includes(value);
 }
 
-export function isConfigMarkdownSummary(value: string): value is ConfigMarkdownSummary {
+export function isConfigMarkdownSummary(
+  value: string,
+): value is ConfigMarkdownSummary {
   return (CONFIG_MARKDOWN_SUMMARIES as readonly string[]).includes(value);
 }
 
-export function isImpactLevel(value: string): value is ContributionAssessment["impactLevel"] {
+export function isImpactLevel(
+  value: string,
+): value is ContributionAssessment["impactLevel"] {
   return (IMPACT_LEVELS as readonly string[]).includes(value);
 }
 
@@ -124,7 +130,7 @@ export function hasPublicRankingLanguage(value: string): boolean {
 }
 
 export function validateContributionAssessment(
-  value: unknown
+  value: unknown,
 ): ValidationResult<ContributionAssessment> {
   const issues: ValidationIssue[] = [];
 
@@ -133,23 +139,42 @@ export function validateContributionAssessment(
       {
         path: "$",
         code: "expected_object",
-        message: "Assessment must be an object."
-      }
+        message: "Assessment must be an object.",
+      },
     ]);
   }
 
-  expectLiteral(value.schemaVersion, ASSESSMENT_SCHEMA_VERSION, "$.schemaVersion", issues);
+  expectLiteral(
+    value.schemaVersion,
+    ASSESSMENT_SCHEMA_VERSION,
+    "$.schemaVersion",
+    issues,
+  );
   rejectPublicScoreFields(value, "$", issues);
   validateContributor(value.contributor, "$.contributor", issues);
-  expectEnum(value.contributionType, isContributionType, "$.contributionType", issues);
+  expectEnum(
+    value.contributionType,
+    isContributionType,
+    "$.contributionType",
+    issues,
+  );
   expectPublicNarrativeText(value.affectedArea, "$.affectedArea", issues);
   expectEnum(value.impactLevel, isImpactLevel, "$.impactLevel", issues);
   expectPublicNarrativeText(value.evidenceSummary, "$.evidenceSummary", issues);
   validateEvidenceRefs(value.evidenceRefs, "$.evidenceRefs", issues);
   expectPublicNarrativeText(value.suggestedBadge, "$.suggestedBadge", issues);
-  expectPublicNarrativeText(value.publicRecognitionText, "$.publicRecognitionText", issues);
+  expectPublicNarrativeText(
+    value.publicRecognitionText,
+    "$.publicRecognitionText",
+    issues,
+  );
   expectConfidence(value.confidence, "$.confidence", issues);
-  expectEnum(value.maintainerApprovalStatus, isApprovalStatus, "$.maintainerApprovalStatus", issues);
+  expectEnum(
+    value.maintainerApprovalStatus,
+    isApprovalStatus,
+    "$.maintainerApprovalStatus",
+    issues,
+  );
   validateSource(value.source, "$.source", issues);
 
   if (issues.length > 0) {
@@ -159,11 +184,13 @@ export function validateContributionAssessment(
   return {
     ok: true,
     value: value as unknown as ContributionAssessment,
-    issues: []
+    issues: [],
   };
 }
 
-export function validateClarissimiConfig(value: unknown): ValidationResult<ClarissimiConfig> {
+export function validateClarissimiConfig(
+  value: unknown,
+): ValidationResult<ClarissimiConfig> {
   const issues: ValidationIssue[] = [];
 
   if (!isRecord(value)) {
@@ -171,30 +198,39 @@ export function validateClarissimiConfig(value: unknown): ValidationResult<Clari
       {
         path: "$",
         code: "expected_object",
-        message: "Clarissimi config must be a JSON object."
-      }
+        message: "Clarissimi config must be a JSON object.",
+      },
     ]);
   }
 
-  const provider = expectOptionalEnum(value.provider, isConfigProvider, "$.provider", issues);
+  const provider = expectOptionalEnum(
+    value.provider,
+    isConfigProvider,
+    "$.provider",
+    issues,
+  );
   const providerEndpoint = expectOptionalHttpUrl(
     value.providerEndpoint,
     "$.providerEndpoint",
-    issues
+    issues,
   );
-  const providerModel = expectOptionalNonEmptyString(value.providerModel, "$.providerModel", issues);
+  const providerModel = expectOptionalNonEmptyString(
+    value.providerModel,
+    "$.providerModel",
+    issues,
+  );
   const providerThinking = expectOptionalEnum(
     value.providerThinking,
     isConfigProviderThinking,
     "$.providerThinking",
-    issues
+    issues,
   );
   const mode = expectOptionalEnum(value.mode, isConfigMode, "$.mode", issues);
   const markdownSummary = expectOptionalEnum(
     value.markdownSummary,
     isConfigMarkdownSummary,
     "$.markdownSummary",
-    issues
+    issues,
   );
 
   if (issues.length > 0) {
@@ -237,13 +273,22 @@ export function validateClarissimiConfig(value: unknown): ValidationResult<Clari
   return {
     ok: true,
     value: config,
-    issues: []
+    issues: [],
   };
 }
 
-function validateContributor(value: unknown, path: string, issues: ValidationIssue[]): void {
+function validateContributor(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[],
+): void {
   if (!isRecord(value)) {
-    pushIssue(issues, path, "expected_object", "Contributor must be an object.");
+    pushIssue(
+      issues,
+      path,
+      "expected_object",
+      "Contributor must be an object.",
+    );
     return;
   }
 
@@ -253,14 +298,28 @@ function validateContributor(value: unknown, path: string, issues: ValidationIss
   expectUrl(value.profileUrl, `${path}.profileUrl`, issues);
 }
 
-function validateEvidenceRefs(value: unknown, path: string, issues: ValidationIssue[]): void {
+function validateEvidenceRefs(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[],
+): void {
   if (!Array.isArray(value)) {
-    pushIssue(issues, path, "expected_array", "Evidence refs must be an array.");
+    pushIssue(
+      issues,
+      path,
+      "expected_array",
+      "Evidence refs must be an array.",
+    );
     return;
   }
 
   if (value.length === 0) {
-    pushIssue(issues, path, "empty_array", "At least one evidence ref is required.");
+    pushIssue(
+      issues,
+      path,
+      "empty_array",
+      "At least one evidence ref is required.",
+    );
     return;
   }
 
@@ -268,7 +327,12 @@ function validateEvidenceRefs(value: unknown, path: string, issues: ValidationIs
     const entryPath = `${path}[${index}]`;
 
     if (!isRecord(entry)) {
-      pushIssue(issues, entryPath, "expected_object", "Evidence ref must be an object.");
+      pushIssue(
+        issues,
+        entryPath,
+        "expected_object",
+        "Evidence ref must be an object.",
+      );
       return;
     }
 
@@ -289,7 +353,11 @@ function validateEvidenceRefs(value: unknown, path: string, issues: ValidationIs
   });
 }
 
-function validateSource(value: unknown, path: string, issues: ValidationIssue[]): void {
+function validateSource(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[],
+): void {
   if (!isRecord(value)) {
     pushIssue(issues, path, "expected_object", "Source must be an object.");
     return;
@@ -297,7 +365,11 @@ function validateSource(value: unknown, path: string, issues: ValidationIssue[])
 
   expectRepositoryName(value.repository, `${path}.repository`, issues);
   expectLiteral(value.event, "merged_pull_request", `${path}.event`, issues);
-  expectPositiveInteger(value.pullRequestNumber, `${path}.pullRequestNumber`, issues);
+  expectPositiveInteger(
+    value.pullRequestNumber,
+    `${path}.pullRequestNumber`,
+    issues,
+  );
 
   if (value.mergedAt !== undefined) {
     expectIsoDateTime(value.mergedAt, `${path}.mergedAt`, issues);
@@ -307,7 +379,7 @@ function validateSource(value: unknown, path: string, issues: ValidationIssue[])
 function expectPublicNarrativeText(
   value: unknown,
   path: string,
-  issues: ValidationIssue[]
+  issues: ValidationIssue[],
 ): void {
   expectNonEmptyString(value, path, issues);
 
@@ -316,26 +388,40 @@ function expectPublicNarrativeText(
       issues,
       path,
       "public_ranking_language",
-      "Public recognition fields must not contain contributor scoring or ranking language."
+      "Public recognition fields must not contain contributor scoring or ranking language.",
     );
   }
 }
 
-function expectConfidence(value: unknown, path: string, issues: ValidationIssue[]): void {
+function expectConfidence(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[],
+): void {
   if (typeof value !== "number" || !Number.isFinite(value)) {
-    pushIssue(issues, path, "expected_number", "Confidence must be a finite number.");
+    pushIssue(
+      issues,
+      path,
+      "expected_number",
+      "Confidence must be a finite number.",
+    );
     return;
   }
 
   if (value < 0 || value > 1) {
-    pushIssue(issues, path, "out_of_range", "Confidence must be between 0 and 1.");
+    pushIssue(
+      issues,
+      path,
+      "out_of_range",
+      "Confidence must be between 0 and 1.",
+    );
   }
 }
 
 function rejectPublicScoreFields(
   value: unknown,
   path: string,
-  issues: ValidationIssue[]
+  issues: ValidationIssue[],
 ): void {
   if (Array.isArray(value)) {
     value.forEach((entry, index) => {
@@ -355,7 +441,7 @@ function rejectPublicScoreFields(
         issues,
         fieldPath,
         "public_score_field",
-        "Assessment must not contain public score, rank, leaderboard, point, or contributor tier fields."
+        "Assessment must not contain public score, rank, leaderboard, point, or contributor tier fields.",
       );
     }
 
@@ -379,7 +465,7 @@ function expectEnum(
   value: unknown,
   guard: (candidate: string) => boolean,
   path: string,
-  issues: ValidationIssue[]
+  issues: ValidationIssue[],
 ): void {
   if (typeof value !== "string" || !guard(value)) {
     pushIssue(issues, path, "invalid_enum", "Value is not in the allowed set.");
@@ -390,30 +476,44 @@ function expectLiteral(
   value: unknown,
   expected: string,
   path: string,
-  issues: ValidationIssue[]
+  issues: ValidationIssue[],
 ): void {
   if (value !== expected) {
     pushIssue(issues, path, "invalid_literal", `Value must be ${expected}.`);
   }
 }
 
-function expectNonEmptyString(value: unknown, path: string, issues: ValidationIssue[]): void {
+function expectNonEmptyString(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[],
+): void {
   if (typeof value !== "string" || value.trim().length === 0) {
-    pushIssue(issues, path, "empty_string", "Value must be a non-empty string.");
+    pushIssue(
+      issues,
+      path,
+      "empty_string",
+      "Value must be a non-empty string.",
+    );
   }
 }
 
 function expectOptionalNonEmptyString(
   value: unknown,
   path: string,
-  issues: ValidationIssue[]
+  issues: ValidationIssue[],
 ): string | undefined {
   if (value === undefined) {
     return undefined;
   }
 
   if (typeof value !== "string" || value.trim().length === 0) {
-    pushIssue(issues, path, "empty_string", "Value must be a non-empty string.");
+    pushIssue(
+      issues,
+      path,
+      "empty_string",
+      "Value must be a non-empty string.",
+    );
     return undefined;
   }
 
@@ -423,7 +523,7 @@ function expectOptionalNonEmptyString(
 function expectOptionalHttpUrl(
   value: unknown,
   path: string,
-  issues: ValidationIssue[]
+  issues: ValidationIssue[],
 ): string | undefined {
   const normalized = expectOptionalNonEmptyString(value, path, issues);
   if (normalized === undefined) {
@@ -433,11 +533,21 @@ function expectOptionalHttpUrl(
   try {
     const parsed = new URL(normalized);
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-      pushIssue(issues, path, "invalid_url_protocol", "Value must be an HTTP(S) URL.");
+      pushIssue(
+        issues,
+        path,
+        "invalid_url_protocol",
+        "Value must be an HTTP(S) URL.",
+      );
       return undefined;
     }
   } catch {
-    pushIssue(issues, path, "invalid_url", "Value must be a valid HTTP(S) URL.");
+    pushIssue(
+      issues,
+      path,
+      "invalid_url",
+      "Value must be a valid HTTP(S) URL.",
+    );
     return undefined;
   }
 
@@ -448,7 +558,7 @@ function expectOptionalEnum<T extends string>(
   value: unknown,
   guard: (candidate: string) => candidate is T,
   path: string,
-  issues: ValidationIssue[]
+  issues: ValidationIssue[],
 ): T | undefined {
   if (value === undefined) {
     return undefined;
@@ -462,9 +572,18 @@ function expectOptionalEnum<T extends string>(
   return value;
 }
 
-function expectUrl(value: unknown, path: string, issues: ValidationIssue[]): void {
+function expectUrl(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[],
+): void {
   if (typeof value !== "string" || value.trim().length === 0) {
-    pushIssue(issues, path, "invalid_url", "Value must be a non-empty URL string.");
+    pushIssue(
+      issues,
+      path,
+      "invalid_url",
+      "Value must be a non-empty URL string.",
+    );
     return;
   }
 
@@ -478,21 +597,51 @@ function expectUrl(value: unknown, path: string, issues: ValidationIssue[]): voi
   }
 }
 
-function expectRepositoryName(value: unknown, path: string, issues: ValidationIssue[]): void {
-  if (typeof value !== "string" || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value)) {
-    pushIssue(issues, path, "invalid_repository", "Repository must use owner/name format.");
+function expectRepositoryName(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[],
+): void {
+  if (
+    typeof value !== "string" ||
+    !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value)
+  ) {
+    pushIssue(
+      issues,
+      path,
+      "invalid_repository",
+      "Repository must use owner/name format.",
+    );
   }
 }
 
-function expectPositiveInteger(value: unknown, path: string, issues: ValidationIssue[]): void {
+function expectPositiveInteger(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[],
+): void {
   if (!Number.isInteger(value) || typeof value !== "number" || value <= 0) {
-    pushIssue(issues, path, "invalid_integer", "Value must be a positive integer.");
+    pushIssue(
+      issues,
+      path,
+      "invalid_integer",
+      "Value must be a positive integer.",
+    );
   }
 }
 
-function expectIsoDateTime(value: unknown, path: string, issues: ValidationIssue[]): void {
+function expectIsoDateTime(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[],
+): void {
   if (typeof value !== "string" || Number.isNaN(Date.parse(value))) {
-    pushIssue(issues, path, "invalid_datetime", "Value must be an ISO-compatible date time.");
+    pushIssue(
+      issues,
+      path,
+      "invalid_datetime",
+      "Value must be an ISO-compatible date time.",
+    );
   }
 }
 
@@ -504,7 +653,7 @@ function pushIssue(
   issues: ValidationIssue[],
   path: string,
   code: string,
-  message: string
+  message: string,
 ): void {
   issues.push({ path, code, message });
 }
@@ -512,6 +661,6 @@ function pushIssue(
 function invalid<T>(issues: ValidationIssue[]): ValidationResult<T> {
   return {
     ok: false,
-    issues
+    issues,
   };
 }

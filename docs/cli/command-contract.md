@@ -154,6 +154,11 @@ Current CLI commands are flag-only except for the `analytics recent-share` subco
 Unexpected positional arguments must fail as usage errors before config loading, ledger reads,
 provider resolution, draft writes, or rebuild work begins.
 
+Each command accepts only the flags listed in its command contract and help output. Unknown flags,
+including flags that belong to another command, must fail as usage errors before config loading,
+ledger reads, provider resolution, draft writes, or rebuild work begins. Repeating the same flag is
+also a usage error instead of silently selecting the first or last value.
+
 ## Exit Codes
 
 The implemented CLI exit-code taxonomy is:

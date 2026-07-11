@@ -593,6 +593,8 @@ test("release readiness rejects CLI command contract drift", () => {
       "Unexpected positional arguments must fail as usage errors before config loading",
       "Unexpected positional arguments are ignored",
     )
+    .replace("Unknown flags,", "Unknown flags are ignored,")
+    .replace("Repeating the same flag is", "Duplicate flags are accepted and")
     .replace("| `7`  | write failure", "| `7`  | failure");
 
   assert.deepEqual(validateCliCommandContract(text), [
@@ -603,6 +605,8 @@ test("release readiness rejects CLI command contract drift", () => {
     'docs/cli/command-contract.md must include accepts only `maintainerApprovalStatus: "draft"`.',
     "docs/cli/command-contract.md must include rejects non-public approval states, appends the sanitized public.",
     "docs/cli/command-contract.md must include Unexpected positional arguments must fail as usage errors before config loading.",
+    "docs/cli/command-contract.md must include Unknown flags,.",
+    "docs/cli/command-contract.md must include Repeating the same flag is.",
     "docs/cli/command-contract.md must include | `7`  | write failure.",
   ]);
 });
@@ -2262,6 +2266,9 @@ function createCliCommandContractText() {
     "",
     "Unexpected positional arguments must fail as usage errors before config loading, ledger reads,",
     "provider resolution, draft writes, or rebuild work begins.",
+    "Unknown flags, including flags that belong to another command, must fail as usage errors before",
+    "config loading, ledger reads, provider resolution, draft writes, or rebuild work begins.",
+    "Repeating the same flag is also a usage error instead of silently selecting the first or last value.",
     "",
     "| `7`  | write failure",
     "A command writes public recognition without approval or configured policy.",

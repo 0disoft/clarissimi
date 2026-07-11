@@ -821,6 +821,33 @@ Validation:
 - `pnpm run check`
 - `pnpm run contract`
 
+### 20. Strict CLI Option Validation
+
+Source: `docs/cli/command-contract.md`
+
+Status: Completed in `packages/cli/src/args.ts` and `packages/cli/src/run.ts`.
+
+Goal: prevent command-line typos and cross-command options from silently changing execution.
+
+Completed deliverables:
+
+- every implemented command has an explicit allowed-flag set matching its command contract
+- global and command help reject unsupported flags instead of hiding mistakes
+- flags that belong to another command fail before config, ledger, provider, or write boundaries
+- repeated flags fail instead of silently selecting the first or last value
+- empty assigned flag names such as `--=value` fail as usage errors
+- help rejects unexpected positional arguments
+
+Validation:
+
+- CLI behavior tests
+- `pnpm run docs`
+- `pnpm run release-readiness`
+- `pnpm run format`
+- `pnpm run lint`
+- `pnpm run check`
+- `pnpm run contract`
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

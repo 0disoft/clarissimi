@@ -55,11 +55,52 @@ import {
   type CliIo,
 } from "./io.js";
 
+const GLOBAL_FLAGS = new Set(["help"]);
+const COMMAND_FLAGS: Readonly<Record<string, ReadonlySet<string>>> = {
+  help: new Set(["help"]),
+  "validate-config": new Set(["config", "json", "help"]),
+  "validate-ledger": new Set(["ledger", "json", "help"]),
+  recognize: new Set([
+    "fixture",
+    "github-fixture",
+    "mode",
+    "config",
+    "markdown-summary",
+    "provider",
+    "provider-model",
+    "provider-endpoint",
+    "provider-thinking",
+    "json",
+    "help",
+  ]),
+  "stage-draft": new Set(["draft", "drafts-dir", "json", "help"]),
+  "approve-draft": new Set(["draft", "json", "help"]),
+  "import-draft": new Set([
+    "draft",
+    "ledger",
+    "out-dir",
+    "config",
+    "markdown-summary",
+    "json",
+    "help",
+  ]),
+  rebuild: new Set(["ledger", "out-dir", "config", "markdown-summary", "json", "help"]),
+  analytics: new Set(["ledger", "window-days", "as-of", "json", "help"]),
+};
+
 export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExitCode> {
   try {
     const args = parseArgs(argv);
+    rejectUnsupportedFlags(args);
 
     if (args.command === undefined || args.command === "help" || getBooleanFlag(args, "help")) {
+      if (args.command === "help") {
+        const positionalError = rejectUnexpectedPositionals(args, "help");
+        if (positionalError !== undefined) {
+          io.stderr(positionalError);
+          return CLI_EXIT_CODES.usage;
+        }
+      }
       io.stdout(renderHelp());
       return CLI_EXIT_CODES.success;
     }
@@ -93,6 +134,20 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExi
 
     io.stderr(`${error instanceof Error ? error.message : String(error)}\n`);
     return CLI_EXIT_CODES.providerFailure;
+  }
+}
+
+function rejectUnsupportedFlags(args: ParsedArgs): void {
+  const supported = args.command === undefined ? GLOBAL_FLAGS : COMMAND_FLAGS[args.command];
+  if (supported === undefined) {
+    return;
+  }
+
+  for (const name of args.flags.keys()) {
+    if (!supported.has(name)) {
+      const scope = args.command === undefined ? "global CLI" : args.command;
+      throw new CliUsageError(`Unknown option for ${scope}: --${name}.`);
+    }
   }
 }
 

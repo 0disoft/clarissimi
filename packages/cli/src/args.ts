@@ -37,9 +37,16 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
 
     const equalsIndex = flag.indexOf("=");
     if (equalsIndex >= 0) {
-      flags.set(flag.slice(0, equalsIndex), flag.slice(equalsIndex + 1));
+      const name = flag.slice(0, equalsIndex);
+      if (name.length === 0) {
+        throw new CliUsageError("Flag name cannot be empty.");
+      }
+      rejectDuplicateFlag(flags, name);
+      flags.set(name, flag.slice(equalsIndex + 1));
       continue;
     }
+
+    rejectDuplicateFlag(flags, flag);
 
     const next = tokens[index + 1];
     if (next !== undefined && !next.startsWith("--")) {
@@ -56,6 +63,12 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
     flags,
     positionals,
   };
+}
+
+function rejectDuplicateFlag(flags: ReadonlyMap<string, string | true>, name: string): void {
+  if (flags.has(name)) {
+    throw new CliUsageError(`--${name} cannot be repeated.`);
+  }
 }
 
 export function getStringFlag(

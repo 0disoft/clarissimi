@@ -289,6 +289,72 @@ test("flag-only commands reject unexpected positional arguments", async () => {
   });
 });
 
+test("commands reject unknown and cross-command flags before reading files", async () => {
+  await withTempDir(async (dir) => {
+    await writeFile(join(dir, "clarissimi.config.ts"), "this is not valid TypeScript\n", "utf8");
+
+    const cases = [
+      {
+        argv: ["validate-config", "--confg", "missing.json"],
+        message: "Unknown option for validate-config: --confg.",
+      },
+      {
+        argv: ["validate-ledger", "--config", "missing.json"],
+        message: "Unknown option for validate-ledger: --config.",
+      },
+      {
+        argv: ["--json"],
+        message: "Unknown option for global CLI: --json.",
+      },
+    ];
+
+    for (const { argv, message } of cases) {
+      const result = await run(argv, dir);
+
+      assert.equal(result.exitCode, 1, argv.join(" "));
+      assert.equal(result.stdout, "", argv.join(" "));
+      assert.equal(result.stderr, `${message}\n`, argv.join(" "));
+    }
+  });
+});
+
+test("commands reject repeated flags instead of silently choosing a value", async () => {
+  await withTempDir(async (dir) => {
+    const result = await run(
+      ["validate-ledger", "--ledger", "first.jsonl", "--ledger=second.jsonl"],
+      dir,
+    );
+
+    assert.equal(result.exitCode, 1);
+    assert.equal(result.stdout, "");
+    assert.equal(result.stderr, "--ledger cannot be repeated.\n");
+  });
+});
+
+test("argument parsing rejects empty flag names with assigned values", async () => {
+  await withTempDir(async (dir) => {
+    const result = await run(["validate-config", "--=value"], dir);
+
+    assert.equal(result.exitCode, 1);
+    assert.equal(result.stdout, "");
+    assert.equal(result.stderr, "Flag name cannot be empty.\n");
+  });
+});
+
+test("help rejects unsupported flags and positional arguments", async () => {
+  await withTempDir(async (dir) => {
+    const unknownFlag = await run(["recognize", "--help", "--wat"], dir);
+    const positional = await run(["help", "unexpected"], dir);
+
+    assert.equal(unknownFlag.exitCode, 1);
+    assert.equal(unknownFlag.stdout, "");
+    assert.equal(unknownFlag.stderr, "Unknown option for recognize: --wat.\n");
+    assert.equal(positional.exitCode, 1);
+    assert.equal(positional.stdout, "");
+    assert.equal(positional.stderr, "help does not accept positional arguments: unexpected\n");
+  });
+});
+
 test("validate-config rejects unsupported provider values", async () => {
   await withTempDir(async (dir) => {
     const configDir = join(dir, ".clarissimi");

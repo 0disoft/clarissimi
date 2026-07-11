@@ -390,6 +390,8 @@ export const cliCommandContract = {
     "does not call providers, read provider tokens, fetch GitHub evidence",
     "it is not an MVP monthly or yearly partition mode",
     "Unexpected positional arguments must fail as usage errors before config loading",
+    "Unknown flags,",
+    "Repeating the same flag is",
     "| `7`  | write failure",
     "A command writes public recognition without approval or configured policy.",
   ],

@@ -28,7 +28,7 @@ const defaults = {
 
 const usageText = [
   "Usage:",
-  "  pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --external-run <run-id> --external-write-run <run-id> --provider-model <model> [--external-ref <immutable-tag-or-sha>] [--external-repo <owner/name>] [--release-type <source-only|versioned-action-tag>] [--release-version <v0.1.x>] [--provider-endpoint <chat-completions-url>] [--provider-thinking <mode>] [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch-name>] [--title <issue-title>] [--print]",
+  "  pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --external-run <run-id> --external-write-run <run-id> --provider-model <model> [--evidence-id <32-hex>] [--external-ref <immutable-tag-or-sha>] [--external-repo <owner/name>] [--release-type <source-only|versioned-action-tag>] [--release-version <v0.1.x>] [--provider-endpoint <chat-completions-url>] [--provider-thinking <mode>] [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch-name>] [--title <issue-title>] [--print]",
   "",
   "Examples:",
   "  pnpm run release-candidate-evidence-issue -- --ci-run 12345 --live-run 67890 --external-run 24680 --external-write-run 13579 --provider-model gpt-4.1-mini",
@@ -95,6 +95,10 @@ async function run(argv, runtime) {
     return usageFailure(runtime, "--provider-thinking supports only disabled.");
   }
 
+  if (args.evidenceId !== undefined && !isEvidenceId(args.evidenceId)) {
+    return usageFailure(runtime, "--evidence-id must be 32 lowercase hexadecimal characters.");
+  }
+
   const releaseType = args.releaseType ?? defaults.releaseType;
   if (!["source-only", "versioned-action-tag"].includes(releaseType)) {
     return usageFailure(runtime, "--release-type supports source-only or versioned-action-tag.");
@@ -158,19 +162,24 @@ async function run(argv, runtime) {
     runId: args.liveRun,
     sha,
     branch,
-    workflowName: defaults.liveWorkflowName
+    workflowName: defaults.liveWorkflowName,
+    displayTitle: args.evidenceId === undefined
+      ? undefined
+      : `${defaults.liveWorkflowName} · ${args.evidenceId}`
   });
 
   const externalRun = await readRun(runtime, externalRepo, args.externalRun);
   validateExternalRun(externalRun, {
     runId: args.externalRun,
-    externalRef
+    externalRef,
+    evidenceId: args.evidenceId
   });
 
   const externalWriteRun = await readRun(runtime, externalRepo, args.externalWriteRun);
   validateExternalWriteRun(externalWriteRun, {
     runId: args.externalWriteRun,
-    externalRef
+    externalRef,
+    evidenceId: args.evidenceId
   });
 
   const title = args.title ?? (releaseType === "versioned-action-tag"
@@ -185,6 +194,7 @@ async function run(argv, runtime) {
     externalRepo,
     externalRun,
     externalWriteRun,
+    evidenceId: args.evidenceId,
     liveRun,
     releaseType,
     releaseVersion: args.releaseVersion,
@@ -248,6 +258,7 @@ function parseArgs(argv, runtime) {
       "sha",
       "ci-run",
       "external-ref",
+      "evidence-id",
       "external-repo",
       "external-run",
       "external-write-run",
@@ -298,6 +309,10 @@ function isHttpsUrl(value) {
 
 function isCommitSha(value) {
   return typeof value === "string" && /^[a-fA-F0-9]{40}$/.test(value);
+}
+
+function isEvidenceId(value) {
+  return typeof value === "string" && /^[0-9a-f]{32}$/.test(value);
 }
 
 function isVersionTag(value) {
@@ -372,6 +387,10 @@ function validateRun(run, options) {
     throw new Error(`${options.label} run ${options.runId} must be workflow ${options.workflowName}.`);
   }
 
+  if (options.displayTitle !== undefined && run.displayTitle !== options.displayTitle) {
+    throw new Error(`${options.label} run ${options.runId} must have displayTitle=${options.displayTitle}.`);
+  }
+
   if (run.headSha !== options.sha) {
     throw new Error(`${options.label} run ${options.runId} validates ${run.headSha ?? "unknown"}, not ${options.sha}.`);
   }
@@ -416,7 +435,9 @@ function validateExternalRun(run, options) {
     throw new Error(`${label} run ${options.runId} must use workflow_dispatch.`);
   }
 
-  const expectedTitle = `${defaults.externalWorkflowName} · ${options.externalRef}`;
+  const expectedTitle = options.evidenceId === undefined
+    ? `${defaults.externalWorkflowName} · ${options.externalRef}`
+    : `${defaults.externalWorkflowName} · ${options.externalRef} · ${options.evidenceId}`;
   if (run.displayTitle !== expectedTitle) {
     throw new Error(
       `${label} run ${options.runId} must validate Clarissimi ${options.externalRef}; `
@@ -460,7 +481,9 @@ function validateExternalWriteRun(run, options) {
     throw new Error(`${label} run ${options.runId} must use workflow_dispatch.`);
   }
 
-  const expectedTitle = `${defaults.externalWriteWorkflowName} · ${options.externalRef} · ${options.runId}`;
+  const expectedTitle = options.evidenceId === undefined
+    ? `${defaults.externalWriteWorkflowName} · ${options.externalRef} · ${options.runId}`
+    : `${defaults.externalWriteWorkflowName} · ${options.externalRef} · ${options.evidenceId} · ${options.runId}`;
   if (run.displayTitle !== expectedTitle) {
     throw new Error(
       `${label} run ${options.runId} must validate Clarissimi ${options.externalRef}; `
@@ -520,18 +543,21 @@ function renderIssueBody(options) {
     `--model ${options.providerModel}`,
     `--ref ${options.branch}`,
     options.providerEndpoint === undefined ? undefined : `--endpoint ${options.providerEndpoint}`,
-    options.providerThinking === undefined ? undefined : `--thinking ${options.providerThinking}`
+    options.providerThinking === undefined ? undefined : `--thinking ${options.providerThinking}`,
+    options.evidenceId === undefined ? undefined : `--evidence-id ${options.evidenceId}`
   ].filter(Boolean).join(" ");
   const externalConsumerCommand = [
     "pnpm run hosted-external-consumer-smoke --",
     `--clarissimi-ref ${options.externalRef}`,
+    options.evidenceId === undefined ? undefined : `--evidence-id ${options.evidenceId}`,
     options.externalRepo === defaults.externalRepo ? undefined : `--repo ${options.externalRepo}`
   ].filter(Boolean).join(" ");
   const externalWriteCommand = [
     `gh workflow run clarissimi-full-write-smoke.yml --repo ${options.externalRepo}`,
     `--ref ${defaults.externalBranch}`,
-    `-f clarissimi-ref=${options.externalRef}`
-  ].join(" ");
+    `-f clarissimi-ref=${options.externalRef}`,
+    options.evidenceId === undefined ? undefined : `-f evidence-id=${options.evidenceId}`
+  ].filter(Boolean).join(" ");
   const releaseType = options.releaseType === "versioned-action-tag"
     ? `versioned Action tag \`${options.releaseVersion}\` under ADR 0031`
     : "source-only merge evidence";
@@ -550,6 +576,7 @@ function renderIssueBody(options) {
     `- Repository: \`${options.repo}\``,
     `- Branch: \`${options.branch}\``,
     `- Candidate SHA: \`${options.sha}\``,
+    `- Evidence correlation id: ${options.evidenceId === undefined ? "not used" : `\`${options.evidenceId}\``}`,
     `- Release type: ${releaseType}`,
     `- Release decision: ${releaseDecision}`,
     "- Package status: root and workspace packages remain private at `0.0.0`; public package publication remains blocked.",

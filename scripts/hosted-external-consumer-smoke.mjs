@@ -9,7 +9,7 @@ const defaults = {
 
 const usageText = [
   "Usage:",
-  "  pnpm run hosted-external-consumer-smoke -- [--clarissimi-ref <immutable-tag-or-sha|v0>] [--expected-sha <commit-sha>] [--repo <owner/name>] [--workflow <workflow-file>] [--workflow-ref <git-ref>]",
+  "  pnpm run hosted-external-consumer-smoke -- [--clarissimi-ref <immutable-tag-or-sha|v0>] [--expected-sha <commit-sha>] [--evidence-id <32-hex>] [--repo <owner/name>] [--workflow <workflow-file>] [--workflow-ref <git-ref>]",
   "",
   "Examples:",
   "  pnpm run hosted-external-consumer-smoke",
@@ -73,6 +73,9 @@ async function run(argv, runtime) {
   if (clarissimiRef === "v0" && expectedSha === undefined) {
     return usageFailure(runtime, "--expected-sha is required when --clarissimi-ref is v0.");
   }
+  if (args.evidenceId !== undefined && !isEvidenceId(args.evidenceId)) {
+    return usageFailure(runtime, "--evidence-id must be 32 lowercase hexadecimal characters.");
+  }
 
   await requireGh(runtime);
 
@@ -82,14 +85,17 @@ async function run(argv, runtime) {
     workflow,
     workflowRef,
     clarissimiRef,
-    expectedSha
+    expectedSha,
+    evidenceId: args.evidenceId
   });
 
   const runId = await findDispatchedRun(runtime, {
     repo,
     workflow,
     workflowRef,
-    dispatchedAfter
+    dispatchedAfter,
+    clarissimiRef,
+    evidenceId: args.evidenceId
   });
 
   runtime.log(`watching hosted external consumer smoke run ${runId}`);
@@ -122,6 +128,7 @@ function parseArgs(argv, runtime) {
     const property = {
       "clarissimi-ref": "clarissimiRef",
       "expected-sha": "expectedSha",
+      "evidence-id": "evidenceId",
       repo: "repo",
       workflow: "workflow",
       "workflow-ref": "workflowRef"
@@ -159,6 +166,10 @@ function isImmutableClarissimiRef(value) {
 
 function isCommitSha(value) {
   return typeof value === "string" && /^[a-fA-F0-9]{40}$/.test(value);
+}
+
+function isEvidenceId(value) {
+  return typeof value === "string" && /^[0-9a-f]{32}$/.test(value);
 }
 
 function isPositiveRunId(value) {
@@ -211,6 +222,9 @@ async function dispatchWorkflow(runtime, options) {
   if (options.expectedSha !== undefined) {
     dispatchArgs.push("-f", `expected-sha=${options.expectedSha}`);
   }
+  if (options.evidenceId !== undefined) {
+    dispatchArgs.push("-f", `evidence-id=${options.evidenceId}`);
+  }
   const result = await runtime.runCommand("gh", dispatchArgs);
   if (result.exitCode !== 0) {
     throw new Error(`Unable to dispatch ${options.workflow}.\n${boundedOutput(result.stderr)}`);
@@ -243,7 +257,7 @@ async function findDispatchedRun(runtime, options) {
       "--limit",
       "5",
       "--json",
-      "databaseId,createdAt,headBranch,headSha,status,conclusion"
+      "databaseId,createdAt,displayTitle,headBranch,headSha,status,conclusion"
     ]);
     if (result.exitCode !== 0) {
       throw new Error(`Unable to list dispatched workflow runs.\n${boundedOutput(result.stderr)}`);
@@ -262,7 +276,12 @@ async function findDispatchedRun(runtime, options) {
 
     const runInfo = runs.find((candidate) => {
       const createdAt = Date.parse(candidate.createdAt);
-      return Number.isFinite(createdAt) && createdAt >= options.dispatchedAfter.getTime();
+      const expectedTitle = options.evidenceId === undefined
+        ? undefined
+        : `Clarissimi external consumer · ${options.clarissimiRef} · ${options.evidenceId}`;
+      return Number.isFinite(createdAt)
+        && createdAt >= options.dispatchedAfter.getTime()
+        && (expectedTitle === undefined || candidate.displayTitle === expectedTitle);
     });
     if (runInfo !== undefined) {
       if (!isPositiveRunId(runInfo.databaseId)) {

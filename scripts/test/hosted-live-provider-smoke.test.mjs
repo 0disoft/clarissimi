@@ -3,6 +3,8 @@ import test from "node:test";
 
 import { runHostedLiveProviderSmoke } from "../hosted-live-provider-smoke.mjs";
 
+const evidenceId = "0123456789abcdef0123456789abcdef";
+
 test("hosted live provider smoke stops before dispatch when the repository secret is missing", async () => {
   const harness = createHarness({
     secrets: []
@@ -29,6 +31,7 @@ test("hosted live provider smoke dispatches and watches the selected workflow", 
     secrets: [{ name: "CLARISSIMI_PROVIDER_TOKEN" }],
     runs: [{
       databaseId: 12345,
+      displayTitle: `Clarissimi live provider smoke · ${evidenceId}`,
       createdAt: "2026-07-09T00:00:10.000Z",
       headBranch: "release-candidate",
       headSha: "abc123",
@@ -45,6 +48,8 @@ test("hosted live provider smoke dispatches and watches the selected workflow", 
     "https://gateway.example/v1/chat/completions",
     "--thinking",
     "disabled",
+    "--evidence-id",
+    evidenceId,
     "--repo",
     "owner/repo",
     "--ref",
@@ -76,7 +81,9 @@ test("hosted live provider smoke dispatches and watches the selected workflow", 
     "-f",
     "provider-endpoint=https://gateway.example/v1/chat/completions",
     "-f",
-    "provider-thinking=disabled"
+    "provider-thinking=disabled",
+    "-f",
+    `evidence-id=${evidenceId}`
   ]);
 
   const runList = harness.commands.find((command) =>
@@ -101,6 +108,13 @@ test("hosted live provider smoke dispatches and watches the selected workflow", 
 });
 
 test("hosted live provider smoke validates dispatch inputs before reading secrets", async () => {
+  const invalidEvidenceId = createHarness({ secrets: [{ name: "CLARISSIMI_PROVIDER_TOKEN" }] });
+  assert.equal(await runHostedLiveProviderSmoke([
+    "--model", "gpt-4.1-mini", "--evidence-id", "not-a-correlation-id"
+  ], invalidEvidenceId.runtime), 2);
+  assert.equal(invalidEvidenceId.errors.includes("--evidence-id must be 32 lowercase hexadecimal characters."), true);
+  assert.equal(invalidEvidenceId.commands.length, 0);
+
   const unsupportedThinking = createHarness({
     secrets: [{ name: "CLARISSIMI_PROVIDER_TOKEN" }]
   });

@@ -4,11 +4,13 @@ import test from "node:test";
 import { runHostedExternalConsumerSmoke } from "../hosted-external-consumer-smoke.mjs";
 
 const exampleSha = "0123456789abcdef0123456789abcdef01234567";
+const evidenceId = "0123456789abcdef0123456789abcdef";
 
 test("hosted external consumer smoke dispatches and watches an immutable tag", async () => {
   const harness = createHarness({
     runs: [{
       databaseId: 12345,
+      displayTitle: `Clarissimi external consumer · v0.1.1 · ${evidenceId}`,
       createdAt: "2026-07-10T00:00:10.000Z",
       headBranch: "main",
       headSha: "integration-lab-sha",
@@ -19,7 +21,9 @@ test("hosted external consumer smoke dispatches and watches an immutable tag", a
 
   const exitCode = await runHostedExternalConsumerSmoke([
     "--clarissimi-ref",
-    "v0.1.1"
+    "v0.1.1",
+    "--evidence-id",
+    evidenceId
   ], harness.runtime);
 
   assert.equal(exitCode, 0);
@@ -31,6 +35,7 @@ test("hosted external consumer smoke dispatches and watches an immutable tag", a
   ]);
   const dispatch = harness.commands.find((entry) => entry.args[0] === "workflow");
   assert.equal(dispatch.args.includes("clarissimi-ref=v0.1.1"), true);
+  assert.equal(dispatch.args.includes(`evidence-id=${evidenceId}`), true);
   assert.equal(
     harness.logs.includes(
       "hosted external consumer smoke passed for Clarissimi v0.1.1: "
@@ -97,6 +102,13 @@ test("hosted external consumer smoke accepts v0 only with an expected SHA", asyn
 });
 
 test("hosted external consumer smoke rejects unsupported mutable or malformed inputs before dispatch", async () => {
+  const invalidEvidenceId = createHarness({});
+  assert.equal(await runHostedExternalConsumerSmoke([
+    "--clarissimi-ref", "v0.1.1", "--evidence-id", "NOT-HEX"
+  ], invalidEvidenceId.runtime), 2);
+  assert.equal(invalidEvidenceId.errors.includes("--evidence-id must be 32 lowercase hexadecimal characters."), true);
+  assert.equal(invalidEvidenceId.commands.length, 0);
+
   const mutableRef = createHarness({});
   const mutableRefExitCode = await runHostedExternalConsumerSmoke([
     "--clarissimi-ref",

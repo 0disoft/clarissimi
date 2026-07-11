@@ -1,4 +1,5 @@
 name: Clarissimi live provider smoke
+run-name: ${{ inputs.evidence-id && format('Clarissimi live provider smoke · {0}', inputs.evidence-id) || 'Clarissimi live provider smoke' }}
 
 on:
   workflow_dispatch:
@@ -11,6 +12,9 @@ on:
         required: false
       provider-thinking:
         description: Optional OpenAI-compatible thinking mode. Use disabled for providers such as minimax-m3.
+        required: false
+      evidence-id:
+        description: Optional 32-character correlation id for release evidence orchestration.
         required: false
 
 permissions:
@@ -48,6 +52,15 @@ jobs:
             echo "::error title=Unsupported provider thinking mode::provider-thinking currently supports only disabled."
             exit 2
           fi
+
+      - name: Verify evidence correlation id
+        if: ${{ inputs.evidence-id != '' }}
+        shell: bash
+        env:
+          EVIDENCE_ID: ${{ inputs.evidence-id }}
+        run: |
+          set -euo pipefail
+          [[ "$EVIDENCE_ID" =~ ^[0-9a-f]{32}$ ]]
 
       - name: Verify provider secret
         shell: bash

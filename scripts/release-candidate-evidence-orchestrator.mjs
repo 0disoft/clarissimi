@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { pathToFileURL } from "node:url";
 
 const defaults = {
@@ -40,12 +41,14 @@ async function run(argv, runtime) {
   const releaseType = args.releaseType ?? defaults.releaseType;
   const sha = args.sha ?? await commandText(runtime, "git", ["rev-parse", "HEAD"], "resolve current HEAD");
   const externalRef = args.externalRef ?? (releaseType === "versioned-action-tag" ? args.releaseVersion : sha);
+  const evidenceId = runtime.randomEvidenceId();
 
   if (!isRepo(repo) || !isRepo(externalRepo)) return usageFailure(runtime, "--repo and --external-repo must use owner/name format.");
   if (!isSha(sha)) return usageFailure(runtime, "--sha must be a 40-character commit SHA.");
   if (releaseType === "source-only" && externalRef.toLowerCase() !== sha.toLowerCase()) {
     return usageFailure(runtime, "source-only evidence requires --external-ref to equal --sha.");
   }
+  if (!isEvidenceId(evidenceId)) throw new Error("Runtime generated an invalid evidence correlation id.");
 
   await command(runtime, "gh", ["--version"], "find GitHub CLI");
   await preflight(runtime, { repo, branch, externalRepo, externalRef, sha });
@@ -58,7 +61,8 @@ async function run(argv, runtime) {
     repo,
     workflow: "clarissimi-live-provider-smoke.yml",
     ref: branch,
-    fields: ["provider-model", args.providerModel, "provider-endpoint", args.providerEndpoint, "provider-thinking", args.providerThinking],
+    fields: ["provider-model", args.providerModel, "provider-endpoint", args.providerEndpoint, "provider-thinking", args.providerThinking, "evidence-id", evidenceId],
+    expectedTitle: `Clarissimi live provider smoke · ${evidenceId}`,
     label: "hosted live-provider smoke"
   });
 
@@ -66,7 +70,8 @@ async function run(argv, runtime) {
     repo: externalRepo,
     workflow: "clarissimi.yml",
     ref: "main",
-    fields: ["clarissimi-ref", externalRef, "expected-sha", externalRef === "v0" ? sha : undefined],
+    fields: ["clarissimi-ref", externalRef, "expected-sha", externalRef === "v0" ? sha : undefined, "evidence-id", evidenceId],
+    expectedTitle: `Clarissimi external consumer · ${externalRef} · ${evidenceId}`,
     label: "external dry-run smoke"
   });
 
@@ -78,7 +83,8 @@ async function run(argv, runtime) {
       repo: externalRepo,
       workflow: "clarissimi-full-write-smoke.yml",
       ref: "main",
-      fields: ["clarissimi-ref", externalRef, "expected-sha", externalRef === "v0" ? sha : undefined],
+      fields: ["clarissimi-ref", externalRef, "expected-sha", externalRef === "v0" ? sha : undefined, "evidence-id", evidenceId],
+      expectedTitle: (run) => `Clarissimi full write smoke · ${externalRef} · ${evidenceId} · ${run.databaseId}`,
       label: "external full-write smoke"
     });
   } catch (error) {
@@ -89,7 +95,8 @@ async function run(argv, runtime) {
         repo: externalRepo,
         workflow: "clarissimi-orphan-audit.yml",
         ref: "main",
-        fields: [],
+        fields: ["evidence-id", evidenceId],
+        expectedTitle: `Clarissimi smoke orphan audit · ${evidenceId}`,
         label: "external orphan audit"
       });
     } catch (error) {
@@ -109,6 +116,7 @@ async function run(argv, runtime) {
     "--external-write-run", String(fullWriteRun.databaseId),
     "--provider-model", args.providerModel
   ];
+  appendOption(evidenceArgs, "--evidence-id", evidenceId);
   appendOption(evidenceArgs, "--release-version", args.releaseVersion);
   appendOption(evidenceArgs, "--provider-endpoint", args.providerEndpoint);
   appendOption(evidenceArgs, "--provider-thinking", args.providerThinking);
@@ -119,6 +127,7 @@ async function run(argv, runtime) {
     mode: args.createIssue ? "create-issue" : "preview",
     sha,
     externalRef,
+    evidenceId,
     runs: {
       ci: ciRun.databaseId,
       liveProvider: liveRun.databaseId,
@@ -209,7 +218,13 @@ async function dispatchAndWatch(runtime, options) {
   const args = ["workflow", "run", options.workflow, "--repo", options.repo, "--ref", options.ref];
   for (let index = 0; index < options.fields.length; index += 2) appendOption(args, "-f", options.fields[index + 1] === undefined ? undefined : `${options.fields[index]}=${options.fields[index + 1]}`);
   await command(runtime, "gh", args, `dispatch ${options.label}`);
-  const run = await findRun(runtime, { repo: options.repo, workflow: options.workflow, branch: options.ref, createdAfter: dispatchedAfter });
+  const run = await findRun(runtime, {
+    repo: options.repo,
+    workflow: options.workflow,
+    branch: options.ref,
+    createdAfter: dispatchedAfter,
+    expectedTitle: options.expectedTitle
+  });
   await watchIfNeeded(runtime, options.repo, run, options.label);
   return run;
 }
@@ -217,9 +232,16 @@ async function dispatchAndWatch(runtime, options) {
 async function findRun(runtime, options) {
   const deadline = runtime.now() + 120_000;
   while (runtime.now() < deadline) {
-    const output = await commandText(runtime, "gh", ["run", "list", "--repo", options.repo, "--workflow", options.workflow, "--branch", options.branch, "--limit", "20", "--json", "databaseId,status,conclusion,headSha,url,createdAt"], `list ${options.workflow} runs`);
+    const output = await commandText(runtime, "gh", ["run", "list", "--repo", options.repo, "--workflow", options.workflow, "--branch", options.branch, "--limit", "20", "--json", "databaseId,status,conclusion,headSha,url,createdAt,displayTitle"], `list ${options.workflow} runs`);
     const runs = parseJson(output, "gh run list");
-    const run = runs.find((candidate) => (!options.headSha || candidate.headSha === options.headSha) && (!options.createdAfter || Date.parse(candidate.createdAt) >= options.createdAfter));
+    const run = runs.find((candidate) => {
+      const expectedTitle = typeof options.expectedTitle === "function"
+        ? options.expectedTitle(candidate)
+        : options.expectedTitle;
+      return (!options.headSha || candidate.headSha === options.headSha)
+        && (!options.createdAfter || Date.parse(candidate.createdAt) >= options.createdAfter)
+        && (!expectedTitle || candidate.displayTitle === expectedTitle);
+    });
     if (run !== undefined) {
       if (!Number.isSafeInteger(run.databaseId) || run.databaseId <= 0) throw new Error(`${options.workflow} run is missing a valid databaseId.`);
       return run;
@@ -250,13 +272,14 @@ function appendOption(args, flag, value) { if (value !== undefined) args.push(fl
 function parseJson(value, label) { try { return JSON.parse(value); } catch (error) { throw new Error(`Unable to parse ${label} output: ${error.message}`); } }
 function isRepo(value) { return /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value); }
 function isSha(value) { return /^[a-fA-F0-9]{40}$/.test(value); }
+function isEvidenceId(value) { return /^[0-9a-f]{32}$/.test(value); }
 function isHttps(value) { try { return new URL(value).protocol === "https:"; } catch { return false; } }
 function bounded(value) { return value.trim().slice(0, 2000); }
 function usageFailure(runtime, message) { runtime.error(message); runtime.log(usageText); throw new UsageError(); }
 class UsageError extends Error { constructor() { super("Invalid release evidence orchestration arguments."); this.exitCode = 2; } }
 
 function defaultRuntime() {
-  return { now: () => Date.now(), delay: (ms) => new Promise((resolve) => setTimeout(resolve, ms)), log: console.log, error: console.error, runCommand };
+  return { now: () => Date.now(), delay: (ms) => new Promise((resolve) => setTimeout(resolve, ms)), randomEvidenceId: () => randomBytes(16).toString("hex"), log: console.log, error: console.error, runCommand };
 }
 
 function runCommand(commandName, args, options = {}) {

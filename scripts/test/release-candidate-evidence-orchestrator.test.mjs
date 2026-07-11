@@ -3,6 +3,7 @@ import test from "node:test";
 import { runReleaseCandidateEvidenceOrchestrator } from "../release-candidate-evidence-orchestrator.mjs";
 
 const sha = "0123456789abcdef0123456789abcdef01234567";
+const evidenceId = "0123456789abcdef0123456789abcdef";
 
 test("defaults to evidence preview and records every successful run", async () => {
   const runtime = fakeRuntime();
@@ -10,6 +11,9 @@ test("defaults to evidence preview and records every successful run", async () =
   assert.equal(exitCode, 0);
   const evidence = runtime.calls.find((call) => call.command === "pnpm");
   assert.ok(evidence.args.includes("--print"));
+  assert.deepEqual(evidence.args.slice(evidence.args.indexOf("--evidence-id"), evidence.args.indexOf("--evidence-id") + 2), ["--evidence-id", evidenceId]);
+  const dispatches = runtime.calls.filter((call) => call.command === "gh" && call.args[0] === "workflow" && call.args[1] === "run");
+  assert.equal(dispatches.every((call) => call.args.includes(`evidence-id=${evidenceId}`)), true);
   assert.deepEqual(runtime.watched, [102, 103, 104, 105]);
   assert.match(runtime.logs.at(-1), /"orphanAudit": 105/);
 });
@@ -47,6 +51,15 @@ test("preflights every workflow before checking the provider secret or dispatchi
   assert.equal(runtime.calls.some((call) => call.command === "gh" && call.args[0] === "workflow" && call.args[1] === "run"), false);
 });
 
+test("ignores a concurrent run for the same workflow when its correlation title differs", async () => {
+  const runtime = fakeRuntime({ includeConcurrentDecoy: true });
+  assert.equal(await runReleaseCandidateEvidenceOrchestrator([
+    "--provider-model", "gpt-4.1-mini", "--sha", sha
+  ], runtime), 0);
+  assert.equal(runtime.watched.includes(900), false);
+  assert.deepEqual(runtime.watched, [102, 103, 104, 105]);
+});
+
 function fakeRuntime(options = {}) {
   let now = Date.parse("2026-07-11T00:00:00Z");
   let nextRun = 102;
@@ -57,6 +70,7 @@ function fakeRuntime(options = {}) {
   return {
     calls, logs, errors, watched,
     now: () => now,
+    randomEvidenceId: () => options.evidenceId ?? evidenceId,
     delay: async (ms) => { now += ms; },
     log: (message) => logs.push(message),
     error: (message) => errors.push(message),
@@ -72,7 +86,19 @@ function fakeRuntime(options = {}) {
       if (command === "gh" && args[0] === "run" && args[1] === "list") {
         const isCi = args.includes("CI");
         const id = isCi ? 101 : nextRun++;
-        return ok(JSON.stringify([{ databaseId: id, status: isCi ? "completed" : "queued", conclusion: isCi ? "success" : "", headSha: sha, url: `https://example.test/${id}`, createdAt: new Date(now).toISOString() }]));
+        const workflow = args[args.indexOf("--workflow") + 1];
+        const displayTitle = workflow === "clarissimi-live-provider-smoke.yml"
+          ? `Clarissimi live provider smoke · ${evidenceId}`
+          : workflow === "clarissimi.yml"
+            ? `Clarissimi external consumer · ${sha} · ${evidenceId}`
+            : workflow === "clarissimi-full-write-smoke.yml"
+              ? `Clarissimi full write smoke · ${sha} · ${evidenceId} · ${id}`
+              : workflow === "clarissimi-orphan-audit.yml"
+                ? `Clarissimi smoke orphan audit · ${evidenceId}`
+                : "CI";
+        const run = { databaseId: id, displayTitle, status: isCi ? "completed" : "queued", conclusion: isCi ? "success" : "", headSha: sha, url: `https://example.test/${id}`, createdAt: new Date(now).toISOString() };
+        const decoy = { ...run, databaseId: 900, displayTitle: `${displayTitle}-another-maintainer` };
+        return ok(JSON.stringify(options.includeConcurrentDecoy && !isCi ? [decoy, run] : [run]));
       }
       if (command === "gh" && args[0] === "run" && args[1] === "watch") {
         const id = Number(args[2]); watched.push(id);

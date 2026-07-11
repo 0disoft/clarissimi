@@ -13,6 +13,9 @@ live-provider smoke, external dry-run smoke, external full-write smoke, and exte
 Before any dispatch, it verifies that the candidate ref resolves to the requested SHA and that all
 five required workflows are readable at their configured refs. A failed preflight makes no hosted
 workflow changes and avoids spending a provider call on a partially configured evidence run.
+It generates one 32-character evidence correlation id and passes it to every dispatched workflow.
+The id appears in each run title, so concurrent runs for the same candidate cannot be mistaken for
+the run created by this command. The same id is recorded in the evidence issue preview.
 It finally calls the evidence-issue helper with the collected run IDs. The default renders an issue
 preview and does not create an issue. It still dispatches hosted workflows and the full-write smoke
 temporarily creates synthetic pull requests and branches before cleanup.

@@ -973,12 +973,14 @@ export const hostedLiveProviderWorkflowContract = {
   requiredInputs: [
     { name: "provider-model", required: true },
     { name: "provider-endpoint", required: false },
-    { name: "provider-thinking", required: false }
+    { name: "provider-thinking", required: false },
+    { name: "evidence-id", required: false }
   ],
   requiredSnippets: [
     "workflow_dispatch:",
     "contents: read",
     "Verify provider inputs",
+    "Verify evidence correlation id",
     "Verify provider secret",
     "uses: actions/checkout@v7",
     "uses: actions/setup-node@v6",
@@ -987,10 +989,12 @@ export const hostedLiveProviderWorkflowContract = {
     "pnpm install --frozen-lockfile",
     "CLARISSIMI_PROVIDER_MODEL: ${{ inputs.provider-model }}",
     "CLARISSIMI_PROVIDER_ENDPOINT: ${{ inputs.provider-endpoint }}",
-    "CLARISSIMI_PROVIDER_THINKING: ${{ inputs.provider-thinking }}"
+    "CLARISSIMI_PROVIDER_THINKING: ${{ inputs.provider-thinking }}",
+    "EVIDENCE_ID: ${{ inputs.evidence-id }}"
   ],
   requiredOrder: [
     "Verify provider inputs",
+    "Verify evidence correlation id",
     "Verify provider secret",
     "Checkout repository",
     "Set up Node.js",

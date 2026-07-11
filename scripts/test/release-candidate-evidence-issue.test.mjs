@@ -4,6 +4,7 @@ import test from "node:test";
 import { runReleaseCandidateEvidenceIssue } from "../release-candidate-evidence-issue.mjs";
 
 const exampleSha = "0123456789abcdef0123456789abcdef01234567";
+const evidenceId = "0123456789abcdef0123456789abcdef";
 
 test("release candidate evidence issue prints a validated evidence body", async () => {
   const harness = createHarness({
@@ -144,7 +145,55 @@ test("release candidate evidence issue resolves HEAD and creates an issue with b
   assert.equal(harness.logs.includes("release candidate evidence issue created: https://github.com/0disoft/clarissimi/issues/12"), true);
 });
 
+test("release candidate evidence issue validates correlated workflow titles", async () => {
+  const harness = createHarness({
+    headSha: exampleSha,
+    runs: {
+      "12345": createRun({ databaseId: 12345, workflowName: "CI" }),
+      "67890": createRun({
+        databaseId: 67890,
+        displayTitle: `Clarissimi live provider smoke · ${evidenceId}`,
+        event: "workflow_dispatch",
+        workflowName: "Clarissimi live provider smoke"
+      }),
+      "24680": createExternalRun(exampleSha, {
+        displayTitle: `Clarissimi external consumer · ${exampleSha} · ${evidenceId}`
+      }),
+      "13579": createExternalWriteRun(exampleSha, {
+        displayTitle: `Clarissimi full write smoke · ${exampleSha} · ${evidenceId} · 13579`
+      })
+    }
+  });
+
+  const exitCode = await runReleaseCandidateEvidenceIssue([
+    "--sha", exampleSha,
+    "--ci-run", "12345",
+    "--live-run", "67890",
+    "--external-run", "24680",
+    "--external-write-run", "13579",
+    "--provider-model", "gpt-4.1-mini",
+    "--evidence-id", evidenceId,
+    "--print"
+  ], harness.runtime);
+
+  assert.equal(exitCode, 0);
+  assert.equal(harness.logs.join("\n").includes(`Evidence correlation id: \`${evidenceId}\``), true);
+  assert.match(harness.logs.join("\n"), new RegExp(`evidence-id=${evidenceId}`));
+});
+
 test("release candidate evidence issue rejects invalid inputs before calling git or gh", async () => {
+  const invalidEvidenceId = createHarness({ headSha: exampleSha });
+  assert.equal(await runReleaseCandidateEvidenceIssue([
+    "--ci-run", "12345",
+    "--live-run", "67890",
+    "--external-run", "24680",
+    "--external-write-run", "13579",
+    "--provider-model", "gpt-4.1-mini",
+    "--evidence-id", "abcdef"
+  ], invalidEvidenceId.runtime), 2);
+  assert.equal(invalidEvidenceId.errors.includes("--evidence-id must be 32 lowercase hexadecimal characters."), true);
+  assert.equal(invalidEvidenceId.commands.length, 0);
+
   const invalidRepo = createHarness({ headSha: exampleSha });
   const invalidRepoExitCode = await runReleaseCandidateEvidenceIssue([
     "--repo",

@@ -9,7 +9,7 @@ const defaults = {
 };
 const usageText = [
   "Usage:",
-  "  pnpm run hosted-live-provider-smoke -- --model <provider-model> [--endpoint <chat-completions-url>] [--thinking <mode>] [--repo <owner/name>] [--ref <git-ref>]",
+  "  pnpm run hosted-live-provider-smoke -- --model <provider-model> [--endpoint <chat-completions-url>] [--thinking <mode>] [--evidence-id <32-hex>] [--repo <owner/name>] [--ref <git-ref>]",
   "",
   "Examples:",
   "  pnpm run hosted-live-provider-smoke -- --model gpt-4.1-mini",
@@ -55,6 +55,9 @@ async function run(argv, runtime) {
   if (args.thinking !== undefined && args.thinking !== "disabled") {
     return usageFailure(runtime, "--thinking supports only disabled.");
   }
+  if (args.evidenceId !== undefined && !isEvidenceId(args.evidenceId)) {
+    return usageFailure(runtime, "--evidence-id must be 32 lowercase hexadecimal characters.");
+  }
 
   const repo = args.repo ?? defaults.repo;
   const ref = args.ref ?? defaults.ref;
@@ -76,13 +79,15 @@ async function run(argv, runtime) {
     ref,
     model: args.model,
     endpoint: args.endpoint,
-    thinking: args.thinking
+    thinking: args.thinking,
+    evidenceId: args.evidenceId
   });
 
   const runId = await findDispatchedRun(runtime, {
     repo,
     ref,
-    dispatchedAfter
+    dispatchedAfter,
+    evidenceId: args.evidenceId
   });
 
   runtime.log(`watching hosted live provider smoke run ${runId}`);
@@ -109,7 +114,7 @@ function parseArgs(argv, runtime) {
       return usageFailure(runtime, `Unexpected positional argument: ${arg}`);
     }
 
-    if (!["repo", "ref", "model", "endpoint", "thinking"].includes(key)) {
+    if (!["repo", "ref", "model", "endpoint", "thinking", "evidence-id"].includes(key)) {
       return usageFailure(runtime, `Unsupported option: ${arg}`);
     }
 
@@ -118,7 +123,7 @@ function parseArgs(argv, runtime) {
       return usageFailure(runtime, `${arg} requires a value.`);
     }
 
-    parsed[key] = value;
+    parsed[key === "evidence-id" ? "evidenceId" : key] = value;
     index += 1;
   }
 
@@ -141,6 +146,10 @@ function isHttpsUrl(value) {
 
 function isGitHubRepositoryName(value) {
   return /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value);
+}
+
+function isEvidenceId(value) {
+  return typeof value === "string" && /^[0-9a-f]{32}$/.test(value);
 }
 
 function isPositiveRunId(value) {
@@ -223,6 +232,9 @@ async function dispatchWorkflow(runtime, options) {
   if (options.thinking !== undefined) {
     args.push("-f", `provider-thinking=${options.thinking}`);
   }
+  if (options.evidenceId !== undefined) {
+    args.push("-f", `evidence-id=${options.evidenceId}`);
+  }
 
   const result = await runtime.runCommand("gh", args);
   if (result.exitCode !== 0) {
@@ -252,7 +264,7 @@ async function findDispatchedRun(runtime, options) {
       "--limit",
       "5",
       "--json",
-      "databaseId,createdAt,headBranch,headSha,status,conclusion"
+      "databaseId,createdAt,displayTitle,headBranch,headSha,status,conclusion"
     ]);
     if (result.exitCode !== 0) {
       throw new Error(`Unable to list dispatched workflow runs.\n${boundedOutput(result.stderr)}`);
@@ -267,7 +279,12 @@ async function findDispatchedRun(runtime, options) {
 
     const run = runs.find((candidate) => {
       const createdAt = Date.parse(candidate.createdAt);
-      return Number.isFinite(createdAt) && createdAt >= options.dispatchedAfter.getTime();
+      const expectedTitle = options.evidenceId === undefined
+        ? undefined
+        : `Clarissimi live provider smoke · ${options.evidenceId}`;
+      return Number.isFinite(createdAt)
+        && createdAt >= options.dispatchedAfter.getTime()
+        && (expectedTitle === undefined || candidate.displayTitle === expectedTitle);
     });
     if (run !== undefined) {
       if (!isPositiveRunId(run.databaseId)) {

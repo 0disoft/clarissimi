@@ -69,8 +69,9 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   creating an external release evidence issue
 - root `package.json`: configured `release-candidate-evidence-orchestrator` script to verify exact
   hosted CI, dispatch and watch credentialed and external consumer checks, guarantee a post-write
-  orphan audit, preflight candidate-ref and workflow availability before dispatch, and pass
-  collected run IDs to the evidence issue helper in preview mode by default
+  orphan audit, preflight candidate-ref and workflow availability before dispatch, pass one
+  correlation id through every workflow so concurrent runs cannot be confused, then pass collected
+  run IDs to the evidence issue helper in preview mode by default
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
   `event-path` inputs, including the sanitized JSON summary artifact path
 - `.github/workflows/clarissimi-propose-fixture.yml`: manual-only fixture propose dogfood

@@ -60,6 +60,10 @@ export const requiredPackageScripts = [
     includes: ["scripts/verify-action-major-tag.mjs"]
   },
   {
+    name: "release-candidate-evidence-orchestrator",
+    includes: ["scripts/release-candidate-evidence-orchestrator.mjs"]
+  },
+  {
     name: "release-candidate-evidence-issue",
     includes: ["scripts/release-candidate-evidence-issue.mjs"]
   }
@@ -135,6 +139,7 @@ export const releasePolicyDocumentContract = {
     "publish a corrective patch tag such as `v0.1.1`",
     "`pnpm run hosted-ci-validation`",
     "`pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
+    "`pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
     "release PR, release issue, or GitHub release notes",
     "Do not make an evidence-only commit after final candidate validation",
     "docs/ops/release-candidate-evidence.md",
@@ -206,6 +211,7 @@ export const readmeValidationContract = {
     "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
     "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>`",
     "- `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
+    "- `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
     "Release-only credentialed checks are:",
     "- `pnpm run hosted-live-provider-smoke -- --model <provider-model>`",
     "`format` intentionally fails closed",
@@ -255,6 +261,7 @@ export const docsValidationScriptContract = {
     "\".github/workflows/clarissimi-stage-draft-fixture.yml\"",
     "\"scripts/hosted-external-consumer-smoke.mjs\"",
     "\"scripts/hosted-live-provider-smoke.mjs\"",
+    "\"scripts/release-candidate-evidence-orchestrator.mjs\"",
     "\"scripts/release-candidate-evidence-issue.mjs\"",
     "\"scripts/release-readiness.mjs\"",
     "\"scripts/verify-action-major-tag.mjs\""

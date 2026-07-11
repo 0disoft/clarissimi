@@ -1,5 +1,24 @@
 # Release Candidate Evidence
 
+## One-command orchestration
+
+For a source-only candidate already pushed to `main`, run:
+
+```powershell
+pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model> --sha <candidate-sha>
+```
+
+The command verifies hosted CI for the exact SHA, then dispatches and watches the hosted
+live-provider smoke, external dry-run smoke, external full-write smoke, and external orphan audit.
+It finally calls the evidence-issue helper with the collected run IDs. The default renders an issue
+preview and does not create an issue. It still dispatches hosted workflows and the full-write smoke
+temporarily creates synthetic pull requests and branches before cleanup.
+
+After reviewing the preview, add `--create-issue` to create the evidence issue. For a versioned
+Action tag, also pass `--release-type versioned-action-tag --release-version <v0.x.y>`; the immutable
+version tag becomes the external consumer ref. If the full-write smoke fails after dispatch, the
+orchestrator still runs the orphan audit before returning failure.
+
 - Status: Draft
 
 ## Purpose

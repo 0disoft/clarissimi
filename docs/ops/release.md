@@ -236,6 +236,11 @@ document would change the candidate SHA.
 and that every full-write runner and required cleanup step succeeded before it creates or prints
 evidence.
 
+Maintainers can collect the complete hosted evidence set and render the issue body with
+`pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`. This
+defaults to an issue preview; `--create-issue` is required for GitHub issue creation. Preview mode
+still dispatches the credentialed, external dry-run, full-write, and orphan-audit workflows.
+
 ## Owners
 
 - Primary owner: Repository maintainers

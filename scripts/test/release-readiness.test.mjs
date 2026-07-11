@@ -216,6 +216,7 @@ test("release readiness rejects release policy document drift", () => {
     .replace("- Moving GitHub Action major alias: `v0` is allowed under ADR 0034", "- Moving alias: ungoverned.")
     .replace("- GitHub Marketplace publication: blocked.", "- GitHub Marketplace publication: allowed.")
     .replace("`pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`", "")
+    .replace("`pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`", "")
     .replace("## Major Alias Promotion", "## Unverified Alias Promotion")
     .replace("`pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`", "");
 
@@ -229,7 +230,8 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include - GitHub Marketplace publication: blocked..",
     "docs/ops/release.md must include ## Major Alias Promotion.",
     "docs/ops/release.md must include `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`.",
-    "docs/ops/release.md must include `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`."
+    "docs/ops/release.md must include `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`.",
+    "docs/ops/release.md must include `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`."
   ]);
 });
 
@@ -276,6 +278,7 @@ test("release readiness rejects README validation drift", () => {
     .replace("- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`", "")
     .replace("- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>`", "")
     .replace("- `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`", "")
+    .replace("- `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`", "")
     .replace("Release-only credentialed checks are:", "Credential checks are:")
     .replace("`format` intentionally fails closed", "`format` is optional")
     .replace("`oxlint` is", "`eslint` is")
@@ -296,6 +299,7 @@ test("release readiness rejects README validation drift", () => {
     "README.md must include - `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`.",
     "README.md must include - `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>`.",
     "README.md must include - `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`.",
+    "README.md must include - `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`.",
     "README.md must include Release-only credentialed checks are:.",
     "README.md must include `format` intentionally fails closed.",
     "README.md must include `oxlint` is.",
@@ -323,6 +327,7 @@ test("release readiness rejects docs validation script drift", () => {
     .replace("\".github/workflows/clarissimi-live-provider-smoke.yml\"", "\".github/workflows/live-provider.yml\"")
     .replace("\"scripts/hosted-external-consumer-smoke.mjs\"", "\"scripts/external-consumer-smoke.mjs\"")
     .replace("\"scripts/hosted-live-provider-smoke.mjs\"", "\"scripts/hosted-provider-smoke.mjs\"")
+    .replace("\"scripts/release-candidate-evidence-orchestrator.mjs\"", "\"scripts/evidence-orchestrator.mjs\"")
     .replace("\"scripts/release-candidate-evidence-issue.mjs\"", "\"scripts/evidence-issue.mjs\"")
     .replace("\"scripts/verify-action-major-tag.mjs\"", "\"scripts/major-tag-check.mjs\"");
 
@@ -341,6 +346,7 @@ test("release readiness rejects docs validation script drift", () => {
     "scripts/validate-docs.mjs must include \".github/workflows/clarissimi-live-provider-smoke.yml\".",
     "scripts/validate-docs.mjs must include \"scripts/hosted-external-consumer-smoke.mjs\".",
     "scripts/validate-docs.mjs must include \"scripts/hosted-live-provider-smoke.mjs\".",
+    "scripts/validate-docs.mjs must include \"scripts/release-candidate-evidence-orchestrator.mjs\".",
     "scripts/validate-docs.mjs must include \"scripts/release-candidate-evidence-issue.mjs\".",
     "scripts/validate-docs.mjs must include \"scripts/verify-action-major-tag.mjs\"."
   ]);
@@ -1656,6 +1662,7 @@ function createReleasePolicyText() {
     "publish a corrective patch tag such as `v0.1.1`",
     "`pnpm run hosted-ci-validation`",
     "`pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
+    "`pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
     "release PR, release issue, or GitHub release notes",
     "Do not make an evidence-only commit after final candidate validation",
     "docs/ops/release-candidate-evidence.md",
@@ -1716,6 +1723,7 @@ function createReadmeValidationText() {
     "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
     "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>`",
     "- `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
+    "- `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
     "",
     "Release-only credentialed checks are:",
     "",
@@ -1769,6 +1777,7 @@ function createDocsValidationScriptText() {
     "  \".github/workflows/clarissimi-stage-draft-fixture.yml\",",
     "  \"scripts/hosted-external-consumer-smoke.mjs\",",
     "  \"scripts/hosted-live-provider-smoke.mjs\",",
+    "  \"scripts/release-candidate-evidence-orchestrator.mjs\",",
     "  \"scripts/release-candidate-evidence-issue.mjs\",",
     "  \"scripts/release-readiness.mjs\",",
     "  \"scripts/verify-action-major-tag.mjs\",",

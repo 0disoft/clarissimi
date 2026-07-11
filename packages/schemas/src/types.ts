@@ -6,8 +6,7 @@ export type ConfigProvider = (typeof CONFIG_PROVIDERS)[number];
 
 export const CONFIG_PROVIDER_THINKING_VALUES = ["disabled"] as const;
 
-export type ConfigProviderThinking =
-  (typeof CONFIG_PROVIDER_THINKING_VALUES)[number];
+export type ConfigProviderThinking = (typeof CONFIG_PROVIDER_THINKING_VALUES)[number];
 
 export const CONFIG_MODES = ["dry-run", "propose", "commit"] as const;
 

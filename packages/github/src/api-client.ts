@@ -26,16 +26,12 @@ export class GitHubApiClientError extends Error {
   }
 }
 
-export function createGitHubApiClient(
-  options: GitHubApiClientOptions = {},
-): LiveGitHubClient {
+export function createGitHubApiClient(options: GitHubApiClientOptions = {}): LiveGitHubClient {
   const apiUrl = normalizeApiUrl(options.apiUrl);
   const fetchImpl = options.fetch ?? fetch;
 
   return {
-    async getPullRequest(
-      input: LiveGitHubPullRequestLookup,
-    ): Promise<LiveGitHubPullRequest> {
+    async getPullRequest(input: LiveGitHubPullRequestLookup): Promise<LiveGitHubPullRequest> {
       const response = await requestJson(
         fetchImpl,
         options.token,
@@ -131,11 +127,7 @@ function parsePullRequest(value: unknown): LiveGitHubPullRequest {
     labels: parseLabels(value.labels),
   };
 
-  assignOptional(
-    pullRequest,
-    "body",
-    expectOptionalNullableString(value.body, "body"),
-  );
+  assignOptional(pullRequest, "body", expectOptionalNullableString(value.body, "body"));
   assignOptional(
     pullRequest,
     "mergedAt",
@@ -157,26 +149,10 @@ function parsePullRequestFile(value: unknown): LiveGitHubPullRequestFile {
     filename: expectString(value.filename, "filename"),
   };
 
-  assignOptional(
-    file,
-    "status",
-    expectOptionalNullableString(value.status, "status"),
-  );
-  assignOptional(
-    file,
-    "additions",
-    expectOptionalNullableNumber(value.additions, "additions"),
-  );
-  assignOptional(
-    file,
-    "deletions",
-    expectOptionalNullableNumber(value.deletions, "deletions"),
-  );
-  assignOptional(
-    file,
-    "patch",
-    expectOptionalNullableString(value.patch, "patch"),
-  );
+  assignOptional(file, "status", expectOptionalNullableString(value.status, "status"));
+  assignOptional(file, "additions", expectOptionalNullableNumber(value.additions, "additions"));
+  assignOptional(file, "deletions", expectOptionalNullableNumber(value.deletions, "deletions"));
+  assignOptional(file, "patch", expectOptionalNullableString(value.patch, "patch"));
   return file;
 }
 
@@ -186,26 +162,10 @@ function parseReviewComment(value: unknown): LiveGitHubReviewComment {
     id: expectStringOrNumber(value.id, "id"),
   };
 
-  assignOptional(
-    comment,
-    "body",
-    expectOptionalNullableString(value.body, "body"),
-  );
-  assignOptional(
-    comment,
-    "htmlUrl",
-    expectOptionalNullableString(value.html_url, "html_url"),
-  );
-  assignOptional(
-    comment,
-    "path",
-    expectOptionalNullableString(value.path, "path"),
-  );
-  assignOptional(
-    comment,
-    "diffHunk",
-    expectOptionalNullableString(value.diff_hunk, "diff_hunk"),
-  );
+  assignOptional(comment, "body", expectOptionalNullableString(value.body, "body"));
+  assignOptional(comment, "htmlUrl", expectOptionalNullableString(value.html_url, "html_url"));
+  assignOptional(comment, "path", expectOptionalNullableString(value.path, "path"));
+  assignOptional(comment, "diffHunk", expectOptionalNullableString(value.diff_hunk, "diff_hunk"));
 
   if (isRecord(value.user)) {
     const user: LiveGitHubActor = {
@@ -229,10 +189,7 @@ function parseLabels(value: unknown): readonly { readonly name: string }[] {
   }
 
   if (!Array.isArray(value)) {
-    throw new GitHubApiClientError(
-      "unexpected_response",
-      "Pull request labels must be an array.",
-    );
+    throw new GitHubApiClientError("unexpected_response", "Pull request labels must be an array.");
   }
 
   return value.map((entry) => {
@@ -243,10 +200,7 @@ function parseLabels(value: unknown): readonly { readonly name: string }[] {
   });
 }
 
-function mapGitHubApiError(
-  status: number,
-  body: unknown,
-): GitHubApiClientError {
+function mapGitHubApiError(status: number, body: unknown): GitHubApiClientError {
   const message = githubMessage(body);
   if (status === 401 || status === 403) {
     return new GitHubApiClientError("permission_denied", message);
@@ -265,9 +219,7 @@ function mapGitHubApiError(
 
 function normalizeApiUrl(value: string | undefined): string {
   const normalized = value?.replace(/\/+$/g, "").trim();
-  return normalized === undefined || normalized.length === 0
-    ? DEFAULT_GITHUB_API_URL
-    : normalized;
+  return normalized === undefined || normalized.length === 0 ? DEFAULT_GITHUB_API_URL : normalized;
 }
 
 function parseOptionalJson(text: string): unknown {
@@ -303,10 +255,7 @@ function expectString(value: unknown, field: string): string {
   return value;
 }
 
-function expectOptionalNullableString(
-  value: unknown,
-  field: string,
-): string | null | undefined {
+function expectOptionalNullableString(value: unknown, field: string): string | null | undefined {
   if (value === undefined || value === null) {
     return value;
   }
@@ -325,10 +274,7 @@ function expectNumber(value: unknown, field: string): number {
   return value;
 }
 
-function expectOptionalNullableNumber(
-  value: unknown,
-  field: string,
-): number | null | undefined {
+function expectOptionalNullableNumber(value: unknown, field: string): number | null | undefined {
   if (value === undefined || value === null) {
     return value;
   }
@@ -347,10 +293,7 @@ function expectStringOrNumber(value: unknown, field: string): string | number {
   return value;
 }
 
-function assertRecord(
-  value: unknown,
-  name: string,
-): asserts value is Record<string, unknown> {
+function assertRecord(value: unknown, name: string): asserts value is Record<string, unknown> {
   if (!isRecord(value)) {
     throw new GitHubApiClientError(
       "unexpected_response",

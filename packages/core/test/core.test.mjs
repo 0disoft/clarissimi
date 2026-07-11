@@ -1,14 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  canPublishAssessment,
-  prepareEvidenceForProvider,
-} from "../dist/index.js";
-import {
-  ASSESSMENT_SCHEMA_VERSION,
-  REDACTION_PLACEHOLDER,
-} from "./support.mjs";
+import { canPublishAssessment, prepareEvidenceForProvider } from "../dist/index.js";
+import { ASSESSMENT_SCHEMA_VERSION, REDACTION_PLACEHOLDER } from "./support.mjs";
 
 const source = {
   repository: "example/project",
@@ -71,10 +65,7 @@ test("prepares provider evidence by redacting all text-bearing fields", () => {
   assert.deepEqual(prepared.items[0].metadata, {
     authorEmail: REDACTION_PLACEHOLDER,
   });
-  assert.equal(
-    prepared.evidenceRefs[0].title,
-    `Reported by ${REDACTION_PLACEHOLDER}`,
-  );
+  assert.equal(prepared.evidenceRefs[0].title, `Reported by ${REDACTION_PLACEHOLDER}`);
   assert.equal(prepared.evidenceRefs[0].excerpt, REDACTION_PLACEHOLDER);
 });
 
@@ -108,10 +99,7 @@ test("allows explicitly auto-approved assessments to become public records", () 
   const result = canPublishAssessment(validAssessment("auto_approved"));
 
   assert.equal(result.ok, true);
-  assert.equal(
-    result.value.assessment.maintainerApprovalStatus,
-    "auto_approved",
-  );
+  assert.equal(result.value.assessment.maintainerApprovalStatus, "auto_approved");
 });
 
 test("rejects draft assessments from public publication", () => {

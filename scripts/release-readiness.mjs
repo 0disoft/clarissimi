@@ -29,7 +29,7 @@ export const requiredPackageScripts = [
   },
   {
     name: "format",
-    includes: ["prettier . --check"],
+    includes: ["oxfmt --check"],
   },
   {
     name: "check",
@@ -108,23 +108,21 @@ export const rootPackageManagerContract = {
 };
 
 export const formatterContract = {
-  dependency: "prettier",
-  version: "3.9.5",
-  configPath: ".prettierrc.json",
+  dependency: "oxfmt",
+  version: "0.58.0",
+  configPath: ".oxfmtrc.json",
   config: {
     endOfLine: "lf",
     proseWrap: "preserve",
   },
-  ignorePath: ".prettierignore",
-  requiredIgnoreEntries: [
-    "action-dist/",
-    "dist/",
-    "build/",
-    "coverage/",
-    "node_modules/",
-    ".cache/",
-    ".tmp/",
-    "tmp/",
+  requiredIgnorePatterns: [
+    "action-dist/**",
+    "dist/**",
+    "build/**",
+    "coverage/**",
+    ".cache/**",
+    ".tmp/**",
+    "tmp/**",
   ],
 };
 
@@ -229,7 +227,7 @@ export const readmeValidationContract = {
     "- `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
     "Release-only credentialed checks are:",
     "- `pnpm run hosted-live-provider-smoke -- --model <provider-model>`",
-    "`format` runs the repository-wide Prettier baseline accepted by ADR 0035",
+    "`format` runs the repository-wide Oxfmt baseline accepted by ADR 0036",
     "`oxlint` remains the JavaScript and TypeScript lint gate",
     "`migration-check` intentionally fails until configured",
   ],
@@ -284,20 +282,19 @@ export const docsValidationScriptContract = {
 };
 
 export const lintAndFormatDecisionDocumentContract = {
-  path: "docs/adr/0035-adopt-prettier-format-baseline.md",
+  path: "docs/adr/0036-replace-prettier-with-oxfmt.md",
   requiredSnippets: [
-    "Adopt exactly pinned `prettier@3.9.5` as the repository formatter.",
-    "run `prettier . --check`",
+    "Replace Prettier with exactly pinned `oxfmt@0.58.0`.",
+    "run `oxfmt --check`",
     "cover maintained TypeScript, JavaScript, JSON, Markdown, and YAML files",
-    "use `.prettierrc.json`",
-    "use `.prettierignore`",
-    "exclude `action-dist/`",
-    "run in hosted CI as its own validation step",
+    "use `.oxfmtrc.json`",
+    "use `ignorePatterns`",
+    "exclude `action-dist/**`",
+    "run in hosted CI as its own non-writing validation step",
     "be protected by `release-readiness` checks",
-    "Future changes must",
-    "pass check mode; CI must never rewrite source files.",
-    "Generated `action-dist/index.js`",
-    "remains outside the formatter surface",
+    "Future changes must pass",
+    "CI must never rewrite source files.",
+    "tracked `action-dist/index.js` remains outside the formatter surface",
   ],
 };
 
@@ -836,8 +833,7 @@ export const credentialedReleaseEvidenceContract = {
   requiredPatterns: [
     {
       description: "a numeric hosted live-provider workflow run id",
-      pattern:
-        /Recent hosted live-provider evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/,
+      pattern: /Recent hosted live-provider evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/,
     },
     {
       description: "a hosted live-provider workflow timestamp",
@@ -886,13 +882,11 @@ export const writeModeDogfoodEvidenceContract = {
     },
     {
       description: "a propose fixture workflow timestamp",
-      pattern:
-        /Current dogfood evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/,
+      pattern: /Current dogfood evidence:[\s\S]*passed on `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`/,
     },
     {
       description: "a numeric stage-draft fixture workflow run id",
-      pattern:
-        /Current draft dogfood evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/,
+      pattern: /Current draft dogfood evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/,
     },
     {
       description: "a stage-draft fixture workflow timestamp",
@@ -913,8 +907,7 @@ export const dryRunDogfoodEvidenceContract = {
   requiredPatterns: [
     {
       description: "a numeric dry-run dogfood workflow run id",
-      pattern:
-        /Current dry-run dogfood evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/,
+      pattern: /Current dry-run dogfood evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/,
     },
     {
       description: "a dry-run dogfood workflow timestamp",
@@ -935,8 +928,7 @@ export const hostedCiEvidenceContract = {
   requiredPatterns: [
     {
       description: "a numeric hosted CI workflow run id",
-      pattern:
-        /Recent hosted CI validation evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/,
+      pattern: /Recent hosted CI validation evidence:[\s\S]*workflow run[\s\S]*`[0-9]{8,}`/,
     },
     {
       description: "a hosted CI workflow timestamp",
@@ -1094,11 +1086,7 @@ export const actionManifestContract = {
     { name: "provider-endpoint" },
     { name: "provider-thinking" },
   ],
-  forbiddenInputs: [
-    "github-token",
-    "provider-token",
-    "clarissimi-provider-token",
-  ],
+  forbiddenInputs: ["github-token", "provider-token", "clarissimi-provider-token"],
   requiredOutputs: [
     "draft-count",
     "proposed-entry-count",
@@ -1230,10 +1218,7 @@ export async function runReleaseReadiness(options = {}) {
     (name) => name.endsWith(".yml") || name.endsWith(".yaml"),
     repoRoot,
   );
-  const yamlFiles = [
-    "action.yml",
-    ...workflowFiles.map((file) => toRepoPath(repoRoot, file)),
-  ];
+  const yamlFiles = ["action.yml", ...workflowFiles.map((file) => toRepoPath(repoRoot, file))];
 
   await runCheck({
     repoRoot,
@@ -1292,9 +1277,7 @@ export async function runReleaseReadiness(options = {}) {
       try {
         result = JSON.parse(stdout);
       } catch (error) {
-        throw new Error(
-          `ssealed doctor did not emit parseable JSON: ${error.message}`,
-        );
+        throw new Error(`ssealed doctor did not emit parseable JSON: ${error.message}`);
       }
 
       if (result.ok !== true) {
@@ -1347,9 +1330,7 @@ export async function runReleaseReadiness(options = {}) {
   console.log(
     "hosted CI, dry-run, write-mode, and credentialed release evidence recorded in docs/ops/release.md",
   );
-  console.log(
-    "immutable v0.x.y Action tags are allowed by ADR 0031 after all release gates pass",
-  );
+  console.log("immutable v0.x.y Action tags are allowed by ADR 0031 after all release gates pass");
   console.log(
     "moving Action alias v0 is allowed by ADR 0034 after exact-SHA post-promotion verification",
   );
@@ -1358,19 +1339,12 @@ export async function runReleaseReadiness(options = {}) {
   );
 }
 
-if (
-  process.argv[1] !== undefined &&
-  pathToFileURL(process.argv[1]).href === import.meta.url
-) {
+if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) {
   await runReleaseReadiness();
 }
 
 async function runCheck(options) {
-  const result = await runCommand(
-    options.command,
-    options.args,
-    options.repoRoot,
-  );
+  const result = await runCommand(options.command, options.args, options.repoRoot);
   if (result.exitCode !== 0) {
     const stdout = options.redactOutput ? "[redacted]" : result.stdout.trim();
     const stderr = options.redactOutput ? "[redacted]" : result.stderr.trim();
@@ -1433,18 +1407,14 @@ async function runSecretScan(repoRoot) {
   }
 
   if (hits.length > 0) {
-    throw new Error(
-      `secret scan found high-risk patterns:\n${hits.join("\n")}`,
-    );
+    throw new Error(`secret scan found high-risk patterns:\n${hits.join("\n")}`);
   }
 
   console.log("secret scan passed");
 }
 
 export function findHighRiskSecretLines(repoPath, text) {
-  const highRiskEnvAssignments = highRiskSecretEnvNames.map(
-    (name) => `${escapeRegExp(name)}\\s*=`,
-  );
+  const highRiskEnvAssignments = highRiskSecretEnvNames.map((name) => `${escapeRegExp(name)}\\s*=`);
   const pattern = new RegExp(
     [
       "sk-(proj|live|test|ant|svc|admin|user|org|key)-[A-Za-z0-9_-]{8,}",
@@ -1474,18 +1444,14 @@ export function validateHostedLiveProviderWorkflowContract(
   for (const input of contract.requiredInputs) {
     const block = findYamlMappingBlock(text, input.name);
     if (block === undefined) {
-      issues.push(
-        `${contract.path} must define workflow_dispatch input ${input.name}.`,
-      );
+      issues.push(`${contract.path} must define workflow_dispatch input ${input.name}.`);
       continue;
     }
 
     const requiredValue = findYamlScalarValue(block, "required");
     const expected = String(input.required);
     if (requiredValue !== expected) {
-      issues.push(
-        `${contract.path} input ${input.name} must set required: ${expected}.`,
-      );
+      issues.push(`${contract.path} input ${input.name} must set required: ${expected}.`);
     }
   }
 
@@ -1509,9 +1475,7 @@ export function validateHostedLiveProviderWorkflowContract(
     }
   }
 
-  issues.push(
-    ...validateSnippetOrder(text, contract.path, contract.requiredOrder),
-  );
+  issues.push(...validateSnippetOrder(text, contract.path, contract.requiredOrder));
 
   return issues;
 }
@@ -1538,10 +1502,7 @@ export function validateWorkflowTrustBoundaryContract(
   return issues;
 }
 
-export function validateRollbackProcedureContract(
-  text,
-  contract = rollbackProcedureContract,
-) {
+export function validateRollbackProcedureContract(text, contract = rollbackProcedureContract) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1577,9 +1538,7 @@ export function validateProductPositioningContract(
   for (const document of contract.documents) {
     const text = textsByPath[document.path];
     if (typeof text !== "string") {
-      issues.push(
-        `${document.path} must be readable for product positioning contract.`,
-      );
+      issues.push(`${document.path} must be readable for product positioning contract.`);
       continue;
     }
 
@@ -1599,10 +1558,7 @@ export function validateProductPositioningContract(
   return issues;
 }
 
-export function validateReadmeValidationContract(
-  text,
-  contract = readmeValidationContract,
-) {
+export function validateReadmeValidationContract(text, contract = readmeValidationContract) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1659,10 +1615,7 @@ export function validateLedgerFormatDocumentContract(
   return issues;
 }
 
-export function validateCliCommandContract(
-  text,
-  contract = cliCommandContract,
-) {
+export function validateCliCommandContract(text, contract = cliCommandContract) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1809,10 +1762,7 @@ export function validateDisasterRecoveryDocumentContract(
   return issues;
 }
 
-export function validateSecretsDocumentContract(
-  text,
-  contract = secretsDocumentContract,
-) {
+export function validateSecretsDocumentContract(text, contract = secretsDocumentContract) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -1908,9 +1858,7 @@ export function validateOpsValidationFooterContract(
   for (const documentPath of contract.documents) {
     const text = textsByPath[documentPath];
     if (typeof text !== "string") {
-      issues.push(
-        `${documentPath} must be readable for ops validation footer contract.`,
-      );
+      issues.push(`${documentPath} must be readable for ops validation footer contract.`);
       continue;
     }
 
@@ -1933,9 +1881,7 @@ export function validateEngineeringValidationDocumentContract(
   for (const documentPath of contract.documents) {
     const text = textsByPath[documentPath];
     if (typeof text !== "string") {
-      issues.push(
-        `${documentPath} must be readable for engineering validation document contract.`,
-      );
+      issues.push(`${documentPath} must be readable for engineering validation document contract.`);
       continue;
     }
 
@@ -1958,9 +1904,7 @@ export function validateMonorepoValidationDocumentContract(
   for (const documentPath of contract.documents) {
     const text = textsByPath[documentPath];
     if (typeof text !== "string") {
-      issues.push(
-        `${documentPath} must be readable for monorepo validation document contract.`,
-      );
+      issues.push(`${documentPath} must be readable for monorepo validation document contract.`);
       continue;
     }
 
@@ -1974,10 +1918,7 @@ export function validateMonorepoValidationDocumentContract(
   return issues;
 }
 
-export function validateCiWorkflowContract(
-  text,
-  contract = ciWorkflowContract,
-) {
+export function validateCiWorkflowContract(text, contract = ciWorkflowContract) {
   const issues = [];
 
   for (const trigger of contract.requiredTriggers) {
@@ -2007,29 +1948,14 @@ export function validateCiWorkflowContract(
   return issues;
 }
 
-export function validateActionManifestContract(
-  text,
-  contract = actionManifestContract,
-) {
+export function validateActionManifestContract(text, contract = actionManifestContract) {
   const issues = [];
-  const inputsBlock = findRequiredYamlMappingBlock(
-    text,
-    contract.path,
-    "inputs",
-    issues,
-  );
-  const outputsBlock = findRequiredYamlMappingBlock(
-    text,
-    contract.path,
-    "outputs",
-    issues,
-  );
+  const inputsBlock = findRequiredYamlMappingBlock(text, contract.path, "inputs", issues);
+  const outputsBlock = findRequiredYamlMappingBlock(text, contract.path, "outputs", issues);
 
   for (const input of contract.requiredInputs) {
     const block =
-      inputsBlock === undefined
-        ? undefined
-        : findYamlMappingBlock(inputsBlock, input.name);
+      inputsBlock === undefined ? undefined : findYamlMappingBlock(inputsBlock, input.name);
     if (block === undefined) {
       issues.push(`${contract.path} must define input ${input.name}.`);
       continue;
@@ -2038,29 +1964,20 @@ export function validateActionManifestContract(
     if (input.default !== undefined) {
       const defaultValue = findYamlScalarValue(block, "default");
       if (defaultValue !== input.default) {
-        issues.push(
-          `${contract.path} input ${input.name} must set default: ${input.default}.`,
-        );
+        issues.push(`${contract.path} input ${input.name} must set default: ${input.default}.`);
       }
     }
   }
 
   for (const inputName of contract.forbiddenInputs) {
-    if (
-      inputsBlock !== undefined &&
-      findYamlMappingBlock(inputsBlock, inputName) !== undefined
-    ) {
-      issues.push(
-        `${contract.path} must not expose ${inputName} as an action input.`,
-      );
+    if (inputsBlock !== undefined && findYamlMappingBlock(inputsBlock, inputName) !== undefined) {
+      issues.push(`${contract.path} must not expose ${inputName} as an action input.`);
     }
   }
 
   for (const output of contract.requiredOutputs) {
     const block =
-      outputsBlock === undefined
-        ? undefined
-        : findYamlMappingBlock(outputsBlock, output);
+      outputsBlock === undefined ? undefined : findYamlMappingBlock(outputsBlock, output);
     if (block === undefined) {
       issues.push(`${contract.path} must define output ${output}.`);
       continue;
@@ -2069,9 +1986,7 @@ export function validateActionManifestContract(
     const expectedValue = `\${{ steps.clarissimi.outputs.${output} }}`;
     const value = findYamlScalarValue(block, "value");
     if (value !== expectedValue) {
-      issues.push(
-        `${contract.path} output ${output} must map to ${expectedValue}.`,
-      );
+      issues.push(`${contract.path} output ${output} must map to ${expectedValue}.`);
     }
   }
 
@@ -2142,9 +2057,7 @@ async function runActionManifestContractCheck(repoRoot) {
   try {
     text = await readFile(actionPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${actionManifestContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${actionManifestContract.path}: ${error.message}`);
   }
 
   const issues = validateActionManifestContract(text);
@@ -2171,9 +2084,7 @@ async function runWorkflowTrustBoundaryContractCheck(repoRoot, workflowFiles) {
   }
 
   if (issues.length > 0) {
-    throw new Error(
-      `workflow trust boundary contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`workflow trust boundary contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("workflow trust boundary contract passed");
@@ -2185,9 +2096,7 @@ async function runCiWorkflowContractCheck(repoRoot) {
   try {
     text = await readFile(workflowPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${ciWorkflowContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${ciWorkflowContract.path}: ${error.message}`);
   }
 
   const issues = validateCiWorkflowContract(text);
@@ -2204,16 +2113,12 @@ async function runHostedLiveProviderWorkflowContractCheck(repoRoot) {
   try {
     text = await readFile(workflowPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${hostedLiveProviderWorkflowContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${hostedLiveProviderWorkflowContract.path}: ${error.message}`);
   }
 
   const issues = validateHostedLiveProviderWorkflowContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `hosted live provider workflow contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`hosted live provider workflow contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("hosted live provider workflow contract passed");
@@ -2268,16 +2173,12 @@ async function runRollbackProcedureContractCheck(repoRoot) {
   try {
     text = await readFile(rollbackPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${rollbackProcedureContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${rollbackProcedureContract.path}: ${error.message}`);
   }
 
   const issues = validateRollbackProcedureContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `rollback procedure contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`rollback procedure contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("rollback procedure contract passed");
@@ -2294,9 +2195,7 @@ async function runPackageScriptRegistrationCheck(repoRoot) {
 
   const issues = validatePackageScriptRegistration(packageJson);
   if (issues.length > 0) {
-    throw new Error(
-      `package.json script registration failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`package.json script registration failed:\n${issues.join("\n")}`);
   }
 
   console.log("package script registration passed");
@@ -2308,16 +2207,12 @@ async function runRootPackageManagerContractCheck(repoRoot) {
   try {
     packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
   } catch (error) {
-    throw new Error(
-      `${rootPackageManagerContract.path} is not parseable JSON: ${error.message}`,
-    );
+    throw new Error(`${rootPackageManagerContract.path} is not parseable JSON: ${error.message}`);
   }
 
   const issues = validateRootPackageManager(packageJson);
   if (issues.length > 0) {
-    throw new Error(
-      `root package manager contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`root package manager contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("root package manager contract passed");
@@ -2326,25 +2221,14 @@ async function runRootPackageManagerContractCheck(repoRoot) {
 async function runFormatterContractCheck(repoRoot) {
   let packageJson;
   let config;
-  let ignoreText;
   try {
-    packageJson = JSON.parse(
-      await readFile(join(repoRoot, "package.json"), "utf8"),
-    );
-    config = JSON.parse(
-      await readFile(join(repoRoot, formatterContract.configPath), "utf8"),
-    );
-    ignoreText = await readFile(
-      join(repoRoot, formatterContract.ignorePath),
-      "utf8",
-    );
+    packageJson = JSON.parse(await readFile(join(repoRoot, "package.json"), "utf8"));
+    config = JSON.parse(await readFile(join(repoRoot, formatterContract.configPath), "utf8"));
   } catch (error) {
-    throw new Error(
-      `formatter contract files are invalid or unreadable: ${error.message}`,
-    );
+    throw new Error(`formatter contract files are invalid or unreadable: ${error.message}`);
   }
 
-  const issues = validateFormatterContract(packageJson, config, ignoreText);
+  const issues = validateFormatterContract(packageJson, config);
   if (issues.length > 0) {
     throw new Error(`formatter contract failed:\n${issues.join("\n")}`);
   }
@@ -2363,9 +2247,7 @@ async function runPackageReleasePolicyCheck(repoRoot) {
 
   const issues = validatePackageReleasePolicy(packageJson);
   if (issues.length > 0) {
-    throw new Error(
-      `package.json release policy failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`package.json release policy failed:\n${issues.join("\n")}`);
   }
 
   console.log("package release policy passed");
@@ -2377,16 +2259,12 @@ async function runReleasePolicyDocumentContractCheck(repoRoot) {
   try {
     text = await readFile(releasePath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${releasePolicyDocumentContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${releasePolicyDocumentContract.path}: ${error.message}`);
   }
 
   const issues = validateReleasePolicyDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `release policy document contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`release policy document contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("release policy document contract passed");
@@ -2406,9 +2284,7 @@ async function runProductPositioningContractCheck(repoRoot) {
 
   const issues = validateProductPositioningContract(textsByPath);
   if (issues.length > 0) {
-    throw new Error(
-      `product positioning contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`product positioning contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("product positioning contract passed");
@@ -2420,9 +2296,7 @@ async function runReadmeValidationContractCheck(repoRoot) {
   try {
     text = await readFile(readmePath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${readmeValidationContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${readmeValidationContract.path}: ${error.message}`);
   }
 
   const issues = validateReadmeValidationContract(text);
@@ -2439,26 +2313,19 @@ async function runDocsValidationScriptContractCheck(repoRoot) {
   try {
     text = await readFile(docsValidationPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${docsValidationScriptContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${docsValidationScriptContract.path}: ${error.message}`);
   }
 
   const issues = validateDocsValidationScriptContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `docs validation script contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`docs validation script contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("docs validation script contract passed");
 }
 
 async function runLintAndFormatDecisionDocumentContractCheck(repoRoot) {
-  const lintAndFormatPath = join(
-    repoRoot,
-    lintAndFormatDecisionDocumentContract.path,
-  );
+  const lintAndFormatPath = join(repoRoot, lintAndFormatDecisionDocumentContract.path);
   let text;
   try {
     text = await readFile(lintAndFormatPath, "utf8");
@@ -2470,9 +2337,7 @@ async function runLintAndFormatDecisionDocumentContractCheck(repoRoot) {
 
   const issues = validateLintAndFormatDecisionDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `lint and format decision document contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`lint and format decision document contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("lint and format decision document contract passed");
@@ -2484,16 +2349,12 @@ async function runLedgerFormatDocumentContractCheck(repoRoot) {
   try {
     text = await readFile(ledgerFormatPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${ledgerFormatDocumentContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${ledgerFormatDocumentContract.path}: ${error.message}`);
   }
 
   const issues = validateLedgerFormatDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `ledger format document contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`ledger format document contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("ledger format document contract passed");
@@ -2505,9 +2366,7 @@ async function runCliCommandContractCheck(repoRoot) {
   try {
     text = await readFile(commandContractPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${cliCommandContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${cliCommandContract.path}: ${error.message}`);
   }
 
   const issues = validateCliCommandContract(text);
@@ -2519,72 +2378,51 @@ async function runCliCommandContractCheck(repoRoot) {
 }
 
 async function runCliOutputExitCodesDocumentContractCheck(repoRoot) {
-  const outputExitCodesPath = join(
-    repoRoot,
-    cliOutputExitCodesDocumentContract.path,
-  );
+  const outputExitCodesPath = join(repoRoot, cliOutputExitCodesDocumentContract.path);
   let text;
   try {
     text = await readFile(outputExitCodesPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${cliOutputExitCodesDocumentContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${cliOutputExitCodesDocumentContract.path}: ${error.message}`);
   }
 
   const issues = validateCliOutputExitCodesDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `CLI output and exit codes document contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`CLI output and exit codes document contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("CLI output and exit codes document contract passed");
 }
 
 async function runCliConfigurationDocumentContractCheck(repoRoot) {
-  const configurationPath = join(
-    repoRoot,
-    cliConfigurationDocumentContract.path,
-  );
+  const configurationPath = join(repoRoot, cliConfigurationDocumentContract.path);
   let text;
   try {
     text = await readFile(configurationPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${cliConfigurationDocumentContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${cliConfigurationDocumentContract.path}: ${error.message}`);
   }
 
   const issues = validateCliConfigurationDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `CLI configuration document contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`CLI configuration document contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("CLI configuration document contract passed");
 }
 
 async function runAgentAssistedDraftsDocumentContractCheck(repoRoot) {
-  const agentAssistedDraftsPath = join(
-    repoRoot,
-    agentAssistedDraftsDocumentContract.path,
-  );
+  const agentAssistedDraftsPath = join(repoRoot, agentAssistedDraftsDocumentContract.path);
   let text;
   try {
     text = await readFile(agentAssistedDraftsPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${agentAssistedDraftsDocumentContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${agentAssistedDraftsDocumentContract.path}: ${error.message}`);
   }
 
   const issues = validateAgentAssistedDraftsDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `agent-assisted drafts document contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`agent-assisted drafts document contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("agent-assisted drafts document contract passed");
@@ -2596,40 +2434,29 @@ async function runCiOperationalDocumentContractCheck(repoRoot) {
   try {
     text = await readFile(ciPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${ciOperationalDocumentContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${ciOperationalDocumentContract.path}: ${error.message}`);
   }
 
   const issues = validateCiOperationalDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `CI operational document contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`CI operational document contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("CI operational document contract passed");
 }
 
 async function runOperationalContractDocumentContractCheck(repoRoot) {
-  const operationalContractPath = join(
-    repoRoot,
-    operationalContractDocumentContract.path,
-  );
+  const operationalContractPath = join(repoRoot, operationalContractDocumentContract.path);
   let text;
   try {
     text = await readFile(operationalContractPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${operationalContractDocumentContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${operationalContractDocumentContract.path}: ${error.message}`);
   }
 
   const issues = validateOperationalContractDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `operational contract document contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`operational contract document contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("operational contract document contract passed");
@@ -2641,16 +2468,12 @@ async function runObservabilityDocumentContractCheck(repoRoot) {
   try {
     text = await readFile(observabilityPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${observabilityDocumentContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${observabilityDocumentContract.path}: ${error.message}`);
   }
 
   const issues = validateObservabilityDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `observability document contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`observability document contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("observability document contract passed");
@@ -2662,16 +2485,12 @@ async function runServiceLevelsDocumentContractCheck(repoRoot) {
   try {
     text = await readFile(serviceLevelsPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${serviceLevelsDocumentContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${serviceLevelsDocumentContract.path}: ${error.message}`);
   }
 
   const issues = validateServiceLevelsDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `service levels document contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`service levels document contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("service levels document contract passed");
@@ -2683,9 +2502,7 @@ async function runSecretsDocumentContractCheck(repoRoot) {
   try {
     text = await readFile(secretsPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${secretsDocumentContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${secretsDocumentContract.path}: ${error.message}`);
   }
 
   const issues = validateSecretsDocumentContract(text);
@@ -2702,136 +2519,97 @@ async function runBackupRestoreDocumentContractCheck(repoRoot) {
   try {
     text = await readFile(backupRestorePath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${backupRestoreDocumentContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${backupRestoreDocumentContract.path}: ${error.message}`);
   }
 
   const issues = validateBackupRestoreDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `backup and restore document contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`backup and restore document contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("backup and restore document contract passed");
 }
 
 async function runIncidentResponseDocumentContractCheck(repoRoot) {
-  const incidentResponsePath = join(
-    repoRoot,
-    incidentResponseDocumentContract.path,
-  );
+  const incidentResponsePath = join(repoRoot, incidentResponseDocumentContract.path);
   let text;
   try {
     text = await readFile(incidentResponsePath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${incidentResponseDocumentContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${incidentResponseDocumentContract.path}: ${error.message}`);
   }
 
   const issues = validateIncidentResponseDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `incident response document contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`incident response document contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("incident response document contract passed");
 }
 
 async function runDisasterRecoveryDocumentContractCheck(repoRoot) {
-  const disasterRecoveryPath = join(
-    repoRoot,
-    disasterRecoveryDocumentContract.path,
-  );
+  const disasterRecoveryPath = join(repoRoot, disasterRecoveryDocumentContract.path);
   let text;
   try {
     text = await readFile(disasterRecoveryPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${disasterRecoveryDocumentContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${disasterRecoveryDocumentContract.path}: ${error.message}`);
   }
 
   const issues = validateDisasterRecoveryDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `disaster recovery document contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`disaster recovery document contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("disaster recovery document contract passed");
 }
 
 async function runActionInputsOutputsDocumentContractCheck(repoRoot) {
-  const inputsOutputsPath = join(
-    repoRoot,
-    actionInputsOutputsDocumentContract.path,
-  );
+  const inputsOutputsPath = join(repoRoot, actionInputsOutputsDocumentContract.path);
   let text;
   try {
     text = await readFile(inputsOutputsPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${actionInputsOutputsDocumentContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${actionInputsOutputsDocumentContract.path}: ${error.message}`);
   }
 
   const issues = validateActionInputsOutputsDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `Action inputs and outputs document contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`Action inputs and outputs document contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("Action inputs and outputs document contract passed");
 }
 
 async function runActionContractDocumentContractCheck(repoRoot) {
-  const actionContractPath = join(
-    repoRoot,
-    actionContractDocumentContract.path,
-  );
+  const actionContractPath = join(repoRoot, actionContractDocumentContract.path);
   let text;
   try {
     text = await readFile(actionContractPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${actionContractDocumentContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${actionContractDocumentContract.path}: ${error.message}`);
   }
 
   const issues = validateActionContractDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `Action contract document contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`Action contract document contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("Action contract document contract passed");
 }
 
 async function runActionPermissionsDocumentContractCheck(repoRoot) {
-  const actionPermissionsPath = join(
-    repoRoot,
-    actionPermissionsDocumentContract.path,
-  );
+  const actionPermissionsPath = join(repoRoot, actionPermissionsDocumentContract.path);
   let text;
   try {
     text = await readFile(actionPermissionsPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `Unable to read ${actionPermissionsDocumentContract.path}: ${error.message}`,
-    );
+    throw new Error(`Unable to read ${actionPermissionsDocumentContract.path}: ${error.message}`);
   }
 
   const issues = validateActionPermissionsDocumentContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `Action permissions document contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`Action permissions document contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("Action permissions document contract passed");
@@ -2842,10 +2620,7 @@ async function runOpsValidationFooterContractCheck(repoRoot) {
 
   for (const documentPath of opsValidationFooterContract.documents) {
     try {
-      textsByPath[documentPath] = await readFile(
-        join(repoRoot, documentPath),
-        "utf8",
-      );
+      textsByPath[documentPath] = await readFile(join(repoRoot, documentPath), "utf8");
     } catch (error) {
       throw new Error(`Unable to read ${documentPath}: ${error.message}`);
     }
@@ -2853,9 +2628,7 @@ async function runOpsValidationFooterContractCheck(repoRoot) {
 
   const issues = validateOpsValidationFooterContract(textsByPath);
   if (issues.length > 0) {
-    throw new Error(
-      `ops validation footer contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`ops validation footer contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("ops validation footer contract passed");
@@ -2866,10 +2639,7 @@ async function runEngineeringValidationDocumentContractCheck(repoRoot) {
 
   for (const documentPath of engineeringValidationDocumentContract.documents) {
     try {
-      textsByPath[documentPath] = await readFile(
-        join(repoRoot, documentPath),
-        "utf8",
-      );
+      textsByPath[documentPath] = await readFile(join(repoRoot, documentPath), "utf8");
     } catch (error) {
       throw new Error(`Unable to read ${documentPath}: ${error.message}`);
     }
@@ -2877,9 +2647,7 @@ async function runEngineeringValidationDocumentContractCheck(repoRoot) {
 
   const issues = validateEngineeringValidationDocumentContract(textsByPath);
   if (issues.length > 0) {
-    throw new Error(
-      `engineering validation document contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`engineering validation document contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("engineering validation document contract passed");
@@ -2890,10 +2658,7 @@ async function runMonorepoValidationDocumentContractCheck(repoRoot) {
 
   for (const documentPath of monorepoValidationDocumentContract.documents) {
     try {
-      textsByPath[documentPath] = await readFile(
-        join(repoRoot, documentPath),
-        "utf8",
-      );
+      textsByPath[documentPath] = await readFile(join(repoRoot, documentPath), "utf8");
     } catch (error) {
       throw new Error(`Unable to read ${documentPath}: ${error.message}`);
     }
@@ -2901,9 +2666,7 @@ async function runMonorepoValidationDocumentContractCheck(repoRoot) {
 
   const issues = validateMonorepoValidationDocumentContract(textsByPath);
   if (issues.length > 0) {
-    throw new Error(
-      `monorepo validation document contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`monorepo validation document contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("monorepo validation document contract passed");
@@ -2915,16 +2678,12 @@ async function runSmokePackCandidateContractCheck(repoRoot) {
   try {
     text = await readFile(smokePath, "utf8");
   } catch (error) {
-    throw new Error(
-      `${smokePackCandidateContract.path} is not readable: ${error.message}`,
-    );
+    throw new Error(`${smokePackCandidateContract.path} is not readable: ${error.message}`);
   }
 
   const issues = validateSmokePackCandidateContract(text);
   if (issues.length > 0) {
-    throw new Error(
-      `smoke package pack candidate contract failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`smoke package pack candidate contract failed:\n${issues.join("\n")}`);
   }
 
   console.log("smoke package pack candidate contract passed");
@@ -2944,13 +2703,7 @@ async function runWorkspacePackageReleasePolicyCheck(repoRoot) {
       continue;
     }
 
-    issues.push(
-      ...validatePackageReleasePolicy(
-        packageJson,
-        packageReleasePolicy,
-        repoPath,
-      ),
-    );
+    issues.push(...validatePackageReleasePolicy(packageJson, packageReleasePolicy, repoPath));
     issues.push(
       ...validateWorkspacePackageManifest(
         packageJson,
@@ -2975,9 +2728,7 @@ async function runWorkspacePackageReleasePolicyCheck(repoRoot) {
   }
 
   if (issues.length > 0) {
-    throw new Error(
-      `workspace package release policy failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`workspace package release policy failed:\n${issues.join("\n")}`);
   }
 
   console.log("workspace package release policy passed");
@@ -2994,9 +2745,7 @@ async function runTrackedGeneratedOutputCheck(repoRoot) {
   const paths = result.stdout.split(/\r?\n/).filter((line) => line.length > 0);
   const issues = validateTrackedGeneratedOutputPaths(paths);
   if (issues.length > 0) {
-    throw new Error(
-      `tracked generated output check failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`tracked generated output check failed:\n${issues.join("\n")}`);
   }
 
   console.log("tracked generated output check passed");
@@ -3012,20 +2761,13 @@ async function runTsconfigBuildGraphCheck(repoRoot) {
       await readFile(join(repoRoot, tsconfigBuildGraphContract.path), "utf8"),
     );
   } catch (error) {
-    throw new Error(
-      `${tsconfigBuildGraphContract.path} is not parseable JSON: ${error.message}`,
-    );
+    throw new Error(`${tsconfigBuildGraphContract.path} is not parseable JSON: ${error.message}`);
   }
 
   issues.push(...validateRootTsconfigReferences(rootTsconfig, packageDirs));
 
   for (const packageDir of packageDirs) {
-    const tsconfigPath = join(
-      repoRoot,
-      "packages",
-      packageDir,
-      "tsconfig.json",
-    );
+    const tsconfigPath = join(repoRoot, "packages", packageDir, "tsconfig.json");
     const repoPath = toRepoPath(repoRoot, tsconfigPath);
     let tsconfig;
     try {
@@ -3035,13 +2777,7 @@ async function runTsconfigBuildGraphCheck(repoRoot) {
       continue;
     }
 
-    issues.push(
-      ...validateWorkspacePackageTsconfigReferences(
-        tsconfig,
-        packageDir,
-        repoPath,
-      ),
-    );
+    issues.push(...validateWorkspacePackageTsconfigReferences(tsconfig, packageDir, repoPath));
   }
 
   if (issues.length > 0) {
@@ -3057,9 +2793,7 @@ async function runWorkspaceContractCheck(repoRoot) {
   try {
     text = await readFile(workspacePath, "utf8");
   } catch (error) {
-    throw new Error(
-      `${workspaceContract.path} is not readable: ${error.message}`,
-    );
+    throw new Error(`${workspaceContract.path} is not readable: ${error.message}`);
   }
 
   const issues = validateWorkspaceContract(text);
@@ -3077,9 +2811,7 @@ async function runPackageOwnershipContractCheck(repoRoot) {
   try {
     text = await readFile(ownershipPath, "utf8");
   } catch (error) {
-    throw new Error(
-      `${packageOwnershipContract.path} is not readable: ${error.message}`,
-    );
+    throw new Error(`${packageOwnershipContract.path} is not readable: ${error.message}`);
   }
 
   const issues = validatePackageOwnershipContract(text, packageDirs);
@@ -3103,9 +2835,7 @@ async function runCredentialedReleaseEvidenceCheck(repoRoot) {
 
   const issues = validateCredentialedReleaseEvidence(text);
   if (issues.length > 0) {
-    throw new Error(
-      `credentialed release evidence record failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`credentialed release evidence record failed:\n${issues.join("\n")}`);
   }
 
   console.log("credentialed release evidence record passed");
@@ -3117,16 +2847,12 @@ async function runWriteModeDogfoodEvidenceCheck(repoRoot) {
   try {
     text = await readFile(evidencePath, "utf8");
   } catch (error) {
-    throw new Error(
-      `${writeModeDogfoodEvidenceContract.path} is not readable: ${error.message}`,
-    );
+    throw new Error(`${writeModeDogfoodEvidenceContract.path} is not readable: ${error.message}`);
   }
 
   const issues = validateWriteModeDogfoodEvidence(text);
   if (issues.length > 0) {
-    throw new Error(
-      `write-mode dogfood evidence record failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`write-mode dogfood evidence record failed:\n${issues.join("\n")}`);
   }
 
   console.log("write-mode dogfood evidence record passed");
@@ -3138,16 +2864,12 @@ async function runDryRunDogfoodEvidenceCheck(repoRoot) {
   try {
     text = await readFile(evidencePath, "utf8");
   } catch (error) {
-    throw new Error(
-      `${dryRunDogfoodEvidenceContract.path} is not readable: ${error.message}`,
-    );
+    throw new Error(`${dryRunDogfoodEvidenceContract.path} is not readable: ${error.message}`);
   }
 
   const issues = validateDryRunDogfoodEvidence(text);
   if (issues.length > 0) {
-    throw new Error(
-      `dry-run dogfood evidence record failed:\n${issues.join("\n")}`,
-    );
+    throw new Error(`dry-run dogfood evidence record failed:\n${issues.join("\n")}`);
   }
 
   console.log("dry-run dogfood evidence record passed");
@@ -3159,9 +2881,7 @@ async function runHostedCiEvidenceCheck(repoRoot) {
   try {
     text = await readFile(evidencePath, "utf8");
   } catch (error) {
-    throw new Error(
-      `${hostedCiEvidenceContract.path} is not readable: ${error.message}`,
-    );
+    throw new Error(`${hostedCiEvidenceContract.path} is not readable: ${error.message}`);
   }
 
   const issues = validateHostedCiEvidence(text);
@@ -3175,11 +2895,7 @@ async function runHostedCiEvidenceCheck(repoRoot) {
 export function validatePackageScriptRegistration(packageJson) {
   const issues = [];
   const scripts = packageJson?.scripts;
-  if (
-    scripts === null ||
-    typeof scripts !== "object" ||
-    Array.isArray(scripts)
-  ) {
+  if (scripts === null || typeof scripts !== "object" || Array.isArray(scripts)) {
     return ["package.json scripts must be configured."];
   }
 
@@ -3192,9 +2908,7 @@ export function validatePackageScriptRegistration(packageJson) {
 
     for (const expected of script.includes) {
       if (!value.includes(expected)) {
-        issues.push(
-          `package.json scripts.${script.name} must include ${expected}.`,
-        );
+        issues.push(`package.json scripts.${script.name} must include ${expected}.`);
       }
     }
   }
@@ -3210,9 +2924,7 @@ export function validatePackageScriptRegistration(packageJson) {
 
     for (const expected of script.requiredSnippets) {
       if (!value.includes(expected)) {
-        issues.push(
-          `package.json scripts.${script.name} must include ${expected}.`,
-        );
+        issues.push(`package.json scripts.${script.name} must include ${expected}.`);
       }
     }
 
@@ -3240,32 +2952,20 @@ export function validatePackageScriptRegistration(packageJson) {
   return issues;
 }
 
-export function validateRootPackageManager(
-  packageJson,
-  contract = rootPackageManagerContract,
-) {
+export function validateRootPackageManager(packageJson, contract = rootPackageManagerContract) {
   const issues = [];
 
   if (packageJson?.packageManager !== contract.packageManager) {
-    issues.push(
-      `${contract.path} packageManager must remain ${contract.packageManager}.`,
-    );
+    issues.push(`${contract.path} packageManager must remain ${contract.packageManager}.`);
   }
 
   return issues;
 }
 
-export function validateFormatterContract(
-  packageJson,
-  config,
-  ignoreText,
-  contract = formatterContract,
-) {
+export function validateFormatterContract(packageJson, config, contract = formatterContract) {
   const issues = [];
 
-  if (
-    packageJson?.devDependencies?.[contract.dependency] !== contract.version
-  ) {
+  if (packageJson?.devDependencies?.[contract.dependency] !== contract.version) {
     issues.push(
       `package.json devDependencies.${contract.dependency} must remain exactly ${contract.version}.`,
     );
@@ -3273,21 +2973,16 @@ export function validateFormatterContract(
 
   for (const [name, expected] of Object.entries(contract.config)) {
     if (config?.[name] !== expected) {
-      issues.push(
-        `${contract.configPath} ${name} must remain ${JSON.stringify(expected)}.`,
-      );
+      issues.push(`${contract.configPath} ${name} must remain ${JSON.stringify(expected)}.`);
     }
   }
 
-  const ignoreEntries = new Set(
-    ignoreText
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0 && !line.startsWith("#")),
+  const ignorePatterns = new Set(
+    Array.isArray(config?.ignorePatterns) ? config.ignorePatterns : [],
   );
-  for (const entry of contract.requiredIgnoreEntries) {
-    if (!ignoreEntries.has(entry)) {
-      issues.push(`${contract.ignorePath} must include ${entry}.`);
+  for (const pattern of contract.requiredIgnorePatterns) {
+    if (!ignorePatterns.has(pattern)) {
+      issues.push(`${contract.configPath} ignorePatterns must include ${pattern}.`);
     }
   }
 
@@ -3316,10 +3011,7 @@ export function validatePackageReleasePolicy(
   return issues;
 }
 
-export function validateSmokePackCandidateContract(
-  text,
-  contract = smokePackCandidateContract,
-) {
+export function validateSmokePackCandidateContract(text, contract = smokePackCandidateContract) {
   const issues = [];
 
   for (const snippet of contract.requiredSnippets) {
@@ -3341,9 +3033,7 @@ export function validateWorkspaceContract(text, contract = workspaceContract) {
   }
 
   if (!text.includes(contract.requiredBuildAllow)) {
-    issues.push(
-      `${contract.path} must explicitly allow the pinned esbuild install script.`,
-    );
+    issues.push(`${contract.path} must explicitly allow the pinned esbuild install script.`);
   }
 
   return issues;
@@ -3386,47 +3076,28 @@ export function validateWorkspacePackageManifestSurface(
   }
 
   const exportRoot = packageJson?.exports?.["."];
-  if (
-    exportRoot === null ||
-    typeof exportRoot !== "object" ||
-    Array.isArray(exportRoot)
-  ) {
-    issues.push(
-      `${manifestPath} exports["."] must define types and default entrypoints.`,
-    );
+  if (exportRoot === null || typeof exportRoot !== "object" || Array.isArray(exportRoot)) {
+    issues.push(`${manifestPath} exports["."] must define types and default entrypoints.`);
   } else {
     if (exportRoot.types !== contract.types) {
-      issues.push(
-        `${manifestPath} exports["."].types must remain ${contract.types}.`,
-      );
+      issues.push(`${manifestPath} exports["."].types must remain ${contract.types}.`);
     }
 
     if (exportRoot.default !== contract.main) {
-      issues.push(
-        `${manifestPath} exports["."].default must remain ${contract.main}.`,
-      );
+      issues.push(`${manifestPath} exports["."].default must remain ${contract.main}.`);
     }
   }
 
   if (!arraysEqual(packageJson?.files, contract.files)) {
-    issues.push(
-      `${manifestPath} files must remain ${JSON.stringify(contract.files)}.`,
-    );
+    issues.push(`${manifestPath} files must remain ${JSON.stringify(contract.files)}.`);
   }
 
   if (packageJson?.license !== contract.license) {
     issues.push(`${manifestPath} license must remain ${contract.license}.`);
   }
 
-  if (
-    !objectsEqual(
-      packageJson?.repository,
-      expectedPackageRepository(packageDir, contract),
-    )
-  ) {
-    issues.push(
-      `${manifestPath} repository metadata must point at packages/${packageDir}.`,
-    );
+  if (!objectsEqual(packageJson?.repository, expectedPackageRepository(packageDir, contract))) {
+    issues.push(`${manifestPath} repository metadata must point at packages/${packageDir}.`);
   }
 
   if (packageJson?.homepage !== contract.homepage) {
@@ -3434,22 +3105,16 @@ export function validateWorkspacePackageManifestSurface(
   }
 
   if (!objectsEqual(packageJson?.bugs, contract.bugs)) {
-    issues.push(
-      `${manifestPath} bugs metadata must remain ${JSON.stringify(contract.bugs)}.`,
-    );
+    issues.push(`${manifestPath} bugs metadata must remain ${JSON.stringify(contract.bugs)}.`);
   }
 
   if (!objectsEqual(packageJson?.engines, contract.engines)) {
-    issues.push(
-      `${manifestPath} engines must remain ${JSON.stringify(contract.engines)}.`,
-    );
+    issues.push(`${manifestPath} engines must remain ${JSON.stringify(contract.engines)}.`);
   }
 
   for (const [scriptName, expectedValue] of Object.entries(contract.scripts)) {
     if (packageJson?.scripts?.[scriptName] !== expectedValue) {
-      issues.push(
-        `${manifestPath} scripts.${scriptName} must remain ${expectedValue}.`,
-      );
+      issues.push(`${manifestPath} scripts.${scriptName} must remain ${expectedValue}.`);
     }
   }
 
@@ -3459,9 +3124,7 @@ export function validateWorkspacePackageManifestSurface(
       issues.push(`${manifestPath} must not expose package bin entries.`);
     }
   } else if (!objectsEqual(packageJson?.bin, expectedBin)) {
-    issues.push(
-      `${manifestPath} bin must remain ${JSON.stringify(expectedBin)}.`,
-    );
+    issues.push(`${manifestPath} bin must remain ${JSON.stringify(expectedBin)}.`);
   }
 
   return issues;
@@ -3483,29 +3146,21 @@ export function validateWorkspaceInternalDependencies(
   const issues = [];
   const allowedDirs = contract.dependenciesByPackageDir[packageDir];
   if (allowedDirs === undefined) {
-    issues.push(
-      `${manifestPath} has no internal dependency contract for packages/${packageDir}.`,
-    );
+    issues.push(`${manifestPath} has no internal dependency contract for packages/${packageDir}.`);
     return issues;
   }
 
-  const expectedNames = allowedDirs.map(
-    (dir) => `${workspaceContract.packageNameScope}/${dir}`,
-  );
+  const expectedNames = allowedDirs.map((dir) => `${workspaceContract.packageNameScope}/${dir}`);
   const expectedSet = new Set(expectedNames);
   const runtimeDependencies = dependencyEntries(packageJson?.dependencies);
   const declaredRuntimeInternal = runtimeDependencies.filter(([name]) =>
     name.startsWith(contract.internalScope),
   );
-  const declaredRuntimeNames = new Set(
-    declaredRuntimeInternal.map(([name]) => name),
-  );
+  const declaredRuntimeNames = new Set(declaredRuntimeInternal.map(([name]) => name));
 
   for (const name of expectedNames) {
     if (!declaredRuntimeNames.has(name)) {
-      issues.push(
-        `${manifestPath} dependencies must include ${name}: ${contract.workspaceRange}.`,
-      );
+      issues.push(`${manifestPath} dependencies must include ${name}: ${contract.workspaceRange}.`);
     }
   }
 
@@ -3518,17 +3173,11 @@ export function validateWorkspaceInternalDependencies(
     }
 
     if (version !== contract.workspaceRange) {
-      issues.push(
-        `${manifestPath} dependency ${name} must use ${contract.workspaceRange}.`,
-      );
+      issues.push(`${manifestPath} dependency ${name} must use ${contract.workspaceRange}.`);
     }
   }
 
-  for (const sectionName of [
-    "devDependencies",
-    "peerDependencies",
-    "optionalDependencies",
-  ]) {
+  for (const sectionName of ["devDependencies", "peerDependencies", "optionalDependencies"]) {
     for (const [name] of dependencyEntries(packageJson?.[sectionName])) {
       if (name.startsWith(contract.internalScope)) {
         issues.push(
@@ -3550,19 +3199,13 @@ export function validateTrackedGeneratedOutputPaths(
   for (const rawPath of paths) {
     const path = rawPath.replaceAll("\\", "/");
 
-    if (
-      contract.forbiddenPathSuffixes.some((suffix) => path.endsWith(suffix))
-    ) {
+    if (contract.forbiddenPathSuffixes.some((suffix) => path.endsWith(suffix))) {
       issues.push(`tracked generated output must not include ${path}.`);
       continue;
     }
 
     const boundedPath = `/${path}`;
-    if (
-      contract.forbiddenPathFragments.some((fragment) =>
-        boundedPath.includes(fragment),
-      )
-    ) {
+    if (contract.forbiddenPathFragments.some((fragment) => boundedPath.includes(fragment))) {
       issues.push(`tracked generated output must not include ${path}.`);
     }
   }
@@ -3576,14 +3219,8 @@ export function validateRootTsconfigReferences(
   contract = tsconfigBuildGraphContract,
 ) {
   const issues = [];
-  const referencePaths = tsconfigReferencePaths(
-    tsconfig?.references,
-    contract.path,
-    issues,
-  );
-  const expectedPaths = packageDirs.map(
-    (dir) => `${contract.packageReferencePrefix}${dir}`,
-  );
+  const referencePaths = tsconfigReferencePaths(tsconfig?.references, contract.path, issues);
+  const expectedPaths = packageDirs.map((dir) => `${contract.packageReferencePrefix}${dir}`);
   const expectedSet = new Set(expectedPaths);
   const declaredSet = new Set(referencePaths);
 
@@ -3613,9 +3250,7 @@ export function validateWorkspacePackageTsconfigReferences(
   const issues = [];
   const allowedDirs = contract.dependenciesByPackageDir[packageDir];
   if (allowedDirs === undefined) {
-    issues.push(
-      `${tsconfigPath} has no internal dependency contract for packages/${packageDir}.`,
-    );
+    issues.push(`${tsconfigPath} has no internal dependency contract for packages/${packageDir}.`);
     return issues;
   }
 
@@ -3625,11 +3260,7 @@ export function validateWorkspacePackageTsconfigReferences(
     );
   }
 
-  const referencePaths = tsconfigReferencePaths(
-    tsconfig?.references,
-    tsconfigPath,
-    issues,
-  );
+  const referencePaths = tsconfigReferencePaths(tsconfig?.references, tsconfigPath, issues);
   const expectedPaths = allowedDirs.map((dir) => `../${dir}`);
   const expectedSet = new Set(expectedPaths);
   const declaredSet = new Set(referencePaths);
@@ -3658,26 +3289,18 @@ export function validatePackageOwnershipContract(
 ) {
   const issues = [];
   const tableEntries = extractPackageOwnershipEntries(text);
-  const documentedPackages = new Set(
-    tableEntries.map((entry) => entry.packagePath),
-  );
-  const workspacePackages = new Set(
-    packageDirs.map((dir) => `packages/${dir}`),
-  );
+  const documentedPackages = new Set(tableEntries.map((entry) => entry.packagePath));
+  const workspacePackages = new Set(packageDirs.map((dir) => `packages/${dir}`));
 
   for (const packagePath of workspacePackages) {
     if (!documentedPackages.has(packagePath)) {
-      issues.push(
-        `${contract.path} missing Package Table entry for ${packagePath}.`,
-      );
+      issues.push(`${contract.path} missing Package Table entry for ${packagePath}.`);
     }
   }
 
   for (const entry of tableEntries) {
     if (!workspacePackages.has(entry.packagePath)) {
-      issues.push(
-        `${contract.path} references missing workspace package ${entry.packagePath}.`,
-      );
+      issues.push(`${contract.path} references missing workspace package ${entry.packagePath}.`);
     }
 
     if (entry.status !== "Implemented") {
@@ -3710,17 +3333,11 @@ export function validateWriteModeDogfoodEvidence(
   return validateReleaseEvidenceText(text, contract);
 }
 
-export function validateDryRunDogfoodEvidence(
-  text,
-  contract = dryRunDogfoodEvidenceContract,
-) {
+export function validateDryRunDogfoodEvidence(text, contract = dryRunDogfoodEvidenceContract) {
   return validateReleaseEvidenceText(text, contract);
 }
 
-export function validateHostedCiEvidence(
-  text,
-  contract = hostedCiEvidenceContract,
-) {
+export function validateHostedCiEvidence(text, contract = hostedCiEvidenceContract) {
   return validateReleaseEvidenceText(text, contract);
 }
 
@@ -3749,8 +3366,7 @@ function escapeRegExp(value) {
 function extractPackageOwnershipEntries(text) {
   const entries = [];
   const lines = extractMarkdownSection(text, "Package Table").split(/\r?\n/);
-  const pattern =
-    /^\|\s*`(?<packagePath>packages\/[^`]+)`\s*\|\s*(?<status>[^|]+?)\s*\|/;
+  const pattern = /^\|\s*`(?<packagePath>packages\/[^`]+)`\s*\|\s*(?<status>[^|]+?)\s*\|/;
 
   for (const line of lines) {
     const match = pattern.exec(line);
@@ -3837,21 +3453,13 @@ function tsconfigReferencePaths(value, path, issues) {
 
   const paths = [];
   for (const reference of value) {
-    if (
-      reference === null ||
-      typeof reference !== "object" ||
-      Array.isArray(reference)
-    ) {
-      issues.push(
-        `${path} references entries must be objects with a path string.`,
-      );
+    if (reference === null || typeof reference !== "object" || Array.isArray(reference)) {
+      issues.push(`${path} references entries must be objects with a path string.`);
       continue;
     }
 
     if (typeof reference.path !== "string" || reference.path.length === 0) {
-      issues.push(
-        `${path} references entries must include a non-empty path string.`,
-      );
+      issues.push(`${path} references entries must include a non-empty path string.`);
       continue;
     }
 
@@ -3925,9 +3533,7 @@ function validateSnippetOrder(text, path, snippets) {
     }
 
     if (next <= cursor) {
-      issues.push(
-        `${path} must keep ${snippet} after the previous release-check step.`,
-      );
+      issues.push(`${path} must keep ${snippet} after the previous release-check step.`);
       continue;
     }
 
@@ -3975,11 +3581,7 @@ async function listFiles(dir, predicate, repoRoot) {
 }
 
 async function listWorkspacePackageManifests(repoRoot) {
-  return listFiles(
-    join(repoRoot, "packages"),
-    (name) => name === "package.json",
-    repoRoot,
-  );
+  return listFiles(join(repoRoot, "packages"), (name) => name === "package.json", repoRoot);
 }
 
 async function listWorkspacePackageDirs(repoRoot) {
@@ -3990,10 +3592,7 @@ async function listWorkspacePackageDirs(repoRoot) {
 }
 
 function workspaceDirFromManifestPath(repoRoot, manifestPath) {
-  return relative(join(repoRoot, "packages"), dirname(manifestPath)).replaceAll(
-    sep,
-    "/",
-  );
+  return relative(join(repoRoot, "packages"), dirname(manifestPath)).replaceAll(sep, "/");
 }
 
 function shouldSkipTraversalPath(repoRoot, path) {

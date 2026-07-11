@@ -41,9 +41,7 @@ test("verify action major tag rejects unsupported aliases and malformed inputs",
     2,
   );
   assert.equal(
-    badAlias.errors.includes(
-      "--alias must be v0 under the current release policy.",
-    ),
+    badAlias.errors.includes("--alias must be v0 under the current release policy."),
     true,
   );
   assert.equal(badAlias.commands.length, 0);
@@ -57,9 +55,7 @@ test("verify action major tag rejects unsupported aliases and malformed inputs",
     2,
   );
   assert.equal(
-    badVersion.errors.includes(
-      "--release-version must be an immutable v0.x.y tag.",
-    ),
+    badVersion.errors.includes("--release-version must be an immutable v0.x.y tag."),
     true,
   );
   assert.equal(badVersion.commands.length, 0);
@@ -99,10 +95,7 @@ test("verify action major tag rejects missing or draft release metadata", async 
   );
 
   assert.equal(exitCode, 1);
-  assert.equal(
-    harness.errors.includes("GitHub Release v0.1.1 must not be a draft."),
-    true,
-  );
+  assert.equal(harness.errors.includes("GitHub Release v0.1.1 must not be a draft."), true);
 });
 
 function createHarness(options = {}) {

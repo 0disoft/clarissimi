@@ -53,9 +53,7 @@ export function createGitHubPullRequestClient(
       return first === undefined ? null : parsePullRequest(first);
     },
 
-    async createPullRequest(
-      input: ProposalPullRequestCreateInput,
-    ): Promise<ProposalPullRequest> {
+    async createPullRequest(input: ProposalPullRequestCreateInput): Promise<ProposalPullRequest> {
       const url = new URL(`${apiUrl}/repos/${input.repository}/pulls`);
       const response = await requestJson(fetchImpl, token, url, {
         method: "POST",
@@ -70,12 +68,8 @@ export function createGitHubPullRequestClient(
       return parsePullRequest(response);
     },
 
-    async updatePullRequest(
-      input: ProposalPullRequestUpdateInput,
-    ): Promise<ProposalPullRequest> {
-      const url = new URL(
-        `${apiUrl}/repos/${input.repository}/pulls/${input.number}`,
-      );
+    async updatePullRequest(input: ProposalPullRequestUpdateInput): Promise<ProposalPullRequest> {
+      const url = new URL(`${apiUrl}/repos/${input.repository}/pulls/${input.number}`);
       const response = await requestJson(fetchImpl, token, url, {
         method: "PATCH",
         body: JSON.stringify({
@@ -114,21 +108,11 @@ async function requestJson(
   throw mapGitHubError(response.status, body);
 }
 
-function mapGitHubError(
-  status: number,
-  body: unknown,
-): ProposalPullRequestClientError {
+function mapGitHubError(status: number, body: unknown): ProposalPullRequestClientError {
   const message = githubMessage(body);
   if (status === 401 || status === 403) {
-    if (
-      /workflow|actions.*pull request|pull request.*disabled|repository setting/i.test(
-        message,
-      )
-    ) {
-      return new ProposalPullRequestClientError(
-        "repository_setting_blocked",
-        message,
-      );
+    if (/workflow|actions.*pull request|pull request.*disabled|repository setting/i.test(message)) {
+      return new ProposalPullRequestClientError("repository_setting_blocked", message);
     }
 
     return new ProposalPullRequestClientError("permission_denied", message);
@@ -169,9 +153,7 @@ function parsePullRequest(value: unknown): ProposalPullRequest {
 
 function normalizeApiUrl(value: string | undefined): string {
   const normalized = value?.replace(/\/+$/g, "").trim();
-  return normalized === undefined || normalized.length === 0
-    ? DEFAULT_GITHUB_API_URL
-    : normalized;
+  return normalized === undefined || normalized.length === 0 ? DEFAULT_GITHUB_API_URL : normalized;
 }
 
 function splitRepository(repository: string): readonly [string, string] {

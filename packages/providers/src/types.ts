@@ -8,9 +8,7 @@ import type {
 
 export interface ContributionDraftProvider {
   readonly id: string;
-  createAssessment(
-    input: ProviderAssessmentInput,
-  ): Promise<ContributionAssessment>;
+  createAssessment(input: ProviderAssessmentInput): Promise<ContributionAssessment>;
 }
 
 export interface ProviderAssessmentInput {

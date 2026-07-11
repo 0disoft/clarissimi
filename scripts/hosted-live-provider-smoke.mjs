@@ -18,10 +18,7 @@ const usageText = [
   "The script checks only that the repository secret name exists. It never reads or prints the secret value.",
 ].join("\n");
 
-export async function runHostedLiveProviderSmoke(
-  argv,
-  runtime = defaultRuntime(),
-) {
+export async function runHostedLiveProviderSmoke(argv, runtime = defaultRuntime()) {
   try {
     return await run(argv, runtime);
   } catch (error) {
@@ -43,9 +40,7 @@ async function run(argv, runtime) {
   }
 
   if (args.model === undefined) {
-    runtime.error(
-      "hosted live provider smoke requires --model <provider-model>.",
-    );
+    runtime.error("hosted live provider smoke requires --model <provider-model>.");
     runtime.log(usageText);
     return 2;
   }
@@ -61,10 +56,7 @@ async function run(argv, runtime) {
     return usageFailure(runtime, "--thinking supports only disabled.");
   }
   if (args.evidenceId !== undefined && !isEvidenceId(args.evidenceId)) {
-    return usageFailure(
-      runtime,
-      "--evidence-id must be 32 lowercase hexadecimal characters.",
-    );
+    return usageFailure(runtime, "--evidence-id must be 32 lowercase hexadecimal characters.");
   }
 
   const repo = args.repo ?? defaults.repo;
@@ -124,11 +116,7 @@ function parseArgs(argv, runtime) {
       return usageFailure(runtime, `Unexpected positional argument: ${arg}`);
     }
 
-    if (
-      !["repo", "ref", "model", "endpoint", "thinking", "evidence-id"].includes(
-        key,
-      )
-    ) {
+    if (!["repo", "ref", "model", "endpoint", "thinking", "evidence-id"].includes(key)) {
       return usageFailure(runtime, `Unsupported option: ${arg}`);
     }
 
@@ -188,9 +176,7 @@ class UsageError extends Error {
 async function requireGh(runtime) {
   const result = await runtime.runCommand("gh", ["--version"]);
   if (result.exitCode !== 0) {
-    throw new Error(
-      "GitHub CLI is required to run hosted live provider smoke.",
-    );
+    throw new Error("GitHub CLI is required to run hosted live provider smoke.");
   }
 }
 
@@ -218,10 +204,7 @@ async function requireRepositorySecret(runtime, repo, secretName) {
     throw new Error(`Unable to parse gh secret list output: ${error.message}`);
   }
 
-  if (
-    !Array.isArray(secrets) ||
-    !secrets.some((secret) => secret.name === secretName)
-  ) {
+  if (!Array.isArray(secrets) || !secrets.some((secret) => secret.name === secretName)) {
     throw new Error(
       `Missing repository secret ${secretName} for ${repo}. ` +
         "Set it before running hosted live provider smoke. " +
@@ -259,9 +242,7 @@ async function dispatchWorkflow(runtime, options) {
 
   const result = await runtime.runCommand("gh", args);
   if (result.exitCode !== 0) {
-    throw new Error(
-      `Unable to dispatch ${workflowFile}.\n${boundedOutput(result.stderr)}`,
-    );
+    throw new Error(`Unable to dispatch ${workflowFile}.\n${boundedOutput(result.stderr)}`);
   }
 
   runtime.log(`dispatched ${workflowFile} on ${options.repo}@${options.ref}`);
@@ -290,9 +271,7 @@ async function findDispatchedRun(runtime, options) {
       "databaseId,createdAt,displayTitle,headBranch,headSha,status,conclusion",
     ]);
     if (result.exitCode !== 0) {
-      throw new Error(
-        `Unable to list dispatched workflow runs.\n${boundedOutput(result.stderr)}`,
-      );
+      throw new Error(`Unable to list dispatched workflow runs.\n${boundedOutput(result.stderr)}`);
     }
 
     let runs;
@@ -311,15 +290,12 @@ async function findDispatchedRun(runtime, options) {
       return (
         Number.isFinite(createdAt) &&
         createdAt >= options.dispatchedAfter.getTime() &&
-        (expectedTitle === undefined ||
-          candidate.displayTitle === expectedTitle)
+        (expectedTitle === undefined || candidate.displayTitle === expectedTitle)
       );
     });
     if (run !== undefined) {
       if (!isPositiveRunId(run.databaseId)) {
-        throw new Error(
-          `Dispatched ${workflowFile} run is missing a valid databaseId.`,
-        );
+        throw new Error(`Dispatched ${workflowFile} run is missing a valid databaseId.`);
       }
 
       return String(run.databaseId);
@@ -342,9 +318,7 @@ async function watchRun(runtime, repo, runId) {
     },
   );
   if (result.exitCode !== 0) {
-    throw new Error(
-      `Hosted live provider smoke failed with exit code ${result.exitCode}.`,
-    );
+    throw new Error(`Hosted live provider smoke failed with exit code ${result.exitCode}.`);
   }
 }
 
@@ -394,10 +368,7 @@ function delay(ms) {
   });
 }
 
-if (
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const exitCode = await runHostedLiveProviderSmoke(process.argv.slice(2));
   process.exit(exitCode);
 }

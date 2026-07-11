@@ -17,10 +17,7 @@ const usageText = [
   "Use --create-issue only after reviewing the generated evidence body.",
 ].join("\n");
 
-export async function runReleaseCandidateEvidenceOrchestrator(
-  argv,
-  runtime = defaultRuntime(),
-) {
+export async function runReleaseCandidateEvidenceOrchestrator(argv, runtime = defaultRuntime()) {
   try {
     return await run(argv, runtime);
   } catch (error) {
@@ -43,33 +40,16 @@ async function run(argv, runtime) {
   const externalRepo = args.externalRepo ?? defaults.externalRepo;
   const releaseType = args.releaseType ?? defaults.releaseType;
   const sha =
-    args.sha ??
-    (await commandText(
-      runtime,
-      "git",
-      ["rev-parse", "HEAD"],
-      "resolve current HEAD",
-    ));
+    args.sha ?? (await commandText(runtime, "git", ["rev-parse", "HEAD"], "resolve current HEAD"));
   const externalRef =
-    args.externalRef ??
-    (releaseType === "versioned-action-tag" ? args.releaseVersion : sha);
+    args.externalRef ?? (releaseType === "versioned-action-tag" ? args.releaseVersion : sha);
   const evidenceId = runtime.randomEvidenceId();
 
   if (!isRepo(repo) || !isRepo(externalRepo))
-    return usageFailure(
-      runtime,
-      "--repo and --external-repo must use owner/name format.",
-    );
-  if (!isSha(sha))
-    return usageFailure(runtime, "--sha must be a 40-character commit SHA.");
-  if (
-    releaseType === "source-only" &&
-    externalRef.toLowerCase() !== sha.toLowerCase()
-  ) {
-    return usageFailure(
-      runtime,
-      "source-only evidence requires --external-ref to equal --sha.",
-    );
+    return usageFailure(runtime, "--repo and --external-repo must use owner/name format.");
+  if (!isSha(sha)) return usageFailure(runtime, "--sha must be a 40-character commit SHA.");
+  if (releaseType === "source-only" && externalRef.toLowerCase() !== sha.toLowerCase()) {
+    return usageFailure(runtime, "source-only evidence requires --external-ref to equal --sha.");
   }
   if (!isEvidenceId(evidenceId))
     throw new Error("Runtime generated an invalid evidence correlation id.");
@@ -187,9 +167,7 @@ async function run(argv, runtime) {
     runtime,
     "pnpm",
     evidenceArgs,
-    args.createIssue
-      ? "create evidence issue"
-      : "render evidence issue preview",
+    args.createIssue ? "create evidence issue" : "render evidence issue preview",
     { inherit: true },
   );
 
@@ -304,8 +282,7 @@ function parseArgs(argv, runtime) {
       parsed[booleanOptions.get(key)] = true;
       continue;
     }
-    if (!valueOptions.has(key))
-      return usageFailure(runtime, `Unsupported option: ${arg}`);
+    if (!valueOptions.has(key)) return usageFailure(runtime, `Unsupported option: ${arg}`);
     const value = argv[index + 1];
     if (value === undefined || value.startsWith("--"))
       return usageFailure(runtime, `${arg} requires a value.`);
@@ -320,10 +297,7 @@ function validateArgs(args, runtime) {
     return usageFailure(runtime, "--provider-model is required.");
   const releaseType = args.releaseType ?? defaults.releaseType;
   if (!["source-only", "versioned-action-tag"].includes(releaseType))
-    return usageFailure(
-      runtime,
-      "--release-type must be source-only or versioned-action-tag.",
-    );
+    return usageFailure(runtime, "--release-type must be source-only or versioned-action-tag.");
   if (
     releaseType === "versioned-action-tag" &&
     !/^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(args.releaseVersion ?? "")
@@ -335,10 +309,7 @@ function validateArgs(args, runtime) {
   }
   if (args.providerEndpoint !== undefined && !isHttps(args.providerEndpoint))
     return usageFailure(runtime, "--provider-endpoint must be an https URL.");
-  if (
-    args.providerThinking !== undefined &&
-    args.providerThinking !== "disabled"
-  )
+  if (args.providerThinking !== undefined && args.providerThinking !== "disabled")
     return usageFailure(runtime, "--provider-thinking supports only disabled.");
 }
 
@@ -350,27 +321,14 @@ async function requireSecret(runtime, repo, name) {
     "list repository secret names",
   );
   const secrets = parseJson(output, "gh secret list");
-  if (
-    !Array.isArray(secrets) ||
-    !secrets.some((secret) => secret.name === name)
-  )
-    throw new Error(
-      `Missing repository secret ${name} for ${repo}. No workflow was dispatched.`,
-    );
+  if (!Array.isArray(secrets) || !secrets.some((secret) => secret.name === name))
+    throw new Error(`Missing repository secret ${name} for ${repo}. No workflow was dispatched.`);
   runtime.log(`repository secret ${name} is configured for ${repo}`);
 }
 
 async function dispatchAndWatch(runtime, options) {
   const dispatchedAfter = runtime.now() - 30_000;
-  const args = [
-    "workflow",
-    "run",
-    options.workflow,
-    "--repo",
-    options.repo,
-    "--ref",
-    options.ref,
-  ];
+  const args = ["workflow", "run", options.workflow, "--repo", options.repo, "--ref", options.ref];
   for (let index = 0; index < options.fields.length; index += 2)
     appendOption(
       args,
@@ -421,31 +379,24 @@ async function findRun(runtime, options) {
           : options.expectedTitle;
       return (
         (!options.headSha || candidate.headSha === options.headSha) &&
-        (!options.createdAfter ||
-          Date.parse(candidate.createdAt) >= options.createdAfter) &&
+        (!options.createdAfter || Date.parse(candidate.createdAt) >= options.createdAfter) &&
         (!expectedTitle || candidate.displayTitle === expectedTitle)
       );
     });
     if (run !== undefined) {
       if (!Number.isSafeInteger(run.databaseId) || run.databaseId <= 0)
-        throw new Error(
-          `${options.workflow} run is missing a valid databaseId.`,
-        );
+        throw new Error(`${options.workflow} run is missing a valid databaseId.`);
       return run;
     }
     await runtime.delay(5_000);
   }
-  throw new Error(
-    `Unable to find ${options.workflow} run for ${options.repo}@${options.branch}.`,
-  );
+  throw new Error(`Unable to find ${options.workflow} run for ${options.repo}@${options.branch}.`);
 }
 
 async function watchIfNeeded(runtime, repo, run, label) {
   if (run.status === "completed" && run.conclusion === "success") return;
   if (run.status === "completed")
-    throw new Error(
-      `${label} failed: conclusion=${run.conclusion ?? "unknown"} (${run.url}).`,
-    );
+    throw new Error(`${label} failed: conclusion=${run.conclusion ?? "unknown"} (${run.url}).`);
   await command(
     runtime,
     "gh",
@@ -457,8 +408,7 @@ async function watchIfNeeded(runtime, repo, run, label) {
 
 async function commandText(runtime, executable, args, label) {
   const result = await runtime.runCommand(executable, args);
-  if (result.exitCode !== 0)
-    throw new Error(`Unable to ${label}.\n${bounded(result.stderr)}`);
+  if (result.exitCode !== 0) throw new Error(`Unable to ${label}.\n${bounded(result.stderr)}`);
   return result.stdout.trim();
 }
 
@@ -544,11 +494,6 @@ function runCommand(commandName, args, options = {}) {
   });
 }
 
-if (
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
-  process.exit(
-    await runReleaseCandidateEvidenceOrchestrator(process.argv.slice(2)),
-  );
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  process.exit(await runReleaseCandidateEvidenceOrchestrator(process.argv.slice(2)));
 }

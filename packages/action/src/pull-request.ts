@@ -16,15 +16,9 @@ export interface ProposalPullRequestCreatorInput {
 }
 
 export interface ProposalPullRequestClient {
-  findOpenPullRequest(
-    input: ProposalPullRequestLookupInput,
-  ): Promise<ProposalPullRequest | null>;
-  createPullRequest(
-    input: ProposalPullRequestCreateInput,
-  ): Promise<ProposalPullRequest>;
-  updatePullRequest(
-    input: ProposalPullRequestUpdateInput,
-  ): Promise<ProposalPullRequest>;
+  findOpenPullRequest(input: ProposalPullRequestLookupInput): Promise<ProposalPullRequest | null>;
+  createPullRequest(input: ProposalPullRequestCreateInput): Promise<ProposalPullRequest>;
+  updatePullRequest(input: ProposalPullRequestUpdateInput): Promise<ProposalPullRequest>;
 }
 
 export interface ProposalPullRequestLookupInput {
@@ -93,8 +87,7 @@ export async function createOrUpdateProposalPullRequest(
 
   const title = buildProposalPullRequestTitle(input.manifest);
   const body = buildProposalPullRequestBody(input);
-  const targetRepository =
-    input.targetRepository ?? input.manifest.source.repository;
+  const targetRepository = input.targetRepository ?? input.manifest.source.repository;
   const lookup = {
     repository: targetRepository,
     headBranch: input.branch.branchName,
@@ -136,13 +129,8 @@ export async function createOrUpdateProposalPullRequest(
   }
 }
 
-export function buildProposalPullRequestTitle(
-  manifest: ProposalOutputStagingManifest,
-): string {
-  const prefix =
-    manifest.mode === "stage-draft"
-      ? DRAFT_TITLE_PREFIX
-      : RECOGNITION_TITLE_PREFIX;
+export function buildProposalPullRequestTitle(manifest: ProposalOutputStagingManifest): string {
+  const prefix = manifest.mode === "stage-draft" ? DRAFT_TITLE_PREFIX : RECOGNITION_TITLE_PREFIX;
   return truncateLine(
     `${prefix} ${manifest.source.repository}#${manifest.source.pullRequestNumber}`,
     MAX_TITLE_LENGTH,
@@ -154,27 +142,21 @@ export function buildProposalPullRequestBody(
 ): string {
   const source = input.manifest.source;
   const changedFiles = boundedList(input.branch.changedFiles);
-  const stagedFiles = boundedList(
-    input.manifest.files.map((file) => file.path),
-  );
+  const stagedFiles = boundedList(input.manifest.files.map((file) => file.path));
   const approvalNote =
     normalizeBodyLine(input.maintainerApprovalNote) ??
     "Maintainers own final approval. Review, edit, or close this pull request according to repository policy.";
   const isDraftReview = input.manifest.mode === "stage-draft";
 
   return [
-    isDraftReview
-      ? "## Clarissimi draft review proposal"
-      : "## Clarissimi recognition proposal",
+    isDraftReview ? "## Clarissimi draft review proposal" : "## Clarissimi recognition proposal",
     "",
     "### Source",
     "",
     `- Repository: ${safeInline(source.repository)}`,
     `- Event: ${safeInline(source.event)}`,
     `- Pull request: #${source.pullRequestNumber}`,
-    ...(source.mergedAt === undefined
-      ? []
-      : [`- Merged at: ${safeInline(source.mergedAt)}`]),
+    ...(source.mergedAt === undefined ? [] : [`- Merged at: ${safeInline(source.mergedAt)}`]),
     "",
     isDraftReview ? "### Staged draft files" : "### Generated files",
     "",
@@ -206,9 +188,7 @@ export function buildProposalPullRequestBody(
   ].join("\n");
 }
 
-function validatePullRequestCreatorInput(
-  input: ProposalPullRequestCreatorInput,
-): void {
+function validatePullRequestCreatorInput(input: ProposalPullRequestCreatorInput): void {
   if (input.manifest.source.repository.trim().length === 0) {
     throw new ProposalPullRequestCreatorError(
       "missing_repository",
@@ -216,10 +196,7 @@ function validatePullRequestCreatorInput(
     );
   }
 
-  if (
-    input.targetRepository !== undefined &&
-    input.targetRepository.trim().length === 0
-  ) {
+  if (input.targetRepository !== undefined && input.targetRepository.trim().length === 0) {
     throw new ProposalPullRequestCreatorError(
       "missing_target_repository",
       "Proposal pull request creation requires a non-empty target repository when provided.",
@@ -240,10 +217,7 @@ function validatePullRequestCreatorInput(
     );
   }
 
-  if (
-    input.branch.changedFiles.length === 0 ||
-    input.manifest.files.length === 0
-  ) {
+  if (input.branch.changedFiles.length === 0 || input.manifest.files.length === 0) {
     throw new ProposalPullRequestCreatorError(
       "missing_changed_files",
       "Proposal pull request creation requires generated file changes.",
@@ -278,29 +252,18 @@ function translatePullRequestClientError(error: unknown): Error {
       );
     }
 
-    return new ProposalPullRequestCreatorError(
-      "pull_request_client_failed",
-      error.message,
-    );
+    return new ProposalPullRequestCreatorError("pull_request_client_failed", error.message);
   }
 
   if (error instanceof Error) {
-    return new ProposalPullRequestCreatorError(
-      "pull_request_client_failed",
-      error.message,
-    );
+    return new ProposalPullRequestCreatorError("pull_request_client_failed", error.message);
   }
 
-  return new ProposalPullRequestCreatorError(
-    "pull_request_client_failed",
-    String(error),
-  );
+  return new ProposalPullRequestCreatorError("pull_request_client_failed", String(error));
 }
 
 function boundedList(values: readonly string[]): readonly string[] {
-  const lines = values
-    .slice(0, MAX_BODY_FILES)
-    .map((value) => `- \`${safeCode(value)}\``);
+  const lines = values.slice(0, MAX_BODY_FILES).map((value) => `- \`${safeCode(value)}\``);
   const remaining = values.length - MAX_BODY_FILES;
 
   if (remaining > 0) {

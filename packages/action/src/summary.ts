@@ -8,11 +8,10 @@ export function sanitizeAssessmentForActionSummary(
   return {
     ...assessment,
     evidenceRefs: assessment.evidenceRefs.map((ref) => {
-      const sanitized: SanitizedContributionAssessment["evidenceRefs"][number] =
-        {
-          kind: ref.kind,
-          id: ref.id,
-        };
+      const sanitized: SanitizedContributionAssessment["evidenceRefs"][number] = {
+        kind: ref.kind,
+        id: ref.id,
+      };
 
       assignOptional(sanitized, "url", ref.url);
       assignOptional(sanitized, "title", ref.title);

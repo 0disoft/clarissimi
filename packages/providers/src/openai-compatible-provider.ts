@@ -7,10 +7,7 @@ import {
   type ValidationIssue,
 } from "@clarissimi/schemas";
 
-import type {
-  ContributionDraftProvider,
-  ProviderAssessmentInput,
-} from "./types.js";
+import type { ContributionDraftProvider, ProviderAssessmentInput } from "./types.js";
 
 const DEFAULT_PROVIDER_ID = "openai-compatible";
 const DEFAULT_ENDPOINT = "https://api.openai.com/v1/chat/completions";
@@ -63,25 +60,13 @@ export function createOpenAiCompatibleContributionDraftProvider(
   const model = nonEmptyOption(options.model, "model");
   const token = nonEmptyOption(options.token, "token");
   const fetchImpl = options.fetch ?? fetch;
-  const temperature = finiteNumberOption(
-    options.temperature ?? DEFAULT_TEMPERATURE,
-    "temperature",
-  );
-  const maxTokens = positiveIntegerOption(
-    options.maxTokens ?? DEFAULT_MAX_TOKENS,
-    "maxTokens",
-  );
-  const thinking = optionalEnumOption(
-    options.thinking,
-    THINKING_TYPES,
-    "thinking",
-  );
+  const temperature = finiteNumberOption(options.temperature ?? DEFAULT_TEMPERATURE, "temperature");
+  const maxTokens = positiveIntegerOption(options.maxTokens ?? DEFAULT_MAX_TOKENS, "maxTokens");
+  const thinking = optionalEnumOption(options.thinking, THINKING_TYPES, "thinking");
 
   return {
     id: options.id ?? DEFAULT_PROVIDER_ID,
-    async createAssessment(
-      input: ProviderAssessmentInput,
-    ): Promise<ContributionAssessment> {
+    async createAssessment(input: ProviderAssessmentInput): Promise<ContributionAssessment> {
       const requestInput = {
         endpoint,
         model,
@@ -110,9 +95,7 @@ interface RequestAssessmentDraftInput {
   readonly input: ProviderAssessmentInput;
 }
 
-async function requestAssessmentDraft(
-  options: RequestAssessmentDraftInput,
-): Promise<string> {
+async function requestAssessmentDraft(options: RequestAssessmentDraftInput): Promise<string> {
   const requestBody: Record<string, unknown> = {
     model: options.model,
     temperature: options.temperature,
@@ -184,9 +167,7 @@ function buildSystemPrompt(): string {
   ].join("\n");
 }
 
-function buildProviderPayload(
-  input: ProviderAssessmentInput,
-): Record<string, unknown> {
+function buildProviderPayload(input: ProviderAssessmentInput): Record<string, unknown> {
   return {
     contributor: input.contributor,
     source: input.preparedEvidence.source,
@@ -258,8 +239,7 @@ function parseAssessmentDraft(
 
 function normalizeJsonObjectContent(content: string): string {
   const trimmed = content.trim();
-  const fencedJsonMatch =
-    /^```(?:json)?\s*\r?\n(?<json>[\s\S]*?)\r?\n```$/i.exec(trimmed);
+  const fencedJsonMatch = /^```(?:json)?\s*\r?\n(?<json>[\s\S]*?)\r?\n```$/i.exec(trimmed);
   return fencedJsonMatch?.groups?.json?.trim() ?? trimmed;
 }
 
@@ -286,9 +266,7 @@ function extractMessageContent(value: unknown): string {
 
   if (Array.isArray(content)) {
     const text = content
-      .map((part) =>
-        isRecord(part) && typeof part.text === "string" ? part.text : "",
-      )
+      .map((part) => (isRecord(part) && typeof part.text === "string" ? part.text : ""))
       .join("")
       .trim();
     if (text.length > 0) {

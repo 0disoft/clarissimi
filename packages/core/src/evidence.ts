@@ -5,11 +5,7 @@ import {
   type RedactableJson,
   type RedactionReport,
 } from "@clarissimi/redaction";
-import type {
-  EvidenceKind,
-  EvidenceRef,
-  RecognitionSource,
-} from "@clarissimi/schemas";
+import type { EvidenceKind, EvidenceRef, RecognitionSource } from "@clarissimi/schemas";
 
 export interface EvidenceItemInput {
   readonly kind: EvidenceKind;
@@ -44,13 +40,9 @@ export interface PreparedProviderEvidence {
   readonly redactionReport: RedactionReport;
 }
 
-export function prepareEvidenceForProvider(
-  input: EvidenceBundleInput,
-): PreparedProviderEvidence {
+export function prepareEvidenceForProvider(input: EvidenceBundleInput): PreparedProviderEvidence {
   const items = input.items.map(prepareEvidenceItem);
-  const redactionReport = mergeRedactionReports(
-    items.map((item) => item.redactionReport),
-  );
+  const redactionReport = mergeRedactionReports(items.map((item) => item.redactionReport));
 
   return {
     source: input.source,

@@ -1,12 +1,5 @@
 import assert from "node:assert/strict";
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  rm,
-  symlink,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
@@ -85,45 +78,25 @@ test("writes staged outputs to a deterministic proposal branch without mutating 
       baseBranch: "main",
     });
 
-    assert.equal(
-      result.branchName,
-      "clarissimi/recognition/merged_pull_request-42",
-    );
+    assert.equal(result.branchName, "clarissimi/recognition/merged_pull_request-42");
     assert.equal(result.baseBranch, "main");
     assert.equal(result.baseCommitSha, baseSha);
     assert.equal(await git(repositoryDir, ["rev-parse", "main"]), baseSha);
-    assert.equal(
-      await git(repositoryDir, ["branch", "--show-current"]),
-      "main",
-    );
+    assert.equal(await git(repositoryDir, ["branch", "--show-current"]), "main");
     assert.notEqual(result.commitSha, baseSha);
     assert.deepEqual(
       [...result.changedFiles].sort(),
       staging.manifest.files.map((file) => file.path).sort(),
     );
-    assert.equal(
-      await git(repositoryDir, ["rev-parse", result.branchName]),
-      result.commitSha,
-    );
+    assert.equal(await git(repositoryDir, ["rev-parse", result.branchName]), result.commitSha);
 
-    const stagedMarkdown = await readFile(
-      join(stagedOutputDir, "CONTRIBUTORS.md"),
-      "utf8",
-    );
+    const stagedMarkdown = await readFile(join(stagedOutputDir, "CONTRIBUTORS.md"), "utf8");
     assert.equal(
-      await git(repositoryDir, [
-        "show",
-        `${result.branchName}:CONTRIBUTORS.md`,
-      ]),
+      await git(repositoryDir, ["show", `${result.branchName}:CONTRIBUTORS.md`]),
       stagedMarkdown.trim(),
     );
     assert.equal(
-      await git(repositoryDir, [
-        "show",
-        "-s",
-        "--format=%an <%ae>",
-        result.branchName,
-      ]),
+      await git(repositoryDir, ["show", "-s", "--format=%an <%ae>", result.branchName]),
       "Clarissimi Bot <clarissimi-bot@users.noreply.github.com>",
     );
   });
@@ -152,12 +125,7 @@ test("writes staged draft outputs to a distinct draft proposal branch", async ()
       ".clarissimi/drafts/sample-project-merged_pull_request-42.json",
     ]);
     assert.equal(
-      await git(repositoryDir, [
-        "show",
-        "-s",
-        "--format=%s",
-        result.branchName,
-      ]),
+      await git(repositoryDir, ["show", "-s", "--format=%s", result.branchName]),
       "Clarissimi draft review: merged_pull_request #42",
     );
   });
@@ -205,11 +173,7 @@ test("refuses to overwrite existing proposal branches with unowned changes", asy
       "utf8",
     );
     await git(repositoryDir, ["add", "README.md"]);
-    await git(repositoryDir, [
-      "commit",
-      "-m",
-      "Edit readme outside generated outputs",
-    ]);
+    await git(repositoryDir, ["commit", "-m", "Edit readme outside generated outputs"]);
     await git(repositoryDir, ["checkout", "main"]);
     const mainSha = await git(repositoryDir, ["rev-parse", "main"]);
 
@@ -227,10 +191,7 @@ test("refuses to overwrite existing proposal branches with unowned changes", asy
     );
 
     assert.equal(await git(repositoryDir, ["rev-parse", "main"]), mainSha);
-    assert.equal(
-      await git(repositoryDir, ["branch", "--show-current"]),
-      "main",
-    );
+    assert.equal(await git(repositoryDir, ["branch", "--show-current"]), "main");
   });
 });
 
@@ -266,10 +227,7 @@ test("rejects repository output paths that traverse a junction before writing ou
 
     assert.equal(await readFile(externalLedger, "utf8"), "EXTERNAL_SENTINEL\n");
     assert.equal(await git(repositoryDir, ["rev-parse", "main"]), mainSha);
-    assert.equal(
-      await git(repositoryDir, ["branch", "--show-current"]),
-      "main",
-    );
+    assert.equal(await git(repositoryDir, ["branch", "--show-current"]), "main");
   });
 });
 
@@ -277,16 +235,8 @@ async function initRepository(repositoryDir) {
   await mkdir(repositoryDir);
   await git(repositoryDir, ["init", "-b", "main"]);
   await git(repositoryDir, ["config", "user.name", "Clarissimi Tests"]);
-  await git(repositoryDir, [
-    "config",
-    "user.email",
-    "clarissimi-tests.invalid",
-  ]);
-  await writeFile(
-    join(repositoryDir, "README.md"),
-    "# Fixture Repository\n",
-    "utf8",
-  );
+  await git(repositoryDir, ["config", "user.email", "clarissimi-tests.invalid"]);
+  await writeFile(join(repositoryDir, "README.md"), "# Fixture Repository\n", "utf8");
   await git(repositoryDir, ["add", "README.md"]);
   await git(repositoryDir, ["commit", "-m", "Initial commit"]);
 }

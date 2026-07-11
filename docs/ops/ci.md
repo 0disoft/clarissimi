@@ -54,12 +54,12 @@ The current local CI parity commands are:
   secret preflight before checkout, runtime setup, and the release smoke command.
 - `pnpm run lint`: runs `oxlint` across the repository as a fast JavaScript and TypeScript lint
   gate.
-- `pnpm run format`: runs Prettier in check mode across maintained TypeScript, JavaScript, JSON,
+- `pnpm run format`: runs Oxfmt in check mode across maintained TypeScript, JavaScript, JSON,
   Markdown, and YAML files. Generated Action bundles and build/cache output are ignored.
 - `pnpm run check`: runs typecheck and the package test suite.
 - `pnpm run contract`: runs typecheck and tests as the current contract gate.
 
-ADR 0035 accepts the isolated Prettier baseline and `release-readiness` protects its package,
+ADR 0036 accepts the corrected Oxfmt baseline and `release-readiness` protects its package,
 configuration, ignore, and CI contracts. `migration-check` remains intentionally unconfigured,
 fails closed, and is protected by `release-readiness` until its owner defines a real check.
 

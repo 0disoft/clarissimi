@@ -20,10 +20,7 @@ const usageText = [
   "The moving v0 alias is accepted only with --expected-sha so the consumer checkout can prove its target.",
 ].join("\n");
 
-export async function runHostedExternalConsumerSmoke(
-  argv,
-  runtime = defaultRuntime(),
-) {
+export async function runHostedExternalConsumerSmoke(argv, runtime = defaultRuntime()) {
   try {
     return await run(argv, runtime);
   } catch (error) {
@@ -47,8 +44,7 @@ async function run(argv, runtime) {
   const repo = args.repo ?? defaults.repo;
   const workflow = args.workflow ?? defaults.workflow;
   const workflowRef = args.workflowRef ?? defaults.workflowRef;
-  const clarissimiRef =
-    args.clarissimiRef ?? (await readCurrentHeadSha(runtime));
+  const clarissimiRef = args.clarissimiRef ?? (await readCurrentHeadSha(runtime));
   const expectedSha = args.expectedSha;
 
   if (!isGitHubRepositoryName(repo)) {
@@ -71,23 +67,14 @@ async function run(argv, runtime) {
   }
 
   if (expectedSha !== undefined && !isCommitSha(expectedSha)) {
-    return usageFailure(
-      runtime,
-      "--expected-sha must be a 40-character commit SHA.",
-    );
+    return usageFailure(runtime, "--expected-sha must be a 40-character commit SHA.");
   }
 
   if (clarissimiRef === "v0" && expectedSha === undefined) {
-    return usageFailure(
-      runtime,
-      "--expected-sha is required when --clarissimi-ref is v0.",
-    );
+    return usageFailure(runtime, "--expected-sha is required when --clarissimi-ref is v0.");
   }
   if (args.evidenceId !== undefined && !isEvidenceId(args.evidenceId)) {
-    return usageFailure(
-      runtime,
-      "--evidence-id must be 32 lowercase hexadecimal characters.",
-    );
+    return usageFailure(runtime, "--evidence-id must be 32 lowercase hexadecimal characters.");
   }
 
   await requireGh(runtime);
@@ -174,8 +161,7 @@ function isGitHubRepositoryName(value) {
 
 function isImmutableClarissimiRef(value) {
   return (
-    /^[a-fA-F0-9]{40}$/.test(value) ||
-    /^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/.test(value)
+    /^[a-fA-F0-9]{40}$/.test(value) || /^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/.test(value)
   );
 }
 
@@ -209,9 +195,7 @@ class UsageError extends Error {
 async function readCurrentHeadSha(runtime) {
   const result = await runtime.runCommand("git", ["rev-parse", "HEAD"]);
   if (result.exitCode !== 0) {
-    throw new Error(
-      `Unable to resolve current HEAD SHA.\n${boundedOutput(result.stderr)}`,
-    );
+    throw new Error(`Unable to resolve current HEAD SHA.\n${boundedOutput(result.stderr)}`);
   }
 
   return result.stdout.trim();
@@ -220,9 +204,7 @@ async function readCurrentHeadSha(runtime) {
 async function requireGh(runtime) {
   const result = await runtime.runCommand("gh", ["--version"]);
   if (result.exitCode !== 0) {
-    throw new Error(
-      "GitHub CLI is required to run hosted external consumer smoke.",
-    );
+    throw new Error("GitHub CLI is required to run hosted external consumer smoke.");
   }
 }
 
@@ -246,17 +228,13 @@ async function dispatchWorkflow(runtime, options) {
   }
   const result = await runtime.runCommand("gh", dispatchArgs);
   if (result.exitCode !== 0) {
-    throw new Error(
-      `Unable to dispatch ${options.workflow}.\n${boundedOutput(result.stderr)}`,
-    );
+    throw new Error(`Unable to dispatch ${options.workflow}.\n${boundedOutput(result.stderr)}`);
   }
 
   runtime.log(
     `dispatched ${options.workflow} on ${options.repo}@${options.workflowRef} ` +
       `for Clarissimi ${options.clarissimiRef}` +
-      (options.expectedSha === undefined
-        ? ""
-        : ` at expected SHA ${options.expectedSha}`),
+      (options.expectedSha === undefined ? "" : ` at expected SHA ${options.expectedSha}`),
   );
 }
 
@@ -283,9 +261,7 @@ async function findDispatchedRun(runtime, options) {
       "databaseId,createdAt,displayTitle,headBranch,headSha,status,conclusion",
     ]);
     if (result.exitCode !== 0) {
-      throw new Error(
-        `Unable to list dispatched workflow runs.\n${boundedOutput(result.stderr)}`,
-      );
+      throw new Error(`Unable to list dispatched workflow runs.\n${boundedOutput(result.stderr)}`);
     }
 
     let runs;
@@ -308,15 +284,12 @@ async function findDispatchedRun(runtime, options) {
       return (
         Number.isFinite(createdAt) &&
         createdAt >= options.dispatchedAfter.getTime() &&
-        (expectedTitle === undefined ||
-          candidate.displayTitle === expectedTitle)
+        (expectedTitle === undefined || candidate.displayTitle === expectedTitle)
       );
     });
     if (runInfo !== undefined) {
       if (!isPositiveRunId(runInfo.databaseId)) {
-        throw new Error(
-          `Dispatched ${options.workflow} run is missing a valid databaseId.`,
-        );
+        throw new Error(`Dispatched ${options.workflow} run is missing a valid databaseId.`);
       }
 
       return String(runInfo.databaseId);
@@ -340,9 +313,7 @@ async function watchRun(runtime, repo, runId) {
     },
   );
   if (result.exitCode !== 0) {
-    throw new Error(
-      `Hosted external consumer smoke failed with exit code ${result.exitCode}.`,
-    );
+    throw new Error(`Hosted external consumer smoke failed with exit code ${result.exitCode}.`);
   }
 }
 
@@ -392,10 +363,7 @@ function delay(ms) {
   });
 }
 
-if (
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const exitCode = await runHostedExternalConsumerSmoke(process.argv.slice(2));
   process.exit(exitCode);
 }

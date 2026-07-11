@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  buildLiveProviderSmokeChildEnv,
-  runLiveProviderSmoke,
-} from "../live-provider-smoke.mjs";
+import { buildLiveProviderSmokeChildEnv, runLiveProviderSmoke } from "../live-provider-smoke.mjs";
 
 test("live provider smoke can be imported without executing provider preflight", () => {
   assert.equal(typeof runLiveProviderSmoke, "function");

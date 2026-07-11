@@ -23,8 +23,7 @@ const validAssessment = {
   contributionType: "test",
   affectedArea: "parser regression coverage",
   impactLevel: "medium",
-  evidenceSummary:
-    "Added a regression test for a parser crash triggered by nested input.",
+  evidenceSummary: "Added a regression test for a parser crash triggered by nested input.",
   evidenceRefs: [
     {
       kind: "pull_request",
@@ -95,10 +94,8 @@ test("rejects public contribution share language in recognition text", () => {
   const result = validateContributionAssessment({
     ...validAssessment,
     affectedArea: "최근 3개월간 전체 기여점수 비율 37%",
-    evidenceSummary:
-      "This person contributed 37% of the last 90 days contribution score.",
-    publicRecognitionText:
-      "Held a 22 percent share of the last 3 months contribution weight.",
+    evidenceSummary: "This person contributed 37% of the last 90 days contribution score.",
+    publicRecognitionText: "Held a 22 percent share of the last 3 months contribution weight.",
   });
 
   assert.equal(result.ok, false);
@@ -188,15 +185,11 @@ test("rejects explicit public score fields in assessment drafts", () => {
     true,
   );
   assert.equal(
-    result.issues.some(
-      (issue) => issue.path === "$.contributor.contributorTier",
-    ),
+    result.issues.some((issue) => issue.path === "$.contributor.contributorTier"),
     true,
   );
   assert.equal(
-    result.issues.some(
-      (issue) => issue.path === "$.evidenceRefs[0].leaderboardPosition",
-    ),
+    result.issues.some((issue) => issue.path === "$.evidenceRefs[0].leaderboardPosition"),
     true,
   );
   assert.equal(
@@ -231,9 +224,7 @@ test("rejects public score fields across common field-name variants", () => {
     true,
   );
   assert.equal(
-    result.issues.some(
-      (issue) => issue.path === "$.contributor.contributor_tier",
-    ),
+    result.issues.some((issue) => issue.path === "$.contributor.contributor_tier"),
     true,
   );
   assert.equal(
@@ -267,9 +258,7 @@ test("rejects public contribution share fields across common field-name variants
     true,
   );
   assert.equal(
-    result.issues.some(
-      (issue) => issue.path === "$.recentContributionWeightShare",
-    ),
+    result.issues.some((issue) => issue.path === "$.recentContributionWeightShare"),
     true,
   );
   assert.equal(
@@ -277,9 +266,7 @@ test("rejects public contribution share fields across common field-name variants
     true,
   );
   assert.equal(
-    result.issues.some(
-      (issue) => issue.path === "$.threeMonthContributionShare",
-    ),
+    result.issues.some((issue) => issue.path === "$.threeMonthContributionShare"),
     true,
   );
   assert.equal(
@@ -302,53 +289,24 @@ test("exports the product contribution type vocabulary", () => {
 });
 
 test("detects ranking language independently", () => {
-  assert.equal(
-    hasPublicRankingLanguage("Top 3 contributor on the leaderboard"),
-    true,
-  );
+  assert.equal(hasPublicRankingLanguage("Top 3 contributor on the leaderboard"), true);
   assert.equal(hasPublicRankingLanguage("Average score improved to 92."), true);
   assert.equal(
-    hasPublicRankingLanguage(
-      "This person contributed 37% of the last 90 days contribution score.",
-    ),
+    hasPublicRankingLanguage("This person contributed 37% of the last 90 days contribution score."),
     true,
   );
   assert.equal(
-    hasPublicRankingLanguage(
-      "Held a 22 percent share of the last 3 months contribution weight.",
-    ),
+    hasPublicRankingLanguage("Held a 22 percent share of the last 3 months contribution weight."),
     true,
   );
+  assert.equal(hasPublicRankingLanguage("최근 3개월간 전체 기여점수 비율 37%"), true);
+  assert.equal(hasPublicRankingLanguage("Show score share for this contributor."), true);
+  assert.equal(hasPublicRankingLanguage("Earned leaderboard points for this contribution."), true);
+  assert.equal(hasPublicRankingLanguage("Promoted to gold contributor tier."), true);
+  assert.equal(hasPublicRankingLanguage("AI judged this contributor as medium quality."), true);
+  assert.equal(hasPublicRankingLanguage("Added regression coverage for the parser crash"), false);
   assert.equal(
-    hasPublicRankingLanguage("최근 3개월간 전체 기여점수 비율 37%"),
-    true,
-  );
-  assert.equal(
-    hasPublicRankingLanguage("Show score share for this contributor."),
-    true,
-  );
-  assert.equal(
-    hasPublicRankingLanguage(
-      "Earned leaderboard points for this contribution.",
-    ),
-    true,
-  );
-  assert.equal(
-    hasPublicRankingLanguage("Promoted to gold contributor tier."),
-    true,
-  );
-  assert.equal(
-    hasPublicRankingLanguage("AI judged this contributor as medium quality."),
-    true,
-  );
-  assert.equal(
-    hasPublicRankingLanguage("Added regression coverage for the parser crash"),
-    false,
-  );
-  assert.equal(
-    hasPublicRankingLanguage(
-      "Clarified three setup points in the documentation.",
-    ),
+    hasPublicRankingLanguage("Clarified three setup points in the documentation."),
     false,
   );
 });
@@ -383,9 +341,7 @@ test("rejects unsupported provider endpoint config values", () => {
   });
   assert.equal(unsupportedProtocol.ok, false);
   assert.equal(
-    unsupportedProtocol.issues.some(
-      (issue) => issue.code === "invalid_url_protocol",
-    ),
+    unsupportedProtocol.issues.some((issue) => issue.code === "invalid_url_protocol"),
     true,
   );
 });

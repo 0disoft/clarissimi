@@ -36,9 +36,7 @@ test("hosted external consumer smoke dispatches and watches an immutable tag", a
       ["gh", "run", "watch"],
     ],
   );
-  const dispatch = harness.commands.find(
-    (entry) => entry.args[0] === "workflow",
-  );
+  const dispatch = harness.commands.find((entry) => entry.args[0] === "workflow");
   assert.equal(dispatch.args.includes("clarissimi-ref=v0.1.1"), true);
   assert.equal(dispatch.args.includes(`evidence-id=${evidenceId}`), true);
   assert.equal(
@@ -75,9 +73,7 @@ test("hosted external consumer smoke defaults to the current HEAD SHA", async ()
       ["gh", "--version"],
     ],
   );
-  const dispatch = harness.commands.find(
-    (entry) => entry.args[0] === "workflow",
-  );
+  const dispatch = harness.commands.find((entry) => entry.args[0] === "workflow");
   assert.equal(dispatch.args.includes(`clarissimi-ref=${exampleSha}`), true);
 });
 
@@ -101,24 +97,17 @@ test("hosted external consumer smoke accepts v0 only with an expected SHA", asyn
   );
 
   assert.equal(exitCode, 0);
-  const dispatch = harness.commands.find(
-    (entry) => entry.args[0] === "workflow",
-  );
+  const dispatch = harness.commands.find((entry) => entry.args[0] === "workflow");
   assert.equal(dispatch.args.includes("clarissimi-ref=v0"), true);
   assert.equal(dispatch.args.includes(`expected-sha=${exampleSha}`), true);
 
   const missingSha = createHarness({});
   assert.equal(
-    await runHostedExternalConsumerSmoke(
-      ["--clarissimi-ref", "v0"],
-      missingSha.runtime,
-    ),
+    await runHostedExternalConsumerSmoke(["--clarissimi-ref", "v0"], missingSha.runtime),
     2,
   );
   assert.equal(
-    missingSha.errors.includes(
-      "--expected-sha is required when --clarissimi-ref is v0.",
-    ),
+    missingSha.errors.includes("--expected-sha is required when --clarissimi-ref is v0."),
     true,
   );
   assert.equal(missingSha.commands.length, 0);
@@ -134,9 +123,7 @@ test("hosted external consumer smoke rejects unsupported mutable or malformed in
     2,
   );
   assert.equal(
-    invalidEvidenceId.errors.includes(
-      "--evidence-id must be 32 lowercase hexadecimal characters.",
-    ),
+    invalidEvidenceId.errors.includes("--evidence-id must be 32 lowercase hexadecimal characters."),
     true,
   );
   assert.equal(invalidEvidenceId.commands.length, 0);
@@ -163,10 +150,7 @@ test("hosted external consumer smoke rejects unsupported mutable or malformed in
   );
 
   assert.equal(invalidRepoExitCode, 2);
-  assert.equal(
-    invalidRepo.errors.includes("--repo must use owner/name format."),
-    true,
-  );
+  assert.equal(invalidRepo.errors.includes("--repo must use owner/name format."), true);
   assert.equal(invalidRepo.commands.length, 0);
 });
 
@@ -191,15 +175,11 @@ test("hosted external consumer smoke fails before watching an invalid run id", a
 
   assert.equal(exitCode, 1);
   assert.equal(
-    harness.errors.includes(
-      "Dispatched clarissimi.yml run is missing a valid databaseId.",
-    ),
+    harness.errors.includes("Dispatched clarissimi.yml run is missing a valid databaseId."),
     true,
   );
   assert.equal(
-    harness.commands.some(
-      (entry) => entry.args[0] === "run" && entry.args[1] === "watch",
-    ),
+    harness.commands.some((entry) => entry.args[0] === "run" && entry.args[1] === "watch"),
     false,
   );
 });

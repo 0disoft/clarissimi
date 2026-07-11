@@ -1,0 +1,13 @@
+{
+  "endOfLine": "lf",
+  "proseWrap": "preserve",
+  "ignorePatterns": [
+    "action-dist/**",
+    "dist/**",
+    "build/**",
+    "coverage/**",
+    ".cache/**",
+    ".tmp/**",
+    "tmp/**"
+  ]
+}

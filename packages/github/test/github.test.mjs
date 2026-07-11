@@ -106,10 +106,7 @@ test("preserves explicit contributor profile URL", () => {
   });
 
   assert.equal(collected.contributor.id, "node-123");
-  assert.equal(
-    collected.contributor.profileUrl,
-    "https://github.com/maintainer",
-  );
+  assert.equal(collected.contributor.profileUrl, "https://github.com/maintainer");
 });
 
 test("deduplicates repeated labels and files while preserving order", () => {
@@ -136,9 +133,7 @@ test("deduplicates repeated labels and files while preserving order", () => {
     },
   });
 
-  const labels = collected.evidence.items.filter(
-    (item) => item.kind === "label",
-  );
+  const labels = collected.evidence.items.filter((item) => item.kind === "label");
   const tests = collected.evidence.items.filter((item) => item.kind === "test");
 
   assert.equal(labels.length, 1);

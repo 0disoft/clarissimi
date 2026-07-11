@@ -1,9 +1,6 @@
 import type { ConfigMarkdownSummary } from "@clarissimi/schemas";
 
-import type {
-  ContributorRecognitionProfile,
-  PublicRecognitionSummary,
-} from "./types.js";
+import type { ContributorRecognitionProfile, PublicRecognitionSummary } from "./types.js";
 import { deriveContributorProfiles } from "./contributors.js";
 
 export interface ContributorsMarkdownOptions {
@@ -56,10 +53,7 @@ function appendContributorSummaryTable(
   lines.push("");
 }
 
-function appendContributorProfile(
-  lines: string[],
-  profile: ContributorRecognitionProfile,
-): void {
+function appendContributorProfile(lines: string[], profile: ContributorRecognitionProfile): void {
   lines.push(
     `## ${escapeMarkdown(profile.contributor.login)}`,
     "",
@@ -74,9 +68,7 @@ function appendContributorProfile(
   lines.push("");
 }
 
-function renderContributionSummary(
-  profile: ContributorRecognitionProfile,
-): string {
+function renderContributionSummary(profile: ContributorRecognitionProfile): string {
   const contributionLabel =
     profile.contributionCount === 1
       ? "1 recognized contribution"
@@ -113,12 +105,8 @@ function renderRecognitionLine(recognition: PublicRecognitionSummary): string {
   return `${text} _${badge}_ in ${area}. ${evidenceLink}`;
 }
 
-function firstEvidenceLink(
-  recognition: PublicRecognitionSummary,
-): string | undefined {
-  const ref = recognition.evidenceRefs.find(
-    (candidate) => candidate.url !== undefined,
-  );
+function firstEvidenceLink(recognition: PublicRecognitionSummary): string | undefined {
+  const ref = recognition.evidenceRefs.find((candidate) => candidate.url !== undefined);
   if (ref === undefined || ref.url === undefined) {
     return undefined;
   }
@@ -129,9 +117,7 @@ function firstEvidenceLink(
 
 function normalizeTitle(value: string | undefined): string {
   const normalized = value?.replace(/\s+/g, " ").trim();
-  return normalized === undefined || normalized.length === 0
-    ? "Contributors"
-    : normalized;
+  return normalized === undefined || normalized.length === 0 ? "Contributors" : normalized;
 }
 
 function escapeMarkdown(value: string): string {

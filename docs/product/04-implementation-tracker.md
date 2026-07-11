@@ -405,10 +405,10 @@ Completed deliverables:
 - release-readiness verifies that the hosted CI validation wrapper remains registered as a
   release-critical package script
 - release-readiness verifies that `pnpm run lint` remains backed by `oxlint . --deny-warnings`
-- release-readiness verifies that `pnpm run format` uses the exactly pinned Prettier baseline and
+- release-readiness verifies that `pnpm run format` uses the exactly pinned Oxfmt baseline and
   that hosted CI runs it as a merge gate
-- ADR 0035 accepts the isolated repository-wide formatter rewrite required by ADR 0027 and covers
-  maintained Markdown, JSON, YAML, TypeScript, and JavaScript sources
+- ADR 0036 supersedes ADR 0035 after current Oxfmt documentation confirmed repository-wide
+  Markdown, JSON, YAML, TypeScript, and JavaScript support
 - generated Action bundles and build/cache output remain excluded from formatting; the existing
   bundle freshness check continues to own `action-dist/index.js`
 - release-readiness verifies that `pnpm run migration-check` remains intentionally fail-closed
@@ -451,7 +451,7 @@ Completed deliverables:
   `dist`, `build`, `coverage`, cache directories, `node_modules`, or `.tsbuildinfo`
 - release-readiness secret scan covers committed provider gateway token assignments including
   Clarissimi, OpenCode Go, UMANS, DeepSeek, Node auth, and GitHub PAT environment names
-- ADR 0027 records the `oxlint` merge gate and ADR 0035 accepts the separate Prettier baseline
+- ADR 0027 records the `oxlint` merge gate and ADR 0036 accepts the corrected Oxfmt baseline
 - agent-assisted draft guide documents a copyable assessment template, PR source fields, evidence
   refs, impact/confidence semantics, and delegated model envelopes
 - ledger format guide documents public ledger fields, PR number and URL placement, draft-versus-ledger

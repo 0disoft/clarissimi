@@ -22,10 +22,7 @@ test("defaults to evidence preview and records every successful run", async () =
     ["--evidence-id", evidenceId],
   );
   const dispatches = runtime.calls.filter(
-    (call) =>
-      call.command === "gh" &&
-      call.args[0] === "workflow" &&
-      call.args[1] === "run",
+    (call) => call.command === "gh" && call.args[0] === "workflow" && call.args[1] === "run",
   );
   assert.equal(
     dispatches.every((call) => call.args.includes(`evidence-id=${evidenceId}`)),
@@ -45,9 +42,7 @@ test("create-issue is explicit and omits preview flag", async () => {
     0,
   );
   assert.equal(
-    runtime.calls
-      .find((call) => call.command === "pnpm")
-      .args.includes("--print"),
+    runtime.calls.find((call) => call.command === "pnpm").args.includes("--print"),
     false,
   );
 });
@@ -72,14 +67,7 @@ test("rejects a mismatched source-only external ref before dispatch", async () =
   const runtime = fakeRuntime();
   assert.equal(
     await runReleaseCandidateEvidenceOrchestrator(
-      [
-        "--provider-model",
-        "gpt-4.1-mini",
-        "--sha",
-        sha,
-        "--external-ref",
-        "v0.1.1",
-      ],
+      ["--provider-model", "gpt-4.1-mini", "--sha", sha, "--external-ref", "v0.1.1"],
       runtime,
     ),
     2,
@@ -100,10 +88,7 @@ test("rejects a candidate ref that does not resolve to the requested SHA before 
   );
   assert.equal(
     runtime.calls.some(
-      (call) =>
-        call.command === "gh" &&
-        call.args[0] === "workflow" &&
-        call.args[1] === "run",
+      (call) => call.command === "gh" && call.args[0] === "workflow" && call.args[1] === "run",
     ),
     false,
   );
@@ -122,17 +107,12 @@ test("preflights every workflow before checking the provider secret or dispatchi
     1,
   );
   assert.equal(
-    runtime.calls.some(
-      (call) => call.command === "gh" && call.args[0] === "secret",
-    ),
+    runtime.calls.some((call) => call.command === "gh" && call.args[0] === "secret"),
     false,
   );
   assert.equal(
     runtime.calls.some(
-      (call) =>
-        call.command === "gh" &&
-        call.args[0] === "workflow" &&
-        call.args[1] === "run",
+      (call) => call.command === "gh" && call.args[0] === "workflow" && call.args[1] === "run",
     ),
     false,
   );
@@ -172,10 +152,8 @@ function fakeRuntime(options = {}) {
     error: (message) => errors.push(message),
     runCommand: async (command, args) => {
       calls.push({ command, args });
-      if (command === "gh" && args[0] === "--version")
-        return ok("gh version 2");
-      if (command === "gh" && args[0] === "api")
-        return ok(options.resolvedSha ?? sha);
+      if (command === "gh" && args[0] === "--version") return ok("gh version 2");
+      if (command === "gh" && args[0] === "api") return ok(options.resolvedSha ?? sha);
       if (command === "gh" && args[0] === "workflow" && args[1] === "view") {
         return args.includes(options.missingWorkflow)
           ? { exitCode: 1, stdout: "", stderr: "workflow not found" }
@@ -212,18 +190,12 @@ function fakeRuntime(options = {}) {
           databaseId: 900,
           displayTitle: `${displayTitle}-another-maintainer`,
         };
-        return ok(
-          JSON.stringify(
-            options.includeConcurrentDecoy && !isCi ? [decoy, run] : [run],
-          ),
-        );
+        return ok(JSON.stringify(options.includeConcurrentDecoy && !isCi ? [decoy, run] : [run]));
       }
       if (command === "gh" && args[0] === "run" && args[1] === "watch") {
         const id = Number(args[2]);
         watched.push(id);
-        return options.failWatchId === id
-          ? { exitCode: 1, stdout: "", stderr: "failed" }
-          : ok();
+        return options.failWatchId === id ? { exitCode: 1, stdout: "", stderr: "failed" } : ok();
       }
       if (command === "pnpm") return ok();
       throw new Error(`Unexpected command: ${command} ${args.join(" ")}`);

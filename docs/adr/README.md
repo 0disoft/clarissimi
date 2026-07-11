@@ -55,7 +55,9 @@ engine.
 - `0034-add-v0-major-alias.md`: provide the moving `v0` Action channel with exact-SHA verification
   while immutable patch tags remain fixed
 - `0035-adopt-prettier-format-baseline.md`: adopt a pinned repository-wide Prettier baseline and
-  enforce it in hosted CI
+  enforce it in hosted CI; superseded by ADR 0036
+- `0036-replace-prettier-with-oxfmt.md`: correct the formatter evidence and replace Prettier with a
+  pinned repository-wide Oxfmt baseline
 
 ## Review Blockers
 

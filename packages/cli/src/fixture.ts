@@ -1,7 +1,4 @@
-import {
-  prepareEvidenceForProvider,
-  type EvidenceBundleInput,
-} from "@clarissimi/core";
+import { prepareEvidenceForProvider, type EvidenceBundleInput } from "@clarissimi/core";
 import {
   collectMergedPullRequestEvidence,
   parseGitHubMergedPullRequestFixture,
@@ -35,9 +32,7 @@ export interface FixtureRecognitionResult {
   readonly redactionMatchCount: number;
 }
 
-export async function readRecognitionFixture(
-  path: string,
-): Promise<RecognitionFixture> {
+export async function readRecognitionFixture(path: string): Promise<RecognitionFixture> {
   const parsed = parseJsonText(await readTextFile(path), path);
   return parseRecognitionFixture(parsed);
 }
@@ -55,9 +50,7 @@ export async function recognizeGitHubFixture(
   provider?: ContributionDraftProvider,
 ): Promise<FixtureRecognitionResult> {
   const parsed = parseJsonText(await readTextFile(path), path);
-  const collected = collectMergedPullRequestEvidence(
-    parseGitHubMergedPullRequestFixture(parsed),
-  );
+  const collected = collectMergedPullRequestEvidence(parseGitHubMergedPullRequestFixture(parsed));
 
   return recognizeCollectedFixture(
     {
@@ -88,10 +81,7 @@ async function recognizeCollectedFixture(
   }
 
   const draft = await provider.createAssessment(providerInput);
-  const assessment = applyFixtureApproval(
-    draft,
-    fixture.maintainerApprovalStatus,
-  );
+  const assessment = applyFixtureApproval(draft, fixture.maintainerApprovalStatus);
 
   return {
     fixtureKind,
@@ -110,11 +100,8 @@ function parseRecognitionFixture(value: unknown): RecognitionFixture {
   assertRecord(value.contributor, "contributor");
   assertRecord(value.evidence, "evidence");
 
-  const hints = parseOptionalRecord(value.hints, "hints") as
-    ProviderAssessmentHints | undefined;
-  const maintainerApprovalStatus = parseOptionalApprovalStatus(
-    value.maintainerApprovalStatus,
-  );
+  const hints = parseOptionalRecord(value.hints, "hints") as ProviderAssessmentHints | undefined;
+  const maintainerApprovalStatus = parseOptionalApprovalStatus(value.maintainerApprovalStatus);
   const fixture: RecognitionFixture = {
     contributor: value.contributor as unknown as ContributorIdentity,
     evidence: value.evidence as unknown as EvidenceBundleInput,
@@ -145,26 +132,19 @@ function applyFixtureApproval(
   };
 }
 
-function parseOptionalApprovalStatus(
-  value: unknown,
-): ApprovalStatus | undefined {
+function parseOptionalApprovalStatus(value: unknown): ApprovalStatus | undefined {
   if (value === undefined) {
     return undefined;
   }
 
   if (typeof value !== "string" || !isApprovalStatus(value)) {
-    throw new Error(
-      "maintainerApprovalStatus must be a known approval status.",
-    );
+    throw new Error("maintainerApprovalStatus must be a known approval status.");
   }
 
   return value;
 }
 
-function parseOptionalRecord(
-  value: unknown,
-  field: string,
-): Record<string, unknown> | undefined {
+function parseOptionalRecord(value: unknown, field: string): Record<string, unknown> | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -173,10 +153,7 @@ function parseOptionalRecord(
   return value;
 }
 
-function assertRecord(
-  value: unknown,
-  field: string,
-): asserts value is Record<string, unknown> {
+function assertRecord(value: unknown, field: string): asserts value is Record<string, unknown> {
   if (!isRecord(value)) {
     throw new Error(`Recognition fixture field ${field} must be an object.`);
   }

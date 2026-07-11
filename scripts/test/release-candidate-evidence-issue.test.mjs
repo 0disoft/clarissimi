@@ -60,10 +60,7 @@ test("release candidate evidence issue prints a validated evidence body", async 
 
   assert.equal(exitCode, 0);
   assert.deepEqual(
-    harness.commands.map((command) => [
-      command.command,
-      ...command.args.slice(0, 2),
-    ]),
+    harness.commands.map((command) => [command.command, ...command.args.slice(0, 2)]),
     [
       ["gh", "--version"],
       ["gh", "run", "view"],
@@ -75,78 +72,51 @@ test("release candidate evidence issue prints a validated evidence body", async 
   assert.equal(
     harness.logs
       .join("\n")
-      .includes(
-        "Release candidate evidence for `0123456789abcdef0123456789abcdef01234567`",
-      ),
+      .includes("Release candidate evidence for `0123456789abcdef0123456789abcdef01234567`"),
+    true,
+  );
+  assert.equal(
+    harness.logs.join("\n").includes("https://github.com/owner/repo/actions/runs/12345"),
     true,
   );
   assert.equal(
     harness.logs
       .join("\n")
-      .includes("https://github.com/owner/repo/actions/runs/12345"),
+      .includes("Repository secret used by workflow: `CLARISSIMI_PROVIDER_TOKEN`"),
     true,
   );
   assert.equal(
     harness.logs
       .join("\n")
-      .includes(
-        "Repository secret used by workflow: `CLARISSIMI_PROVIDER_TOKEN`",
-      ),
+      .includes("https://github.com/0disoft/integration-lab/actions/runs/24680"),
     true,
   );
   assert.equal(
     harness.logs
       .join("\n")
-      .includes(
-        "https://github.com/0disoft/integration-lab/actions/runs/24680",
-      ),
+      .includes("https://github.com/0disoft/integration-lab/actions/runs/13579"),
     true,
   );
-  assert.equal(
-    harness.logs
-      .join("\n")
-      .includes(
-        "https://github.com/0disoft/integration-lab/actions/runs/13579",
-      ),
-    true,
-  );
-  assert.equal(
-    harness.logs.join("\n").includes("Clarissimi ref: `v0.1.0`"),
-    true,
-  );
+  assert.equal(harness.logs.join("\n").includes("Clarissimi ref: `v0.1.0`"), true);
   assert.equal(harness.logs.join("\n").includes("minimax-m3"), true);
   assert.equal(
-    harness.logs
-      .join("\n")
-      .includes("--endpoint https://gateway.example/v1/chat/completions"),
+    harness.logs.join("\n").includes("--endpoint https://gateway.example/v1/chat/completions"),
     true,
   );
   assert.equal(
     harness.logs
       .join("\n")
-      .includes(
-        "Provider endpoint override: `https://gateway.example/v1/chat/completions`",
-      ),
+      .includes("Provider endpoint override: `https://gateway.example/v1/chat/completions`"),
     true,
   );
+  assert.equal(harness.logs.join("\n").includes("Provider thinking mode: `disabled`"), true);
   assert.equal(
-    harness.logs.join("\n").includes("Provider thinking mode: `disabled`"),
+    harness.logs.join("\n").includes("versioned Action tag `v0.1.0` under ADR 0031"),
     true,
   );
+  assert.equal(harness.logs.join("\n").includes("publishing immutable tag `v0.1.0`"), true);
   assert.equal(
-    harness.logs
-      .join("\n")
-      .includes("versioned Action tag `v0.1.0` under ADR 0031"),
-    true,
-  );
-  assert.equal(
-    harness.logs.join("\n").includes("publishing immutable tag `v0.1.0`"),
-    true,
-  );
-  assert.equal(
-    harness.logs
-      .join("\n")
-      .includes("public package publication remains blocked"),
+    harness.logs.join("\n").includes("public package publication remains blocked"),
     true,
   );
   assert.equal(harness.logs.join("\n").includes("provider-token-value"), false);
@@ -192,10 +162,7 @@ test("release candidate evidence issue resolves HEAD and creates an issue with b
 
   assert.equal(exitCode, 0);
   assert.deepEqual(
-    harness.commands.map((command) => [
-      command.command,
-      ...command.args.slice(0, 2),
-    ]),
+    harness.commands.map((command) => [command.command, ...command.args.slice(0, 2)]),
     [
       ["git", "rev-parse", "HEAD"],
       ["gh", "--version"],
@@ -209,9 +176,7 @@ test("release candidate evidence issue resolves HEAD and creates an issue with b
 
   const issueCreate = harness.commands.find(
     (command) =>
-      command.command === "gh" &&
-      command.args[0] === "issue" &&
-      command.args[1] === "create",
+      command.command === "gh" && command.args[0] === "issue" && command.args[1] === "create",
   );
   assert.deepEqual(issueCreate.args, [
     "issue",
@@ -278,15 +243,10 @@ test("release candidate evidence issue validates correlated workflow titles", as
 
   assert.equal(exitCode, 0);
   assert.equal(
-    harness.logs
-      .join("\n")
-      .includes(`Evidence correlation id: \`${evidenceId}\``),
+    harness.logs.join("\n").includes(`Evidence correlation id: \`${evidenceId}\``),
     true,
   );
-  assert.match(
-    harness.logs.join("\n"),
-    new RegExp(`evidence-id=${evidenceId}`),
-  );
+  assert.match(harness.logs.join("\n"), new RegExp(`evidence-id=${evidenceId}`));
 });
 
 test("release candidate evidence issue rejects invalid inputs before calling git or gh", async () => {
@@ -312,9 +272,7 @@ test("release candidate evidence issue rejects invalid inputs before calling git
     2,
   );
   assert.equal(
-    invalidEvidenceId.errors.includes(
-      "--evidence-id must be 32 lowercase hexadecimal characters.",
-    ),
+    invalidEvidenceId.errors.includes("--evidence-id must be 32 lowercase hexadecimal characters."),
     true,
   );
   assert.equal(invalidEvidenceId.commands.length, 0);
@@ -337,10 +295,7 @@ test("release candidate evidence issue rejects invalid inputs before calling git
   );
 
   assert.equal(invalidRepoExitCode, 2);
-  assert.equal(
-    invalidRepo.errors.includes("--repo must use owner/name format."),
-    true,
-  );
+  assert.equal(invalidRepo.errors.includes("--repo must use owner/name format."), true);
   assert.equal(invalidRepo.commands.length, 0);
 
   const invalidRun = createHarness({ headSha: exampleSha });
@@ -360,23 +315,14 @@ test("release candidate evidence issue rejects invalid inputs before calling git
 
   assert.equal(invalidRunExitCode, 2);
   assert.equal(
-    invalidRun.errors.includes(
-      "--ci-run requires a positive numeric workflow run id.",
-    ),
+    invalidRun.errors.includes("--ci-run requires a positive numeric workflow run id."),
     true,
   );
   assert.equal(invalidRun.commands.length, 0);
 
   const missingExternalRun = createHarness({ headSha: exampleSha });
   const missingExternalRunExitCode = await runReleaseCandidateEvidenceIssue(
-    [
-      "--ci-run",
-      "12345",
-      "--live-run",
-      "67890",
-      "--provider-model",
-      "gpt-4.1-mini",
-    ],
+    ["--ci-run", "12345", "--live-run", "67890", "--provider-model", "gpt-4.1-mini"],
     missingExternalRun.runtime,
   );
 
@@ -390,20 +336,19 @@ test("release candidate evidence issue rejects invalid inputs before calling git
   assert.equal(missingExternalRun.commands.length, 0);
 
   const missingExternalWriteRun = createHarness({ headSha: exampleSha });
-  const missingExternalWriteRunExitCode =
-    await runReleaseCandidateEvidenceIssue(
-      [
-        "--ci-run",
-        "12345",
-        "--live-run",
-        "67890",
-        "--external-run",
-        "24680",
-        "--provider-model",
-        "gpt-4.1-mini",
-      ],
-      missingExternalWriteRun.runtime,
-    );
+  const missingExternalWriteRunExitCode = await runReleaseCandidateEvidenceIssue(
+    [
+      "--ci-run",
+      "12345",
+      "--live-run",
+      "67890",
+      "--external-run",
+      "24680",
+      "--provider-model",
+      "gpt-4.1-mini",
+    ],
+    missingExternalWriteRun.runtime,
+  );
 
   assert.equal(missingExternalWriteRunExitCode, 2);
   assert.equal(
@@ -432,10 +377,7 @@ test("release candidate evidence issue rejects invalid inputs before calling git
   );
 
   assert.equal(emptyModelExitCode, 2);
-  assert.equal(
-    emptyModel.errors.includes("--provider-model requires a non-empty value."),
-    true,
-  );
+  assert.equal(emptyModel.errors.includes("--provider-model requires a non-empty value."), true);
   assert.equal(emptyModel.commands.length, 0);
 
   const invalidEndpoint = createHarness({ headSha: exampleSha });
@@ -458,12 +400,7 @@ test("release candidate evidence issue rejects invalid inputs before calling git
   );
 
   assert.equal(invalidEndpointExitCode, 2);
-  assert.equal(
-    invalidEndpoint.errors.includes(
-      "--provider-endpoint must be an https URL.",
-    ),
-    true,
-  );
+  assert.equal(invalidEndpoint.errors.includes("--provider-endpoint must be an https URL."), true);
   assert.equal(invalidEndpoint.commands.length, 0);
 
   const unsupportedThinking = createHarness({ headSha: exampleSha });
@@ -483,9 +420,7 @@ test("release candidate evidence issue rejects invalid inputs before calling git
 
   assert.equal(unsupportedThinkingExitCode, 2);
   assert.equal(
-    unsupportedThinking.errors.includes(
-      "--provider-thinking supports only disabled.",
-    ),
+    unsupportedThinking.errors.includes("--provider-thinking supports only disabled."),
     true,
   );
   assert.equal(unsupportedThinking.commands.length, 0);
@@ -580,9 +515,7 @@ test("release candidate evidence issue rejects workflow run mismatch before issu
     true,
   );
   assert.equal(
-    wrongSha.commands.some(
-      (command) => command.command === "gh" && command.args[0] === "issue",
-    ),
+    wrongSha.commands.some((command) => command.command === "gh" && command.args[0] === "issue"),
     false,
   );
 
@@ -670,18 +603,14 @@ test("release candidate evidence issue rejects an external run for another Clari
     true,
   );
   assert.equal(
-    harness.commands.some(
-      (command) => command.command === "gh" && command.args[0] === "issue",
-    ),
+    harness.commands.some((command) => command.command === "gh" && command.args[0] === "issue"),
     false,
   );
 });
 
 test("release candidate evidence issue rejects full-write evidence without successful cleanup", async () => {
   const fullWriteRun = createExternalWriteRun(exampleSha);
-  const windowsJob = fullWriteRun.jobs.find((job) =>
-    job.name.includes("windows-latest"),
-  );
+  const windowsJob = fullWriteRun.jobs.find((job) => job.name.includes("windows-latest"));
   const cleanupStep = windowsJob.steps.find(
     (step) => step.name === "Clean up smoke pull requests and branches",
   );

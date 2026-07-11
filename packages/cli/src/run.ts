@@ -55,18 +55,11 @@ import {
   type CliIo,
 } from "./io.js";
 
-export async function runCli(
-  argv: readonly string[],
-  io: CliIo,
-): Promise<CliExitCode> {
+export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExitCode> {
   try {
     const args = parseArgs(argv);
 
-    if (
-      args.command === undefined ||
-      args.command === "help" ||
-      getBooleanFlag(args, "help")
-    ) {
+    if (args.command === undefined || args.command === "help" || getBooleanFlag(args, "help")) {
       io.stdout(renderHelp());
       return CLI_EXIT_CODES.success;
     }
@@ -103,10 +96,7 @@ export async function runCli(
   }
 }
 
-async function runValidateConfig(
-  args: ParsedArgs,
-  io: CliIo,
-): Promise<CliExitCode> {
+async function runValidateConfig(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const positionalError = rejectUnexpectedPositionals(args, "validate-config");
   if (positionalError !== undefined) {
     io.stderr(positionalError);
@@ -132,10 +122,7 @@ async function runValidateConfig(
   }
 }
 
-async function runValidateLedger(
-  args: ParsedArgs,
-  io: CliIo,
-): Promise<CliExitCode> {
+async function runValidateLedger(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const positionalError = rejectUnexpectedPositionals(args, "validate-ledger");
   if (positionalError !== undefined) {
     io.stderr(positionalError);
@@ -145,12 +132,9 @@ async function runValidateLedger(
   try {
     const ledgerPath = resolveFromCwd(
       io.cwd,
-      getStringFlag(args, "ledger", CONTRIBUTIONS_JSONL_PATH) ??
-        CONTRIBUTIONS_JSONL_PATH,
+      getStringFlag(args, "ledger", CONTRIBUTIONS_JSONL_PATH) ?? CONTRIBUTIONS_JSONL_PATH,
     );
-    const text = (await fileExists(ledgerPath))
-      ? await readTextFile(ledgerPath)
-      : "";
+    const text = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
     const records = parseContributionsJsonl(text);
     assertUniqueContributionRecords(records);
 
@@ -178,28 +162,20 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const fixturePath = getStringFlag(args, "fixture");
   const githubFixturePath = getStringFlag(args, "github-fixture");
   if (fixturePath === undefined && githubFixturePath === undefined) {
-    io.stderr(
-      "recognize requires --fixture <path> or --github-fixture <path>.\n",
-    );
+    io.stderr("recognize requires --fixture <path> or --github-fixture <path>.\n");
     return CLI_EXIT_CODES.usage;
   }
 
   if (fixturePath !== undefined && githubFixturePath !== undefined) {
-    io.stderr(
-      "recognize accepts only one fixture input: use --fixture or --github-fixture.\n",
-    );
+    io.stderr("recognize accepts only one fixture input: use --fixture or --github-fixture.\n");
     return CLI_EXIT_CODES.usage;
   }
 
   try {
-    const config = (
-      await validateConfigFile(io.cwd, getStringFlag(args, "config"))
-    ).config;
+    const config = (await validateConfigFile(io.cwd, getStringFlag(args, "config"))).config;
     const mode = getStringFlag(args, "mode") ?? config.mode ?? "dry-run";
     if (mode !== "dry-run") {
-      io.stderr(
-        "The fixture-first recognize command currently supports only --mode dry-run.\n",
-      );
+      io.stderr("The fixture-first recognize command currently supports only --mode dry-run.\n");
       return CLI_EXIT_CODES.usage;
     }
 
@@ -212,14 +188,8 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
     const provider = await resolveRecognitionProvider(args, io, config);
     const result =
       fixturePath !== undefined
-        ? await recognizeFixture(
-            resolveFromCwd(io.cwd, selectedFixturePath),
-            provider,
-          )
-        : await recognizeGitHubFixture(
-            resolveFromCwd(io.cwd, selectedFixturePath),
-            provider,
-          );
+        ? await recognizeFixture(resolveFromCwd(io.cwd, selectedFixturePath), provider)
+        : await recognizeGitHubFixture(resolveFromCwd(io.cwd, selectedFixturePath), provider);
     const canRenderPublicOutputs =
       result.assessment.maintainerApprovalStatus === "approved" ||
       result.assessment.maintainerApprovalStatus === "auto_approved";
@@ -227,10 +197,9 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
       ? {
           contributionsJsonl: renderContributionsJsonl([result.assessment]),
           contributorsJson: renderContributorsJson([result.assessment]),
-          contributorsMarkdown: renderContributorsMarkdown(
-            [result.assessment],
-            { summary: resolveMarkdownSummary(args, config) },
-          ),
+          contributorsMarkdown: renderContributorsMarkdown([result.assessment], {
+            summary: resolveMarkdownSummary(args, config),
+          }),
           staticDataJson: renderStaticContributionsJson([result.assessment]),
         }
       : null;
@@ -268,10 +237,7 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   }
 }
 
-async function runStageDraft(
-  args: ParsedArgs,
-  io: CliIo,
-): Promise<CliExitCode> {
+async function runStageDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const positionalError = rejectUnexpectedPositionals(args, "stage-draft");
   if (positionalError !== undefined) {
     io.stderr(positionalError);
@@ -299,17 +265,14 @@ async function runStageDraft(
 
     const stagedDraftPath = join(draftsDir, draftInboxFilename(draftReview));
     if (await fileExists(stagedDraftPath)) {
-      throw new RendererValidationError(
-        "Draft is already staged for this contribution source.",
-        [
-          {
-            path: "$.source",
-            code: "duplicate_staged_draft",
-            message:
-              "A staged draft already exists for this repository, event, and pull request number.",
-          },
-        ],
-      );
+      throw new RendererValidationError("Draft is already staged for this contribution source.", [
+        {
+          path: "$.source",
+          code: "duplicate_staged_draft",
+          message:
+            "A staged draft already exists for this repository, event, and pull request number.",
+        },
+      ]);
     }
 
     await writeTextFile(stagedDraftPath, renderDraftReviewJson(draftReview));
@@ -321,8 +284,7 @@ async function runStageDraft(
       draftPath,
       stagedDraftPath,
       approvalStatus: draftReview.maintainerApprovalStatus,
-      message:
-        "Draft staged for maintainer review; approve it before importing into the ledger.",
+      message: "Draft staged for maintainer review; approve it before importing into the ledger.",
     });
     return CLI_EXIT_CODES.success;
   } catch (error) {
@@ -333,10 +295,7 @@ async function runStageDraft(
   }
 }
 
-async function runApproveDraft(
-  args: ParsedArgs,
-  io: CliIo,
-): Promise<CliExitCode> {
+async function runApproveDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const positionalError = rejectUnexpectedPositionals(args, "approve-draft");
   if (positionalError !== undefined) {
     io.stderr(positionalError);
@@ -352,10 +311,7 @@ async function runApproveDraft(
   const resolvedDraftPath = resolveFromCwd(io.cwd, draftPath);
 
   try {
-    const parsedDraftInput = parseJsonText(
-      await readTextFile(resolvedDraftPath),
-      draftPath,
-    );
+    const parsedDraftInput = parseJsonText(await readTextFile(resolvedDraftPath), draftPath);
     const draftInput = parseDraftImportInput(parsedDraftInput);
     const draftReview = toDraftReviewRecord(draftInput.assessment);
     const approvedDraft = {
@@ -383,10 +339,7 @@ async function runApproveDraft(
   }
 }
 
-async function runImportDraft(
-  args: ParsedArgs,
-  io: CliIo,
-): Promise<CliExitCode> {
+async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const positionalError = rejectUnexpectedPositionals(args, "import-draft");
   if (positionalError !== undefined) {
     io.stderr(positionalError);
@@ -401,15 +354,12 @@ async function runImportDraft(
 
   const ledgerPath = resolveFromCwd(
     io.cwd,
-    getStringFlag(args, "ledger", CONTRIBUTIONS_JSONL_PATH) ??
-      CONTRIBUTIONS_JSONL_PATH,
+    getStringFlag(args, "ledger", CONTRIBUTIONS_JSONL_PATH) ?? CONTRIBUTIONS_JSONL_PATH,
   );
   const outDir = getStringFlag(args, "out-dir");
 
   try {
-    const config = (
-      await validateConfigFile(io.cwd, getStringFlag(args, "config"))
-    ).config;
+    const config = (await validateConfigFile(io.cwd, getStringFlag(args, "config"))).config;
     const parsedDraftInput = parseJsonText(
       await readTextFile(resolveFromCwd(io.cwd, draftPath)),
       draftPath,
@@ -423,14 +373,9 @@ async function runImportDraft(
       );
     }
 
-    const existingLedgerText = (await fileExists(ledgerPath))
-      ? await readTextFile(ledgerPath)
-      : "";
+    const existingLedgerText = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
     const existingRecords = parseContributionsJsonl(existingLedgerText);
-    const nextRecords = appendPublicContributionRecord(
-      existingRecords,
-      validation.value,
-    );
+    const nextRecords = appendPublicContributionRecord(existingRecords, validation.value);
     const outputs = renderRecognitionOutputs(nextRecords, {
       summary: resolveMarkdownSummary(args, config),
     });
@@ -486,10 +431,7 @@ function parseDraftImportInput(value: unknown): {
   readonly format: "assessment" | "draft-envelope";
   readonly assessment: unknown;
 } {
-  if (
-    !isRecord(value) ||
-    value.schemaVersion !== "clarissimi.draft-envelope/v1"
-  ) {
+  if (!isRecord(value) || value.schemaVersion !== "clarissimi.draft-envelope/v1") {
     return {
       format: "assessment",
       assessment: value,
@@ -527,12 +469,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function resolveMarkdownSummary(
-  args: ParsedArgs,
-  config: CliConfig,
-): ConfigMarkdownSummary {
-  const value =
-    getStringFlag(args, "markdown-summary") ?? config.markdownSummary ?? "none";
+function resolveMarkdownSummary(args: ParsedArgs, config: CliConfig): ConfigMarkdownSummary {
+  const value = getStringFlag(args, "markdown-summary") ?? config.markdownSummary ?? "none";
   if (!isConfigMarkdownSummary(value)) {
     throw new CliUsageError(`Unsupported Markdown summary: ${value}`);
   }
@@ -549,18 +487,13 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
 
   const ledgerPath = resolveFromCwd(
     io.cwd,
-    getStringFlag(args, "ledger", CONTRIBUTIONS_JSONL_PATH) ??
-      CONTRIBUTIONS_JSONL_PATH,
+    getStringFlag(args, "ledger", CONTRIBUTIONS_JSONL_PATH) ?? CONTRIBUTIONS_JSONL_PATH,
   );
   const outDir = getStringFlag(args, "out-dir");
 
   try {
-    const config = (
-      await validateConfigFile(io.cwd, getStringFlag(args, "config"))
-    ).config;
-    const ledgerText = (await fileExists(ledgerPath))
-      ? await readTextFile(ledgerPath)
-      : "";
+    const config = (await validateConfigFile(io.cwd, getStringFlag(args, "config"))).config;
+    const ledgerText = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
     const records = parseContributionsJsonl(ledgerText);
     assertUniqueContributionRecords(records);
     const outputs = renderRecognitionOutputs(records, {
@@ -612,33 +545,18 @@ async function runAnalytics(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
 
   const ledgerPath = resolveFromCwd(
     io.cwd,
-    getStringFlag(args, "ledger", CONTRIBUTIONS_JSONL_PATH) ??
-      CONTRIBUTIONS_JSONL_PATH,
+    getStringFlag(args, "ledger", CONTRIBUTIONS_JSONL_PATH) ?? CONTRIBUTIONS_JSONL_PATH,
   );
 
   try {
-    const ledgerText = (await fileExists(ledgerPath))
-      ? await readTextFile(ledgerPath)
-      : "";
+    const ledgerText = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
     const records = parseContributionsJsonl(ledgerText);
     assertUniqueContributionRecords(records);
-    const analyticsOptions: Parameters<
-      typeof buildMaintainerRecentRecognitionShareDocument
-    >[1] = {};
-    assignOptional(
-      analyticsOptions,
-      "asOf",
-      parseIsoDateTimeFlag(args, "as-of"),
-    );
-    assignOptional(
-      analyticsOptions,
-      "windowDays",
-      parsePositiveIntegerFlag(args, "window-days"),
-    );
-    const analytics = buildMaintainerRecentRecognitionShareDocument(
-      records,
-      analyticsOptions,
-    );
+    const analyticsOptions: Parameters<typeof buildMaintainerRecentRecognitionShareDocument>[1] =
+      {};
+    assignOptional(analyticsOptions, "asOf", parseIsoDateTimeFlag(args, "as-of"));
+    assignOptional(analyticsOptions, "windowDays", parsePositiveIntegerFlag(args, "window-days"));
+    const analytics = buildMaintainerRecentRecognitionShareDocument(records, analyticsOptions);
 
     writeOutput(io, args, {
       ok: true,
@@ -662,11 +580,7 @@ async function runAnalytics(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   }
 }
 
-function writeOutput(
-  io: CliIo,
-  args: ParsedArgs,
-  value: Record<string, unknown>,
-): void {
+function writeOutput(io: CliIo, args: ParsedArgs, value: Record<string, unknown>): void {
   if (getBooleanFlag(args, "json")) {
     io.stdout(`${JSON.stringify(value, null, 2)}\n`);
     return;
@@ -675,12 +589,7 @@ function writeOutput(
   io.stdout(`${value.message ?? "Command completed."}\n`);
 }
 
-function writeFailure(
-  io: CliIo,
-  args: ParsedArgs,
-  command: string,
-  error: unknown,
-): void {
+function writeFailure(io: CliIo, args: ParsedArgs, command: string, error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
 
   if (getBooleanFlag(args, "json")) {
@@ -710,10 +619,7 @@ function renderHelp(): string {
   ].join("\n");
 }
 
-function rejectUnexpectedPositionals(
-  args: ParsedArgs,
-  command: string,
-): string | undefined {
+function rejectUnexpectedPositionals(args: ParsedArgs, command: string): string | undefined {
   if (args.positionals.length === 0) {
     return undefined;
   }
@@ -770,10 +676,8 @@ async function resolveRecognitionProvider(
   existingConfig?: CliConfig,
 ): Promise<ContributionDraftProvider> {
   const configPath = getStringFlag(args, "config");
-  const config =
-    existingConfig ?? (await validateConfigFile(io.cwd, configPath)).config;
-  const providerId =
-    getStringFlag(args, "provider") ?? config.provider ?? "fake";
+  const config = existingConfig ?? (await validateConfigFile(io.cwd, configPath)).config;
+  const providerId = getStringFlag(args, "provider") ?? config.provider ?? "fake";
   if (!isConfigProvider(providerId)) {
     throw new CliUsageError(`Unsupported provider: ${providerId}`);
   }
@@ -783,9 +687,7 @@ async function resolveRecognitionProvider(
   }
 
   if (providerId === "openai-compatible") {
-    const options: Parameters<
-      typeof createOpenAiCompatibleContributionDraftProvider
-    >[0] = {
+    const options: Parameters<typeof createOpenAiCompatibleContributionDraftProvider>[0] = {
       model: requiredProviderOption(
         getStringFlag(args, "provider-model") ?? config.providerModel,
         "provider model",
@@ -802,9 +704,7 @@ async function resolveRecognitionProvider(
     assignOptional(
       options,
       "thinking",
-      parseProviderThinking(
-        getStringFlag(args, "provider-thinking") ?? config.providerThinking,
-      ),
+      parseProviderThinking(getStringFlag(args, "provider-thinking") ?? config.providerThinking),
     );
     return createOpenAiCompatibleContributionDraftProvider(options);
   }
@@ -812,15 +712,9 @@ async function resolveRecognitionProvider(
   throw new CliUsageError(`Unsupported provider: ${providerId}`);
 }
 
-function requiredProviderOption(
-  value: string | undefined,
-  label: string,
-  source: string,
-): string {
+function requiredProviderOption(value: string | undefined, label: string, source: string): string {
   if (value === undefined || value.trim().length === 0) {
-    throw new CliUsageError(
-      `OpenAI-compatible provider requires ${label} from ${source}.`,
-    );
+    throw new CliUsageError(`OpenAI-compatible provider requires ${label} from ${source}.`);
   }
 
   return value;
@@ -829,34 +723,25 @@ function requiredProviderOption(
 function requiredProviderToken(env: NodeJS.ProcessEnv): string {
   const token = env.CLARISSIMI_PROVIDER_TOKEN;
   if (token === undefined || token.trim().length === 0) {
-    throw new CliUsageError(
-      "OpenAI-compatible provider requires CLARISSIMI_PROVIDER_TOKEN.",
-    );
+    throw new CliUsageError("OpenAI-compatible provider requires CLARISSIMI_PROVIDER_TOKEN.");
   }
 
   return token;
 }
 
-function parseProviderThinking(
-  value: string | undefined,
-): ConfigProviderThinking | undefined {
+function parseProviderThinking(value: string | undefined): ConfigProviderThinking | undefined {
   if (value === undefined || value.trim().length === 0) {
     return undefined;
   }
 
   if (!isConfigProviderThinking(value)) {
-    throw new CliUsageError(
-      "OpenAI-compatible provider thinking supports only disabled.",
-    );
+    throw new CliUsageError("OpenAI-compatible provider thinking supports only disabled.");
   }
 
   return value;
 }
 
-function parsePositiveIntegerFlag(
-  args: ParsedArgs,
-  name: string,
-): number | undefined {
+function parsePositiveIntegerFlag(args: ParsedArgs, name: string): number | undefined {
   const value = getStringFlag(args, name);
   if (value === undefined) {
     return undefined;
@@ -870,10 +755,7 @@ function parsePositiveIntegerFlag(
   return parsed;
 }
 
-function parseIsoDateTimeFlag(
-  args: ParsedArgs,
-  name: string,
-): string | undefined {
+function parseIsoDateTimeFlag(args: ParsedArgs, name: string): string | undefined {
   const value = getStringFlag(args, name);
   if (value === undefined) {
     return undefined;
@@ -897,9 +779,9 @@ function assignOptional<T extends object, K extends keyof T>(
   }
 }
 
-function sanitizeAssessmentForCliOutput<
-  T extends { evidenceRefs: readonly object[] },
->(assessment: T): T {
+function sanitizeAssessmentForCliOutput<T extends { evidenceRefs: readonly object[] }>(
+  assessment: T,
+): T {
   return {
     ...assessment,
     evidenceRefs: assessment.evidenceRefs.map((ref) => {

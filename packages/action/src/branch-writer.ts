@@ -3,10 +3,7 @@ import { createHash } from "node:crypto";
 import { lstat, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, normalize, relative, sep } from "node:path";
 
-import type {
-  ProposalOutputStagingManifest,
-  ProposalStagedFile,
-} from "./staging.js";
+import type { ProposalOutputStagingManifest, ProposalStagedFile } from "./staging.js";
 
 const proposalCommitAuthorName = "Clarissimi Bot";
 const proposalCommitAuthorEmail = "clarissimi-bot@users.noreply.github.com";
@@ -59,18 +56,9 @@ export async function writeProposalBranch(
   );
 
   try {
-    await git(input.repositoryDir, [
-      "checkout",
-      "-B",
-      branchName,
-      input.baseBranch,
-    ]);
+    await git(input.repositoryDir, ["checkout", "-B", branchName, input.baseBranch]);
     await writeStagedFilesToRepository(input);
-    await git(input.repositoryDir, [
-      "add",
-      "--",
-      ...input.manifest.files.map((file) => file.path),
-    ]);
+    await git(input.repositoryDir, ["add", "--", ...input.manifest.files.map((file) => file.path)]);
 
     const hasChanges = await hasCachedChanges(input.repositoryDir);
     if (hasChanges) {
@@ -107,9 +95,7 @@ export async function writeProposalBranch(
   }
 }
 
-export function proposalBranchName(
-  manifest: ProposalOutputStagingManifest,
-): string {
+export function proposalBranchName(manifest: ProposalOutputStagingManifest): string {
   const sourceKind = normalizeBranchSegment(manifest.source.event);
   const sourceId = String(manifest.source.pullRequestNumber);
   if (manifest.mode === "stage-draft") {
@@ -157,24 +143,14 @@ async function assertExistingProposalBranchIsOwned(
   branchName: string,
   files: readonly ProposalStagedFile[],
 ): Promise<void> {
-  const exists = await gitOk(repositoryDir, [
-    "rev-parse",
-    "--verify",
-    `${branchName}^{commit}`,
-  ]);
+  const exists = await gitOk(repositoryDir, ["rev-parse", "--verify", `${branchName}^{commit}`]);
   if (!exists) {
     return;
   }
 
-  const changedFiles = await changedFilesFromBase(
-    repositoryDir,
-    baseBranch,
-    branchName,
-  );
+  const changedFiles = await changedFilesFromBase(repositoryDir, baseBranch, branchName);
   const ownedPaths = new Set(files.map((file) => file.path));
-  const outsideOwnedFiles = changedFiles.filter(
-    (file) => !ownedPaths.has(file),
-  );
+  const outsideOwnedFiles = changedFiles.filter((file) => !ownedPaths.has(file));
 
   if (outsideOwnedFiles.length > 0) {
     throw new ProposalBranchWriterError(
@@ -184,9 +160,7 @@ async function assertExistingProposalBranchIsOwned(
   }
 }
 
-async function writeStagedFilesToRepository(
-  input: ProposalBranchWriterInput,
-): Promise<void> {
+async function writeStagedFilesToRepository(input: ProposalBranchWriterInput): Promise<void> {
   for (const file of input.manifest.files) {
     assertOwnedStagedPath(file);
     await assertSafeRepositoryOutputPath(input.repositoryDir, file.path);
@@ -213,10 +187,7 @@ async function writeStagedFilesToRepository(
   }
 }
 
-async function assertSafeRepositoryOutputPath(
-  repositoryDir: string,
-  path: string,
-): Promise<void> {
+async function assertSafeRepositoryOutputPath(repositoryDir: string, path: string): Promise<void> {
   const repositoryRoot = await realpath(repositoryDir);
   let currentPath = repositoryRoot;
 
@@ -264,20 +235,12 @@ async function changedFilesFromBase(
   baseBranch: string,
   branchName: string,
 ): Promise<readonly string[]> {
-  const output = await git(repositoryDir, [
-    "diff",
-    "--name-only",
-    `${baseBranch}...${branchName}`,
-  ]);
+  const output = await git(repositoryDir, ["diff", "--name-only", `${baseBranch}...${branchName}`]);
   return output.split(/\r?\n/).filter((line) => line.length > 0);
 }
 
 async function hasCachedChanges(repositoryDir: string): Promise<boolean> {
-  const exitCode = await gitExitCode(repositoryDir, [
-    "diff",
-    "--cached",
-    "--quiet",
-  ]);
+  const exitCode = await gitExitCode(repositoryDir, ["diff", "--cached", "--quiet"]);
   if (exitCode === 0) {
     return false;
   }
@@ -311,9 +274,7 @@ async function restoreRef(repositoryDir: string, ref: string): Promise<void> {
 
 function assertOwnedStagedPath(file: ProposalStagedFile): void {
   const normalized = normalize(file.path);
-  const allowed =
-    normalized === "CONTRIBUTORS.md" ||
-    normalized.startsWith(`.clarissimi${sep}`);
+  const allowed = normalized === "CONTRIBUTORS.md" || normalized.startsWith(`.clarissimi${sep}`);
 
   if (
     isAbsolute(file.path) ||
@@ -350,10 +311,7 @@ function normalizeBranchSegment(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-async function git(
-  repositoryDir: string,
-  args: readonly string[],
-): Promise<string> {
+async function git(repositoryDir: string, args: readonly string[]): Promise<string> {
   const result = await runGit(repositoryDir, args);
   if (result.exitCode !== 0) {
     throw new ProposalBranchWriterError(
@@ -365,17 +323,11 @@ async function git(
   return result.stdout.trim();
 }
 
-async function gitOk(
-  repositoryDir: string,
-  args: readonly string[],
-): Promise<boolean> {
+async function gitOk(repositoryDir: string, args: readonly string[]): Promise<boolean> {
   return (await gitExitCode(repositoryDir, args)) === 0;
 }
 
-async function gitExitCode(
-  repositoryDir: string,
-  args: readonly string[],
-): Promise<number> {
+async function gitExitCode(repositoryDir: string, args: readonly string[]): Promise<number> {
   return (await runGit(repositoryDir, args)).exitCode;
 }
 

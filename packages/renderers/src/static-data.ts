@@ -18,9 +18,7 @@ export function buildStaticContributionsDocument(
   };
 }
 
-export function renderStaticContributionsJson(
-  values: readonly unknown[],
-): string {
+export function renderStaticContributionsJson(values: readonly unknown[]): string {
   return renderPrettyJson(buildStaticContributionsDocument(values));
 }
 

@@ -1,8 +1,5 @@
 import type { EvidenceItemInput } from "@clarissimi/core";
-import type {
-  ContributorIdentity,
-  RecognitionSource,
-} from "@clarissimi/schemas";
+import type { ContributorIdentity, RecognitionSource } from "@clarissimi/schemas";
 
 import type {
   CollectedGitHubEvidence,
@@ -14,8 +11,7 @@ import type {
 
 const DEFAULT_TEXT_LIMIT = 2_000;
 const REPOSITORY_NAME_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
-const TEST_PATH_PATTERN =
-  /(^|\/)(__tests__|tests?|specs?)(\/|$)|[./_-](test|spec)\.[cm]?[jt]sx?$/i;
+const TEST_PATH_PATTERN = /(^|\/)(__tests__|tests?|specs?)(\/|$)|[./_-](test|spec)\.[cm]?[jt]sx?$/i;
 
 export class GitHubEvidenceCollectionError extends Error {
   readonly field: string;
@@ -39,10 +35,7 @@ export function parseGitHubMergedPullRequestFixture(
 
   const fixture: GitHubMergedPullRequestFixture = {
     repository: {
-      fullName: expectString(
-        value.repository.fullName,
-        "$.repository.fullName",
-      ),
+      fullName: expectString(value.repository.fullName, "$.repository.fullName"),
     },
     pullRequest: {
       number: expectNumber(pullRequest.number, "$.pullRequest.number"),
@@ -72,10 +65,7 @@ export function parseGitHubMergedPullRequestFixture(
   assignOptional(
     fixture.pullRequest.user,
     "htmlUrl",
-    expectOptionalString(
-      pullRequest.user.htmlUrl,
-      "$.pullRequest.user.htmlUrl",
-    ),
+    expectOptionalString(pullRequest.user.htmlUrl, "$.pullRequest.user.htmlUrl"),
   );
   assignOptional(
     fixture.pullRequest,
@@ -85,18 +75,12 @@ export function parseGitHubMergedPullRequestFixture(
   assignOptional(
     fixture.pullRequest,
     "changedFiles",
-    parseOptionalChangedFiles(
-      pullRequest.changedFiles,
-      "$.pullRequest.changedFiles",
-    ),
+    parseOptionalChangedFiles(pullRequest.changedFiles, "$.pullRequest.changedFiles"),
   );
   assignOptional(
     fixture.pullRequest,
     "mergeCommitSha",
-    expectOptionalString(
-      pullRequest.mergeCommitSha,
-      "$.pullRequest.mergeCommitSha",
-    ),
+    expectOptionalString(pullRequest.mergeCommitSha, "$.pullRequest.mergeCommitSha"),
   );
 
   return fixture;
@@ -105,10 +89,7 @@ export function parseGitHubMergedPullRequestFixture(
 export function collectMergedPullRequestEvidence(
   fixture: GitHubMergedPullRequestFixture,
 ): CollectedGitHubEvidence {
-  const repository = normalizeRequiredString(
-    fixture.repository.fullName,
-    "repository.fullName",
-  );
+  const repository = normalizeRequiredString(fixture.repository.fullName, "repository.fullName");
   if (!REPOSITORY_NAME_PATTERN.test(repository)) {
     throw new GitHubEvidenceCollectionError(
       "repository.fullName",
@@ -117,19 +98,10 @@ export function collectMergedPullRequestEvidence(
   }
 
   const pullRequest = fixture.pullRequest;
-  const pullRequestNumber = normalizePositiveInteger(
-    pullRequest.number,
-    "pullRequest.number",
-  );
+  const pullRequestNumber = normalizePositiveInteger(pullRequest.number, "pullRequest.number");
   const title = normalizeRequiredString(pullRequest.title, "pullRequest.title");
-  const mergedAt = normalizeOptionalDateTime(
-    pullRequest.mergedAt,
-    "pullRequest.mergedAt",
-  );
-  const pullRequestUrl = normalizeOptionalHttpsUrl(
-    pullRequest.htmlUrl,
-    "pullRequest.htmlUrl",
-  );
+  const mergedAt = normalizeOptionalDateTime(pullRequest.mergedAt, "pullRequest.mergedAt");
+  const pullRequestUrl = normalizeOptionalHttpsUrl(pullRequest.htmlUrl, "pullRequest.htmlUrl");
   const contributor = collectContributor(pullRequest.user);
   const source: RecognitionSource = {
     repository,
@@ -139,12 +111,7 @@ export function collectMergedPullRequestEvidence(
   assignOptional(source, "mergedAt", mergedAt);
 
   const items = [
-    buildPullRequestItem(
-      pullRequestNumber,
-      title,
-      pullRequest.body,
-      pullRequestUrl,
-    ),
+    buildPullRequestItem(pullRequestNumber, title, pullRequest.body, pullRequestUrl),
     ...buildLabelItems(pullRequest.labels ?? []),
     ...buildChangedFileItems(pullRequest.changedFiles ?? []),
     ...buildMergeCommitItems(pullRequest.mergeCommitSha),
@@ -190,9 +157,7 @@ function buildPullRequestItem(
   return item;
 }
 
-function buildLabelItems(
-  labels: readonly GitHubLabelFixture[],
-): EvidenceItemInput[] {
+function buildLabelItems(labels: readonly GitHubLabelFixture[]): EvidenceItemInput[] {
   return labels.flatMap((label, index) => {
     const name = normalizeOptionalString(label.name);
     if (name === undefined) {
@@ -212,23 +177,12 @@ function buildLabelItems(
   });
 }
 
-function buildChangedFileItems(
-  files: readonly GitHubChangedFileFixture[],
-): EvidenceItemInput[] {
+function buildChangedFileItems(files: readonly GitHubChangedFileFixture[]): EvidenceItemInput[] {
   return files.map((file) => {
-    const filename = normalizeRequiredString(
-      file.filename,
-      "pullRequest.changedFiles[].filename",
-    );
+    const filename = normalizeRequiredString(file.filename, "pullRequest.changedFiles[].filename");
     const status = normalizeOptionalString(file.status);
-    const additions = normalizeOptionalNonNegativeInteger(
-      file.additions,
-      "additions",
-    );
-    const deletions = normalizeOptionalNonNegativeInteger(
-      file.deletions,
-      "deletions",
-    );
+    const additions = normalizeOptionalNonNegativeInteger(file.additions, "additions");
+    const deletions = normalizeOptionalNonNegativeInteger(file.deletions, "deletions");
     const metadata = buildFileMetadata(status, additions, deletions);
     const item: EvidenceItemInput = {
       kind: isTestPath(filename) ? "test" : "file",
@@ -236,19 +190,13 @@ function buildChangedFileItems(
       title: filename,
     };
 
-    assignOptional(
-      item,
-      "excerpt",
-      buildFileExcerpt(file, status, additions, deletions),
-    );
+    assignOptional(item, "excerpt", buildFileExcerpt(file, status, additions, deletions));
     assignOptional(item, "metadata", metadata);
     return item;
   });
 }
 
-function buildMergeCommitItems(
-  mergeCommitSha: string | undefined,
-): EvidenceItemInput[] {
+function buildMergeCommitItems(mergeCommitSha: string | undefined): EvidenceItemInput[] {
   const normalized = normalizeOptionalString(mergeCommitSha);
   if (normalized === undefined) {
     return [];
@@ -296,9 +244,7 @@ function buildFileMetadata(
   return Object.keys(metadata).length === 0 ? undefined : metadata;
 }
 
-function dedupeEvidenceItems(
-  items: readonly EvidenceItemInput[],
-): EvidenceItemInput[] {
+function dedupeEvidenceItems(items: readonly EvidenceItemInput[]): EvidenceItemInput[] {
   const seen = new Set<string>();
   const deduped: EvidenceItemInput[] = [];
 
@@ -318,10 +264,7 @@ function dedupeEvidenceItems(
 function normalizeRequiredString(value: string, field: string): string {
   const normalized = normalizeOptionalString(value);
   if (normalized === undefined) {
-    throw new GitHubEvidenceCollectionError(
-      field,
-      `${field} must be a non-empty string.`,
-    );
+    throw new GitHubEvidenceCollectionError(field, `${field} must be a non-empty string.`);
   }
 
   return normalized;
@@ -336,10 +279,7 @@ function parseOptionalLabels(
   }
 
   if (!Array.isArray(value)) {
-    throw new GitHubEvidenceCollectionError(
-      field,
-      `${field} must be an array when provided.`,
-    );
+    throw new GitHubEvidenceCollectionError(field, `${field} must be an array when provided.`);
   }
 
   return value.map((entry, index) => {
@@ -359,10 +299,7 @@ function parseOptionalChangedFiles(
   }
 
   if (!Array.isArray(value)) {
-    throw new GitHubEvidenceCollectionError(
-      field,
-      `${field} must be an array when provided.`,
-    );
+    throw new GitHubEvidenceCollectionError(field, `${field} must be an array when provided.`);
   }
 
   return value.map((entry, index) => {
@@ -372,11 +309,7 @@ function parseOptionalChangedFiles(
     const changedFile: GitHubChangedFileFixture = {
       filename: expectString(entry.filename, `${itemPath}.filename`),
     };
-    assignOptional(
-      changedFile,
-      "status",
-      expectOptionalString(entry.status, `${itemPath}.status`),
-    );
+    assignOptional(changedFile, "status", expectOptionalString(entry.status, `${itemPath}.status`));
     assignOptional(
       changedFile,
       "additions",
@@ -399,19 +332,13 @@ function parseOptionalChangedFiles(
 
 function expectString(value: unknown, field: string): string {
   if (typeof value !== "string") {
-    throw new GitHubEvidenceCollectionError(
-      field,
-      `${field} must be a string.`,
-    );
+    throw new GitHubEvidenceCollectionError(field, `${field} must be a string.`);
   }
 
   return value;
 }
 
-function expectOptionalString(
-  value: unknown,
-  field: string,
-): string | undefined {
+function expectOptionalString(value: unknown, field: string): string | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -421,19 +348,13 @@ function expectOptionalString(
 
 function expectNumber(value: unknown, field: string): number {
   if (typeof value !== "number") {
-    throw new GitHubEvidenceCollectionError(
-      field,
-      `${field} must be a number.`,
-    );
+    throw new GitHubEvidenceCollectionError(field, `${field} must be a number.`);
   }
 
   return value;
 }
 
-function expectOptionalNumber(
-  value: unknown,
-  field: string,
-): number | undefined {
+function expectOptionalNumber(value: unknown, field: string): number | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -443,30 +364,19 @@ function expectOptionalNumber(
 
 function expectStringOrNumber(value: unknown, field: string): string | number {
   if (typeof value !== "string" && typeof value !== "number") {
-    throw new GitHubEvidenceCollectionError(
-      field,
-      `${field} must be a string or number.`,
-    );
+    throw new GitHubEvidenceCollectionError(field, `${field} must be a string or number.`);
   }
 
   return value;
 }
 
-function assertRecord(
-  value: unknown,
-  field: string,
-): asserts value is Record<string, unknown> {
+function assertRecord(value: unknown, field: string): asserts value is Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new GitHubEvidenceCollectionError(
-      field,
-      `${field} must be an object.`,
-    );
+    throw new GitHubEvidenceCollectionError(field, `${field} must be an object.`);
   }
 }
 
-function normalizeOptionalString(
-  value: string | undefined,
-): string | undefined {
+function normalizeOptionalString(value: string | undefined): string | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -475,9 +385,7 @@ function normalizeOptionalString(
   return normalized.length === 0 ? undefined : normalized;
 }
 
-function normalizeOptionalExcerpt(
-  value: string | undefined,
-): string | undefined {
+function normalizeOptionalExcerpt(value: string | undefined): string | undefined {
   const normalized = normalizeOptionalString(value);
   if (normalized === undefined) {
     return undefined;
@@ -490,10 +398,7 @@ function normalizeOptionalExcerpt(
 
 function normalizePositiveInteger(value: number, field: string): number {
   if (!Number.isInteger(value) || value <= 0) {
-    throw new GitHubEvidenceCollectionError(
-      field,
-      `${field} must be a positive integer.`,
-    );
+    throw new GitHubEvidenceCollectionError(field, `${field} must be a positive integer.`);
   }
 
   return value;
@@ -517,29 +422,20 @@ function normalizeOptionalNonNegativeInteger(
   return value;
 }
 
-function normalizeOptionalDateTime(
-  value: string | undefined,
-  field: string,
-): string | undefined {
+function normalizeOptionalDateTime(value: string | undefined, field: string): string | undefined {
   const normalized = normalizeOptionalString(value);
   if (normalized === undefined) {
     return undefined;
   }
 
   if (Number.isNaN(Date.parse(normalized))) {
-    throw new GitHubEvidenceCollectionError(
-      field,
-      `${field} must be an ISO-compatible date time.`,
-    );
+    throw new GitHubEvidenceCollectionError(field, `${field} must be an ISO-compatible date time.`);
   }
 
   return normalized;
 }
 
-function normalizeOptionalHttpsUrl(
-  value: string | undefined,
-  field: string,
-): string | undefined {
+function normalizeOptionalHttpsUrl(value: string | undefined, field: string): string | undefined {
   const normalized = normalizeOptionalString(value);
   if (normalized === undefined) {
     return undefined;
@@ -548,20 +444,14 @@ function normalizeOptionalHttpsUrl(
   try {
     const parsed = new URL(normalized);
     if (parsed.protocol !== "https:") {
-      throw new GitHubEvidenceCollectionError(
-        field,
-        `${field} must use https.`,
-      );
+      throw new GitHubEvidenceCollectionError(field, `${field} must use https.`);
     }
   } catch (error) {
     if (error instanceof GitHubEvidenceCollectionError) {
       throw error;
     }
 
-    throw new GitHubEvidenceCollectionError(
-      field,
-      `${field} must be a valid URL.`,
-    );
+    throw new GitHubEvidenceCollectionError(field, `${field} must be a valid URL.`);
   }
 
   return normalized;

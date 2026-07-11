@@ -3,17 +3,20 @@
   "version": "0.0.0",
   "private": true,
   "description": "Clarissimi policy glue for prepared evidence and recognition approval gates.",
+  "homepage": "https://github.com/0disoft/clarissimi#readme",
+  "bugs": {
+    "url": "https://github.com/0disoft/clarissimi/issues"
+  },
   "license": "Apache-2.0",
-  "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/0disoft/clarissimi.git",
     "directory": "packages/core"
   },
-  "homepage": "https://github.com/0disoft/clarissimi#readme",
-  "bugs": {
-    "url": "https://github.com/0disoft/clarissimi/issues"
-  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -22,18 +25,15 @@
       "default": "./dist/index.js"
     }
   },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "build": "tsc -b",
     "typecheck": "tsc -b --pretty false"
   },
-  "engines": {
-    "node": ">=24"
-  },
   "dependencies": {
     "@clarissimi/redaction": "workspace:*",
     "@clarissimi/schemas": "workspace:*"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

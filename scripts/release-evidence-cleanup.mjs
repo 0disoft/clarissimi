@@ -14,10 +14,7 @@ const usageText = [
   "are deterministically reserved for the completed Clarissimi full-write smoke run.",
 ].join("\n");
 
-export async function runReleaseEvidenceCleanup(
-  argv,
-  runtime = defaultRuntime(),
-) {
+export async function runReleaseEvidenceCleanup(argv, runtime = defaultRuntime()) {
   try {
     return await run(argv, runtime);
   } catch (error) {
@@ -35,13 +32,9 @@ async function run(argv, runtime) {
   }
 
   const repo = args.repo ?? defaults.repo;
-  if (!isRepo(repo))
-    return usageFailure(runtime, "--repo must use owner/name format.");
+  if (!isRepo(repo)) return usageFailure(runtime, "--repo must use owner/name format.");
   if (!isPositiveRunId(args.runId))
-    return usageFailure(
-      runtime,
-      "--run-id must be a positive numeric workflow run id.",
-    );
+    return usageFailure(runtime, "--run-id must be a positive numeric workflow run id.");
 
   await requireGh(runtime);
   const run = await readFullWriteRun(runtime, repo, args.runId);
@@ -70,9 +63,7 @@ async function run(argv, runtime) {
       repo,
     ]);
     if (result.exitCode !== 0)
-      failures.push(
-        `pull request #${pullRequest.number}: ${bounded(result.stderr)}`,
-      );
+      failures.push(`pull request #${pullRequest.number}: ${bounded(result.stderr)}`);
   }
   for (const branch of state.branches) {
     const result = await runtime.runCommand("gh", [
@@ -81,8 +72,7 @@ async function run(argv, runtime) {
       "DELETE",
       `repos/${repo}/git/refs/heads/${branch}`,
     ]);
-    if (result.exitCode !== 0)
-      failures.push(`branch ${branch}: ${bounded(result.stderr)}`);
+    if (result.exitCode !== 0) failures.push(`branch ${branch}: ${bounded(result.stderr)}`);
   }
 
   const remaining = await readCleanupState(runtime, repo, expectedBranches);
@@ -95,11 +85,7 @@ async function run(argv, runtime) {
     failures,
   });
   runtime.log(JSON.stringify(receipt, null, 2));
-  if (
-    failures.length > 0 ||
-    remaining.pullRequests.length > 0 ||
-    remaining.branches.length > 0
-  ) {
+  if (failures.length > 0 || remaining.pullRequests.length > 0 || remaining.branches.length > 0) {
     throw new Error(
       `Clarissimi smoke cleanup for run ${args.runId} is incomplete. ` +
         `failures=${failures.length} remainingPullRequests=${remaining.pullRequests.length} ` +
@@ -136,9 +122,7 @@ function parseArgs(argv, runtime) {
 async function requireGh(runtime) {
   const result = await runtime.runCommand("gh", ["--version"]);
   if (result.exitCode !== 0)
-    throw new Error(
-      "GitHub CLI is required to inspect or clean release evidence residue.",
-    );
+    throw new Error("GitHub CLI is required to inspect or clean release evidence residue.");
 }
 
 async function readFullWriteRun(runtime, repo, runId) {
@@ -152,17 +136,13 @@ async function readFullWriteRun(runtime, repo, runId) {
     "databaseId,displayTitle,event,status,conclusion,workflowName,url",
   ]);
   if (result.exitCode !== 0)
-    throw new Error(
-      `Unable to inspect full-write run ${runId}.\n${bounded(result.stderr)}`,
-    );
+    throw new Error(`Unable to inspect full-write run ${runId}.\n${bounded(result.stderr)}`);
   return parseJson(result.stdout, `workflow run ${runId}`);
 }
 
 function validateFullWriteRun(run, runId) {
   if (String(run?.databaseId) !== String(runId))
-    throw new Error(
-      `Full-write run ${runId} metadata has mismatched databaseId.`,
-    );
+    throw new Error(`Full-write run ${runId} metadata has mismatched databaseId.`);
   if (run.workflowName !== defaults.workflowName)
     throw new Error(`Run ${runId} must be workflow ${defaults.workflowName}.`);
   if (run.event !== "workflow_dispatch")
@@ -208,10 +188,7 @@ async function readCleanupState(runtime, repo, expectedBranches) {
       "--json",
       "number,url,headRefName,baseRefName",
     ]),
-    runtime.runCommand("gh", [
-      "api",
-      `repos/${repo}/git/matching-refs/heads/clarissimi`,
-    ]),
+    runtime.runCommand("gh", ["api", `repos/${repo}/git/matching-refs/heads/clarissimi`]),
   ]);
   if (pullRequestsResult.exitCode !== 0)
     throw new Error(
@@ -222,10 +199,7 @@ async function readCleanupState(runtime, repo, expectedBranches) {
       `Unable to list Clarissimi branches for ${repo}.\n${bounded(refsResult.stderr)}`,
     );
 
-  const pullRequests = parseJson(
-    pullRequestsResult.stdout,
-    "open pull requests",
-  );
+  const pullRequests = parseJson(pullRequestsResult.stdout, "open pull requests");
   const refs = parseJson(refsResult.stdout, "Clarissimi refs");
   if (!Array.isArray(pullRequests) || !Array.isArray(refs))
     throw new Error("GitHub cleanup state must use JSON arrays.");
@@ -241,9 +215,7 @@ async function readCleanupState(runtime, repo, expectedBranches) {
       .sort((left, right) => left.number - right.number),
     branches: refs
       .map((ref) =>
-        typeof ref?.ref === "string"
-          ? ref.ref.replace(/^refs\/heads\//, "")
-          : undefined,
+        typeof ref?.ref === "string" ? ref.ref.replace(/^refs\/heads\//, "") : undefined,
       )
       .filter((branch) => branch !== undefined && expectedBranches.has(branch))
       .sort(),
@@ -253,13 +225,8 @@ async function readCleanupState(runtime, repo, expectedBranches) {
 function validatePullRequest(pullRequest) {
   if (!Number.isSafeInteger(pullRequest.number) || pullRequest.number <= 0)
     throw new Error("Cleanup pull request is missing a positive number.");
-  if (
-    typeof pullRequest.url !== "string" ||
-    !pullRequest.url.startsWith("https://github.com/")
-  )
-    throw new Error(
-      `Cleanup pull request #${pullRequest.number} is missing a GitHub URL.`,
-    );
+  if (typeof pullRequest.url !== "string" || !pullRequest.url.startsWith("https://github.com/"))
+    throw new Error(`Cleanup pull request #${pullRequest.number} is missing a GitHub URL.`);
   return {
     number: pullRequest.number,
     url: pullRequest.url,
@@ -295,10 +262,7 @@ function createReceipt(options) {
 }
 
 function isRepo(value) {
-  return (
-    typeof value === "string" &&
-    /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value)
-  );
+  return typeof value === "string" && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value);
 }
 function isPositiveRunId(value) {
   return typeof value === "string" && /^[1-9][0-9]*$/.test(value);
@@ -351,9 +315,6 @@ function runCommand(command, args, options = {}) {
   });
 }
 
-if (
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   process.exit(await runReleaseEvidenceCleanup(process.argv.slice(2)));
 }

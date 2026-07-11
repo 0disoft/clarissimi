@@ -11,17 +11,9 @@ const recognition = `clarissimi/recognition/merged_pull_request-${sourceId}`;
 test("previews only residue deterministically owned by the completed full-write run", async () => {
   const harness = createHarness({
     pullRequests: [pr(41, draft, base), pr(42, "feature/user-work", "main")],
-    branches: [
-      base,
-      draft,
-      recognition,
-      "clarissimi/recognition/merged_pull_request-123",
-    ],
+    branches: [base, draft, recognition, "clarissimi/recognition/merged_pull_request-123"],
   });
-  assert.equal(
-    await runReleaseEvidenceCleanup(["--run-id", runId], harness.runtime),
-    0,
-  );
+  assert.equal(await runReleaseEvidenceCleanup(["--run-id", runId], harness.runtime), 0);
   const receipt = JSON.parse(harness.logs.at(-1));
   assert.equal(receipt.mode, "preview");
   assert.deepEqual(
@@ -41,13 +33,7 @@ test("apply closes matched pull requests before deleting exact branches and veri
     branches: [base, draft],
     stateAfterMutation: { pullRequests: [], branches: [] },
   });
-  assert.equal(
-    await runReleaseEvidenceCleanup(
-      ["--run-id", runId, "--apply"],
-      harness.runtime,
-    ),
-    0,
-  );
+  assert.equal(await runReleaseEvidenceCleanup(["--run-id", runId, "--apply"], harness.runtime), 0);
   const mutations = harness.commands.filter((item) => isMutation(item.args));
   assert.deepEqual(
     mutations.map((item) => item.args.slice(0, 3)),
@@ -69,10 +55,7 @@ test("rejects unrelated or active workflow runs before reading repository state"
   ]) {
     const harness = createHarness({ run });
     assert.equal(
-      await runReleaseEvidenceCleanup(
-        ["--run-id", runId, "--apply"],
-        harness.runtime,
-      ),
+      await runReleaseEvidenceCleanup(["--run-id", runId, "--apply"], harness.runtime),
       1,
     );
     assert.equal(
@@ -89,13 +72,7 @@ test("continues bounded cleanup after one mutation fails and reports incomplete 
     failBranch: draft,
     stateAfterMutation: { pullRequests: [], branches: [draft] },
   });
-  assert.equal(
-    await runReleaseEvidenceCleanup(
-      ["--run-id", runId, "--apply"],
-      harness.runtime,
-    ),
-    1,
-  );
+  assert.equal(await runReleaseEvidenceCleanup(["--run-id", runId, "--apply"], harness.runtime), 1);
   const mutations = harness.commands.filter((item) => isMutation(item.args));
   assert.equal(mutations.length, 3);
   const receipt = JSON.parse(harness.logs.at(-1));
@@ -119,20 +96,13 @@ function createHarness(options = {}) {
         commands.push({ command, args });
         if (command !== "gh") return failure("unexpected executable");
         if (args[0] === "--version") return success("gh fake");
-        if (args[0] === "run")
-          return success(JSON.stringify(options.run ?? fullWriteRun()));
+        if (args[0] === "run") return success(JSON.stringify(options.run ?? fullWriteRun()));
         if (args[0] === "pr" && args[1] === "list") {
-          const state =
-            stateReads === 0
-              ? options
-              : (options.stateAfterMutation ?? options);
+          const state = stateReads === 0 ? options : (options.stateAfterMutation ?? options);
           return success(JSON.stringify(state.pullRequests ?? []));
         }
         if (args[0] === "api" && args[1]?.startsWith("repos/")) {
-          const state =
-            stateReads === 0
-              ? options
-              : (options.stateAfterMutation ?? options);
+          const state = stateReads === 0 ? options : (options.stateAfterMutation ?? options);
           stateReads += 1;
           return success(
             JSON.stringify(
@@ -145,9 +115,7 @@ function createHarness(options = {}) {
         if (args[0] === "pr" && args[1] === "close") return success("");
         if (args[0] === "api" && args[1] === "--method") {
           const branch = args[3].split("/git/refs/heads/")[1];
-          return branch === options.failBranch
-            ? failure("protected branch")
-            : success("");
+          return branch === options.failBranch ? failure("protected branch") : success("");
         }
         return failure(`unexpected gh args: ${args.join(" ")}`);
       },
@@ -177,10 +145,7 @@ function pr(number, headRefName, baseRefName) {
   };
 }
 function isMutation(args) {
-  return (
-    (args[0] === "pr" && args[1] === "close") ||
-    (args[0] === "api" && args[1] === "--method")
-  );
+  return (args[0] === "pr" && args[1] === "close") || (args[0] === "api" && args[1] === "--method");
 }
 function success(stdout) {
   return { exitCode: 0, stdout, stderr: "" };

@@ -1,6 +1,6 @@
 # ADR 0035: Adopt Prettier Format Baseline
 
-- Status: Accepted
+- Status: Superseded by ADR 0036
 - Date: 2026-07-11
 - Owner: Repository maintainers
 

@@ -286,7 +286,7 @@ Release-only credentialed checks are:
 - `pnpm run live-provider-smoke`
 - `pnpm run hosted-live-provider-smoke -- --model <provider-model>`
 
-`format` runs the repository-wide Prettier baseline accepted by ADR 0035. It checks maintained
+`format` runs the repository-wide Oxfmt baseline accepted by ADR 0036. It checks maintained
 TypeScript, JavaScript, JSON, Markdown, and YAML sources while ignoring generated Action bundles
 and build/cache output. `oxlint` remains the JavaScript and TypeScript lint gate.
 `migration-check` intentionally fails until configured.

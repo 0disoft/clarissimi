@@ -31,10 +31,7 @@ export async function publishProposalBranch(
   validatePublisherInput(input);
 
   const remoteName = input.remoteName ?? "origin";
-  const localSha = await git(input.repositoryDir, [
-    "rev-parse",
-    input.branch.branchName,
-  ]);
+  const localSha = await git(input.repositoryDir, ["rev-parse", input.branch.branchName]);
   if (localSha !== input.branch.commitSha) {
     throw new ProposalBranchPublisherError(
       "branch_commit_mismatch",
@@ -87,10 +84,7 @@ function validatePublisherInput(input: ProposalBranchPublisherInput): void {
   }
 }
 
-async function git(
-  repositoryDir: string,
-  args: readonly string[],
-): Promise<string> {
+async function git(repositoryDir: string, args: readonly string[]): Promise<string> {
   const result = await runGit(repositoryDir, args);
   if (result.exitCode !== 0) {
     throw new ProposalBranchPublisherError(

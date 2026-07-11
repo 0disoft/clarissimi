@@ -8,14 +8,7 @@ const defaultRepoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 export async function runBundleAction(options = {}) {
   const repoRoot = options.repoRoot ?? defaultRepoRoot;
-  const entryPoint = join(
-    repoRoot,
-    "packages",
-    "action",
-    "dist",
-    "bin",
-    "clarissimi-action.js",
-  );
+  const entryPoint = join(repoRoot, "packages", "action", "dist", "bin", "clarissimi-action.js");
   const outputPath = join(repoRoot, "action-dist", "index.js");
   const checkOnly = options.checkOnly ?? false;
 
@@ -50,9 +43,7 @@ export async function runBundleAction(options = {}) {
     try {
       trackedText = await readFile(outputPath, "utf8");
     } catch (error) {
-      throw new Error(
-        `Tracked Action bundle is missing or unreadable: ${error.message}`,
-      );
+      throw new Error(`Tracked Action bundle is missing or unreadable: ${error.message}`);
     }
 
     if (trackedText !== bundledText) {
@@ -83,10 +74,7 @@ export function addNoticeAfterShebang(text, notice) {
   return `${text.slice(0, newlineIndex + 1)}${notice}${text.slice(newlineIndex + 1)}`;
 }
 
-if (
-  process.argv[1] !== undefined &&
-  pathToFileURL(process.argv[1]).href === import.meta.url
-) {
+if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) {
   await runBundleAction({
     checkOnly: process.argv.slice(2).includes("--check"),
   });

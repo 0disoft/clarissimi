@@ -44,9 +44,7 @@ test("validateDocs rejects invalid fenced JSON examples", async (t) => {
 
   assert.equal(result.ok, false);
   assert.equal(
-    result.issues.some((issue) =>
-      issue.startsWith("README.md has invalid json code block 1:"),
-    ),
+    result.issues.some((issue) => issue.startsWith("README.md has invalid json code block 1:")),
     true,
   );
 });
@@ -63,9 +61,7 @@ test("validateDocs rejects missing local markdown links", async (t) => {
 
   assert.equal(result.ok, false);
   assert.equal(
-    result.issues.includes(
-      "README.md links to missing local target: docs/missing.md",
-    ),
+    result.issues.includes("README.md links to missing local target: docs/missing.md"),
     true,
   );
 });
@@ -89,9 +85,7 @@ test("validateDocs rejects missing required documentation targets", async (t) =>
 
   assert.equal(result.ok, false);
   assert.equal(
-    result.issues.includes(
-      "missing required documentation target: docs/cli/missing-required.md",
-    ),
+    result.issues.includes("missing required documentation target: docs/cli/missing-required.md"),
     true,
   );
 });
@@ -163,50 +157,30 @@ test("agent-assisted draft guide JSON examples match the assessment schema", asy
     join(process.cwd(), "docs", "cli", "agent-assisted-drafts.md"),
     "utf8",
   );
-  const examples = extractJsonCodeBlocks(guideText).map((block) =>
-    JSON.parse(block),
-  );
+  const examples = extractJsonCodeBlocks(guideText).map((block) => JSON.parse(block));
 
   assert.equal(examples.length, 2);
 
   const assessment = examples[0];
   const assessmentResult = validateContributionAssessment(assessment);
-  assert.equal(
-    assessmentResult.ok,
-    true,
-    JSON.stringify(assessmentResult.issues),
-  );
+  assert.equal(assessmentResult.ok, true, JSON.stringify(assessmentResult.issues));
   assert.equal(assessment.source.pullRequestNumber, 42);
-  assert.equal(
-    assessment.evidenceRefs[0].url,
-    "https://github.com/example/project/pull/42",
-  );
+  assert.equal(assessment.evidenceRefs[0].url, "https://github.com/example/project/pull/42");
   assert.equal(Object.hasOwn(assessment, "score"), false);
   assert.equal(Object.hasOwn(assessment, "averageScore"), false);
 
   const envelope = examples[1];
   assert.equal(envelope.schemaVersion, "clarissimi.draft-envelope/v1");
   assert.equal(envelope.draftProvenance.delegatedModel, "example-model");
-  const envelopeAssessmentResult = validateContributionAssessment(
-    envelope.assessment,
-  );
-  assert.equal(
-    envelopeAssessmentResult.ok,
-    true,
-    JSON.stringify(envelopeAssessmentResult.issues),
-  );
+  const envelopeAssessmentResult = validateContributionAssessment(envelope.assessment);
+  assert.equal(envelopeAssessmentResult.ok, true, JSON.stringify(envelopeAssessmentResult.issues));
   assert.equal(Object.hasOwn(envelope.assessment, "score"), false);
   assert.equal(Object.hasOwn(envelope.assessment, "averageScore"), false);
 });
 
 test("ledger format guide JSON example matches the assessment schema", async () => {
-  const guideText = await readFile(
-    join(process.cwd(), "docs", "cli", "ledger-format.md"),
-    "utf8",
-  );
-  const examples = extractJsonCodeBlocks(guideText).map((block) =>
-    JSON.parse(block),
-  );
+  const guideText = await readFile(join(process.cwd(), "docs", "cli", "ledger-format.md"), "utf8");
+  const examples = extractJsonCodeBlocks(guideText).map((block) => JSON.parse(block));
 
   assert.equal(examples.length, 1);
 
@@ -214,10 +188,7 @@ test("ledger format guide JSON example matches the assessment schema", async () 
   const result = validateContributionAssessment(ledgerRecord);
   assert.equal(result.ok, true, JSON.stringify(result.issues));
   assert.equal(ledgerRecord.source.pullRequestNumber, 42);
-  assert.equal(
-    ledgerRecord.evidenceRefs[0].url,
-    "https://github.com/example/project/pull/42",
-  );
+  assert.equal(ledgerRecord.evidenceRefs[0].url, "https://github.com/example/project/pull/42");
   assert.equal(Object.hasOwn(ledgerRecord, "score"), false);
   assert.equal(Object.hasOwn(ledgerRecord, "averageScore"), false);
   assert.equal(Object.hasOwn(ledgerRecord, "rank"), false);
@@ -238,11 +209,7 @@ async function createDocsFixture(options) {
   }
 
   if (options.adrIndex !== undefined) {
-    await writeFile(
-      join(repoRoot, "docs", "adr", "README.md"),
-      options.adrIndex,
-      "utf8",
-    );
+    await writeFile(join(repoRoot, "docs", "adr", "README.md"), options.adrIndex, "utf8");
   }
 
   if (options.adrFiles !== undefined) {

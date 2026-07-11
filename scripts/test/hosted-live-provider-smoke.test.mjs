@@ -10,10 +10,7 @@ test("hosted live provider smoke stops before dispatch when the repository secre
     secrets: [],
   });
 
-  const exitCode = await runHostedLiveProviderSmoke(
-    ["--model", "gpt-4.1-mini"],
-    harness.runtime,
-  );
+  const exitCode = await runHostedLiveProviderSmoke(["--model", "gpt-4.1-mini"], harness.runtime);
 
   assert.equal(exitCode, 1);
   assert.match(
@@ -21,9 +18,7 @@ test("hosted live provider smoke stops before dispatch when the repository secre
     /Missing repository secret CLARISSIMI_PROVIDER_TOKEN .* gh secret set CLARISSIMI_PROVIDER_TOKEN --repo 0disoft\/clarissimi --app actions\. No workflow was dispatched\./,
   );
   assert.equal(
-    harness.commands.some(
-      (command) => command.args[0] === "workflow" && command.args[1] === "run",
-    ),
+    harness.commands.some((command) => command.args[0] === "workflow" && command.args[1] === "run"),
     false,
   );
 });
@@ -66,13 +61,7 @@ test("hosted live provider smoke dispatches and watches the selected workflow", 
   assert.equal(exitCode, 0);
   assert.deepEqual(
     harness.commands.map((command) => command.args.slice(0, 2)),
-    [
-      ["--version"],
-      ["secret", "list"],
-      ["workflow", "run"],
-      ["run", "list"],
-      ["run", "watch"],
-    ],
+    [["--version"], ["secret", "list"], ["workflow", "run"], ["run", "list"], ["run", "watch"]],
   );
 
   const workflowRun = harness.commands.find(
@@ -100,10 +89,7 @@ test("hosted live provider smoke dispatches and watches the selected workflow", 
     (command) => command.args[0] === "run" && command.args[1] === "list",
   );
   assert.equal(runList.args.includes("--branch"), true);
-  assert.equal(
-    runList.args[runList.args.indexOf("--branch") + 1],
-    "release-candidate",
-  );
+  assert.equal(runList.args[runList.args.indexOf("--branch") + 1], "release-candidate");
 
   const runWatch = harness.commands.find(
     (command) => command.args[0] === "run" && command.args[1] === "watch",
@@ -118,9 +104,7 @@ test("hosted live provider smoke dispatches and watches the selected workflow", 
   ]);
   assert.equal(runWatch.options.inherit, true);
   assert.equal(
-    harness.logs.some((line) =>
-      line.includes("hosted live provider smoke passed"),
-    ),
+    harness.logs.some((line) => line.includes("hosted live provider smoke passed")),
     true,
   );
 });
@@ -137,9 +121,7 @@ test("hosted live provider smoke validates dispatch inputs before reading secret
     2,
   );
   assert.equal(
-    invalidEvidenceId.errors.includes(
-      "--evidence-id must be 32 lowercase hexadecimal characters.",
-    ),
+    invalidEvidenceId.errors.includes("--evidence-id must be 32 lowercase hexadecimal characters."),
     true,
   );
   assert.equal(invalidEvidenceId.commands.length, 0);
@@ -153,45 +135,28 @@ test("hosted live provider smoke validates dispatch inputs before reading secret
   );
 
   assert.equal(unsupportedThinkingExitCode, 2);
-  assert.equal(
-    unsupportedThinking.errors.includes("--thinking supports only disabled."),
-    true,
-  );
+  assert.equal(unsupportedThinking.errors.includes("--thinking supports only disabled."), true);
   assert.equal(unsupportedThinking.commands.length, 0);
 
   const invalidEndpoint = createHarness({
     secrets: [{ name: "CLARISSIMI_PROVIDER_TOKEN" }],
   });
   const invalidEndpointExitCode = await runHostedLiveProviderSmoke(
-    [
-      "--model",
-      "gpt-4.1-mini",
-      "--endpoint",
-      "http://gateway.example/v1/chat/completions",
-    ],
+    ["--model", "gpt-4.1-mini", "--endpoint", "http://gateway.example/v1/chat/completions"],
     invalidEndpoint.runtime,
   );
 
   assert.equal(invalidEndpointExitCode, 2);
-  assert.equal(
-    invalidEndpoint.errors.includes("--endpoint must be an https URL."),
-    true,
-  );
+  assert.equal(invalidEndpoint.errors.includes("--endpoint must be an https URL."), true);
   assert.equal(invalidEndpoint.commands.length, 0);
 
   const emptyModel = createHarness({
     secrets: [{ name: "CLARISSIMI_PROVIDER_TOKEN" }],
   });
-  const emptyModelExitCode = await runHostedLiveProviderSmoke(
-    ["--model", ""],
-    emptyModel.runtime,
-  );
+  const emptyModelExitCode = await runHostedLiveProviderSmoke(["--model", ""], emptyModel.runtime);
 
   assert.equal(emptyModelExitCode, 2);
-  assert.equal(
-    emptyModel.errors.includes("--model requires a non-empty value."),
-    true,
-  );
+  assert.equal(emptyModel.errors.includes("--model requires a non-empty value."), true);
   assert.equal(emptyModel.commands.length, 0);
 
   const invalidRepo = createHarness({
@@ -203,10 +168,7 @@ test("hosted live provider smoke validates dispatch inputs before reading secret
   );
 
   assert.equal(invalidRepoExitCode, 2);
-  assert.equal(
-    invalidRepo.errors.includes("--repo must use owner/name format."),
-    true,
-  );
+  assert.equal(invalidRepo.errors.includes("--repo must use owner/name format."), true);
   assert.equal(invalidRepo.commands.length, 0);
 
   const emptyRef = createHarness({
@@ -218,10 +180,7 @@ test("hosted live provider smoke validates dispatch inputs before reading secret
   );
 
   assert.equal(emptyRefExitCode, 2);
-  assert.equal(
-    emptyRef.errors.includes("--ref requires a non-empty value."),
-    true,
-  );
+  assert.equal(emptyRef.errors.includes("--ref requires a non-empty value."), true);
   assert.equal(emptyRef.commands.length, 0);
 });
 
@@ -240,10 +199,7 @@ test("hosted live provider smoke fails before watching when the dispatched run i
     ],
   });
 
-  const exitCode = await runHostedLiveProviderSmoke(
-    ["--model", "gpt-4.1-mini"],
-    harness.runtime,
-  );
+  const exitCode = await runHostedLiveProviderSmoke(["--model", "gpt-4.1-mini"], harness.runtime);
 
   assert.equal(exitCode, 1);
   assert.equal(
@@ -253,9 +209,7 @@ test("hosted live provider smoke fails before watching when the dispatched run i
     true,
   );
   assert.equal(
-    harness.commands.some(
-      (command) => command.args[0] === "run" && command.args[1] === "watch",
-    ),
+    harness.commands.some((command) => command.args[0] === "run" && command.args[1] === "watch"),
     false,
   );
 });

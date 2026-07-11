@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  LiveGitHubCollectionError,
-  collectLiveMergedPullRequestEvidence,
-} from "../dist/index.js";
+import { LiveGitHubCollectionError, collectLiveMergedPullRequestEvidence } from "../dist/index.js";
 
 function livePullRequest(overrides = {}) {
   return {
@@ -102,15 +99,11 @@ test("collects live merged pull request evidence through an injected client", as
     true,
   );
   assert.equal(
-    collected.evidence.items.some(
-      (item) => item.kind === "issue" && item.id === "#7",
-    ),
+    collected.evidence.items.some((item) => item.kind === "issue" && item.id === "#7"),
     true,
   );
   assert.equal(
-    collected.evidence.items.some(
-      (item) => item.kind === "issue" && item.id === "#8",
-    ),
+    collected.evidence.items.some((item) => item.kind === "issue" && item.id === "#8"),
     true,
   );
 });
@@ -138,12 +131,8 @@ test("bounds review comments and linked issue candidates", async () => {
     reviewCommentLimit: 1,
   });
 
-  const issues = collected.evidence.items.filter(
-    (item) => item.kind === "issue",
-  );
-  const reviews = collected.evidence.items.filter(
-    (item) => item.kind === "review",
-  );
+  const issues = collected.evidence.items.filter((item) => item.kind === "issue");
+  const reviews = collected.evidence.items.filter((item) => item.kind === "review");
 
   assert.deepEqual(
     issues.map((item) => item.id),
@@ -164,8 +153,7 @@ test("rejects unmerged live pull requests before returning evidence", async () =
         pullRequestNumber: 42,
       }),
     (error) =>
-      error instanceof LiveGitHubCollectionError &&
-      error.code === "pull_request_not_merged",
+      error instanceof LiveGitHubCollectionError && error.code === "pull_request_not_merged",
   );
 });
 
@@ -180,8 +168,7 @@ test("rejects live pull request number mismatches", async () => {
         pullRequestNumber: 42,
       }),
     (error) =>
-      error instanceof LiveGitHubCollectionError &&
-      error.code === "pull_request_number_mismatch",
+      error instanceof LiveGitHubCollectionError && error.code === "pull_request_number_mismatch",
   );
 });
 

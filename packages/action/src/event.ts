@@ -10,9 +10,7 @@ export type GitHubActionEventResolution =
       readonly reason: string;
     };
 
-export function resolveGitHubEventPayload(
-  value: unknown,
-): GitHubActionEventResolution {
+export function resolveGitHubEventPayload(value: unknown): GitHubActionEventResolution {
   if (!isRecord(value)) {
     return {
       kind: "skipped",
@@ -20,10 +18,7 @@ export function resolveGitHubEventPayload(
     };
   }
 
-  if (
-    !isRecord(value.repository) ||
-    typeof value.repository.full_name !== "string"
-  ) {
+  if (!isRecord(value.repository) || typeof value.repository.full_name !== "string") {
     return {
       kind: "skipped",
       reason: "GitHub event payload does not include repository.full_name.",
@@ -38,10 +33,7 @@ export function resolveGitHubEventPayload(
   }
 
   const pullRequest = value.pull_request;
-  const mergedAt =
-    typeof pullRequest.merged_at === "string"
-      ? pullRequest.merged_at
-      : undefined;
+  const mergedAt = typeof pullRequest.merged_at === "string" ? pullRequest.merged_at : undefined;
   if (mergedAt === undefined) {
     return {
       kind: "skipped",
@@ -73,16 +65,8 @@ export function resolveGitHubEventPayload(
   };
 
   assignOptional(fixture.pullRequest, "body", optionalString(pullRequest.body));
-  assignOptional(
-    fixture.pullRequest,
-    "htmlUrl",
-    optionalString(pullRequest.html_url),
-  );
-  assignOptional(
-    fixture.pullRequest.user,
-    "htmlUrl",
-    optionalString(pullRequest.user.html_url),
-  );
+  assignOptional(fixture.pullRequest, "htmlUrl", optionalString(pullRequest.html_url));
+  assignOptional(fixture.pullRequest.user, "htmlUrl", optionalString(pullRequest.user.html_url));
   assignOptional(
     fixture.pullRequest,
     "mergeCommitSha",

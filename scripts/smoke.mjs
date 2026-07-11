@@ -13,11 +13,7 @@ await runJsonCommand({
   expectExitCode: 0,
   validate(output) {
     assertEqual(output.ok, true, "validate-config should succeed.");
-    assertEqual(
-      output.command,
-      "validate-config",
-      "validate-config command name should match.",
-    );
+    assertEqual(output.command, "validate-config", "validate-config command name should match.");
   },
 });
 
@@ -36,21 +32,9 @@ await runJsonCommand({
   expectExitCode: 0,
   validate(output) {
     assertEqual(output.ok, true, "recognize should succeed.");
-    assertEqual(
-      output.command,
-      "recognize",
-      "recognize command name should match.",
-    );
-    assertEqual(
-      output.fixtureKind,
-      "github",
-      "recognize should use the GitHub fixture path.",
-    );
-    assertEqual(
-      output.approvalStatus,
-      "draft",
-      "basic GitHub fixture should remain a draft.",
-    );
+    assertEqual(output.command, "recognize", "recognize command name should match.");
+    assertEqual(output.fixtureKind, "github", "recognize should use the GitHub fixture path.");
+    assertEqual(output.approvalStatus, "draft", "basic GitHub fixture should remain a draft.");
     assertEqual(
       output.publicOutputsRendered,
       false,
@@ -121,16 +105,8 @@ await withTempDir("clarissimi-import-draft-smoke-", async (dir) => {
     expectExitCode: 0,
     validate(output) {
       assertEqual(output.ok, true, "import-draft should succeed.");
-      assertEqual(
-        output.command,
-        "import-draft",
-        "import-draft command name should match.",
-      );
-      assertEqual(
-        output.records,
-        1,
-        "import-draft should write one ledger record.",
-      );
+      assertEqual(output.command, "import-draft", "import-draft command name should match.");
+      assertEqual(output.records, 1, "import-draft should write one ledger record.");
       assertEqual(
         output.wroteDerivedFiles,
         true,
@@ -141,9 +117,7 @@ await withTempDir("clarissimi-import-draft-smoke-", async (dir) => {
 
   const ledgerText = await readFile(ledgerPath, "utf8");
   if (ledgerText.includes("Raw PR body should not be rendered.")) {
-    throw new Error(
-      "import-draft smoke leaked raw evidence excerpt into the public ledger.",
-    );
+    throw new Error("import-draft smoke leaked raw evidence excerpt into the public ledger.");
   }
 });
 
@@ -206,16 +180,8 @@ await withTempDir("clarissimi-stage-draft-smoke-", async (dir) => {
     expectExitCode: 0,
     validate(output) {
       assertEqual(output.ok, true, "stage-draft should succeed.");
-      assertEqual(
-        output.command,
-        "stage-draft",
-        "stage-draft command name should match.",
-      );
-      assertEqual(
-        output.approvalStatus,
-        "draft",
-        "stage-draft should keep draft approval status.",
-      );
+      assertEqual(output.command, "stage-draft", "stage-draft command name should match.");
+      assertEqual(output.approvalStatus, "draft", "stage-draft should keep draft approval status.");
     },
   });
 
@@ -224,9 +190,7 @@ await withTempDir("clarissimi-stage-draft-smoke-", async (dir) => {
     "utf8",
   );
   if (draftText.includes("Raw PR body should not be staged.")) {
-    throw new Error(
-      "stage-draft smoke leaked raw evidence excerpt into the staged draft.",
-    );
+    throw new Error("stage-draft smoke leaked raw evidence excerpt into the staged draft.");
   }
 });
 
@@ -241,21 +205,13 @@ await runJsonCommand({
   expectExitCode: 0,
   validate(output) {
     assertEqual(output.ok, true, "Action dry-run should succeed.");
-    assertEqual(
-      output.mode,
-      "dry-run",
-      "Action explicit dry-run should preserve dry-run mode.",
-    );
+    assertEqual(output.mode, "dry-run", "Action explicit dry-run should preserve dry-run mode.");
     assertEqual(
       output.inputSource,
       "github_fixture",
       "Action dry-run should use the fixture source.",
     );
-    assertEqual(
-      output.proposedEntryCount,
-      0,
-      "dry-run must not propose public entries.",
-    );
+    assertEqual(output.proposedEntryCount, 0, "dry-run must not propose public entries.");
   },
 });
 
@@ -270,21 +226,13 @@ await runJsonCommand({
   expectExitCode: 0,
   validate(output) {
     assertEqual(output.ok, true, "bundled Action dry-run should succeed.");
-    assertEqual(
-      output.mode,
-      "dry-run",
-      "bundled Action should preserve dry-run mode.",
-    );
+    assertEqual(output.mode, "dry-run", "bundled Action should preserve dry-run mode.");
     assertEqual(
       output.inputSource,
       "github_fixture",
       "bundled Action should use the fixture source.",
     );
-    assertEqual(
-      output.proposedEntryCount,
-      0,
-      "bundled dry-run must not propose public entries.",
-    );
+    assertEqual(output.proposedEntryCount, 0, "bundled dry-run must not propose public entries.");
   },
 });
 
@@ -297,15 +245,9 @@ await runCommand({
   },
   expectExitCode: 1,
   validate({ stdout, stderr }) {
-    assertEqual(
-      stdout,
-      "",
-      "default propose token failure should not write stdout.",
-    );
+    assertEqual(stdout, "", "default propose token failure should not write stdout.");
     if (!stderr.includes("GITHUB_TOKEN is required for write modes.")) {
-      throw new Error(
-        "default propose token failure should explain the missing GitHub token.",
-      );
+      throw new Error("default propose token failure should explain the missing GitHub token.");
     }
   },
 });
@@ -322,19 +264,13 @@ await runCommand({
   },
   expectExitCode: 2,
   validate({ stdout, stderr }) {
-    assertEqual(
-      stdout,
-      "",
-      "live provider credential preflight should not write stdout.",
-    );
+    assertEqual(stdout, "", "live provider credential preflight should not write stdout.");
     if (
       !stderr.includes(
         "live provider smoke requires CLARISSIMI_PROVIDER_TOKEN and CLARISSIMI_PROVIDER_MODEL.",
       )
     ) {
-      throw new Error(
-        "live provider credential preflight should explain missing credentials.",
-      );
+      throw new Error("live provider credential preflight should explain missing credentials.");
     }
 
     if (!stderr.includes("No provider call was made.")) {
@@ -357,11 +293,7 @@ await runCommand({
   },
   expectExitCode: 2,
   validate({ stdout, stderr }) {
-    assertEqual(
-      stdout,
-      "",
-      "live provider invalid endpoint preflight should not write stdout.",
-    );
+    assertEqual(stdout, "", "live provider invalid endpoint preflight should not write stdout.");
     if (
       !stderr.includes(
         "live provider smoke requires CLARISSIMI_PROVIDER_ENDPOINT to be an https URL when provided.",
@@ -398,9 +330,7 @@ await runCommand({
       "live provider unsupported thinking preflight should not write stdout.",
     );
     if (
-      !stderr.includes(
-        "live provider smoke supports only CLARISSIMI_PROVIDER_THINKING=disabled.",
-      )
+      !stderr.includes("live provider smoke supports only CLARISSIMI_PROVIDER_THINKING=disabled.")
     ) {
       throw new Error(
         "live provider unsupported thinking preflight should explain the supported value.",
@@ -435,13 +365,7 @@ async function assertWorkspacePackagePackDryRuns() {
     await runJsonCommand({
       name: `Package pack dry-run ${packageInfo.dir}`,
       command: "pnpm",
-      args: [
-        "--filter",
-        `@clarissimi/${packageInfo.dir}`,
-        "pack",
-        "--dry-run",
-        "--json",
-      ],
+      args: ["--filter", `@clarissimi/${packageInfo.dir}`, "pack", "--dry-run", "--json"],
       expectExitCode: 0,
       validate(output) {
         validatePackagePackDryRun(output, packageInfo);
@@ -463,14 +387,10 @@ function validatePackagePackDryRun(output, packageInfo) {
   );
 
   if (!Array.isArray(output.files)) {
-    throw new Error(
-      `${packageInfo.dir} pack dry-run did not report a files array.`,
-    );
+    throw new Error(`${packageInfo.dir} pack dry-run did not report a files array.`);
   }
 
-  const paths = output.files
-    .map((file) => file?.path)
-    .filter((path) => typeof path === "string");
+  const paths = output.files.map((file) => file?.path).filter((path) => typeof path === "string");
   const pathSet = new Set(paths);
   const requiredFiles = [
     "package.json",
@@ -483,9 +403,7 @@ function validatePackagePackDryRun(output, packageInfo) {
 
   for (const requiredFile of requiredFiles) {
     if (!pathSet.has(requiredFile)) {
-      throw new Error(
-        `${packageInfo.dir} pack dry-run is missing ${requiredFile}.`,
-      );
+      throw new Error(`${packageInfo.dir} pack dry-run is missing ${requiredFile}.`);
     }
   }
 
@@ -498,9 +416,7 @@ function validatePackagePackDryRun(output, packageInfo) {
       path.includes("node_modules/") ||
       path.endsWith(".tsbuildinfo")
     ) {
-      throw new Error(
-        `${packageInfo.dir} pack dry-run includes non-public file ${path}.`,
-      );
+      throw new Error(`${packageInfo.dir} pack dry-run includes non-public file ${path}.`);
     }
   }
 }
@@ -517,9 +433,7 @@ async function runJsonCommand(options) {
   try {
     output = JSON.parse(result.stdout);
   } catch (error) {
-    throw new Error(
-      `${options.name} did not emit parseable JSON: ${error.message}`,
-    );
+    throw new Error(`${options.name} did not emit parseable JSON: ${error.message}`);
   }
 
   options.validate(output);

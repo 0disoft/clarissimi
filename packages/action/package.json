@@ -3,37 +3,34 @@
   "version": "0.0.0",
   "private": true,
   "description": "Clarissimi GitHub Action runner for dry-run summaries and recognition proposal PRs.",
+  "homepage": "https://github.com/0disoft/clarissimi#readme",
+  "bugs": {
+    "url": "https://github.com/0disoft/clarissimi/issues"
+  },
   "license": "Apache-2.0",
-  "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/0disoft/clarissimi.git",
     "directory": "packages/action"
   },
-  "homepage": "https://github.com/0disoft/clarissimi#readme",
-  "bugs": {
-    "url": "https://github.com/0disoft/clarissimi/issues"
-  },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "bin": {
     "clarissimi-action": "./dist/bin/clarissimi-action.js"
   },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }
   },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "build": "tsc -b",
     "typecheck": "tsc -b --pretty false"
-  },
-  "engines": {
-    "node": ">=24"
   },
   "dependencies": {
     "@clarissimi/core": "workspace:*",
@@ -41,5 +38,8 @@
     "@clarissimi/providers": "workspace:*",
     "@clarissimi/renderers": "workspace:*",
     "@clarissimi/schemas": "workspace:*"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

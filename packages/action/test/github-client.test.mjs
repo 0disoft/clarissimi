@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  ProposalPullRequestClientError,
-  createGitHubPullRequestClient,
-} from "../dist/index.js";
+import { ProposalPullRequestClientError, createGitHubPullRequestClient } from "../dist/index.js";
 
 test("GitHub pull request client creates bounded REST requests", async () => {
   const requests = [];
@@ -41,10 +38,7 @@ test("GitHub pull request client creates bounded REST requests", async () => {
 
   assert.equal(pullRequest.number, 5);
   assert.equal(requests.length, 1);
-  assert.equal(
-    requests[0].url,
-    "https://api.github.com/repos/sample/project/pulls",
-  );
+  assert.equal(requests[0].url, "https://api.github.com/repos/sample/project/pulls");
   assert.equal(requests[0].method, "POST");
   assert.equal(requests[0].authorization, "Bearer test-token");
   assert.deepEqual(JSON.parse(requests[0].body), {

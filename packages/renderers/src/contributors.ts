@@ -26,9 +26,7 @@ export function deriveContributorProfiles(
     existing.push(record);
   });
 
-  return Array.from(grouped.values())
-    .map(toContributorProfile)
-    .sort(compareContributorProfiles);
+  return Array.from(grouped.values()).map(toContributorProfile).sort(compareContributorProfiles);
 }
 
 export function buildContributorsJsonDocument(
@@ -49,30 +47,22 @@ function toContributorProfile(
 ): ContributorRecognitionProfile {
   const first = records[0];
   if (first === undefined) {
-    throw new Error(
-      "Contributor profile requires at least one contribution record.",
-    );
+    throw new Error("Contributor profile requires at least one contribution record.");
   }
 
-  const recognitions = records
-    .map(toRecognitionSummary)
-    .sort(compareRecognitionSummaries);
+  const recognitions = records.map(toRecognitionSummary).sort(compareRecognitionSummaries);
 
   return {
     contributor: first.contributor,
     contributionCount: records.length,
-    contributionTypes: uniqueSorted(
-      records.map((record) => record.contributionType),
-    ),
+    contributionTypes: uniqueSorted(records.map((record) => record.contributionType)),
     affectedAreas: uniqueSorted(records.map((record) => record.affectedArea)),
     badges: uniqueSorted(records.map((record) => record.suggestedBadge)),
     recognitions,
   };
 }
 
-function toRecognitionSummary(
-  record: PublicContributionRecord,
-): PublicRecognitionSummary {
+function toRecognitionSummary(record: PublicContributionRecord): PublicRecognitionSummary {
   return {
     source: record.source,
     contributionType: record.contributionType,
@@ -108,10 +98,6 @@ function compareRecognitionSummaries(
   );
 }
 
-function uniqueSorted<T extends string | ContributionType>(
-  values: readonly T[],
-): readonly T[] {
-  return Array.from(new Set(values)).sort((left, right) =>
-    left.localeCompare(right),
-  );
+function uniqueSorted<T extends string | ContributionType>(values: readonly T[]): readonly T[] {
+  return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right));
 }

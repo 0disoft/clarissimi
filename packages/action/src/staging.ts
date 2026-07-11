@@ -68,15 +68,12 @@ export async function stageProposalRecognitionOutputs(
   const assessments = toPublishableAssessments(input.assessments);
   const source = requireSingleSource(assessments);
   const records = assessments.reduce<readonly unknown[]>(
-    (currentRecords, assessment) =>
-      appendPublicContributionRecord(currentRecords, assessment),
+    (currentRecords, assessment) => appendPublicContributionRecord(currentRecords, assessment),
     input.existingRecords ?? [],
   );
   const outputs = renderRecognitionOutputs(
     records,
-    input.markdownSummary === undefined
-      ? {}
-      : { summary: input.markdownSummary },
+    input.markdownSummary === undefined ? {} : { summary: input.markdownSummary },
   );
   const files = await writeRenderedOutputs(input.outputDir, outputs);
 
@@ -97,16 +94,13 @@ export async function stageProposalDraftReviewOutput(
   input: ProposalOutputStagingInput,
 ): Promise<ProposalOutputStagingResult> {
   if (input.assessments.length !== 1) {
-    throw new ProposalOutputStagingError(
-      "Draft review staging requires exactly one assessment.",
-      [
-        {
-          path: "$.assessments",
-          code: "invalid_assessment_count",
-          message: "Exactly one draft assessment is required.",
-        },
-      ],
-    );
+    throw new ProposalOutputStagingError("Draft review staging requires exactly one assessment.", [
+      {
+        path: "$.assessments",
+        code: "invalid_assessment_count",
+        message: "Exactly one draft assessment is required.",
+      },
+    ]);
   }
 
   const draft = toDraftReviewRecord(input.assessments[0]);
@@ -131,9 +125,7 @@ export async function stageProposalDraftReviewOutput(
   };
 }
 
-function toPublishableAssessments(
-  values: readonly unknown[],
-): readonly ContributionAssessment[] {
+function toPublishableAssessments(values: readonly unknown[]): readonly ContributionAssessment[] {
   if (values.length === 0) {
     throw new ProposalOutputStagingError(
       "Proposal output staging requires at least one assessment.",
@@ -141,8 +133,7 @@ function toPublishableAssessments(
         {
           path: "$.assessments",
           code: "empty_array",
-          message:
-            "At least one approved or auto_approved assessment is required.",
+          message: "At least one approved or auto_approved assessment is required.",
         },
       ],
     );
@@ -164,22 +155,16 @@ function toPublishableAssessments(
   });
 }
 
-function requireSingleSource(
-  assessments: readonly ContributionAssessment[],
-): RecognitionSource {
+function requireSingleSource(assessments: readonly ContributionAssessment[]): RecognitionSource {
   const first = assessments[0];
   if (first === undefined) {
-    throw new ProposalOutputStagingError(
-      "Proposal output staging requires a source event.",
-      [
-        {
-          path: "$.assessments",
-          code: "empty_array",
-          message:
-            "At least one assessment is required to derive source identity.",
-        },
-      ],
-    );
+    throw new ProposalOutputStagingError("Proposal output staging requires a source event.", [
+      {
+        path: "$.assessments",
+        code: "empty_array",
+        message: "At least one assessment is required to derive source identity.",
+      },
+    ]);
   }
 
   assessments.forEach((assessment, index) => {
@@ -190,8 +175,7 @@ function requireSingleSource(
           {
             path: `$.assessments[${index}].source`,
             code: "mixed_source",
-            message:
-              "All staged assessments must come from the same recognition source.",
+            message: "All staged assessments must come from the same recognition source.",
           },
         ],
       );
@@ -205,10 +189,7 @@ async function writeRenderedOutputs(
   outputDir: string,
   outputs: RenderedRecognitionOutputs,
 ): Promise<readonly ProposalStagedFile[]> {
-  const entries: readonly (readonly [
-    keyof RenderedRecognitionOutputs,
-    string,
-  ])[] = [
+  const entries: readonly (readonly [keyof RenderedRecognitionOutputs, string])[] = [
     ["contributionsJsonl", RENDERED_OUTPUT_PATHS.contributionsJsonl],
     ["contributorsJson", RENDERED_OUTPUT_PATHS.contributorsJson],
     ["contributorsMarkdown", RENDERED_OUTPUT_PATHS.contributorsMarkdown],
@@ -248,12 +229,9 @@ function summarizeApprovals(
 ): ProposalApprovalSummary {
   return assessments.reduce<ProposalApprovalSummary>(
     (summary, assessment) => ({
-      approved:
-        summary.approved +
-        (assessment.maintainerApprovalStatus === "approved" ? 1 : 0),
+      approved: summary.approved + (assessment.maintainerApprovalStatus === "approved" ? 1 : 0),
       autoApproved:
-        summary.autoApproved +
-        (assessment.maintainerApprovalStatus === "auto_approved" ? 1 : 0),
+        summary.autoApproved + (assessment.maintainerApprovalStatus === "auto_approved" ? 1 : 0),
     }),
     {
       approved: 0,
@@ -262,10 +240,7 @@ function summarizeApprovals(
   );
 }
 
-function sameSource(
-  left: RecognitionSource,
-  right: RecognitionSource,
-): boolean {
+function sameSource(left: RecognitionSource, right: RecognitionSource): boolean {
   return (
     left.repository === right.repository &&
     left.event === right.event &&
@@ -293,8 +268,7 @@ function assertClarissimiOutputPath(path: string): void {
         {
           path: "$.files.path",
           code: "unsafe_output_path",
-          message:
-            "Staged output paths must stay within Clarissimi-owned recognition outputs.",
+          message: "Staged output paths must stay within Clarissimi-owned recognition outputs.",
         },
       ],
     );

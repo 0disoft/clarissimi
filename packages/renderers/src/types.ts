@@ -7,20 +7,15 @@ import type {
   ValidationIssue,
 } from "@clarissimi/schemas";
 
-export const CONTRIBUTIONS_JSONL_PATH =
-  ".clarissimi/contributions.jsonl" as const;
+export const CONTRIBUTIONS_JSONL_PATH = ".clarissimi/contributions.jsonl" as const;
 export const DRAFTS_DIR_PATH = ".clarissimi/drafts" as const;
 export const CONTRIBUTORS_JSON_PATH = ".clarissimi/contributors.json" as const;
 export const CONTRIBUTORS_MARKDOWN_PATH = "CONTRIBUTORS.md" as const;
-export const STATIC_DATA_JSON_PATH =
-  ".clarissimi/static/contributions.json" as const;
+export const STATIC_DATA_JSON_PATH = ".clarissimi/static/contributions.json" as const;
 
-export const CONTRIBUTORS_JSON_SCHEMA_VERSION =
-  "clarissimi.contributors/v1" as const;
-export const STATIC_DATA_SCHEMA_VERSION =
-  "clarissimi.static-contributions/v1" as const;
-export const MAINTAINER_ANALYTICS_SCHEMA_VERSION =
-  "clarissimi.maintainer-analytics/v1" as const;
+export const CONTRIBUTORS_JSON_SCHEMA_VERSION = "clarissimi.contributors/v1" as const;
+export const STATIC_DATA_SCHEMA_VERSION = "clarissimi.static-contributions/v1" as const;
+export const MAINTAINER_ANALYTICS_SCHEMA_VERSION = "clarissimi.maintainer-analytics/v1" as const;
 
 export type PublicContributionRecord = ContributionAssessment;
 export type DraftReviewRecord = ContributionAssessment;

@@ -79,9 +79,7 @@ export function renderMaintainerRecentRecognitionShareJson(
   values: readonly unknown[],
   options: MaintainerRecentRecognitionShareOptions = {},
 ): string {
-  return renderPrettyJson(
-    buildMaintainerRecentRecognitionShareDocument(values, options),
-  );
+  return renderPrettyJson(buildMaintainerRecentRecognitionShareDocument(values, options));
 }
 
 function normalizeWindowDays(value: number | undefined): number {
@@ -109,16 +107,13 @@ function normalizeAsOf(value: string | undefined): string {
 
   const parsed = Date.parse(value);
   if (Number.isNaN(parsed)) {
-    throw new RendererValidationError(
-      "Recent recognition share requires a valid as-of date.",
-      [
-        {
-          path: "$.asOf",
-          code: "invalid_datetime",
-          message: "asOf must be an ISO-compatible date time.",
-        },
-      ],
-    );
+    throw new RendererValidationError("Recent recognition share requires a valid as-of date.", [
+      {
+        path: "$.asOf",
+        code: "invalid_datetime",
+        message: "asOf must be an ISO-compatible date time.",
+      },
+    ]);
   }
 
   return new Date(parsed).toISOString();
@@ -141,9 +136,7 @@ function toRecentShareContributor(
   };
 }
 
-function createContributorAccumulator(
-  record: PublicContributionRecord,
-): ContributorAccumulator {
+function createContributorAccumulator(record: PublicContributionRecord): ContributorAccumulator {
   return {
     contributor: record.contributor,
     recognitionCount: 0,
@@ -173,12 +166,8 @@ function contributorKey(record: PublicContributionRecord): string {
   return `${record.contributor.platform}:${record.contributor.id}:${record.contributor.login}`;
 }
 
-function uniqueSorted<T extends string | ContributionType>(
-  values: readonly T[],
-): readonly T[] {
-  return Array.from(new Set(values)).sort((left, right) =>
-    left.localeCompare(right),
-  );
+function uniqueSorted<T extends string | ContributionType>(values: readonly T[]): readonly T[] {
+  return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right));
 }
 
 interface ContributorAccumulator {

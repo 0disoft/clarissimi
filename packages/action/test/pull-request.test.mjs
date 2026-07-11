@@ -75,9 +75,7 @@ const draftManifest = {
 const draftBranch = {
   ...branch,
   branchName: "clarissimi/drafts/merged_pull_request-42",
-  changedFiles: [
-    ".clarissimi/drafts/sample-project-merged_pull_request-42.json",
-  ],
+  changedFiles: [".clarissimi/drafts/sample-project-merged_pull_request-42.json"],
   rollbackHint:
     "Delete branch clarissimi/drafts/merged_pull_request-42 before merge to discard this proposal.",
 };
@@ -121,21 +119,12 @@ test("creates a draft review pull request without implying public approval", asy
 
   assert.equal(result.action, "created");
   assert.equal(result.title, "Clarissimi draft review: sample/project#42");
-  assert.equal(
-    result.body.includes("## Clarissimi draft review proposal"),
-    true,
-  );
+  assert.equal(result.body.includes("## Clarissimi draft review proposal"), true);
   assert.equal(result.body.includes("### Staged draft files"), true);
   assert.equal(result.body.includes("- Drafts staged: 1"), true);
   assert.equal(result.body.includes("- Approved: 0"), true);
-  assert.equal(
-    result.body.includes("Review the staged draft before importing it."),
-    true,
-  );
-  assert.equal(
-    client.created[0].headBranch,
-    "clarissimi/drafts/merged_pull_request-42",
-  );
+  assert.equal(result.body.includes("Review the staged draft before importing it."), true);
+  assert.equal(client.created[0].headBranch, "clarissimi/drafts/merged_pull_request-42");
 });
 
 test("updates an existing proposal pull request instead of creating a duplicate", async () => {
@@ -166,10 +155,7 @@ test("updates an existing proposal pull request instead of creating a duplicate"
     title: result.title,
     body: result.body,
   });
-  assert.equal(
-    result.body.includes("Maintainer review is still required before merge."),
-    true,
-  );
+  assert.equal(result.body.includes("Maintainer review is still required before merge."), true);
 });
 
 test("can target the runner repository while preserving source repository text", async () => {
@@ -284,8 +270,7 @@ test("keeps assessment scoring and share signals out of the proposal title and b
 test("bounds long changed file lists in the proposal body", () => {
   const manyFiles = Array.from(
     { length: 30 },
-    (_, index) =>
-      `.clarissimi/generated/file-${String(index).padStart(2, "0")}.json`,
+    (_, index) => `.clarissimi/generated/file-${String(index).padStart(2, "0")}.json`,
   );
   const body = buildProposalPullRequestBody({
     manifest: {
@@ -302,10 +287,7 @@ test("bounds long changed file lists in the proposal body", () => {
     },
   });
 
-  assert.equal(
-    body.includes("5 more file(s) omitted from this summary."),
-    true,
-  );
+  assert.equal(body.includes("5 more file(s) omitted from this summary."), true);
 });
 
 test("returns actionable diagnostics for token permission failures", async () => {

@@ -106,14 +106,8 @@ test("keeps ranking language out of generated public narrative fields", () => {
 
   assert.equal(assessment.affectedArea, "repository maintenance");
   assert.equal(assessment.suggestedBadge, "Maintenance Steward");
-  assert.equal(
-    assessment.evidenceSummary.includes("top 3 contributor scoreboard"),
-    false,
-  );
-  assert.equal(
-    assessment.publicRecognitionText.includes("top 3 contributor scoreboard"),
-    false,
-  );
+  assert.equal(assessment.evidenceSummary.includes("top 3 contributor scoreboard"), false);
+  assert.equal(assessment.publicRecognitionText.includes("top 3 contributor scoreboard"), false);
   assert.equal(validateContributionAssessment(assessment).ok, true);
 });
 

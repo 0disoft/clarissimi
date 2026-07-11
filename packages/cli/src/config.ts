@@ -6,19 +6,11 @@ import {
 import { basename } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import {
-  fileExists,
-  parseJsonText,
-  readTextFile,
-  resolveFromCwd,
-} from "./io.js";
+import { fileExists, parseJsonText, readTextFile, resolveFromCwd } from "./io.js";
 
 export type CliConfig = ClarissimiConfig;
 
-const defaultConfigPaths = [
-  "clarissimi.config.ts",
-  ".clarissimi/config.json",
-] as const;
+const defaultConfigPaths = ["clarissimi.config.ts", ".clarissimi/config.json"] as const;
 
 export interface ConfigValidationResult {
   readonly ok: true;
@@ -60,9 +52,7 @@ export async function validateConfigFile(
   };
 }
 
-async function resolveDefaultConfigPath(
-  cwd: string,
-): Promise<string | undefined> {
+async function resolveDefaultConfigPath(cwd: string): Promise<string | undefined> {
   const existing = [];
   for (const path of defaultConfigPaths) {
     if (await fileExists(resolveFromCwd(cwd, path))) {
@@ -79,10 +69,7 @@ async function resolveDefaultConfigPath(
   return existing[0];
 }
 
-async function loadConfigValue(
-  path: string,
-  resolvedPath: string,
-): Promise<unknown> {
+async function loadConfigValue(path: string, resolvedPath: string): Promise<unknown> {
   if (resolvedPath.endsWith(".json")) {
     return parseJsonText(await readTextFile(resolvedPath), path);
   }
@@ -96,10 +83,7 @@ async function loadConfigValue(
   );
 }
 
-async function loadTypeScriptConfig(
-  path: string,
-  resolvedPath: string,
-): Promise<unknown> {
+async function loadTypeScriptConfig(path: string, resolvedPath: string): Promise<unknown> {
   let module;
   try {
     module = await import(pathToFileURL(resolvedPath).href);
@@ -108,9 +92,7 @@ async function loadTypeScriptConfig(
   }
 
   if (!("default" in module)) {
-    throw new Error(
-      `TypeScript config ${path} must export a default config object.`,
-    );
+    throw new Error(`TypeScript config ${path} must export a default config object.`);
   }
 
   return module.default;
@@ -120,9 +102,7 @@ function isSupportedTypeScriptConfigPath(path: string): boolean {
   return basename(path.replaceAll("\\", "/")) === "clarissimi.config.ts";
 }
 
-function formatConfigValidationIssue(
-  issue: ValidationIssue | undefined,
-): string {
+function formatConfigValidationIssue(issue: ValidationIssue | undefined): string {
   if (issue === undefined) {
     return "Clarissimi config is invalid.";
   }

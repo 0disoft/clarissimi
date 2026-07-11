@@ -41,15 +41,8 @@ async function run(argv, runtime) {
   }
 
   const repo = args.repo ?? defaults.repo;
-  if (
-    args.branch !== undefined &&
-    args.ref !== undefined &&
-    args.branch !== args.ref
-  ) {
-    return usageFailure(
-      runtime,
-      "--branch and --ref must match when both are provided.",
-    );
+  if (args.branch !== undefined && args.ref !== undefined && args.branch !== args.ref) {
+    return usageFailure(runtime, "--branch and --ref must match when both are provided.");
   }
 
   const branch = args.branch ?? args.ref ?? defaults.branch;
@@ -168,9 +161,7 @@ class UsageError extends Error {
 async function readCurrentHeadSha(runtime) {
   const result = await runtime.runCommand("git", ["rev-parse", "HEAD"]);
   if (result.exitCode !== 0) {
-    throw new Error(
-      `Unable to resolve current HEAD SHA.\n${boundedOutput(result.stderr)}`,
-    );
+    throw new Error(`Unable to resolve current HEAD SHA.\n${boundedOutput(result.stderr)}`);
   }
 
   return result.stdout.trim();
@@ -204,9 +195,7 @@ async function findWorkflowRun(runtime, options) {
       "databaseId,status,conclusion,headSha,url,createdAt",
     ]);
     if (result.exitCode !== 0) {
-      throw new Error(
-        `Unable to list hosted CI workflow runs.\n${boundedOutput(result.stderr)}`,
-      );
+      throw new Error(`Unable to list hosted CI workflow runs.\n${boundedOutput(result.stderr)}`);
     }
 
     let runs;
@@ -235,9 +224,7 @@ async function findWorkflowRun(runtime, options) {
 
 function validateRunInfo(runInfo, workflow, sha) {
   if (!isPositiveRunId(runInfo.databaseId)) {
-    throw new Error(
-      `${workflow} workflow run for ${sha} is missing a valid databaseId.`,
-    );
+    throw new Error(`${workflow} workflow run for ${sha} is missing a valid databaseId.`);
   }
 
   if (
@@ -245,9 +232,7 @@ function validateRunInfo(runInfo, workflow, sha) {
     typeof runInfo.url !== "string" ||
     !runInfo.url.startsWith("https://")
   ) {
-    throw new Error(
-      `${workflow} workflow run for ${sha} is missing an https URL.`,
-    );
+    throw new Error(`${workflow} workflow run for ${sha} is missing an https URL.`);
   }
 
   if (
@@ -260,10 +245,7 @@ function validateRunInfo(runInfo, workflow, sha) {
     );
   }
 
-  if (
-    runInfo.status === "completed" &&
-    typeof runInfo.conclusion !== "string"
-  ) {
+  if (runInfo.status === "completed" && typeof runInfo.conclusion !== "string") {
     throw new Error(
       `${workflow} workflow run for ${sha} is completed without a string conclusion.`,
     );
@@ -281,9 +263,7 @@ async function watchRun(runtime, repo, runId) {
     },
   );
   if (result.exitCode !== 0) {
-    throw new Error(
-      `Hosted CI validation failed with exit code ${result.exitCode}.`,
-    );
+    throw new Error(`Hosted CI validation failed with exit code ${result.exitCode}.`);
   }
 }
 
@@ -333,10 +313,7 @@ function delay(ms) {
   });
 }
 
-if (
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const exitCode = await runHostedCiValidation(process.argv.slice(2));
   process.exit(exitCode);
 }

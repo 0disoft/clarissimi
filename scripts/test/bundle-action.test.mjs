@@ -5,10 +5,7 @@ import { addNoticeAfterShebang } from "../bundle-action.mjs";
 
 test("bundle notice preserves a Node shebang as the first line", () => {
   assert.equal(
-    addNoticeAfterShebang(
-      "#!/usr/bin/env node\nconsole.log('ok');\n",
-      "// generated\n",
-    ),
+    addNoticeAfterShebang("#!/usr/bin/env node\nconsole.log('ok');\n", "// generated\n"),
     "#!/usr/bin/env node\n// generated\nconsole.log('ok');\n",
   );
 });

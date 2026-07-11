@@ -73,18 +73,9 @@ test("stages renderer outputs with deterministic file metadata", async () => {
     });
     const expectedOutputs = renderRecognitionOutputs([approved]);
     const expected = new Map([
-      [
-        RENDERED_OUTPUT_PATHS.contributionsJsonl,
-        expectedOutputs.contributionsJsonl,
-      ],
-      [
-        RENDERED_OUTPUT_PATHS.contributorsJson,
-        expectedOutputs.contributorsJson,
-      ],
-      [
-        RENDERED_OUTPUT_PATHS.contributorsMarkdown,
-        expectedOutputs.contributorsMarkdown,
-      ],
+      [RENDERED_OUTPUT_PATHS.contributionsJsonl, expectedOutputs.contributionsJsonl],
+      [RENDERED_OUTPUT_PATHS.contributorsJson, expectedOutputs.contributorsJson],
+      [RENDERED_OUTPUT_PATHS.contributorsMarkdown, expectedOutputs.contributorsMarkdown],
       [RENDERED_OUTPUT_PATHS.staticDataJson, expectedOutputs.staticDataJson],
     ]);
 
@@ -108,10 +99,7 @@ test("stages renderer outputs with deterministic file metadata", async () => {
 
       assert.equal(content, expectedContent);
       assert.equal(file.bytes, Buffer.byteLength(content, "utf8"));
-      assert.equal(
-        file.sha256,
-        createHash("sha256").update(content, "utf8").digest("hex"),
-      );
+      assert.equal(file.sha256, createHash("sha256").update(content, "utf8").digest("hex"));
     }
   });
 });
@@ -124,17 +112,12 @@ test("stages the optional contributor summary table", async () => {
       redactionMatchCount: 0,
       markdownSummary: "table",
     });
-    const markdown = await readFile(
-      join(dir, RENDERED_OUTPUT_PATHS.contributorsMarkdown),
-      "utf8",
-    );
+    const markdown = await readFile(join(dir, RENDERED_OUTPUT_PATHS.contributorsMarkdown), "utf8");
 
     assert.equal(result.manifest.mode, "propose");
     assert.equal(markdown.includes("| Contributor | Total | Types |"), true);
     assert.equal(
-      markdown.includes(
-        "| [@octocat](https://github.com/octocat) | 1 | test 1 |",
-      ),
+      markdown.includes("| [@octocat](https://github.com/octocat) | 1 | test 1 |"),
       true,
     );
     assert.equal(markdown.includes("## octocat"), true);
@@ -182,19 +165,14 @@ test("stages draft review output without public recognition files", async () => 
     const draftText = await readFile(join(dir, filePaths[0]), "utf8");
 
     assert.equal(result.manifest.mode, "stage-draft");
-    assert.deepEqual(filePaths, [
-      ".clarissimi/drafts/sample-project-merged_pull_request-42.json",
-    ]);
+    assert.deepEqual(filePaths, [".clarissimi/drafts/sample-project-merged_pull_request-42.json"]);
     assert.equal(result.manifest.assessmentCount, 1);
     assert.deepEqual(result.manifest.approvalSummary, {
       approved: 0,
       autoApproved: 0,
     });
     assert.equal(result.manifest.redactionMatchCount, 4);
-    assert.equal(
-      draftText.includes('"maintainerApprovalStatus": "draft"'),
-      true,
-    );
+    assert.equal(draftText.includes('"maintainerApprovalStatus": "draft"'), true);
     assert.equal(draftText.includes("PATCH_EXCERPT_SENTINEL"), false);
     assert.equal(draftText.includes("PROVIDER_RAW_SENTINEL"), false);
     assert.deepEqual(await readdir(join(dir, ".clarissimi")), ["drafts"]);
@@ -249,9 +227,7 @@ test("keeps raw evidence and provider output out of staged metadata and files", 
     });
     const manifestText = JSON.stringify(result.manifest);
     const stagedContent = await Promise.all(
-      result.manifest.files.map((file) =>
-        readFile(join(dir, file.path), "utf8"),
-      ),
+      result.manifest.files.map((file) => readFile(join(dir, file.path), "utf8")),
     );
     const stagedText = stagedContent.join("\n");
 

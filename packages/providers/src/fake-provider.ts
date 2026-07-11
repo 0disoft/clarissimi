@@ -41,9 +41,7 @@ export function createFakeContributionDraftProvider(
 ): ContributionDraftProvider {
   return {
     id: options.id ?? DEFAULT_PROVIDER_ID,
-    async createAssessment(
-      input: ProviderAssessmentInput,
-    ): Promise<ContributionAssessment> {
+    async createAssessment(input: ProviderAssessmentInput): Promise<ContributionAssessment> {
       return createFakeAssessment(input, options.defaults);
     },
   };
@@ -67,9 +65,7 @@ export function createFakeAssessment(
     DEFAULT_AFFECTED_AREA,
   );
   const impactLevel =
-    hints.impactLevel ??
-    defaults.impactLevel ??
-    inferImpactLevel(input.preparedEvidence);
+    hints.impactLevel ?? defaults.impactLevel ?? inferImpactLevel(input.preparedEvidence);
   const suggestedBadge = safePublicNarrative(
     firstNonEmpty(
       hints.suggestedBadge,
@@ -78,26 +74,17 @@ export function createFakeAssessment(
     ),
     inferSuggestedBadge(contributionType),
   );
-  const confidence = clampConfidence(
-    hints.confidence ?? defaults.confidence ?? DEFAULT_CONFIDENCE,
-  );
+  const confidence = clampConfidence(hints.confidence ?? defaults.confidence ?? DEFAULT_CONFIDENCE);
   const assessment = {
     schemaVersion: ASSESSMENT_SCHEMA_VERSION,
     contributor: input.contributor,
     contributionType,
     affectedArea,
     impactLevel,
-    evidenceSummary: buildEvidenceSummary(
-      input.preparedEvidence,
-      contributionType,
-      affectedArea,
-    ),
+    evidenceSummary: buildEvidenceSummary(input.preparedEvidence, contributionType, affectedArea),
     evidenceRefs: input.preparedEvidence.evidenceRefs,
     suggestedBadge,
-    publicRecognitionText: buildPublicRecognitionText(
-      contributionType,
-      affectedArea,
-    ),
+    publicRecognitionText: buildPublicRecognitionText(contributionType, affectedArea),
     confidence,
     maintainerApprovalStatus: "draft",
     source: input.preparedEvidence.source,
@@ -111,9 +98,7 @@ export function createFakeAssessment(
   return result.value;
 }
 
-function inferContributionType(
-  evidence: PreparedProviderEvidence,
-): ContributionType {
+function inferContributionType(evidence: PreparedProviderEvidence): ContributionType {
   if (hasEvidenceKind(evidence, "test")) {
     return "test";
   }
@@ -174,9 +159,7 @@ function buildEvidenceSummary(
 ): string {
   const primary = evidence.items[0];
   const primaryLabel =
-    primary === undefined
-      ? "provided evidence"
-      : `${primary.kind} ${primary.id}`;
+    primary === undefined ? "provided evidence" : `${primary.kind} ${primary.id}`;
   return `Drafted ${contributionType} recognition for ${affectedArea} from ${primaryLabel}.`;
 }
 
@@ -198,10 +181,7 @@ function buildPublicRecognitionText(
   }
 }
 
-function hasEvidenceKind(
-  evidence: PreparedProviderEvidence,
-  kind: EvidenceKind,
-): boolean {
+function hasEvidenceKind(evidence: PreparedProviderEvidence, kind: EvidenceKind): boolean {
   return evidence.items.some((item) => item.kind === kind);
 }
 

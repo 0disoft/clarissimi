@@ -20,9 +20,7 @@ export type PublishableAssessmentResult =
       readonly issues: readonly ValidationIssue[];
     };
 
-export function canPublishAssessment(
-  value: unknown,
-): PublishableAssessmentResult {
+export function canPublishAssessment(value: unknown): PublishableAssessmentResult {
   const validation = validateContributionAssessment(value);
 
   if (!validation.ok) {
@@ -36,8 +34,7 @@ export function canPublishAssessment(
         {
           path: "$.maintainerApprovalStatus",
           code: "not_approved",
-          message:
-            "Only approved or auto_approved assessments can become public records.",
+          message: "Only approved or auto_approved assessments can become public records.",
         },
       ],
     };
@@ -52,9 +49,7 @@ export function canPublishAssessment(
   };
 }
 
-export function requireValidAssessment(
-  value: unknown,
-): ValidationResult<ContributionAssessment> {
+export function requireValidAssessment(value: unknown): ValidationResult<ContributionAssessment> {
   return validateContributionAssessment(value);
 }
 

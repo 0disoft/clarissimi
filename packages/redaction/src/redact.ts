@@ -25,8 +25,7 @@ const REDACTION_RULES: readonly RedactionRule[] = [
   },
   {
     kind: "openai_token",
-    pattern:
-      /\bsk-(?:proj|live|test|admin|user|org|svc|key)-[A-Za-z0-9_-]{12,}\b/g,
+    pattern: /\bsk-(?:proj|live|test|admin|user|org|svc|key)-[A-Za-z0-9_-]{12,}\b/g,
   },
   {
     kind: "anthropic_token",
@@ -43,8 +42,7 @@ const REDACTION_RULES: readonly RedactionRule[] = [
   },
   {
     kind: "generic_secret_assignment",
-    pattern:
-      /\b(?:token|secret|password|api[_-]?key)\s*[:=]\s*["'][^"']{8,}["']/gi,
+    pattern: /\b(?:token|secret|password|api[_-]?key)\s*[:=]\s*["'][^"']{8,}["']/gi,
   },
   {
     kind: "email",
@@ -75,9 +73,7 @@ export function redactText(input: string): RedactedText {
   };
 }
 
-export function redactJson<T extends RedactableJson>(
-  input: T,
-): RedactedJson<T> {
+export function redactJson<T extends RedactableJson>(input: T): RedactedJson<T> {
   const occurrences: RedactionOccurrence[] = [];
   const value = redactJsonValue(input, occurrences) as T;
 
@@ -87,9 +83,7 @@ export function redactJson<T extends RedactableJson>(
   };
 }
 
-export function mergeRedactionReports(
-  reports: readonly RedactionReport[],
-): RedactionReport {
+export function mergeRedactionReports(reports: readonly RedactionReport[]): RedactionReport {
   const occurrences = reports.flatMap((report) => report.occurrences);
   return buildReport(occurrences);
 }
@@ -110,19 +104,14 @@ function redactJsonValue(
 
   if (value !== null && typeof value === "object") {
     return Object.fromEntries(
-      Object.entries(value).map(([key, entry]) => [
-        key,
-        redactJsonValue(entry, occurrences),
-      ]),
+      Object.entries(value).map(([key, entry]) => [key, redactJsonValue(entry, occurrences)]),
     );
   }
 
   return value;
 }
 
-function buildReport(
-  occurrences: readonly RedactionOccurrence[],
-): RedactionReport {
+function buildReport(occurrences: readonly RedactionOccurrence[]): RedactionReport {
   return {
     changed: occurrences.length > 0,
     occurrences,

@@ -4,11 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import {
-  ActionUsageError,
-  runActionDryRun,
-  runActionFromEnvironment,
-} from "../dist/index.js";
+import { ActionUsageError, runActionDryRun, runActionFromEnvironment } from "../dist/index.js";
 
 function githubFixture(overrides = {}) {
   return {
@@ -150,14 +146,8 @@ test("creates a dry-run summary from a GitHub fixture path", async () => {
     assert.equal(summary.proposedEntryCount, 0);
     assert.equal(summary.publicOutputsRendered, false);
     assert.equal(summary.assessment.contributor.login, "octocat");
-    assert.equal(
-      JSON.stringify(summary).includes("Adds a failing parser case"),
-      false,
-    );
-    assert.equal(
-      JSON.stringify(summary).includes("parses nested input"),
-      false,
-    );
+    assert.equal(JSON.stringify(summary).includes("Adds a failing parser case"), false);
+    assert.equal(JSON.stringify(summary).includes("parses nested input"), false);
   });
 });
 
@@ -192,11 +182,7 @@ test("uses an injected live GitHub collector for merged pull request events", as
     assert.equal(summary.draftCount, 1);
     assert.deepEqual(
       liveGitHubClient.calls.map((call) => call[0]),
-      [
-        "getPullRequest",
-        "listPullRequestFiles",
-        "listPullRequestReviewComments",
-      ],
+      ["getPullRequest", "listPullRequestFiles", "listPullRequestReviewComments"],
     );
     assert.equal(
       summary.assessment.evidenceRefs.some((ref) => ref.kind === "review"),
@@ -206,20 +192,13 @@ test("uses an injected live GitHub collector for merged pull request events", as
       summary.assessment.evidenceRefs.some((ref) => ref.kind === "issue"),
       true,
     );
-    assert.equal(
-      JSON.stringify(summary).includes("LIVE_REVIEW_BODY_SENTINEL"),
-      false,
-    );
+    assert.equal(JSON.stringify(summary).includes("LIVE_REVIEW_BODY_SENTINEL"), false);
     assert.equal(JSON.stringify(summary).includes("@@ -0,0 +1,12 @@"), false);
   });
 });
 
 test("maps the repository merged pull request event fixture", async () => {
-  const eventPath = join(
-    process.cwd(),
-    "fixtures",
-    "github-pull-request-merged-event.json",
-  );
+  const eventPath = join(process.cwd(), "fixtures", "github-pull-request-merged-event.json");
   const eventText = await readFile(eventPath, "utf8");
   const summary = await runActionDryRun({
     eventPath,
@@ -228,18 +207,11 @@ test("maps the repository merged pull request event fixture", async () => {
   assert.equal(summary.inputSource, "github_event_path");
   assert.equal(summary.draftCount, 1);
   assert.equal(summary.assessment.source.repository, "sample/project");
-  assert.equal(
-    JSON.stringify(summary).includes(JSON.parse(eventText).pull_request.body),
-    false,
-  );
+  assert.equal(JSON.stringify(summary).includes(JSON.parse(eventText).pull_request.body), false);
 });
 
 test("environment runner accepts GITHUB_EVENT_PATH", async () => {
-  const eventPath = join(
-    process.cwd(),
-    "fixtures",
-    "github-pull-request-merged-event.json",
-  );
+  const eventPath = join(process.cwd(), "fixtures", "github-pull-request-merged-event.json");
   let stdout = "";
   let stderr = "";
 
@@ -313,11 +285,9 @@ test("environment runner can use the OpenAI-compatible provider when explicitly 
                     contributionType: "test",
                     affectedArea: "parser regression coverage",
                     impactLevel: "medium",
-                    evidenceSummary:
-                      "Added regression coverage based on test evidence.",
+                    evidenceSummary: "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
-                    publicRecognitionText:
-                      "Added regression coverage for the parser.",
+                    publicRecognitionText: "Added regression coverage for the parser.",
                     confidence: 0.8,
                   }),
                 },
@@ -337,10 +307,7 @@ test("environment runner can use the OpenAI-compatible provider when explicitly 
     );
     assert.equal(requests.length, 1);
     assert.deepEqual(requests[0].body.thinking, { type: "disabled" });
-    assert.equal(
-      JSON.stringify(requests[0].body).includes("person@example.com"),
-      false,
-    );
+    assert.equal(JSON.stringify(requests[0].body).includes("person@example.com"), false);
   });
 });
 
@@ -393,11 +360,9 @@ test("environment runner can use OpenAI-compatible provider values from JSON con
                     contributionType: "test",
                     affectedArea: "parser regression coverage",
                     impactLevel: "medium",
-                    evidenceSummary:
-                      "Added regression coverage based on test evidence.",
+                    evidenceSummary: "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
-                    publicRecognitionText:
-                      "Added regression coverage for the parser.",
+                    publicRecognitionText: "Added regression coverage for the parser.",
                     confidence: 0.8,
                   }),
                 },
@@ -469,11 +434,9 @@ test("environment runner can use provider values from TypeScript config-path", a
                     contributionType: "test",
                     affectedArea: "parser regression coverage",
                     impactLevel: "medium",
-                    evidenceSummary:
-                      "Added regression coverage based on test evidence.",
+                    evidenceSummary: "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
-                    publicRecognitionText:
-                      "Added regression coverage for the parser.",
+                    publicRecognitionText: "Added regression coverage for the parser.",
                     confidence: 0.8,
                   }),
                 },
@@ -541,11 +504,9 @@ test("environment runner lets explicit provider inputs override config-path valu
                     contributionType: "test",
                     affectedArea: "parser regression coverage",
                     impactLevel: "medium",
-                    evidenceSummary:
-                      "Added regression coverage based on test evidence.",
+                    evidenceSummary: "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
-                    publicRecognitionText:
-                      "Added regression coverage for the parser.",
+                    publicRecognitionText: "Added regression coverage for the parser.",
                     confidence: 0.8,
                   }),
                 },
@@ -694,10 +655,7 @@ test("environment runner writes a sanitized JSON summary artifact inside the wor
     assert.equal(stderr, "");
     assert.equal(JSON.parse(stdout).draftCount, 1);
     assert.equal(summary.draftCount, 1);
-    assert.equal(
-      outputText.includes(`summary-json-path=${summaryJsonPath}`),
-      true,
-    );
+    assert.equal(outputText.includes(`summary-json-path=${summaryJsonPath}`), true);
     assert.equal(summaryText.includes("Adds a failing parser case"), false);
     assert.equal(summaryText.includes("parses nested input"), false);
   });
@@ -739,10 +697,7 @@ test("environment runner rejects summary artifact paths outside the workspace be
 
     assert.equal(exitCode, 1);
     assert.equal(stdout, "");
-    assert.equal(
-      stderr,
-      "INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.\n",
-    );
+    assert.equal(stderr, "INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.\n");
     assert.deepEqual(requests, []);
   });
 });
@@ -787,10 +742,7 @@ test("environment runner writes a bounded GitHub step summary", async () => {
     assert.equal(JSON.parse(stdout).draftCount, 1);
     assert.equal(summaryText.includes("## Clarissimi dry-run summary"), true);
     assert.equal(summaryText.includes("| Drafts | 1 |"), true);
-    assert.equal(
-      summaryText.includes("| Input source | github_fixture |"),
-      true,
-    );
+    assert.equal(summaryText.includes("| Input source | github_fixture |"), true);
     assert.equal(summaryText.includes("Adds a failing parser case"), false);
     assert.equal(summaryText.includes("parses nested input"), false);
   });
@@ -847,10 +799,7 @@ test("environment runner returns usage failure for missing input source", async 
 
   assert.equal(exitCode, 1);
   assert.equal(stdout, "");
-  assert.equal(
-    stderr,
-    "The action skeleton requires GITHUB_EVENT_PATH or INPUT_GITHUB_FIXTURE.\n",
-  );
+  assert.equal(stderr, "The action skeleton requires GITHUB_EVENT_PATH or INPUT_GITHUB_FIXTURE.\n");
 });
 
 test("environment runner returns usage failure for unsupported mode", async () => {
@@ -989,10 +938,7 @@ test("promote-draft skips provider config and rejects draft paths outside the in
 
     assert.equal(exitCode, 1);
     assert.equal(stdout, "");
-    assert.equal(
-      stderr,
-      "INPUT_DRAFT_PATH must point inside .clarissimi/drafts/.\n",
-    );
+    assert.equal(stderr, "INPUT_DRAFT_PATH must point inside .clarissimi/drafts/.\n");
   });
 });
 
@@ -1114,10 +1060,7 @@ test("environment runner returns usage failure for explicit source conflict", as
 
     assert.equal(exitCode, 1);
     assert.equal(stdout, "");
-    assert.equal(
-      stderr,
-      "Use only one action input source: eventPath or githubFixturePath.\n",
-    );
+    assert.equal(stderr, "Use only one action input source: eventPath or githubFixturePath.\n");
   });
 });
 
@@ -1152,11 +1095,7 @@ test("environment runner returns unexpected failure for malformed event JSON", a
 test("skips an unmerged pull request event without drafting", async () => {
   await withTempDir(async (dir) => {
     const eventPath = join(dir, "event.json");
-    await writeFile(
-      eventPath,
-      JSON.stringify(pullRequestEvent({ merged_at: null })),
-      "utf8",
-    );
+    await writeFile(eventPath, JSON.stringify(pullRequestEvent({ merged_at: null })), "utf8");
 
     const summary = await runActionDryRun({
       eventPath,
@@ -1172,11 +1111,7 @@ test("environment runner treats unmerged pull request events as skipped success"
   await withTempDir(async (dir) => {
     const eventPath = join(dir, "event.json");
     const summaryPath = join(dir, "step-summary.md");
-    await writeFile(
-      eventPath,
-      JSON.stringify(pullRequestEvent({ merged_at: null })),
-      "utf8",
-    );
+    await writeFile(eventPath, JSON.stringify(pullRequestEvent({ merged_at: null })), "utf8");
     let stdout = "";
     let stderr = "";
 
@@ -1202,10 +1137,7 @@ test("environment runner treats unmerged pull request events as skipped success"
     assert.equal(stderr, "");
     assert.equal(parsed.draftCount, 0);
     assert.equal(parsed.skippedEntryCount, 1);
-    assert.equal(
-      parsed.skippedReason,
-      "GitHub pull request event is not a merged pull request.",
-    );
+    assert.equal(parsed.skippedReason, "GitHub pull request event is not a merged pull request.");
     assert.equal(
       summaryText.includes(
         "| Skipped reason | GitHub pull request event is not a merged pull request. |",

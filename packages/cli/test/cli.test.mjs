@@ -237,10 +237,7 @@ test("validate-config accepts explicit JSON config when TypeScript config also e
       "utf8",
     );
 
-    const result = await run(
-      ["validate-config", "--config", jsonConfigPath, "--json"],
-      dir,
-    );
+    const result = await run(["validate-config", "--config", jsonConfigPath, "--json"], dir);
     const output = JSON.parse(result.stdout);
 
     assert.equal(result.exitCode, 0);
@@ -271,14 +268,7 @@ test("flag-only commands reject unexpected positional arguments", async () => {
     const commands = [
       ["validate-config", "unexpected"],
       ["validate-ledger", "unexpected"],
-      [
-        "recognize",
-        "unexpected",
-        "--fixture",
-        "missing.json",
-        "--mode",
-        "dry-run",
-      ],
+      ["recognize", "unexpected", "--fixture", "missing.json", "--mode", "dry-run"],
       ["stage-draft", "unexpected", "--draft", "missing.json"],
       ["approve-draft", "unexpected", "--draft", "missing.json"],
       ["import-draft", "unexpected", "--draft", "missing.json"],
@@ -342,10 +332,7 @@ test("validate-ledger validates approved JSONL records", async () => {
     const ledger = join(dir, "ledger.jsonl");
     await writeFile(ledger, `${JSON.stringify(assessment())}\n`, "utf8");
 
-    const result = await run(
-      ["validate-ledger", "--ledger", ledger, "--json"],
-      dir,
-    );
+    const result = await run(["validate-ledger", "--ledger", ledger, "--json"], dir);
     const output = JSON.parse(result.stdout);
 
     assert.equal(result.exitCode, 0);
@@ -362,10 +349,7 @@ test("validate-ledger rejects draft records", async () => {
       "utf8",
     );
 
-    const result = await run(
-      ["validate-ledger", "--ledger", ledger, "--json"],
-      dir,
-    );
+    const result = await run(["validate-ledger", "--ledger", ledger, "--json"], dir);
 
     assert.equal(result.exitCode, 3);
     assert.equal(JSON.parse(result.stdout).ok, false);
@@ -383,8 +367,7 @@ test("validate-ledger rejects duplicate contributor source records", async () =>
           contributionType: "documentation",
           affectedArea: "setup guide",
           suggestedBadge: "Docs Pathfinder",
-          publicRecognitionText:
-            "Improved setup documentation for first-time contributors.",
+          publicRecognitionText: "Improved setup documentation for first-time contributors.",
         }),
       ]
         .map((record) => JSON.stringify(record))
@@ -392,10 +375,7 @@ test("validate-ledger rejects duplicate contributor source records", async () =>
       "utf8",
     );
 
-    const result = await run(
-      ["validate-ledger", "--ledger", ledger, "--json"],
-      dir,
-    );
+    const result = await run(["validate-ledger", "--ledger", ledger, "--json"], dir);
     const output = JSON.parse(result.stdout);
 
     assert.equal(result.exitCode, 3);
@@ -478,9 +458,7 @@ test("analytics recent-share reports maintainer-only recognition share without w
     assert.equal(output.analytics.window.totalRecognitionWeight, 4);
     assert.equal(output.analytics.contributors[0].contributor.login, "octocat");
     assert.equal(output.analytics.contributors[0].recognitionShare, 0.75);
-    await assert.rejects(
-      readFile(join(dir, ".clarissimi", "contributors.json"), "utf8"),
-    );
+    await assert.rejects(readFile(join(dir, ".clarissimi", "contributors.json"), "utf8"));
     await assert.rejects(readFile(join(dir, "CONTRIBUTORS.md"), "utf8"));
   });
 });
@@ -491,15 +469,7 @@ test("analytics recent-share rejects invalid as-of values as usage errors", asyn
     await writeFile(ledger, `${JSON.stringify(assessment())}\n`, "utf8");
 
     const result = await run(
-      [
-        "analytics",
-        "recent-share",
-        "--ledger",
-        ledger,
-        "--as-of",
-        "not-a-date",
-        "--json",
-      ],
+      ["analytics", "recent-share", "--ledger", ledger, "--as-of", "not-a-date", "--json"],
       dir,
     );
 
@@ -515,15 +485,7 @@ test("analytics recent-share rejects invalid window-day values as usage errors",
     await writeFile(ledger, `${JSON.stringify(assessment())}\n`, "utf8");
 
     const result = await run(
-      [
-        "analytics",
-        "recent-share",
-        "--ledger",
-        ledger,
-        "--window-days",
-        "0",
-        "--json",
-      ],
+      ["analytics", "recent-share", "--ledger", ledger, "--window-days", "0", "--json"],
       dir,
     );
 
@@ -555,10 +517,7 @@ test("rebuild rejects duplicate ledger records before writing derived outputs", 
       "utf8",
     );
 
-    const result = await run(
-      ["rebuild", "--ledger", ledger, "--out-dir", outDir, "--json"],
-      dir,
-    );
+    const result = await run(["rebuild", "--ledger", ledger, "--out-dir", outDir, "--json"], dir);
     const output = JSON.parse(result.stdout);
 
     assert.equal(result.exitCode, 3);
@@ -593,14 +552,7 @@ test("stage-draft writes a sanitized review copy without touching the ledger", a
     );
 
     const result = await run(
-      [
-        "stage-draft",
-        "--draft",
-        draftPath,
-        "--drafts-dir",
-        draftsDir,
-        "--json",
-      ],
+      ["stage-draft", "--draft", draftPath, "--drafts-dir", draftsDir, "--json"],
       dir,
     );
     const output = JSON.parse(result.stdout);
@@ -611,9 +563,7 @@ test("stage-draft writes a sanitized review copy without touching the ledger", a
     assert.equal(output.command, "stage-draft");
     assert.equal(output.approvalStatus, "draft");
     assert.equal(
-      output.stagedDraftPath.endsWith(
-        "example-project-merged_pull_request-42.json",
-      ),
+      output.stagedDraftPath.endsWith("example-project-merged_pull_request-42.json"),
       true,
     );
     assert.equal(stagedDraft.maintainerApprovalStatus, "draft");
@@ -640,14 +590,7 @@ test("stage-draft accepts delegated envelopes without storing provenance", async
     );
 
     const result = await run(
-      [
-        "stage-draft",
-        "--draft",
-        draftPath,
-        "--drafts-dir",
-        draftsDir,
-        "--json",
-      ],
+      ["stage-draft", "--draft", draftPath, "--drafts-dir", draftsDir, "--json"],
       dir,
     );
     const output = JSON.parse(result.stdout);
@@ -665,17 +608,11 @@ test("stage-draft rejects approved assessments before staging", async () => {
     const draftPath = join(dir, "approved-draft.json");
     await writeFile(draftPath, JSON.stringify(assessment()), "utf8");
 
-    const result = await run(
-      ["stage-draft", "--draft", draftPath, "--json"],
-      dir,
-    );
+    const result = await run(["stage-draft", "--draft", draftPath, "--json"], dir);
     const output = JSON.parse(result.stdout);
 
     assert.equal(result.exitCode, 6);
-    assert.equal(
-      output.message,
-      "Only draft assessments can be staged for maintainer review.",
-    );
+    assert.equal(output.message, "Only draft assessments can be staged for maintainer review.");
   });
 });
 
@@ -688,21 +625,12 @@ test("stage-draft rejects duplicate staged draft paths", async () => {
       "utf8",
     );
 
-    const first = await run(
-      ["stage-draft", "--draft", draftPath, "--json"],
-      dir,
-    );
-    const second = await run(
-      ["stage-draft", "--draft", draftPath, "--json"],
-      dir,
-    );
+    const first = await run(["stage-draft", "--draft", draftPath, "--json"], dir);
+    const second = await run(["stage-draft", "--draft", draftPath, "--json"], dir);
 
     assert.equal(first.exitCode, 0);
     assert.equal(second.exitCode, 6);
-    assert.equal(
-      JSON.parse(second.stdout).message.includes("already staged"),
-      true,
-    );
+    assert.equal(JSON.parse(second.stdout).message.includes("already staged"), true);
   });
 });
 
@@ -729,10 +657,7 @@ test("approve-draft marks a staged draft approved without touching the ledger", 
       "utf8",
     );
 
-    const result = await run(
-      ["approve-draft", "--draft", draftPath, "--json"],
-      dir,
-    );
+    const result = await run(["approve-draft", "--draft", draftPath, "--json"], dir);
     const output = JSON.parse(result.stdout);
     const approvedText = await readFile(draftPath, "utf8");
     const approvedDraft = JSON.parse(approvedText);
@@ -741,10 +666,7 @@ test("approve-draft marks a staged draft approved without touching the ledger", 
     assert.equal(output.command, "approve-draft");
     assert.equal(output.approvalStatus, "approved");
     assert.equal(approvedDraft.maintainerApprovalStatus, "approved");
-    assert.equal(
-      approvedText.includes("Raw PR body should not survive approval"),
-      false,
-    );
+    assert.equal(approvedText.includes("Raw PR body should not survive approval"), false);
     await assert.rejects(readFile(ledger, "utf8"));
   });
 });
@@ -766,10 +688,7 @@ test("approve-draft accepts delegated envelopes without storing provenance", asy
       "utf8",
     );
 
-    const result = await run(
-      ["approve-draft", "--draft", draftPath, "--json"],
-      dir,
-    );
+    const result = await run(["approve-draft", "--draft", draftPath, "--json"], dir);
     const approvedText = await readFile(draftPath, "utf8");
 
     assert.equal(result.exitCode, 0);
@@ -785,17 +704,11 @@ test("approve-draft rejects non-draft approval states", async () => {
     const draftPath = join(dir, "approved-draft.json");
     await writeFile(draftPath, JSON.stringify(assessment()), "utf8");
 
-    const result = await run(
-      ["approve-draft", "--draft", draftPath, "--json"],
-      dir,
-    );
+    const result = await run(["approve-draft", "--draft", draftPath, "--json"], dir);
     const output = JSON.parse(result.stdout);
 
     assert.equal(result.exitCode, 6);
-    assert.equal(
-      output.message,
-      "Only draft assessments can be staged for maintainer review.",
-    );
+    assert.equal(output.message, "Only draft assessments can be staged for maintainer review.");
   });
 });
 
@@ -809,10 +722,7 @@ test("approve-draft output can be imported into the public ledger", async () => 
       "utf8",
     );
 
-    const approvalResult = await run(
-      ["approve-draft", "--draft", draftPath, "--json"],
-      dir,
-    );
+    const approvalResult = await run(["approve-draft", "--draft", draftPath, "--json"], dir);
     const importResult = await run(
       ["import-draft", "--draft", draftPath, "--ledger", ledger, "--json"],
       dir,
@@ -822,10 +732,7 @@ test("approve-draft output can be imported into the public ledger", async () => 
     assert.equal(approvalResult.exitCode, 0);
     assert.equal(importResult.exitCode, 0);
     assert.equal(JSON.parse(importResult.stdout).records, 1);
-    assert.equal(
-      ledgerText.includes('"maintainerApprovalStatus":"approved"'),
-      true,
-    );
+    assert.equal(ledgerText.includes('"maintainerApprovalStatus":"approved"'), true);
   });
 });
 
@@ -853,34 +760,19 @@ test("import-draft appends an approved agent draft and writes derived outputs", 
     );
 
     const result = await run(
-      [
-        "import-draft",
-        "--draft",
-        draftPath,
-        "--ledger",
-        ledger,
-        "--out-dir",
-        outDir,
-        "--json",
-      ],
+      ["import-draft", "--draft", draftPath, "--ledger", ledger, "--out-dir", outDir, "--json"],
       dir,
     );
     const output = JSON.parse(result.stdout);
     const ledgerText = await readFile(ledger, "utf8");
-    const contributorsMarkdown = await readFile(
-      join(outDir, "CONTRIBUTORS.md"),
-      "utf8",
-    );
+    const contributorsMarkdown = await readFile(join(outDir, "CONTRIBUTORS.md"), "utf8");
 
     assert.equal(result.exitCode, 0);
     assert.equal(output.command, "import-draft");
     assert.equal(output.records, 1);
     assert.equal(output.wroteDerivedFiles, true);
     assert.equal(ledgerText.includes("Added regression coverage"), true);
-    assert.equal(
-      ledgerText.includes("Raw PR body should not be written"),
-      false,
-    );
+    assert.equal(ledgerText.includes("Raw PR body should not be written"), false);
     assert.equal(contributorsMarkdown.includes("## octocat"), true);
   });
 });
@@ -979,10 +871,7 @@ test("import-draft rejects duplicate contributor and source records", async () =
     );
 
     assert.equal(result.exitCode, 6);
-    assert.equal(
-      JSON.parse(result.stdout).message.includes("already exists"),
-      true,
-    );
+    assert.equal(JSON.parse(result.stdout).message.includes("already exists"), true);
   });
 });
 
@@ -1022,10 +911,7 @@ test("recognize renders previews when fixture explicitly carries approval", asyn
     assert.equal(result.exitCode, 0);
     assert.equal(output.approvalStatus, "approved");
     assert.equal(output.publicOutputsRendered, true);
-    assert.equal(
-      output.outputPreview.contributorsMarkdown.includes("## octocat"),
-      true,
-    );
+    assert.equal(output.outputPreview.contributorsMarkdown.includes("## octocat"), true);
   });
 });
 
@@ -1035,14 +921,7 @@ test("recognize collects GitHub merged PR fixture evidence", async () => {
     await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
 
     const result = await run(
-      [
-        "recognize",
-        "--github-fixture",
-        fixturePath,
-        "--mode",
-        "dry-run",
-        "--json",
-      ],
+      ["recognize", "--github-fixture", fixturePath, "--mode", "dry-run", "--json"],
       dir,
     );
     const output = JSON.parse(result.stdout);
@@ -1052,10 +931,7 @@ test("recognize collects GitHub merged PR fixture evidence", async () => {
     assert.equal(output.approvalStatus, "draft");
     assert.equal(output.assessment.contributor.login, "octocat");
     assert.equal(output.assessment.source.pullRequestNumber, 42);
-    assert.equal(
-      JSON.stringify(output).includes("Adds a failing parser case"),
-      false,
-    );
+    assert.equal(JSON.stringify(output).includes("Adds a failing parser case"), false);
   });
 });
 
@@ -1116,11 +992,9 @@ test("recognize can use the OpenAI-compatible provider when explicitly selected"
                     contributionType: "test",
                     affectedArea: "parser regression coverage",
                     impactLevel: "medium",
-                    evidenceSummary:
-                      "Added regression coverage based on test evidence.",
+                    evidenceSummary: "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
-                    publicRecognitionText:
-                      "Added regression coverage for the parser.",
+                    publicRecognitionText: "Added regression coverage for the parser.",
                     confidence: 0.8,
                   }),
                 },
@@ -1141,10 +1015,7 @@ test("recognize can use the OpenAI-compatible provider when explicitly selected"
     );
     assert.equal(requests.length, 1);
     assert.deepEqual(requests[0].body.thinking, { type: "disabled" });
-    assert.equal(
-      JSON.stringify(requests[0].body).includes("person@example.com"),
-      false,
-    );
+    assert.equal(JSON.stringify(requests[0].body).includes("person@example.com"), false);
   });
 });
 
@@ -1166,40 +1037,34 @@ test("recognize uses JSON config provider values when flags are omitted", async 
       "utf8",
     );
 
-    const result = await run(
-      ["recognize", "--fixture", fixturePath, "--json"],
-      dir,
-      {
-        env: {
-          CLARISSIMI_PROVIDER_TOKEN: "unit-token",
-        },
-        fetch: async (url, init) => {
-          requests.push({
-            url: String(url),
-            body: JSON.parse(init.body),
-          });
-          return jsonResponse({
-            choices: [
-              {
-                message: {
-                  content: JSON.stringify({
-                    contributionType: "test",
-                    affectedArea: "parser regression coverage",
-                    impactLevel: "medium",
-                    evidenceSummary:
-                      "Added regression coverage based on test evidence.",
-                    suggestedBadge: "Regression Shield",
-                    publicRecognitionText:
-                      "Added regression coverage for the parser.",
-                    confidence: 0.8,
-                  }),
-                },
-              },
-            ],
-          });
-        },
+    const result = await run(["recognize", "--fixture", fixturePath, "--json"], dir, {
+      env: {
+        CLARISSIMI_PROVIDER_TOKEN: "unit-token",
       },
-    );
+      fetch: async (url, init) => {
+        requests.push({
+          url: String(url),
+          body: JSON.parse(init.body),
+        });
+        return jsonResponse({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  contributionType: "test",
+                  affectedArea: "parser regression coverage",
+                  impactLevel: "medium",
+                  evidenceSummary: "Added regression coverage based on test evidence.",
+                  suggestedBadge: "Regression Shield",
+                  publicRecognitionText: "Added regression coverage for the parser.",
+                  confidence: 0.8,
+                }),
+              },
+            },
+          ],
+        });
+      },
+    });
     const output = JSON.parse(result.stdout);
 
     assert.equal(result.exitCode, 0);
@@ -1232,40 +1097,34 @@ test("recognize uses TypeScript config provider values when flags are omitted", 
       "utf8",
     );
 
-    const result = await run(
-      ["recognize", "--fixture", fixturePath, "--json"],
-      dir,
-      {
-        env: {
-          CLARISSIMI_PROVIDER_TOKEN: "unit-token",
-        },
-        fetch: async (url, init) => {
-          requests.push({
-            url: String(url),
-            body: JSON.parse(init.body),
-          });
-          return jsonResponse({
-            choices: [
-              {
-                message: {
-                  content: JSON.stringify({
-                    contributionType: "test",
-                    affectedArea: "parser regression coverage",
-                    impactLevel: "medium",
-                    evidenceSummary:
-                      "Added regression coverage based on test evidence.",
-                    suggestedBadge: "Regression Shield",
-                    publicRecognitionText:
-                      "Added regression coverage for the parser.",
-                    confidence: 0.8,
-                  }),
-                },
-              },
-            ],
-          });
-        },
+    const result = await run(["recognize", "--fixture", fixturePath, "--json"], dir, {
+      env: {
+        CLARISSIMI_PROVIDER_TOKEN: "unit-token",
       },
-    );
+      fetch: async (url, init) => {
+        requests.push({
+          url: String(url),
+          body: JSON.parse(init.body),
+        });
+        return jsonResponse({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  contributionType: "test",
+                  affectedArea: "parser regression coverage",
+                  impactLevel: "medium",
+                  evidenceSummary: "Added regression coverage based on test evidence.",
+                  suggestedBadge: "Regression Shield",
+                  publicRecognitionText: "Added regression coverage for the parser.",
+                  confidence: 0.8,
+                }),
+              },
+            },
+          ],
+        });
+      },
+    });
 
     assert.equal(result.exitCode, 0);
     assert.equal(requests.length, 1);
@@ -1320,11 +1179,9 @@ test("recognize lets explicit provider flags override JSON config values", async
                     contributionType: "test",
                     affectedArea: "parser regression coverage",
                     impactLevel: "medium",
-                    evidenceSummary:
-                      "Added regression coverage based on test evidence.",
+                    evidenceSummary: "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
-                    publicRecognitionText:
-                      "Added regression coverage for the parser.",
+                    publicRecognitionText: "Added regression coverage for the parser.",
                     confidence: 0.8,
                   }),
                 },
@@ -1479,10 +1336,7 @@ test("rebuild writes derived outputs only when out-dir is provided", async () =>
     await mkdir(ledgerDir, { recursive: true });
     await writeFile(ledger, `${JSON.stringify(assessment())}\n`, "utf8");
 
-    const result = await run(
-      ["rebuild", "--ledger", ledger, "--out-dir", outDir, "--json"],
-      dir,
-    );
+    const result = await run(["rebuild", "--ledger", ledger, "--out-dir", outDir, "--json"], dir);
     const output = JSON.parse(result.stdout);
     const markdown = await readFile(join(outDir, "CONTRIBUTORS.md"), "utf8");
 
@@ -1501,35 +1355,16 @@ test("rebuild renders the configured Markdown summary table and lets the flag ov
     const detailsOutDir = join(dir, "details-out");
     await mkdir(ledgerDir, { recursive: true });
     await writeFile(ledger, `${JSON.stringify(assessment())}\n`, "utf8");
-    await writeFile(
-      configPath,
-      `${JSON.stringify({ markdownSummary: "table" })}\n`,
-      "utf8",
-    );
+    await writeFile(configPath, `${JSON.stringify({ markdownSummary: "table" })}\n`, "utf8");
 
     const tableResult = await run(
-      [
-        "rebuild",
-        "--ledger",
-        ledger,
-        "--out-dir",
-        tableOutDir,
-        "--config",
-        configPath,
-        "--json",
-      ],
+      ["rebuild", "--ledger", ledger, "--out-dir", tableOutDir, "--config", configPath, "--json"],
       dir,
     );
-    const tableMarkdown = await readFile(
-      join(tableOutDir, "CONTRIBUTORS.md"),
-      "utf8",
-    );
+    const tableMarkdown = await readFile(join(tableOutDir, "CONTRIBUTORS.md"), "utf8");
 
     assert.equal(tableResult.exitCode, 0);
-    assert.equal(
-      tableMarkdown.includes("| Contributor | Total | Types |"),
-      true,
-    );
+    assert.equal(tableMarkdown.includes("| Contributor | Total | Types |"), true);
     assert.equal(tableMarkdown.includes("## octocat"), true);
 
     const detailsResult = await run(
@@ -1547,16 +1382,10 @@ test("rebuild renders the configured Markdown summary table and lets the flag ov
       ],
       dir,
     );
-    const detailsMarkdown = await readFile(
-      join(detailsOutDir, "CONTRIBUTORS.md"),
-      "utf8",
-    );
+    const detailsMarkdown = await readFile(join(detailsOutDir, "CONTRIBUTORS.md"), "utf8");
 
     assert.equal(detailsResult.exitCode, 0);
-    assert.equal(
-      detailsMarkdown.includes("| Contributor | Total | Types |"),
-      false,
-    );
+    assert.equal(detailsMarkdown.includes("| Contributor | Total | Types |"), false);
     assert.equal(detailsMarkdown.includes("## octocat"), true);
   });
 });

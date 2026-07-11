@@ -63,11 +63,7 @@ test("publishes a proposal branch without mutating remote main", async () => {
     const repositoryDir = join(dir, "repo");
     const stagedOutputDir = join(dir, "staged");
     await initRepositoryWithRemote(repositoryDir, remoteDir);
-    const remoteMainSha = await git(repositoryDir, [
-      "ls-remote",
-      "origin",
-      "refs/heads/main",
-    ]);
+    const remoteMainSha = await git(repositoryDir, ["ls-remote", "origin", "refs/heads/main"]);
     const staging = await stageProposalRecognitionOutputs({
       outputDir: stagedOutputDir,
       assessments: [assessment()],
@@ -88,18 +84,12 @@ test("publishes a proposal branch without mutating remote main", async () => {
     assert.equal(result.remoteName, "origin");
     assert.equal(result.branchName, branch.branchName);
     assert.equal(result.commitSha, branch.commitSha);
-    assert.equal(
-      await remoteBranchSha(repositoryDir, branch.branchName),
-      branch.commitSha,
-    );
+    assert.equal(await remoteBranchSha(repositoryDir, branch.branchName), branch.commitSha);
     assert.equal(
       await git(repositoryDir, ["ls-remote", "origin", "refs/heads/main"]),
       remoteMainSha,
     );
-    assert.equal(
-      result.rollbackHint.includes(`origin/${branch.branchName}`),
-      true,
-    );
+    assert.equal(result.rollbackHint.includes(`origin/${branch.branchName}`), true);
   });
 });
 
@@ -122,17 +112,9 @@ test("rejects publishing when the local branch no longer matches the writer resu
     });
 
     await git(repositoryDir, ["checkout", branch.branchName]);
-    await writeFile(
-      join(repositoryDir, "CONTRIBUTORS.md"),
-      "# Manual edit\n",
-      "utf8",
-    );
+    await writeFile(join(repositoryDir, "CONTRIBUTORS.md"), "# Manual edit\n", "utf8");
     await git(repositoryDir, ["add", "CONTRIBUTORS.md"]);
-    await git(repositoryDir, [
-      "commit",
-      "-m",
-      "Change proposal branch after writer",
-    ]);
+    await git(repositoryDir, ["commit", "-m", "Change proposal branch after writer"]);
     await git(repositoryDir, ["checkout", "main"]);
 
     await assert.rejects(
@@ -142,8 +124,7 @@ test("rejects publishing when the local branch no longer matches the writer resu
           branch,
         }),
       (error) =>
-        error instanceof ProposalBranchPublisherError &&
-        error.code === "branch_commit_mismatch",
+        error instanceof ProposalBranchPublisherError && error.code === "branch_commit_mismatch",
     );
   });
 });
@@ -170,16 +151,8 @@ async function initRepositoryWithRemote(repositoryDir, remoteDir) {
   await mkdir(repositoryDir);
   await git(repositoryDir, ["init", "-b", "main"]);
   await git(repositoryDir, ["config", "user.name", "Clarissimi Tests"]);
-  await git(repositoryDir, [
-    "config",
-    "user.email",
-    "clarissimi-tests.invalid",
-  ]);
-  await writeFile(
-    join(repositoryDir, "README.md"),
-    "# Fixture Repository\n",
-    "utf8",
-  );
+  await git(repositoryDir, ["config", "user.email", "clarissimi-tests.invalid"]);
+  await writeFile(join(repositoryDir, "README.md"), "# Fixture Repository\n", "utf8");
   await git(repositoryDir, ["add", "README.md"]);
   await git(repositoryDir, ["commit", "-m", "Initial commit"]);
   await git(repositoryDir, ["init", "--bare", remoteDir]);
@@ -188,11 +161,7 @@ async function initRepositoryWithRemote(repositoryDir, remoteDir) {
 }
 
 async function remoteBranchSha(repositoryDir, branchName) {
-  const output = await git(repositoryDir, [
-    "ls-remote",
-    "origin",
-    `refs/heads/${branchName}`,
-  ]);
+  const output = await git(repositoryDir, ["ls-remote", "origin", `refs/heads/${branchName}`]);
   return output.split(/\s+/)[0];
 }
 

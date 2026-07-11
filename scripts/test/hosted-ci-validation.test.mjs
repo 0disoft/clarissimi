@@ -67,10 +67,7 @@ test("hosted CI validation resolves HEAD and watches an in-progress workflow run
 
   assert.equal(exitCode, 0);
   assert.deepEqual(
-    harness.commands.map((command) => [
-      command.command,
-      ...command.args.slice(0, 2),
-    ]),
+    harness.commands.map((command) => [command.command, ...command.args.slice(0, 2)]),
     [
       ["git", "rev-parse", "HEAD"],
       ["gh", "--version"],
@@ -81,9 +78,7 @@ test("hosted CI validation resolves HEAD and watches an in-progress workflow run
 
   const runList = harness.commands.find(
     (command) =>
-      command.command === "gh" &&
-      command.args[0] === "run" &&
-      command.args[1] === "list",
+      command.command === "gh" && command.args[0] === "run" && command.args[1] === "list",
   );
   assert.equal(runList.args.includes("--workflow"), true);
   assert.equal(runList.args[runList.args.indexOf("--workflow") + 1], "CI");
@@ -92,9 +87,7 @@ test("hosted CI validation resolves HEAD and watches an in-progress workflow run
 
   const runWatch = harness.commands.find(
     (command) =>
-      command.command === "gh" &&
-      command.args[0] === "run" &&
-      command.args[1] === "watch",
+      command.command === "gh" && command.args[0] === "run" && command.args[1] === "watch",
   );
   assert.deepEqual(runWatch.args, [
     "run",
@@ -115,23 +108,14 @@ test("hosted CI validation rejects invalid inputs before calling git or gh", asy
   );
 
   assert.equal(invalidRepoExitCode, 2);
-  assert.equal(
-    invalidRepo.errors.includes("--repo must use owner/name format."),
-    true,
-  );
+  assert.equal(invalidRepo.errors.includes("--repo must use owner/name format."), true);
   assert.equal(invalidRepo.commands.length, 0);
 
   const invalidSha = createHarness({ headSha: exampleSha });
-  const invalidShaExitCode = await runHostedCiValidation(
-    ["--sha", "abc123"],
-    invalidSha.runtime,
-  );
+  const invalidShaExitCode = await runHostedCiValidation(["--sha", "abc123"], invalidSha.runtime);
 
   assert.equal(invalidShaExitCode, 2);
-  assert.equal(
-    invalidSha.errors.includes("--sha must be a 40-character commit SHA."),
-    true,
-  );
+  assert.equal(invalidSha.errors.includes("--sha must be a 40-character commit SHA."), true);
   assert.equal(invalidSha.commands.length, 0);
 
   const conflictingBranchAliases = createHarness({ headSha: exampleSha });
@@ -180,9 +164,7 @@ test("hosted CI validation fails for completed unsuccessful workflow runs", asyn
   assert.equal(
     harness.commands.some(
       (command) =>
-        command.command === "gh" &&
-        command.args[0] === "run" &&
-        command.args[1] === "watch",
+        command.command === "gh" && command.args[0] === "run" && command.args[1] === "watch",
     ),
     false,
   );

@@ -1,11 +1,7 @@
 import { validateContributionAssessment } from "@clarissimi/schemas";
 import type { ContributionAssessment } from "@clarissimi/schemas";
 
-import {
-  DRAFTS_DIR_PATH,
-  RendererValidationError,
-  type DraftReviewRecord,
-} from "./types.js";
+import { DRAFTS_DIR_PATH, RendererValidationError, type DraftReviewRecord } from "./types.js";
 import { renderPrettyJson } from "./ledger.js";
 
 export function toDraftReviewRecord(value: unknown): DraftReviewRecord {
@@ -43,18 +39,14 @@ export function draftReviewPathForAssessment(value: unknown): string {
   return `${DRAFTS_DIR_PATH}/${draftReviewFilename(record)}`;
 }
 
-export function draftReviewFilename(
-  assessment: ContributionAssessment,
-): string {
+export function draftReviewFilename(assessment: ContributionAssessment): string {
   const repository = sanitizePathPart(assessment.source.repository);
   const event = sanitizePathPart(assessment.source.event);
 
   return `${repository}-${event}-${assessment.source.pullRequestNumber}.json`;
 }
 
-function sanitizeDraftReviewRecord(
-  assessment: ContributionAssessment,
-): DraftReviewRecord {
+function sanitizeDraftReviewRecord(assessment: ContributionAssessment): DraftReviewRecord {
   return {
     schemaVersion: assessment.schemaVersion,
     contributor: {
@@ -81,16 +73,12 @@ function sanitizeDraftReviewRecord(
       repository: assessment.source.repository,
       event: assessment.source.event,
       pullRequestNumber: assessment.source.pullRequestNumber,
-      ...(assessment.source.mergedAt === undefined
-        ? {}
-        : { mergedAt: assessment.source.mergedAt }),
+      ...(assessment.source.mergedAt === undefined ? {} : { mergedAt: assessment.source.mergedAt }),
     },
   };
 }
 
 function sanitizePathPart(value: string): string {
-  const normalized = value
-    .replace(/[^A-Za-z0-9._-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  const normalized = value.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
   return normalized.length === 0 ? "unknown" : normalized;
 }

@@ -100,24 +100,22 @@ test("release readiness rejects format command drift", () => {
   const fakeSuccessScripts = createValidScripts();
   fakeSuccessScripts.format = "node -e \"console.log('formatted')\"";
 
-  assert.deepEqual(
-    validatePackageScriptRegistration({ scripts: fakeSuccessScripts }),
-    ["package.json scripts.format must include prettier . --check."],
-  );
+  assert.deepEqual(validatePackageScriptRegistration({ scripts: fakeSuccessScripts }), [
+    "package.json scripts.format must include oxfmt --check.",
+  ]);
 });
 
 test("release readiness accepts the formatter dependency and config contract", () => {
   const packageJson = {
-    devDependencies: { prettier: formatterContract.version },
+    devDependencies: { oxfmt: formatterContract.version },
   };
-  const ignoreText = `${formatterContract.requiredIgnoreEntries.join("\n")}\n`;
 
   assert.deepEqual(
-    validateFormatterContract(
-      packageJson,
-      { endOfLine: "lf", proseWrap: "preserve" },
-      ignoreText,
-    ),
+    validateFormatterContract(packageJson, {
+      endOfLine: "lf",
+      proseWrap: "preserve",
+      ignorePatterns: formatterContract.requiredIgnorePatterns,
+    }),
     [],
   );
 });
@@ -125,21 +123,19 @@ test("release readiness accepts the formatter dependency and config contract", (
 test("release readiness rejects formatter dependency, config, and ignore drift", () => {
   assert.deepEqual(
     validateFormatterContract(
-      { devDependencies: { prettier: "^3.9.5" } },
-      { endOfLine: "auto", proseWrap: "always" },
-      "dist/\n",
+      { devDependencies: { oxfmt: "^0.58.0" } },
+      { endOfLine: "crlf", proseWrap: "always", ignorePatterns: ["dist/**"] },
     ),
     [
-      "package.json devDependencies.prettier must remain exactly 3.9.5.",
-      '.prettierrc.json endOfLine must remain "lf".',
-      '.prettierrc.json proseWrap must remain "preserve".',
-      ".prettierignore must include action-dist/.",
-      ".prettierignore must include build/.",
-      ".prettierignore must include coverage/.",
-      ".prettierignore must include node_modules/.",
-      ".prettierignore must include .cache/.",
-      ".prettierignore must include .tmp/.",
-      ".prettierignore must include tmp/.",
+      "package.json devDependencies.oxfmt must remain exactly 0.58.0.",
+      '.oxfmtrc.json endOfLine must remain "lf".',
+      '.oxfmtrc.json proseWrap must remain "preserve".',
+      ".oxfmtrc.json ignorePatterns must include action-dist/**.",
+      ".oxfmtrc.json ignorePatterns must include build/**.",
+      ".oxfmtrc.json ignorePatterns must include coverage/**.",
+      ".oxfmtrc.json ignorePatterns must include .cache/**.",
+      ".oxfmtrc.json ignorePatterns must include .tmp/**.",
+      ".oxfmtrc.json ignorePatterns must include tmp/**.",
     ],
   );
 });
@@ -168,22 +164,17 @@ test("release readiness rejects missing package and script test globs", () => {
 });
 
 test("release readiness accepts the root package manager contract", () => {
-  assert.deepEqual(
-    validateRootPackageManager(createRootPackageManagerPackageJson()),
-    [],
-  );
+  assert.deepEqual(validateRootPackageManager(createRootPackageManagerPackageJson()), []);
 });
 
 test("release readiness rejects root package manager drift", () => {
-  assert.deepEqual(
-    validateRootPackageManager({ packageManager: "pnpm@latest" }),
-    ["package.json packageManager must remain pnpm@11.7.0."],
-  );
+  assert.deepEqual(validateRootPackageManager({ packageManager: "pnpm@latest" }), [
+    "package.json packageManager must remain pnpm@11.7.0.",
+  ]);
 
-  assert.deepEqual(
-    validateRootPackageManager({ packageManager: "npm@11.7.0" }),
-    ["package.json packageManager must remain pnpm@11.7.0."],
-  );
+  assert.deepEqual(validateRootPackageManager({ packageManager: "npm@11.7.0" }), [
+    "package.json packageManager must remain pnpm@11.7.0.",
+  ]);
 
   assert.deepEqual(validateRootPackageManager({}), [
     "package.json packageManager must remain pnpm@11.7.0.",
@@ -191,10 +182,7 @@ test("release readiness rejects root package manager drift", () => {
 });
 
 test("release readiness accepts smoke package pack candidate coverage", () => {
-  assert.deepEqual(
-    validateSmokePackCandidateContract(createSmokeScriptText()),
-    [],
-  );
+  assert.deepEqual(validateSmokePackCandidateContract(createSmokeScriptText()), []);
 });
 
 test("release readiness rejects missing smoke package pack candidate coverage", () => {
@@ -216,10 +204,7 @@ test("release readiness rejects missing smoke package pack candidate coverage", 
 });
 
 test("release readiness accepts the current package release policy", () => {
-  assert.deepEqual(
-    validatePackageReleasePolicy(createBlockedReleasePackageJson()),
-    [],
-  );
+  assert.deepEqual(validatePackageReleasePolicy(createBlockedReleasePackageJson()), []);
 });
 
 test("release readiness rejects accidental public package release drift", () => {
@@ -239,11 +224,7 @@ test("release readiness reports workspace package release policy drift with mani
   packageJson.version = "0.2.0";
 
   assert.deepEqual(
-    validatePackageReleasePolicy(
-      packageJson,
-      packageReleasePolicy,
-      "packages/cli/package.json",
-    ),
+    validatePackageReleasePolicy(packageJson, packageReleasePolicy, "packages/cli/package.json"),
     [
       "packages/cli/package.json private must remain true while public package publication is blocked.",
       "packages/cli/package.json version must remain 0.0.0 while public package publication is blocked.",
@@ -252,10 +233,7 @@ test("release readiness reports workspace package release policy drift with mani
 });
 
 test("release readiness accepts the Action release policy document contract", () => {
-  assert.deepEqual(
-    validateReleasePolicyDocumentContract(createReleasePolicyText()),
-    [],
-  );
+  assert.deepEqual(validateReleasePolicyDocumentContract(createReleasePolicyText()), []);
 });
 
 test("release readiness rejects release policy document drift", () => {
@@ -264,18 +242,9 @@ test("release readiness rejects release policy document drift", () => {
       "Clarissimi is not ready for public package publication.",
       "Clarissimi can publish packages.",
     )
-    .replace(
-      "ADR 0031 authorizes immutable root GitHub",
-      "No immutable release decision exists.",
-    )
-    .replace(
-      "ADR 0034 authorizes moving major alias `v0`",
-      "No alias release decision exists.",
-    )
-    .replace(
-      "- Public package publication: blocked.",
-      "- Public package publication: allowed.",
-    )
+    .replace("ADR 0031 authorizes immutable root GitHub", "No immutable release decision exists.")
+    .replace("ADR 0034 authorizes moving major alias `v0`", "No alias release decision exists.")
+    .replace("- Public package publication: blocked.", "- Public package publication: allowed.")
     .replace(
       "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0031",
       "- Versioned GitHub Action tag: moving latest.",
@@ -288,10 +257,7 @@ test("release readiness rejects release policy document drift", () => {
       "- GitHub Marketplace publication: blocked.",
       "- GitHub Marketplace publication: allowed.",
     )
-    .replace(
-      "`pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
-      "",
-    )
+    .replace("`pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`", "")
     .replace(
       "`pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
       "",
@@ -318,10 +284,7 @@ test("release readiness rejects release policy document drift", () => {
 });
 
 test("release readiness accepts the product positioning contract", () => {
-  assert.deepEqual(
-    validateProductPositioningContract(createProductPositioningTexts()),
-    [],
-  );
+  assert.deepEqual(validateProductPositioningContract(createProductPositioningTexts()), []);
 });
 
 test("release readiness rejects product positioning drift", () => {
@@ -331,10 +294,7 @@ test("release readiness rejects product positioning drift", () => {
       "Clarissimi is a maintainer-approved contribution recognition engine for open-source repositories.",
       "Clarissimi is a contribution automation tool for open-source repositories.",
     )
-    .replace(
-      "Public output should read like contribution history, not a scoreboard.",
-      "",
-    );
+    .replace("Public output should read like contribution history, not a scoreboard.", "");
   texts["docs/product/02-spec.md"] =
     texts["docs/product/02-spec.md"]
       .replace(
@@ -356,23 +316,14 @@ test("release readiness rejects product positioning drift", () => {
 });
 
 test("release readiness accepts the README validation contract", () => {
-  assert.deepEqual(
-    validateReadmeValidationContract(createReadmeValidationText()),
-    [],
-  );
+  assert.deepEqual(validateReadmeValidationContract(createReadmeValidationText()), []);
 });
 
 test("release readiness rejects README validation drift", () => {
   const text = createReadmeValidationText()
     .replace("Not implemented yet:", "Implemented now:")
-    .replace(
-      "repository write modes such as direct `commit`",
-      "repository direct commit mode",
-    )
-    .replace(
-      "comment updates or default-branch mutation",
-      "comment and default branch updates",
-    )
+    .replace("repository write modes such as direct `commit`", "repository direct commit mode")
+    .replace("comment updates or default-branch mutation", "comment and default branch updates")
     .replace(
       "Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
       "Source-only merges require `pnpm run docs`,",
@@ -381,10 +332,7 @@ test("release readiness rejects README validation drift", () => {
     .replace("- `pnpm run release-readiness`", "")
     .replace("- `pnpm run live-provider-smoke`", "")
     .replace("- `pnpm run hosted-ci-validation`", "")
-    .replace(
-      "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
-      "",
-    )
+    .replace("- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`", "")
     .replace(
       "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>`",
       "",
@@ -399,7 +347,7 @@ test("release readiness rejects README validation drift", () => {
     )
     .replace("Release-only credentialed checks are:", "Credential checks are:")
     .replace(
-      "`format` runs the repository-wide Prettier baseline accepted by ADR 0035",
+      "`format` runs the repository-wide Oxfmt baseline accepted by ADR 0036",
       "`format` is optional",
     )
     .replace(
@@ -421,40 +369,28 @@ test("release readiness rejects README validation drift", () => {
     "README.md must include - `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`.",
     "README.md must include - `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`.",
     "README.md must include Release-only credentialed checks are:.",
-    "README.md must include `format` runs the repository-wide Prettier baseline accepted by ADR 0035.",
+    "README.md must include `format` runs the repository-wide Oxfmt baseline accepted by ADR 0036.",
     "README.md must include `oxlint` remains the JavaScript and TypeScript lint gate.",
   ]);
 });
 
 test("release readiness accepts the docs validation script contract", () => {
-  assert.deepEqual(
-    validateDocsValidationScriptContract(createDocsValidationScriptText()),
-    [],
-  );
+  assert.deepEqual(validateDocsValidationScriptContract(createDocsValidationScriptText()), []);
 });
 
 test("release readiness rejects docs validation script drift", () => {
   const text = createDocsValidationScriptText()
     .replace('"action.yml"', '"action-renamed.yml"')
-    .replace(
-      '"docs/product/00-product-brief.md"',
-      '"docs/product/00-product-brief-renamed.md"',
-    )
+    .replace('"docs/product/00-product-brief.md"', '"docs/product/00-product-brief-renamed.md"')
     .replace('"docs/product/02-spec.md"', '"docs/product/spec.md"')
     .replace('"docs/product/03-risk-register.md"', '"docs/product/risk.md"')
     .replace('"docs/cli/configuration.md"', '"docs/cli/config.md"')
     .replace('"docs/cli/ledger-format.md"', '"docs/cli/ledger.md"')
     .replace('"docs/github-action/README.md"', '"docs/github-action/GUIDE.md"')
     .replace('"docs/ops/incident-response.md"', '"docs/ops/incidents.md"')
-    .replace(
-      '"docs/ops/release-candidate-evidence.md"',
-      '"docs/ops/release-candidate.md"',
-    )
+    .replace('"docs/ops/release-candidate-evidence.md"', '"docs/ops/release-candidate.md"')
     .replace('"docs/ops/release.md"', '"docs/ops/publication.md"')
-    .replace(
-      '"packages/renderers/README.md"',
-      '"packages/renderers/README-renamed.md"',
-    )
+    .replace('"packages/renderers/README.md"', '"packages/renderers/README-renamed.md"')
     .replace(
       '".github/workflows/clarissimi-live-provider-smoke.yml"',
       '".github/workflows/live-provider.yml"',
@@ -463,22 +399,13 @@ test("release readiness rejects docs validation script drift", () => {
       '"scripts/hosted-external-consumer-smoke.mjs"',
       '"scripts/external-consumer-smoke.mjs"',
     )
-    .replace(
-      '"scripts/hosted-live-provider-smoke.mjs"',
-      '"scripts/hosted-provider-smoke.mjs"',
-    )
+    .replace('"scripts/hosted-live-provider-smoke.mjs"', '"scripts/hosted-provider-smoke.mjs"')
     .replace(
       '"scripts/release-candidate-evidence-orchestrator.mjs"',
       '"scripts/evidence-orchestrator.mjs"',
     )
-    .replace(
-      '"scripts/release-candidate-evidence-issue.mjs"',
-      '"scripts/evidence-issue.mjs"',
-    )
-    .replace(
-      '"scripts/verify-action-major-tag.mjs"',
-      '"scripts/major-tag-check.mjs"',
-    );
+    .replace('"scripts/release-candidate-evidence-issue.mjs"', '"scripts/evidence-issue.mjs"')
+    .replace('"scripts/verify-action-major-tag.mjs"', '"scripts/major-tag-check.mjs"');
 
   assert.deepEqual(validateDocsValidationScriptContract(text), [
     'scripts/validate-docs.mjs must include "action.yml".',
@@ -503,56 +430,46 @@ test("release readiness rejects docs validation script drift", () => {
 
 test("release readiness accepts the lint and format decision contract", () => {
   assert.deepEqual(
-    validateLintAndFormatDecisionDocumentContract(
-      createLintAndFormatDecisionText(),
-    ),
+    validateLintAndFormatDecisionDocumentContract(createLintAndFormatDecisionText()),
     [],
   );
 });
 
 test("release readiness rejects lint and format decision drift", () => {
   const text = createLintAndFormatDecisionText()
-    .replace(
-      "Adopt exactly pinned `prettier@3.9.5` as the repository formatter.",
-      "Use any formatter.",
-    )
-    .replace("run `prettier . --check`", "run prettier")
+    .replace("Replace Prettier with exactly pinned `oxfmt@0.58.0`.", "Use any formatter.")
+    .replace("run `oxfmt --check`", "run formatter")
     .replace(
       "cover maintained TypeScript, JavaScript, JSON, Markdown, and YAML files",
       "cover source",
     )
-    .replace("use `.prettierrc.json`", "use defaults")
-    .replace("use `.prettierignore`", "ignore files")
-    .replace("exclude `action-dist/`", "exclude output")
+    .replace("use `.oxfmtrc.json`", "use defaults")
+    .replace("use `ignorePatterns`", "ignore files")
+    .replace("exclude `action-dist/**`", "exclude output")
     .replace("be protected by `release-readiness` checks", "be documented")
-    .replace("Future changes must", "Future changes may")
+    .replace("Future changes must pass", "Future changes may pass")
+    .replace("CI must never rewrite source files.", "CI may rewrite source.")
     .replace(
-      "pass check mode; CI must never rewrite source files.",
-      "CI may rewrite source.",
-    )
-    .replace("Generated `action-dist/index.js`", "Generated output")
-    .replace("remains outside the formatter surface.", "may be formatted.");
+      "tracked `action-dist/index.js` remains outside the formatter surface",
+      "generated output may be formatted",
+    );
 
   assert.deepEqual(validateLintAndFormatDecisionDocumentContract(text), [
-    "docs/adr/0035-adopt-prettier-format-baseline.md must include Adopt exactly pinned `prettier@3.9.5` as the repository formatter..",
-    "docs/adr/0035-adopt-prettier-format-baseline.md must include run `prettier . --check`.",
-    "docs/adr/0035-adopt-prettier-format-baseline.md must include cover maintained TypeScript, JavaScript, JSON, Markdown, and YAML files.",
-    "docs/adr/0035-adopt-prettier-format-baseline.md must include use `.prettierrc.json`.",
-    "docs/adr/0035-adopt-prettier-format-baseline.md must include use `.prettierignore`.",
-    "docs/adr/0035-adopt-prettier-format-baseline.md must include exclude `action-dist/`.",
-    "docs/adr/0035-adopt-prettier-format-baseline.md must include be protected by `release-readiness` checks.",
-    "docs/adr/0035-adopt-prettier-format-baseline.md must include Future changes must.",
-    "docs/adr/0035-adopt-prettier-format-baseline.md must include pass check mode; CI must never rewrite source files..",
-    "docs/adr/0035-adopt-prettier-format-baseline.md must include Generated `action-dist/index.js`.",
-    "docs/adr/0035-adopt-prettier-format-baseline.md must include remains outside the formatter surface.",
+    "docs/adr/0036-replace-prettier-with-oxfmt.md must include Replace Prettier with exactly pinned `oxfmt@0.58.0`..",
+    "docs/adr/0036-replace-prettier-with-oxfmt.md must include run `oxfmt --check`.",
+    "docs/adr/0036-replace-prettier-with-oxfmt.md must include cover maintained TypeScript, JavaScript, JSON, Markdown, and YAML files.",
+    "docs/adr/0036-replace-prettier-with-oxfmt.md must include use `.oxfmtrc.json`.",
+    "docs/adr/0036-replace-prettier-with-oxfmt.md must include use `ignorePatterns`.",
+    "docs/adr/0036-replace-prettier-with-oxfmt.md must include exclude `action-dist/**`.",
+    "docs/adr/0036-replace-prettier-with-oxfmt.md must include be protected by `release-readiness` checks.",
+    "docs/adr/0036-replace-prettier-with-oxfmt.md must include Future changes must pass.",
+    "docs/adr/0036-replace-prettier-with-oxfmt.md must include CI must never rewrite source files..",
+    "docs/adr/0036-replace-prettier-with-oxfmt.md must include tracked `action-dist/index.js` remains outside the formatter surface.",
   ]);
 });
 
 test("release readiness accepts the ledger format document contract", () => {
-  assert.deepEqual(
-    validateLedgerFormatDocumentContract(createLedgerFormatDocumentText()),
-    [],
-  );
+  assert.deepEqual(validateLedgerFormatDocumentContract(createLedgerFormatDocumentText()), []);
 });
 
 test("release readiness rejects ledger format document drift", () => {
@@ -561,22 +478,13 @@ test("release readiness rejects ledger format document drift", () => {
       "Each non-empty line is one approved `clarissimi.assessment/v1` JSON object.",
       "Each line stores a contribution.",
     )
-    .replace(
-      "`source.pullRequestNumber` stores the PR number",
-      "`source` stores event data",
-    )
-    .replace(
-      "`evidenceRefs[]` stores the human-clickable PR URL",
-      "URLs are optional metadata",
-    )
+    .replace("`source.pullRequestNumber` stores the PR number", "`source` stores event data")
+    .replace("`evidenceRefs[]` stores the human-clickable PR URL", "URLs are optional metadata")
     .replace(
       "Ledger records must not contain public contributor scores, average scores, ranks, leaderboard",
       "Ledger records may contain scores",
     )
-    .replace(
-      "The MVP keeps one canonical ledger file.",
-      "The MVP uses monthly partitions.",
-    )
+    .replace("The MVP keeps one canonical ledger file.", "The MVP uses monthly partitions.")
     .replace(
       "Maintainer-only analytics may calculate recent recognition share from the same ledger",
       "Public analytics may show share",
@@ -608,18 +516,12 @@ test("release readiness rejects ledger format document drift", () => {
 });
 
 test("release readiness accepts the CLI command contract", () => {
-  assert.deepEqual(
-    validateCliCommandContract(createCliCommandContractText()),
-    [],
-  );
+  assert.deepEqual(validateCliCommandContract(createCliCommandContractText()), []);
 });
 
 test("release readiness rejects CLI command contract drift", () => {
   const text = createCliCommandContractText()
-    .replace(
-      "Help output is informational and must not read",
-      "Help output is informational.",
-    )
+    .replace("Help output is informational and must not read", "Help output is informational.")
     .replace(
       "default config files exist, the command fails closed",
       "default config files exist, the command picks one",
@@ -629,10 +531,7 @@ test("release readiness rejects CLI command contract drift", () => {
       "`--provider openai-compatible`: live provider path",
     )
     .replace("writes files only when `--out-dir`", "writes files by default")
-    .replace(
-      'accepts only `maintainerApprovalStatus: "draft"`',
-      "accepts draft assessments",
-    )
+    .replace('accepts only `maintainerApprovalStatus: "draft"`', "accepts draft assessments")
     .replace(
       "rejects non-public approval states, appends the sanitized public",
       "imports assessments",
@@ -657,9 +556,7 @@ test("release readiness rejects CLI command contract drift", () => {
 
 test("release readiness accepts the CLI output and exit codes document contract", () => {
   assert.deepEqual(
-    validateCliOutputExitCodesDocumentContract(
-      createCliOutputExitCodesDocumentText(),
-    ),
+    validateCliOutputExitCodesDocumentContract(createCliOutputExitCodesDocumentText()),
     [],
   );
 });
@@ -675,10 +572,7 @@ test("release readiness rejects CLI output and exit codes drift", () => {
       "Output implies a recognition entry was approved when it is only a draft.",
       "Output says recognition is approved.",
     )
-    .replace(
-      "JSON output leaks raw evidence.",
-      "JSON output includes evidence.",
-    );
+    .replace("JSON output leaks raw evidence.", "JSON output includes evidence.");
 
   assert.deepEqual(validateCliOutputExitCodesDocumentContract(text), [
     "docs/cli/output-and-exit-codes.md must include raw provider response.",
@@ -693,28 +587,17 @@ test("release readiness rejects CLI output and exit codes drift", () => {
 
 test("release readiness accepts the CLI configuration document contract", () => {
   assert.deepEqual(
-    validateCliConfigurationDocumentContract(
-      createCliConfigurationDocumentText(),
-    ),
+    validateCliConfigurationDocumentContract(createCliConfigurationDocumentText()),
     [],
   );
 });
 
 test("release readiness rejects CLI configuration document drift", () => {
   const text = createCliConfigurationDocumentText()
-    .replace(
-      "if both exist, the CLI fails closed",
-      "if both exist, the CLI chooses one",
-    )
-    .replace(
-      "The CLI owns file loading and precedence.",
-      "The schema owns file loading.",
-    )
+    .replace("if both exist, the CLI fails closed", "if both exist, the CLI chooses one")
+    .replace("The CLI owns file loading and precedence.", "The schema owns file loading.")
     .replace("explicit CLI flags", "config values")
-    .replace(
-      "`provider`: `fake` or `openai-compatible`",
-      "`provider`: any model provider",
-    )
+    .replace("`provider`: `fake` or `openai-compatible`", "`provider`: any model provider")
     .replace(
       "Provider API keys and GitHub tokens must not be stored in config files.",
       "Provider API keys may be stored in config files.",
@@ -736,9 +619,7 @@ test("release readiness rejects CLI configuration document drift", () => {
 
 test("release readiness accepts the agent-assisted drafts document contract", () => {
   assert.deepEqual(
-    validateAgentAssistedDraftsDocumentContract(
-      createAgentAssistedDraftsDocumentText(),
-    ),
+    validateAgentAssistedDraftsDocumentContract(createAgentAssistedDraftsDocumentText()),
     [],
   );
 });
@@ -746,10 +627,7 @@ test("release readiness accepts the agent-assisted drafts document contract", ()
 test("release readiness rejects agent-assisted drafts document drift", () => {
   const text = createAgentAssistedDraftsDocumentText()
     .replace("already-running AI coding agent", "external automation")
-    .replace(
-      "Clarissimi a provider API key.",
-      "Clarissimi a configured provider key.",
-    )
+    .replace("Clarissimi a provider API key.", "Clarissimi a configured provider key.")
     .replace(
       "responsible for validating the resulting JSON, enforcing approval status, and rendering public",
       "Clarissimi accepts the result",
@@ -779,10 +657,7 @@ test("release readiness rejects agent-assisted drafts document drift", () => {
 });
 
 test("release readiness accepts the CI operational document contract", () => {
-  assert.deepEqual(
-    validateCiOperationalDocumentContract(createCiOperationalDocumentText()),
-    [],
-  );
+  assert.deepEqual(validateCiOperationalDocumentContract(createCiOperationalDocumentText()), []);
 });
 
 test("release readiness rejects CI operational document drift", () => {
@@ -804,33 +679,22 @@ test("release readiness rejects CI operational document drift", () => {
       "- Required validation names: `docs`, `smoke`, `check`, `contract`",
     );
   const withoutHostedCiValidation = text
-    .replace(
-      "`pnpm run hosted-ci-validation`",
-      "`pnpm run hosted-live-provider-smoke`",
-    )
-    .replace(
-      "uses `gh run list` to find the `CI` workflow run",
-      "uses the GitHub UI",
-    );
+    .replace("`pnpm run hosted-ci-validation`", "`pnpm run hosted-live-provider-smoke`")
+    .replace("uses `gh run list` to find the `CI` workflow run", "uses the GitHub UI");
 
-  assert.deepEqual(
-    validateCiOperationalDocumentContract(withoutHostedCiValidation),
-    [
-      "docs/ops/ci.md must include `lint`, `format`, `smoke`, `check`, and `contract` with Node.js 24.",
-      "docs/ops/ci.md must include `pnpm run hosted-ci-validation`.",
-      "docs/ops/ci.md must include uses `gh run list` to find the `CI` workflow run.",
-      "docs/ops/ci.md must include The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`.",
-      "docs/ops/ci.md must include to pass with strict up-to-date status checks. Administrator enforcement is disabled.",
-      "docs/ops/ci.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`.",
-    ],
-  );
+  assert.deepEqual(validateCiOperationalDocumentContract(withoutHostedCiValidation), [
+    "docs/ops/ci.md must include `lint`, `format`, `smoke`, `check`, and `contract` with Node.js 24.",
+    "docs/ops/ci.md must include `pnpm run hosted-ci-validation`.",
+    "docs/ops/ci.md must include uses `gh run list` to find the `CI` workflow run.",
+    "docs/ops/ci.md must include The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`.",
+    "docs/ops/ci.md must include to pass with strict up-to-date status checks. Administrator enforcement is disabled.",
+    "docs/ops/ci.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`.",
+  ]);
 });
 
 test("release readiness accepts the operational contract document contract", () => {
   assert.deepEqual(
-    validateOperationalContractDocumentContract(
-      createOperationalContractDocumentText(),
-    ),
+    validateOperationalContractDocumentContract(createOperationalContractDocumentText()),
     [],
   );
 });
@@ -858,10 +722,7 @@ test("release readiness rejects operational contract document drift", () => {
 });
 
 test("release readiness accepts the observability document contract", () => {
-  assert.deepEqual(
-    validateObservabilityDocumentContract(createObservabilityDocumentText()),
-    [],
-  );
+  assert.deepEqual(validateObservabilityDocumentContract(createObservabilityDocumentText()), []);
 });
 
 test("release readiness rejects observability document drift", () => {
@@ -896,10 +757,7 @@ test("release readiness rejects observability document drift", () => {
 });
 
 test("release readiness accepts the service levels document contract", () => {
-  assert.deepEqual(
-    validateServiceLevelsDocumentContract(createServiceLevelsDocumentText()),
-    [],
-  );
+  assert.deepEqual(validateServiceLevelsDocumentContract(createServiceLevelsDocumentText()), []);
 });
 
 test("release readiness rejects service levels document drift", () => {
@@ -920,10 +778,7 @@ test("release readiness rejects service levels document drift", () => {
 });
 
 test("release readiness accepts the secrets document contract", () => {
-  assert.deepEqual(
-    validateSecretsDocumentContract(createSecretsDocumentText()),
-    [],
-  );
+  assert.deepEqual(validateSecretsDocumentContract(createSecretsDocumentText()), []);
 });
 
 test("release readiness rejects secrets document drift", () => {
@@ -949,10 +804,7 @@ test("release readiness rejects secrets document drift", () => {
 });
 
 test("release readiness accepts the backup and restore document contract", () => {
-  assert.deepEqual(
-    validateBackupRestoreDocumentContract(createBackupRestoreDocumentText()),
-    [],
-  );
+  assert.deepEqual(validateBackupRestoreDocumentContract(createBackupRestoreDocumentText()), []);
 });
 
 test("release readiness rejects backup and restore document drift", () => {
@@ -978,19 +830,14 @@ test("release readiness rejects backup and restore document drift", () => {
 
 test("release readiness accepts the incident response document contract", () => {
   assert.deepEqual(
-    validateIncidentResponseDocumentContract(
-      createIncidentResponseDocumentText(),
-    ),
+    validateIncidentResponseDocumentContract(createIncidentResponseDocumentText()),
     [],
   );
 });
 
 test("release readiness rejects incident response document drift", () => {
   const text = createIncidentResponseDocumentText()
-    .replace(
-      "Incident response is repository-local for the MVP.",
-      "Incident response is external.",
-    )
+    .replace("Incident response is repository-local for the MVP.", "Incident response is external.")
     .replace(
       "Token, private key, raw provider output, raw diff, or sensitive evidence is public.",
       "Service outage.",
@@ -999,10 +846,7 @@ test("release readiness rejects incident response document drift", () => {
       "Capture commit SHA, workflow run URL, PR URL, and local command output.",
       "Capture a summary.",
     )
-    .replace(
-      "Use `docs/ops/secrets.md` for credential exposure.",
-      "Handle credentials manually.",
-    )
+    .replace("Use `docs/ops/secrets.md` for credential exposure.", "Handle credentials manually.")
     .replace(
       "Do not publish or promote a versioned Action tag while any required release gate is failing.",
       "Publish after maintainer approval.",
@@ -1019,9 +863,7 @@ test("release readiness rejects incident response document drift", () => {
 
 test("release readiness accepts the disaster recovery document contract", () => {
   assert.deepEqual(
-    validateDisasterRecoveryDocumentContract(
-      createDisasterRecoveryDocumentText(),
-    ),
+    validateDisasterRecoveryDocumentContract(createDisasterRecoveryDocumentText()),
     [],
   );
 });
@@ -1036,22 +878,13 @@ test("release readiness rejects disaster recovery document drift", () => {
       "branch protection no longer requires the hosted `Validation` check",
       "branch protection changes",
     )
-    .replace(
-      "Stop release, publication, and dogfood workflow runs.",
-      "Keep workflows running.",
-    )
-    .replace(
-      "Revoke or rotate any exposed credential.",
-      "Review exposed credential.",
-    )
+    .replace("Stop release, publication, and dogfood workflow runs.", "Keep workflows running.")
+    .replace("Revoke or rotate any exposed credential.", "Review exposed credential.")
     .replace(
       "Preserve the failing commit SHA, workflow run URL, pull request URL, and changed file list.",
       "Preserve a summary.",
     )
-    .replace(
-      "Choose rollback or forward-fix using `docs/ops/rollback.md`.",
-      "Choose a fix.",
-    );
+    .replace("Choose rollback or forward-fix using `docs/ops/rollback.md`.", "Choose a fix.");
 
   assert.deepEqual(validateDisasterRecoveryDocumentContract(text), [
     "docs/ops/disaster-recovery.md must include Clarissimi disaster recovery covers repository-state corruption, unsafe recognition publication,.",
@@ -1065,9 +898,7 @@ test("release readiness rejects disaster recovery document drift", () => {
 
 test("release readiness accepts the Action inputs and outputs document contract", () => {
   assert.deepEqual(
-    validateActionInputsOutputsDocumentContract(
-      createActionInputsOutputsDocumentText(),
-    ),
+    validateActionInputsOutputsDocumentContract(createActionInputsOutputsDocumentText()),
     [],
   );
 });
@@ -1102,10 +933,7 @@ test("release readiness rejects Action inputs and outputs document drift", () =>
       "Outputs must not include raw provider output, raw diff text, raw issue text, tokens, private keys",
       "Outputs may include raw provider output.",
     )
-    .replace(
-      "raw-evidence exclusion rules as action outputs.",
-      "summary rules.",
-    );
+    .replace("raw-evidence exclusion rules as action outputs.", "summary rules.");
 
   assert.deepEqual(validateActionInputsOutputsDocumentContract(text), [
     "docs/github-action/inputs-and-outputs.md must include - `mode`: `dry-run`, `propose`, `stage-draft`, or `promote-draft`, default `propose`.",
@@ -1120,10 +948,7 @@ test("release readiness rejects Action inputs and outputs document drift", () =>
 });
 
 test("release readiness accepts the Action contract document contract", () => {
-  assert.deepEqual(
-    validateActionContractDocumentContract(createActionContractDocumentText()),
-    [],
-  );
+  assert.deepEqual(validateActionContractDocumentContract(createActionContractDocumentText()), []);
 });
 
 test("release readiness rejects Action contract document drift", () => {
@@ -1190,9 +1015,7 @@ test("release readiness rejects Action contract document drift", () => {
 
 test("release readiness accepts the Action permissions document contract", () => {
   assert.deepEqual(
-    validateActionPermissionsDocumentContract(
-      createActionPermissionsDocumentText(),
-    ),
+    validateActionPermissionsDocumentContract(createActionPermissionsDocumentText()),
     [],
   );
 });
@@ -1203,10 +1026,7 @@ test("release readiness rejects Action permissions document drift", () => {
       "Clarissimi should request the narrowest permissions required for the selected mode.",
       "Clarissimi can request broad permissions.",
     )
-    .replace(
-      "A workflow must not use `write-all`.",
-      "A workflow may use `write-all`.",
-    )
+    .replace("A workflow must not use `write-all`.", "A workflow may use `write-all`.")
     .replace(
       "| `dry-run` | `read` | `read` | `read` | No | No |",
       "| `dry-run` | `write` | `write` | `read` | Yes | Yes |",
@@ -1215,10 +1035,7 @@ test("release readiness rejects Action permissions document drift", () => {
       "Dry-run mode should not write recognition files, branches, comments, or pull requests.",
       "Dry-run mode can update branches.",
     )
-    .replace(
-      "Do not document `pull_request_target`",
-      "Document `pull_request_target`",
-    )
+    .replace("Do not document `pull_request_target`", "Document `pull_request_target`")
     .replace(
       "instead of falling back to direct commits or broader credentials.",
       "or fall back to direct commits.",
@@ -1255,17 +1072,12 @@ test("release readiness rejects Action permissions document drift", () => {
 });
 
 test("release readiness accepts ops validation footer contracts", () => {
-  assert.deepEqual(
-    validateOpsValidationFooterContract(createOpsValidationFooterTexts()),
-    [],
-  );
+  assert.deepEqual(validateOpsValidationFooterContract(createOpsValidationFooterTexts()), []);
 });
 
 test("release readiness rejects ops validation footer drift", () => {
   const texts = createOpsValidationFooterTexts();
-  texts["docs/ops/incident-response.md"] = texts[
-    "docs/ops/incident-response.md"
-  ].replace(
+  texts["docs/ops/incident-response.md"] = texts["docs/ops/incident-response.md"].replace(
     "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
     "- Required validation names: `docs`, `smoke`, `check`, `contract`",
   );
@@ -1279,9 +1091,7 @@ test("release readiness rejects ops validation footer drift", () => {
 
 test("release readiness accepts engineering validation document contracts", () => {
   assert.deepEqual(
-    validateEngineeringValidationDocumentContract(
-      createEngineeringValidationDocumentTexts(),
-    ),
+    validateEngineeringValidationDocumentContract(createEngineeringValidationDocumentTexts()),
     [],
   );
 });
@@ -1311,18 +1121,14 @@ test("release readiness rejects engineering validation document drift", () => {
 
 test("release readiness accepts monorepo validation document contracts", () => {
   assert.deepEqual(
-    validateMonorepoValidationDocumentContract(
-      createMonorepoValidationDocumentTexts(),
-    ),
+    validateMonorepoValidationDocumentContract(createMonorepoValidationDocumentTexts()),
     [],
   );
 });
 
 test("release readiness rejects monorepo validation document drift", () => {
   const texts = createMonorepoValidationDocumentTexts();
-  texts["docs/monorepo/change-coordination.md"] = texts[
-    "docs/monorepo/change-coordination.md"
-  ]
+  texts["docs/monorepo/change-coordination.md"] = texts["docs/monorepo/change-coordination.md"]
     .replace("`release-readiness`, ", "")
     .replace("`lint`, ", "");
   delete texts["docs/monorepo/workspace-boundaries.md"];
@@ -1336,9 +1142,7 @@ test("release readiness rejects monorepo validation document drift", () => {
 
 test("release readiness accepts workspace contract and package manifest identity", () => {
   assert.deepEqual(
-    validateWorkspaceContract(
-      'packages:\n  - "packages/*"\nallowBuilds:\n  esbuild: true\n',
-    ),
+    validateWorkspaceContract('packages:\n  - "packages/*"\nallowBuilds:\n  esbuild: true\n'),
     [],
   );
   assert.deepEqual(
@@ -1463,9 +1267,7 @@ test("release readiness rejects workspace package manifest publish surface drift
       "cli",
       "packages/cli/package.json",
     ),
-    [
-      'packages/cli/package.json bin must remain {"clarissimi":"./dist/bin/clarissimi.js"}.',
-    ],
+    ['packages/cli/package.json bin must remain {"clarissimi":"./dist/bin/clarissimi.js"}.'],
   );
 });
 
@@ -1488,11 +1290,7 @@ test("release readiness accepts the internal workspace dependency graph", () => 
   );
 
   assert.deepEqual(
-    validateWorkspaceInternalDependencies(
-      {},
-      "schemas",
-      "packages/schemas/package.json",
-    ),
+    validateWorkspaceInternalDependencies({}, "schemas", "packages/schemas/package.json"),
     [],
   );
 });
@@ -1525,10 +1323,7 @@ test("release readiness accepts the TypeScript build graph", () => {
   assert.deepEqual(
     validateRootTsconfigReferences(
       {
-        references: [
-          { path: "./packages/schemas" },
-          { path: "./packages/cli" },
-        ],
+        references: [{ path: "./packages/schemas" }, { path: "./packages/cli" }],
       },
       ["cli", "schemas"],
     ),
@@ -1567,10 +1362,7 @@ test("release readiness rejects TypeScript build graph drift", () => {
   assert.deepEqual(
     validateRootTsconfigReferences(
       {
-        references: [
-          { path: "./packages/schemas" },
-          { path: "./packages/old-cli" },
-        ],
+        references: [{ path: "./packages/schemas" }, { path: "./packages/old-cli" }],
       },
       ["cli", "schemas"],
     ),
@@ -1620,24 +1412,15 @@ test("release readiness rejects tracked generated output paths", () => {
 
 test("release readiness accepts package ownership table coverage", () => {
   assert.deepEqual(
-    validatePackageOwnershipContract(createPackageOwnershipText(), [
-      "cli",
-      "schemas",
-    ]),
+    validatePackageOwnershipContract(createPackageOwnershipText(), ["cli", "schemas"]),
     [],
   );
 });
 
 test("release readiness rejects package ownership table drift", () => {
   const text = createPackageOwnershipText()
-    .replace(
-      "| `packages/cli` | Implemented |",
-      "| `packages/old-cli` | Implemented |",
-    )
-    .replace(
-      "| `packages/schemas` | Implemented |",
-      "| `packages/schemas` | Planned |",
-    );
+    .replace("| `packages/cli` | Implemented |", "| `packages/old-cli` | Implemented |")
+    .replace("| `packages/schemas` | Implemented |", "| `packages/schemas` | Planned |");
 
   assert.deepEqual(validatePackageOwnershipContract(text, ["cli", "schemas"]), [
     `${packageOwnershipContract.path} missing Package Table entry for packages/cli.`,
@@ -1658,24 +1441,15 @@ test("release readiness rejects package ownership ADR reference drift", () => {
 });
 
 test("release readiness accepts recorded credentialed release evidence", () => {
-  assert.deepEqual(
-    validateCredentialedReleaseEvidence(createReleaseEvidenceText()),
-    [],
-  );
+  assert.deepEqual(validateCredentialedReleaseEvidence(createReleaseEvidenceText()), []);
 });
 
 test("release readiness accepts recorded write-mode dogfood evidence", () => {
-  assert.deepEqual(
-    validateWriteModeDogfoodEvidence(createReleaseEvidenceText()),
-    [],
-  );
+  assert.deepEqual(validateWriteModeDogfoodEvidence(createReleaseEvidenceText()), []);
 });
 
 test("release readiness accepts recorded dry-run dogfood evidence", () => {
-  assert.deepEqual(
-    validateDryRunDogfoodEvidence(createReleaseEvidenceText()),
-    [],
-  );
+  assert.deepEqual(validateDryRunDogfoodEvidence(createReleaseEvidenceText()), []);
 });
 
 test("release readiness accepts recorded hosted CI evidence", () => {
@@ -1683,10 +1457,7 @@ test("release readiness accepts recorded hosted CI evidence", () => {
 });
 
 test("release readiness accepts rollback procedure coverage", () => {
-  assert.deepEqual(
-    validateRollbackProcedureContract(createRollbackProcedureText()),
-    [],
-  );
+  assert.deepEqual(validateRollbackProcedureContract(createRollbackProcedureText()), []);
 });
 
 test("release readiness rejects missing rollback procedure coverage", () => {
@@ -1699,32 +1470,17 @@ test("release readiness rejects missing rollback procedure coverage", () => {
       "`pnpm run check`, `pnpm run contract`, `actionlint`, `ssealed doctor . --json`, YAML parsing,",
       "`pnpm run check`,",
     )
-    .replace(
-      "Delete the temporary staging directory.",
-      "Clean up temporary files.",
-    )
+    .replace("Delete the temporary staging directory.", "Clean up temporary files.")
     .replace(
       "Close the proposal pull request and delete the proposal branch.",
       "Resolve the proposal.",
     )
-    .replace(
-      "`pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`",
-      "",
-    )
-    .replace(
-      "do not delete broad `clarissimi/*` patterns",
-      "delete matching branches",
-    )
-    .replace(
-      "Revert the recognition pull request",
-      "Undo the recognition change",
-    )
+    .replace("`pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`", "")
+    .replace("do not delete broad `clarissimi/*` patterns", "delete matching branches")
+    .replace("Revert the recognition pull request", "Undo the recognition change")
     .replace("Published Action tag with a normal defect", "Published tag")
     .replace("do not move or overwrite the existing tag.", "Move the tag.")
-    .replace(
-      "No database rollback exists in the MVP.",
-      "Database rollback is TBD.",
-    );
+    .replace("No database rollback exists in the MVP.", "Database rollback is TBD.");
 
   assert.deepEqual(validateRollbackProcedureContract(text), [
     "docs/ops/rollback.md must include `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`, `pnpm run smoke`,.",
@@ -1749,10 +1505,7 @@ test("release readiness rejects missing hosted credentialed release evidence", (
     .replace("`29052452214` passed on `2026-07-09T21:45:58Z`", "passed")
     .replace("validated source commit", "source")
     .replace("`eaf22e44f5ef87391a16cf5a6597395826f05b7d`", "`not-a-sha`")
-    .replace(
-      "https://github.com/0disoft/clarissimi/actions/runs/29052452214",
-      "",
-    )
+    .replace("https://github.com/0disoft/clarissimi/actions/runs/29052452214", "")
     .replace("Refresh this evidence with", "")
     .replace(
       "`pnpm run hosted-live-provider-smoke -- --model <provider-model>` for the exact release-candidate commit",
@@ -1772,19 +1525,10 @@ test("release readiness rejects missing hosted credentialed release evidence", (
 
 test("release readiness rejects missing write-mode dogfood evidence", () => {
   const text = createReleaseEvidenceText()
-    .replace(
-      "Current dogfood evidence: `Clarissimi propose fixture` workflow run",
-      "",
-    )
+    .replace("Current dogfood evidence: `Clarissimi propose fixture` workflow run", "")
     .replace("`29027800039` passed on `2026-07-09T15:02:15Z`", "passed")
-    .replace(
-      "https://github.com/0disoft/clarissimi/actions/runs/29027800039",
-      "",
-    )
-    .replace(
-      "https://github.com/0disoft/clarissimi/actions/runs/29027802451",
-      "",
-    )
+    .replace("https://github.com/0disoft/clarissimi/actions/runs/29027800039", "")
+    .replace("https://github.com/0disoft/clarissimi/actions/runs/29027802451", "")
     .replace("https://github.com/0disoft/clarissimi/pull/2", "")
     .replace("pull request `#1` was closed after evidence capture", "")
     .replace("pull request `#2` was closed after evidence capture", "")
@@ -1807,16 +1551,10 @@ test("release readiness rejects missing write-mode dogfood evidence", () => {
 
 test("release readiness rejects missing dry-run dogfood evidence", () => {
   const text = createReleaseEvidenceText()
-    .replace(
-      "Current dry-run dogfood evidence: `Clarissimi dry run` workflow run",
-      "",
-    )
+    .replace("Current dry-run dogfood evidence: `Clarissimi dry run` workflow run", "")
     .replace("`29031384775` passed on `2026-07-09T15:54:58Z`", "passed")
     .replace("summary artifact validation", "summary output check")
-    .replace(
-      "https://github.com/0disoft/clarissimi/actions/runs/29031384775",
-      "",
-    );
+    .replace("https://github.com/0disoft/clarissimi/actions/runs/29031384775", "");
 
   assert.deepEqual(validateDryRunDogfoodEvidence(text), [
     "docs/ops/release.md must include Current dry-run dogfood evidence: `Clarissimi dry run` workflow run.",
@@ -1833,15 +1571,9 @@ test("release readiness rejects missing hosted CI evidence", () => {
     .replace("`29052254866` passed on `2026-07-09T21:42:23Z`", "passed")
     .replace("validated source commit", "candidate")
     .replace("`eaf22e44f5ef87391a16cf5a6597395826f05b7d`", "`not-a-sha`")
-    .replace(
-      "https://github.com/0disoft/clarissimi/actions/runs/29052254866",
-      "",
-    )
+    .replace("https://github.com/0disoft/clarissimi/actions/runs/29052254866", "")
     .replace("Refresh this evidence with", "")
-    .replace(
-      "`pnpm run hosted-ci-validation` for the exact release-candidate commit",
-      "",
-    );
+    .replace("`pnpm run hosted-ci-validation` for the exact release-candidate commit", "");
 
   assert.deepEqual(validateHostedCiEvidence(text), [
     "docs/ops/release.md must include Recent hosted CI validation evidence: `CI` workflow run.",
@@ -1863,9 +1595,7 @@ test("release readiness secret scan detects provider gateway env assignments", (
     ["GITHUB", "PAT", "ODISOFT"],
   ].map((parts) => parts.join("_"));
   const text = names
-    .map((name, index) =>
-      index === 0 ? `${name} = synthetic-token` : `${name}=synthetic-token`,
-    )
+    .map((name, index) => (index === 0 ? `${name} = synthetic-token` : `${name}=synthetic-token`))
     .join("\n");
 
   assert.deepEqual(findHighRiskSecretLines("sample.env", text), [
@@ -1889,19 +1619,13 @@ test("release readiness secret scan allows documented secret names without assig
 });
 
 test("release readiness accepts the Action manifest contract", () => {
-  assert.deepEqual(
-    validateActionManifestContract(createActionManifestText()),
-    [],
-  );
+  assert.deepEqual(validateActionManifestContract(createActionManifestText()), []);
 });
 
 test("release readiness rejects Action manifest input default drift and secret inputs", () => {
   const text = createActionManifestText()
     .replace("default: propose", "default: dry-run")
-    .replace(
-      "  provider-model:",
-      "  provider-token:\n    required: false\n  provider-model:",
-    );
+    .replace("  provider-model:", "  provider-token:\n    required: false\n  provider-model:");
 
   assert.deepEqual(validateActionManifestContract(text), [
     "action.yml input mode must set default: propose.",
@@ -1964,30 +1688,20 @@ test("release readiness accepts the CI workflow contract", () => {
 
 test("release readiness accepts safe workflow trust boundaries", () => {
   assert.deepEqual(
-    validateWorkflowTrustBoundaryContract(
-      createCiWorkflowText(),
-      ".github/workflows/ci.yml",
-    ),
+    validateWorkflowTrustBoundaryContract(createCiWorkflowText(), ".github/workflows/ci.yml"),
     [],
   );
 });
 
 test("release readiness rejects pull_request_target and broad workflow permissions", () => {
-  const text = [
-    "name: Risky",
-    "on:",
-    "  pull_request_target:",
-    "permissions: write-all",
-    "",
-  ].join("\n");
-
-  assert.deepEqual(
-    validateWorkflowTrustBoundaryContract(text, ".github/workflows/risky.yml"),
-    [
-      ".github/workflows/risky.yml must not include pull_request_target:.",
-      ".github/workflows/risky.yml must not include write-all.",
-    ],
+  const text = ["name: Risky", "on:", "  pull_request_target:", "permissions: write-all", ""].join(
+    "\n",
   );
+
+  assert.deepEqual(validateWorkflowTrustBoundaryContract(text, ".github/workflows/risky.yml"), [
+    ".github/workflows/risky.yml must not include pull_request_target:.",
+    ".github/workflows/risky.yml must not include write-all.",
+  ]);
 });
 
 test("release readiness rejects workflows without explicit permissions", () => {
@@ -2002,10 +1716,7 @@ test("release readiness rejects workflows without explicit permissions", () => {
   ].join("\n");
 
   assert.deepEqual(
-    validateWorkflowTrustBoundaryContract(
-      text,
-      ".github/workflows/missing-permissions.yml",
-    ),
+    validateWorkflowTrustBoundaryContract(text, ".github/workflows/missing-permissions.yml"),
     [".github/workflows/missing-permissions.yml must include permissions:."],
   );
 });
@@ -2049,41 +1760,26 @@ test("release readiness rejects CI runtime and tool pin drift", () => {
 
 test("release readiness accepts dogfood workflow contracts", () => {
   assert.deepEqual(
-    validateDogfoodWorkflowContract(
-      createDryRunWorkflowText(),
-      dogfoodWorkflowContracts[0],
-    ),
+    validateDogfoodWorkflowContract(createDryRunWorkflowText(), dogfoodWorkflowContracts[0]),
     [],
   );
   assert.deepEqual(
-    validateDogfoodWorkflowContract(
-      createProposeWorkflowText(),
-      dogfoodWorkflowContracts[1],
-    ),
+    validateDogfoodWorkflowContract(createProposeWorkflowText(), dogfoodWorkflowContracts[1]),
     [],
   );
   assert.deepEqual(
-    validateDogfoodWorkflowContract(
-      createStageDraftWorkflowText(),
-      dogfoodWorkflowContracts[2],
-    ),
+    validateDogfoodWorkflowContract(createStageDraftWorkflowText(), dogfoodWorkflowContracts[2]),
     [],
   );
 });
 
 test("release readiness rejects dry-run dogfood write permission drift", () => {
-  const text = createDryRunWorkflowText().replace(
-    "contents: read",
-    "contents: write",
-  );
+  const text = createDryRunWorkflowText().replace("contents: read", "contents: write");
 
-  assert.deepEqual(
-    validateDogfoodWorkflowContract(text, dogfoodWorkflowContracts[0]),
-    [
-      ".github/workflows/clarissimi-dry-run.yml must include contents: read.",
-      ".github/workflows/clarissimi-dry-run.yml must not include contents: write.",
-    ],
-  );
+  assert.deepEqual(validateDogfoodWorkflowContract(text, dogfoodWorkflowContracts[0]), [
+    ".github/workflows/clarissimi-dry-run.yml must include contents: read.",
+    ".github/workflows/clarissimi-dry-run.yml must not include contents: write.",
+  ]);
 });
 
 test("release readiness rejects propose and stage-draft dogfood drift", () => {
@@ -2094,13 +1790,10 @@ test("release readiness rejects propose and stage-draft dogfood drift", () => {
       "github-fixture: fixtures/github-merged-pr-basic.json",
     );
 
-  assert.deepEqual(
-    validateDogfoodWorkflowContract(proposeText, dogfoodWorkflowContracts[1]),
-    [
-      ".github/workflows/clarissimi-propose-fixture.yml must include mode: propose.",
-      ".github/workflows/clarissimi-propose-fixture.yml must include github-fixture: fixtures/github-merged-pr-approved.json.",
-    ],
-  );
+  assert.deepEqual(validateDogfoodWorkflowContract(proposeText, dogfoodWorkflowContracts[1]), [
+    ".github/workflows/clarissimi-propose-fixture.yml must include mode: propose.",
+    ".github/workflows/clarissimi-propose-fixture.yml must include github-fixture: fixtures/github-merged-pr-approved.json.",
+  ]);
 
   const stageDraftText = createStageDraftWorkflowText()
     .replace("mode: stage-draft", "mode: propose")
@@ -2109,23 +1802,14 @@ test("release readiness rejects propose and stage-draft dogfood drift", () => {
       'test "${{ steps.stage.outputs.staged-file-count }}" = "4"',
     );
 
-  assert.deepEqual(
-    validateDogfoodWorkflowContract(
-      stageDraftText,
-      dogfoodWorkflowContracts[2],
-    ),
-    [
-      ".github/workflows/clarissimi-stage-draft-fixture.yml must include mode: stage-draft.",
-      '.github/workflows/clarissimi-stage-draft-fixture.yml must include test "${{ steps.stage.outputs.staged-file-count }}" = "1".',
-    ],
-  );
+  assert.deepEqual(validateDogfoodWorkflowContract(stageDraftText, dogfoodWorkflowContracts[2]), [
+    ".github/workflows/clarissimi-stage-draft-fixture.yml must include mode: stage-draft.",
+    '.github/workflows/clarissimi-stage-draft-fixture.yml must include test "${{ steps.stage.outputs.staged-file-count }}" = "1".',
+  ]);
 });
 
 test("release readiness accepts the hosted live provider workflow contract", () => {
-  assert.deepEqual(
-    validateHostedLiveProviderWorkflowContract(createHostedWorkflowText()),
-    [],
-  );
+  assert.deepEqual(validateHostedLiveProviderWorkflowContract(createHostedWorkflowText()), []);
 });
 
 test("release readiness rejects hosted live provider workflow input drift", () => {
@@ -2350,7 +2034,7 @@ function createReadmeValidationText() {
     "- `pnpm run live-provider-smoke`",
     "- `pnpm run hosted-live-provider-smoke -- --model <provider-model>`",
     "",
-    "`format` runs the repository-wide Prettier baseline accepted by ADR 0035.",
+    "`format` runs the repository-wide Oxfmt baseline accepted by ADR 0036.",
     "`oxlint` remains the JavaScript and TypeScript lint gate.",
     "`migration-check` intentionally fails until configured.",
     "",
@@ -2409,20 +2093,19 @@ function createDocsValidationScriptText() {
 
 function createLintAndFormatDecisionText() {
   return [
-    "Adopt exactly pinned `prettier@3.9.5` as the repository formatter.",
+    "Replace Prettier with exactly pinned `oxfmt@0.58.0`.",
     "",
     "The `format` validation must:",
     "",
-    "- run `prettier . --check`",
+    "- run `oxfmt --check`",
     "- cover maintained TypeScript, JavaScript, JSON, Markdown, and YAML files",
-    "- use `.prettierrc.json` so CLI and editor integrations share the same options",
-    "- use `.prettierignore` to exclude `action-dist/` and build output",
-    "- run in hosted CI as its own validation step",
+    "- use `.oxfmtrc.json` for shared CLI and editor options",
+    "- use `ignorePatterns` to exclude `action-dist/**` and build output",
+    "- run in hosted CI as its own non-writing validation step",
     "- be protected by `release-readiness` checks",
-    "Future changes must",
-    "pass check mode; CI must never rewrite source files.",
-    "Generated `action-dist/index.js`",
-    "remains outside the formatter surface.",
+    "Future changes must pass",
+    "CI must never rewrite source files.",
+    "tracked `action-dist/index.js` remains outside the formatter surface",
     "",
   ].join("\n");
 }

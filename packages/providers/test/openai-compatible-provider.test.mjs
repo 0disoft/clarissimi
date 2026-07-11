@@ -65,8 +65,7 @@ test("creates a draft assessment from an OpenAI-compatible response", async () =
                 evidenceSummary:
                   "Added regression coverage based on the merged pull request and test evidence.",
                 suggestedBadge: "Regression Shield",
-                publicRecognitionText:
-                  "Added regression coverage for the parser.",
+                publicRecognitionText: "Added regression coverage for the parser.",
                 confidence: 0.82,
                 maintainerApprovalStatus: "approved",
                 contributor: {
@@ -107,14 +106,9 @@ test("creates a draft assessment from an OpenAI-compatible response", async () =
   assert.equal(requests[0].body.model, "clarissimi-test-model");
   assert.equal(requests[0].body.response_format.type, "json_object");
   assert.equal(requests[0].body.thinking, undefined);
+  assert.equal(requests[0].body.messages[0].content.includes("score shares"), true);
   assert.equal(
-    requests[0].body.messages[0].content.includes("score shares"),
-    true,
-  );
-  assert.equal(
-    requests[0].body.messages[0].content.includes(
-      "recent time-window contribution percentages",
-    ),
+    requests[0].body.messages[0].content.includes("recent time-window contribution percentages"),
     true,
   );
   const requestText = JSON.stringify(requests[0].body);
@@ -141,11 +135,9 @@ test("can disable provider thinking for OpenAI-compatible providers that support
                 contributionType: "test",
                 affectedArea: "parser regression coverage",
                 impactLevel: "medium",
-                evidenceSummary:
-                  "Added regression coverage based on test evidence.",
+                evidenceSummary: "Added regression coverage based on test evidence.",
                 suggestedBadge: "Regression Shield",
-                publicRecognitionText:
-                  "Added regression coverage for the parser.",
+                publicRecognitionText: "Added regression coverage for the parser.",
                 confidence: 0.76,
               }),
             },
@@ -180,11 +172,9 @@ test("supports text-array message content", async () => {
                     contributionType: "test",
                     affectedArea: "parser regression coverage",
                     impactLevel: "medium",
-                    evidenceSummary:
-                      "Added regression coverage based on test evidence.",
+                    evidenceSummary: "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
-                    publicRecognitionText:
-                      "Added regression coverage for the parser.",
+                    publicRecognitionText: "Added regression coverage for the parser.",
                     confidence: 0.74,
                   }),
                 },
@@ -218,11 +208,9 @@ test("accepts markdown-fenced JSON message content from compatible providers", a
                   contributionType: "test",
                   affectedArea: "parser regression coverage",
                   impactLevel: "medium",
-                  evidenceSummary:
-                    "Added regression coverage based on test evidence.",
+                  evidenceSummary: "Added regression coverage based on test evidence.",
                   suggestedBadge: "Regression Shield",
-                  publicRecognitionText:
-                    "Added regression coverage for the parser.",
+                  publicRecognitionText: "Added regression coverage for the parser.",
                   confidence: 0.71,
                 }),
                 "```",
@@ -283,8 +271,7 @@ test("rejects invalid model drafts after schema validation", async () => {
                 contributionType: "test",
                 affectedArea: "parser regression coverage",
                 impactLevel: "medium",
-                evidenceSummary:
-                  "Added regression coverage based on test evidence.",
+                evidenceSummary: "Added regression coverage based on test evidence.",
                 suggestedBadge: "Regression Shield",
                 publicRecognitionText: "Top 1 contributor on the leaderboard.",
                 confidence: 0.9,
@@ -324,8 +311,7 @@ test("rejects model drafts that include public contribution share language", asy
                 evidenceSummary:
                   "Held a 22 percent share of the last 3 months contribution weight.",
                 suggestedBadge: "Regression Shield",
-                publicRecognitionText:
-                  "Added regression coverage for the parser.",
+                publicRecognitionText: "Added regression coverage for the parser.",
                 confidence: 0.9,
               }),
             },

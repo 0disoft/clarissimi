@@ -91,9 +91,7 @@ export async function validateDocs(options = {}) {
       }
 
       if (!localTargetExists(repoRoot, filePath, target)) {
-        issues.push(
-          `${toRepoPath(repoRoot, filePath)} links to missing local target: ${link}`,
-        );
+        issues.push(`${toRepoPath(repoRoot, filePath)} links to missing local target: ${link}`);
       }
     }
   }
@@ -115,16 +113,11 @@ export async function runValidateDocs(options = {}) {
     return 1;
   }
 
-  console.log(
-    `docs validation passed (${result.markdownFileCount} markdown files)`,
-  );
+  console.log(`docs validation passed (${result.markdownFileCount} markdown files)`);
   return 0;
 }
 
-if (
-  process.argv[1] !== undefined &&
-  pathToFileURL(process.argv[1]).href === import.meta.url
-) {
+if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) {
   process.exitCode = await runValidateDocs();
 }
 
@@ -162,9 +155,7 @@ async function validateAdrIndex(repoRoot, issues) {
   const adrFiles = (await readdir(adrDir, { withFileTypes: true }))
     .filter((entry) => entry.isFile())
     .map((entry) => entry.name)
-    .filter(
-      (name) => /^\d{4}-.+\.md$/.test(name) && name !== "0000-template.md",
-    )
+    .filter((name) => /^\d{4}-.+\.md$/.test(name) && name !== "0000-template.md")
     .sort();
 
   if (adrFiles.length === 0) {
@@ -179,18 +170,14 @@ async function validateAdrIndex(repoRoot, issues) {
   const indexText = await readFile(indexPath, "utf8");
   for (const adrFile of adrFiles) {
     if (!indexText.includes(adrFile)) {
-      issues.push(
-        `docs/adr/README.md missing ADR index entry for docs/adr/${adrFile}`,
-      );
+      issues.push(`docs/adr/README.md missing ADR index entry for docs/adr/${adrFile}`);
     }
   }
 
   const adrFileNames = new Set(adrFiles);
   for (const adrFile of extractAdrIndexEntries(indexText)) {
     if (!adrFileNames.has(adrFile)) {
-      issues.push(
-        `docs/adr/README.md references missing ADR file docs/adr/${adrFile}`,
-      );
+      issues.push(`docs/adr/README.md references missing ADR file docs/adr/${adrFile}`);
     }
   }
 }
@@ -241,10 +228,7 @@ function stripLinkSuffix(link) {
 }
 
 function localTargetExists(repoRoot, markdownFile, target) {
-  const candidates = [
-    resolve(dirname(markdownFile), target),
-    resolve(repoRoot, target),
-  ];
+  const candidates = [resolve(dirname(markdownFile), target), resolve(repoRoot, target)];
 
   return candidates.some((candidate) => {
     if (!isInsideRepo(repoRoot, candidate)) {
@@ -258,8 +242,7 @@ function localTargetExists(repoRoot, markdownFile, target) {
 function isInsideRepo(repoRoot, path) {
   const relativePath = relative(repoRoot, path);
   return (
-    relativePath === "" ||
-    (!relativePath.startsWith("..") && !relativePath.includes(`..${sep}`))
+    relativePath === "" || (!relativePath.startsWith("..") && !relativePath.includes(`..${sep}`))
   );
 }
 

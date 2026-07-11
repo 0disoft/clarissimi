@@ -1,14 +1,9 @@
 import { canPublishAssessment } from "@clarissimi/core";
 import type { ContributionAssessment } from "@clarissimi/schemas";
 
-import {
-  RendererValidationError,
-  type PublicContributionRecord,
-} from "./types.js";
+import { RendererValidationError, type PublicContributionRecord } from "./types.js";
 
-export function toPublicContributionRecord(
-  value: unknown,
-): PublicContributionRecord {
+export function toPublicContributionRecord(value: unknown): PublicContributionRecord {
   const result = canPublishAssessment(value);
 
   if (!result.ok) {
@@ -35,22 +30,15 @@ export function appendPublicContributionRecord(
   assertUniqueContributionRecords(existingRecords);
   const nextRecord = toPublicContributionRecord(nextValue);
 
-  if (
-    existingRecords.some((record) =>
-      hasSameContributionIdentity(record, nextRecord),
-    )
-  ) {
-    throw new RendererValidationError(
-      "Contribution already exists in the selected ledger.",
-      [
-        {
-          path: "$.source",
-          code: "duplicate_source",
-          message:
-            "A contribution from this contributor and merged pull request is already recorded.",
-        },
-      ],
-    );
+  if (existingRecords.some((record) => hasSameContributionIdentity(record, nextRecord))) {
+    throw new RendererValidationError("Contribution already exists in the selected ledger.", [
+      {
+        path: "$.source",
+        code: "duplicate_source",
+        message:
+          "A contribution from this contributor and merged pull request is already recorded.",
+      },
+    ]);
   }
 
   return [...existingRecords, nextRecord];
@@ -65,23 +53,19 @@ export function assertUniqueContributionRecords(
     const key = contributionIdentityKey(record);
     const firstIndex = seen.get(key);
     if (firstIndex !== undefined) {
-      throw new RendererValidationError(
-        "Ledger contains duplicate contribution records.",
-        [
-          {
-            path: `$[${index}].source`,
-            code: "duplicate_source",
-            message:
-              "Ledger records must be unique for contributor platform, contributor id, repository, event, and pull request number.",
-          },
-          {
-            path: `$[${firstIndex}].source`,
-            code: "duplicate_source_original",
-            message:
-              "This earlier ledger record has the same contribution identity.",
-          },
-        ],
-      );
+      throw new RendererValidationError("Ledger contains duplicate contribution records.", [
+        {
+          path: `$[${index}].source`,
+          code: "duplicate_source",
+          message:
+            "Ledger records must be unique for contributor platform, contributor id, repository, event, and pull request number.",
+        },
+        {
+          path: `$[${firstIndex}].source`,
+          code: "duplicate_source_original",
+          message: "This earlier ledger record has the same contribution identity.",
+        },
+      ]);
     }
 
     seen.set(key, index);
@@ -126,16 +110,12 @@ function sanitizePublicContributionRecord(
       repository: assessment.source.repository,
       event: assessment.source.event,
       pullRequestNumber: assessment.source.pullRequestNumber,
-      ...(assessment.source.mergedAt === undefined
-        ? {}
-        : { mergedAt: assessment.source.mergedAt }),
+      ...(assessment.source.mergedAt === undefined ? {} : { mergedAt: assessment.source.mergedAt }),
     },
   };
 }
 
-export function parseContributionsJsonl(
-  input: string,
-): readonly PublicContributionRecord[] {
+export function parseContributionsJsonl(input: string): readonly PublicContributionRecord[] {
   const records: PublicContributionRecord[] = [];
 
   input.split(/\r?\n/).forEach((line, index) => {
@@ -147,16 +127,13 @@ export function parseContributionsJsonl(
     try {
       parsed = JSON.parse(line);
     } catch {
-      throw new RendererValidationError(
-        "Ledger JSONL contains an invalid JSON line.",
-        [
-          {
-            path: `$[${index}]`,
-            code: "invalid_json",
-            message: "Ledger line must be valid JSON.",
-          },
-        ],
-      );
+      throw new RendererValidationError("Ledger JSONL contains an invalid JSON line.", [
+        {
+          path: `$[${index}]`,
+          code: "invalid_json",
+          message: "Ledger line must be valid JSON.",
+        },
+      ]);
     }
 
     records.push(toPublicContributionRecord(parsed));

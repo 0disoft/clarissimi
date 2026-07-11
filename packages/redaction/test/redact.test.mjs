@@ -12,10 +12,7 @@ test("redacts email addresses without changing surrounding evidence text", () =>
   const address = `dev@${["example", "invalid"].join(".")}`;
   const result = redactText(`Maintainer note from person at ${address}.`);
 
-  assert.equal(
-    result.text,
-    `Maintainer note from person at ${REDACTION_PLACEHOLDER}.`,
-  );
+  assert.equal(result.text, `Maintainer note from person at ${REDACTION_PLACEHOLDER}.`);
   assert.equal(result.report.changed, true);
   assert.equal(result.report.occurrences[0].kind, "email");
 });
@@ -94,9 +91,7 @@ test("merges reports without leaking matched values", () => {
   assert.equal(merged.changed, true);
   assert.equal(merged.occurrences.length, 2);
   assert.equal(
-    merged.occurrences.every(
-      (occurrence) => occurrence.replacement === REDACTION_PLACEHOLDER,
-    ),
+    merged.occurrences.every((occurrence) => occurrence.replacement === REDACTION_PLACEHOLDER),
     true,
   );
 });

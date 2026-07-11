@@ -1,26 +1,10 @@
-import {
-  appendFile,
-  mkdir,
-  readFile,
-  realpath,
-  writeFile,
-} from "node:fs/promises";
-import {
-  basename,
-  dirname,
-  isAbsolute,
-  join,
-  relative,
-  resolve,
-} from "node:path";
+import { appendFile, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 
 import { prepareEvidenceForProvider } from "@clarissimi/core";
-import {
-  CONTRIBUTIONS_JSONL_PATH,
-  parseContributionsJsonl,
-} from "@clarissimi/renderers";
+import { CONTRIBUTIONS_JSONL_PATH, parseContributionsJsonl } from "@clarissimi/renderers";
 import {
   collectMergedPullRequestEvidence,
   collectLiveMergedPullRequestEvidence,
@@ -54,10 +38,7 @@ import {
   createOrUpdateProposalPullRequest,
   type ProposalPullRequestClient,
 } from "./pull-request.js";
-import {
-  stageProposalDraftReviewOutput,
-  stageProposalRecognitionOutputs,
-} from "./staging.js";
+import { stageProposalDraftReviewOutput, stageProposalRecognitionOutputs } from "./staging.js";
 import { sanitizeAssessmentForActionSummary } from "./summary.js";
 import type {
   ActionMode,
@@ -79,9 +60,7 @@ export class ActionUsageError extends Error {
   }
 }
 
-export async function runActionDryRun(
-  input: ActionDryRunInput,
-): Promise<ActionDryRunSummary> {
+export async function runActionDryRun(input: ActionDryRunInput): Promise<ActionDryRunSummary> {
   const mode = input.mode ?? "dry-run";
   if (mode !== "dry-run") {
     throw new ActionUsageError("runActionDryRun supports only dry-run mode.");
@@ -120,14 +99,10 @@ export async function runActionDryRun(
   };
 }
 
-export async function runActionPropose(
-  input: ActionProposeInput,
-): Promise<ActionProposeSummary> {
+export async function runActionPropose(input: ActionProposeInput): Promise<ActionProposeSummary> {
   const prepared = await prepareActionAssessment(input);
   if (prepared.kind === "skipped") {
-    throw new ActionUsageError(
-      "Propose mode requires a merged pull request input.",
-    );
+    throw new ActionUsageError("Propose mode requires a merged pull request input.");
   }
 
   const staging = await stageProposalRecognitionOutputs({
@@ -135,9 +110,7 @@ export async function runActionPropose(
     assessments: [prepared.assessment],
     existingRecords: await readExistingRecognitionRecords(input.repositoryDir),
     redactionMatchCount: prepared.redactionMatchCount,
-    ...(input.markdownSummary === undefined
-      ? {}
-      : { markdownSummary: input.markdownSummary }),
+    ...(input.markdownSummary === undefined ? {} : { markdownSummary: input.markdownSummary }),
   });
   const branch = await writeProposalBranch({
     repositoryDir: input.repositoryDir,
@@ -151,9 +124,7 @@ export async function runActionPropose(
   };
   assignOptional(publishInput, "remoteName", input.remoteName);
   await publishProposalBranch(publishInput);
-  const pullRequestInput: Parameters<
-    typeof createOrUpdateProposalPullRequest
-  >[0] = {
+  const pullRequestInput: Parameters<typeof createOrUpdateProposalPullRequest>[0] = {
     client: input.pullRequestClient,
     manifest: staging.manifest,
     branch,
@@ -169,8 +140,7 @@ export async function runActionPropose(
     proposedEntryCount: 1,
     skippedEntryCount: 0,
     publicOutputsRendered: true,
-    approvalStatus: prepared.assessment.maintainerApprovalStatus as
-      "approved" | "auto_approved",
+    approvalStatus: prepared.assessment.maintainerApprovalStatus as "approved" | "auto_approved",
     redactionChanged: prepared.redactionChanged,
     redactionMatchCount: prepared.redactionMatchCount,
     stagedFileCount: staging.manifest.files.length,
@@ -187,9 +157,7 @@ export async function runActionStageDraft(
 ): Promise<ActionProposeSummary> {
   const prepared = await prepareActionAssessment(input);
   if (prepared.kind === "skipped") {
-    throw new ActionUsageError(
-      "Stage-draft mode requires a merged pull request input.",
-    );
+    throw new ActionUsageError("Stage-draft mode requires a merged pull request input.");
   }
 
   const staging = await stageProposalDraftReviewOutput({
@@ -209,9 +177,7 @@ export async function runActionStageDraft(
   };
   assignOptional(publishInput, "remoteName", input.remoteName);
   await publishProposalBranch(publishInput);
-  const pullRequestInput: Parameters<
-    typeof createOrUpdateProposalPullRequest
-  >[0] = {
+  const pullRequestInput: Parameters<typeof createOrUpdateProposalPullRequest>[0] = {
     client: input.pullRequestClient,
     manifest: staging.manifest,
     branch,
@@ -244,18 +210,13 @@ export async function runActionStageDraft(
 export async function runActionPromoteDraft(
   input: ActionPromoteDraftInput,
 ): Promise<ActionProposeSummary> {
-  const assessment = await readApprovedDraft(
-    input.draftPath,
-    input.repositoryDir,
-  );
+  const assessment = await readApprovedDraft(input.draftPath, input.repositoryDir);
   const staging = await stageProposalRecognitionOutputs({
     outputDir: input.stagingDir,
     assessments: [assessment],
     existingRecords: await readExistingRecognitionRecords(input.repositoryDir),
     redactionMatchCount: 0,
-    ...(input.markdownSummary === undefined
-      ? {}
-      : { markdownSummary: input.markdownSummary }),
+    ...(input.markdownSummary === undefined ? {} : { markdownSummary: input.markdownSummary }),
   });
   const branch = await writeProposalBranch({
     repositoryDir: input.repositoryDir,
@@ -269,9 +230,7 @@ export async function runActionPromoteDraft(
   };
   assignOptional(publishInput, "remoteName", input.remoteName);
   await publishProposalBranch(publishInput);
-  const pullRequestInput: Parameters<
-    typeof createOrUpdateProposalPullRequest
-  >[0] = {
+  const pullRequestInput: Parameters<typeof createOrUpdateProposalPullRequest>[0] = {
     client: input.pullRequestClient,
     manifest: staging.manifest,
     branch,
@@ -301,9 +260,7 @@ export async function runActionPromoteDraft(
   };
 }
 
-async function readExistingRecognitionRecords(
-  repositoryDir: string,
-): Promise<readonly unknown[]> {
+async function readExistingRecognitionRecords(repositoryDir: string): Promise<readonly unknown[]> {
   const ledgerPath = join(repositoryDir, CONTRIBUTIONS_JSONL_PATH);
 
   try {
@@ -337,8 +294,7 @@ export async function runActionFromEnvironment(
     const explicitEventPath = readEnvInput(env.INPUT_EVENT_PATH);
     const githubFixturePath = readEnvInput(env.INPUT_GITHUB_FIXTURE);
     const modeInput = readEnvInput(env.INPUT_MODE);
-    const explicitMode =
-      modeInput === undefined ? undefined : normalizeActionMode(modeInput);
+    const explicitMode = modeInput === undefined ? undefined : normalizeActionMode(modeInput);
     const fallbackEventPath =
       githubFixturePath === undefined && explicitMode !== "promote-draft"
         ? readEnvInput(env.GITHUB_EVENT_PATH)
@@ -346,9 +302,7 @@ export async function runActionFromEnvironment(
     const summaryJsonPath = resolveActionSummaryPath(env);
 
     const config =
-      explicitMode === "promote-draft"
-        ? {}
-        : await loadActionConfigFromEnvironment(env);
+      explicitMode === "promote-draft" ? {} : await loadActionConfigFromEnvironment(env);
     const mode = explicitMode ?? normalizeActionMode(config.mode ?? "propose");
     const input: ActionDryRunInput = {
       mode,
@@ -361,11 +315,7 @@ export async function runActionFromEnvironment(
         );
       }
     } else {
-      assignOptional(
-        input,
-        "eventPath",
-        explicitEventPath ?? fallbackEventPath,
-      );
+      assignOptional(input, "eventPath", explicitEventPath ?? fallbackEventPath);
       assignOptional(input, "githubFixturePath", githubFixturePath);
       assignOptional(input, "liveGitHubClient", runtime.liveGitHubClient);
       assignOptional(
@@ -400,14 +350,10 @@ function resolveActionSummaryPath(env: NodeJS.ProcessEnv): string | undefined {
     );
   }
 
-  const workspace = resolve(
-    readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
-  );
+  const workspace = resolve(readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd());
   const resolvedPath = resolve(workspace, inputPath);
   if (!isPathInside(workspace, resolvedPath)) {
-    throw new ActionUsageError(
-      "INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.",
-    );
+    throw new ActionUsageError("INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.");
   }
 
   return resolvedPath;
@@ -415,10 +361,7 @@ function resolveActionSummaryPath(env: NodeJS.ProcessEnv): string | undefined {
 
 function isPathInside(basePath: string, targetPath: string): boolean {
   const relativePath = relative(basePath, targetPath);
-  return (
-    relativePath.length === 0 ||
-    (!relativePath.startsWith("..") && !isAbsolute(relativePath))
-  );
+  return relativePath.length === 0 || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
 }
 
 async function runActionMode(
@@ -429,21 +372,15 @@ async function runActionMode(
   const mode = normalizeActionMode(input.mode ?? "dry-run");
 
   if (mode === "propose") {
-    return runActionPropose(
-      buildActionWriteInput(input, env, runtime, "propose"),
-    );
+    return runActionPropose(buildActionWriteInput(input, env, runtime, "propose"));
   }
 
   if (mode === "stage-draft") {
-    return runActionStageDraft(
-      buildActionWriteInput(input, env, runtime, "stage-draft"),
-    );
+    return runActionStageDraft(buildActionWriteInput(input, env, runtime, "stage-draft"));
   }
 
   if (mode === "promote-draft") {
-    return runActionPromoteDraft(
-      buildActionWriteInput(input, env, runtime, "promote-draft"),
-    );
+    return runActionPromoteDraft(buildActionWriteInput(input, env, runtime, "promote-draft"));
   }
 
   return runActionDryRun({
@@ -491,10 +428,7 @@ function buildActionWriteInput(
   assignOptional(clientOptions, "fetch", runtime.fetch);
 
   if (mode === "propose") {
-    const liveGitHubClientOptions = buildLiveGitHubClientOptions(
-      clientOptions,
-      runtime,
-    );
+    const liveGitHubClientOptions = buildLiveGitHubClientOptions(clientOptions, runtime);
     const proposeInput: ActionProposeInput = {
       ...input,
       mode,
@@ -503,23 +437,11 @@ function buildActionWriteInput(
         readEnvInput(env.INPUT_STAGING_DIR) ??
         join(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-propose"),
       baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
-      pullRequestClient:
-        runtime.pullRequestClient ??
-        createGitHubPullRequestClient(clientOptions),
-      liveGitHubClient:
-        runtime.liveGitHubClient ??
-        createGitHubApiClient(liveGitHubClientOptions),
+      pullRequestClient: runtime.pullRequestClient ?? createGitHubPullRequestClient(clientOptions),
+      liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(liveGitHubClientOptions),
     };
-    assignOptional(
-      proposeInput,
-      "remoteName",
-      readEnvInput(env.INPUT_REMOTE_NAME),
-    );
-    assignOptional(
-      proposeInput,
-      "targetRepository",
-      readEnvInput(env.GITHUB_REPOSITORY),
-    );
+    assignOptional(proposeInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
+    assignOptional(proposeInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
 
     return proposeInput;
   }
@@ -531,34 +453,18 @@ function buildActionWriteInput(
       repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
       stagingDir:
         readEnvInput(env.INPUT_STAGING_DIR) ??
-        join(
-          readEnvInput(env.RUNNER_TEMP) ?? tmpdir(),
-          "clarissimi-promote-draft",
-        ),
+        join(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-promote-draft"),
       baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
-      pullRequestClient:
-        runtime.pullRequestClient ??
-        createGitHubPullRequestClient(clientOptions),
+      pullRequestClient: runtime.pullRequestClient ?? createGitHubPullRequestClient(clientOptions),
     };
-    assignOptional(
-      promoteDraftInput,
-      "remoteName",
-      readEnvInput(env.INPUT_REMOTE_NAME),
-    );
-    assignOptional(
-      promoteDraftInput,
-      "targetRepository",
-      readEnvInput(env.GITHUB_REPOSITORY),
-    );
+    assignOptional(promoteDraftInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
+    assignOptional(promoteDraftInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
     assignOptional(promoteDraftInput, "markdownSummary", input.markdownSummary);
 
     return promoteDraftInput;
   }
 
-  const liveGitHubClientOptions = buildLiveGitHubClientOptions(
-    clientOptions,
-    runtime,
-  );
+  const liveGitHubClientOptions = buildLiveGitHubClientOptions(clientOptions, runtime);
 
   const stageDraftInput: ActionStageDraftInput = {
     ...input,
@@ -568,22 +474,11 @@ function buildActionWriteInput(
       readEnvInput(env.INPUT_STAGING_DIR) ??
       join(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-stage-draft"),
     baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
-    pullRequestClient:
-      runtime.pullRequestClient ?? createGitHubPullRequestClient(clientOptions),
-    liveGitHubClient:
-      runtime.liveGitHubClient ??
-      createGitHubApiClient(liveGitHubClientOptions),
+    pullRequestClient: runtime.pullRequestClient ?? createGitHubPullRequestClient(clientOptions),
+    liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(liveGitHubClientOptions),
   };
-  assignOptional(
-    stageDraftInput,
-    "remoteName",
-    readEnvInput(env.INPUT_REMOTE_NAME),
-  );
-  assignOptional(
-    stageDraftInput,
-    "targetRepository",
-    readEnvInput(env.GITHUB_REPOSITORY),
-  );
+  assignOptional(stageDraftInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
+  assignOptional(stageDraftInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
 
   return stageDraftInput;
 }
@@ -603,32 +498,22 @@ function buildLiveGitHubClientOptions(
 function resolvePromoteDraftPath(env: NodeJS.ProcessEnv): string {
   const inputPath = readEnvInput(env.INPUT_DRAFT_PATH);
   if (inputPath === undefined) {
-    throw new ActionUsageError(
-      "INPUT_DRAFT_PATH is required for promote-draft mode.",
-    );
+    throw new ActionUsageError("INPUT_DRAFT_PATH is required for promote-draft mode.");
   }
 
   if (isAbsolute(inputPath)) {
-    throw new ActionUsageError(
-      "INPUT_DRAFT_PATH must be relative to GITHUB_WORKSPACE.",
-    );
+    throw new ActionUsageError("INPUT_DRAFT_PATH must be relative to GITHUB_WORKSPACE.");
   }
 
-  const workspace = resolve(
-    readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
-  );
+  const workspace = resolve(readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd());
   const draftsRoot = resolve(workspace, ".clarissimi", "drafts");
   const resolvedPath = resolve(workspace, inputPath);
   if (!isPathInside(draftsRoot, resolvedPath) || resolvedPath === draftsRoot) {
-    throw new ActionUsageError(
-      "INPUT_DRAFT_PATH must point inside .clarissimi/drafts/.",
-    );
+    throw new ActionUsageError("INPUT_DRAFT_PATH must point inside .clarissimi/drafts/.");
   }
 
   if (!resolvedPath.toLowerCase().endsWith(".json")) {
-    throw new ActionUsageError(
-      "INPUT_DRAFT_PATH must point to a JSON draft file.",
-    );
+    throw new ActionUsageError("INPUT_DRAFT_PATH must point to a JSON draft file.");
   }
 
   return resolvedPath;
@@ -656,9 +541,7 @@ async function readApprovedDraft(
     !isPathInside(realDraftsRoot, realDraftPath) ||
     realDraftPath === realDraftsRoot
   ) {
-    throw new Error(
-      "Approved Clarissimi draft resolves outside .clarissimi/drafts/.",
-    );
+    throw new Error("Approved Clarissimi draft resolves outside .clarissimi/drafts/.");
   }
 
   let parsed: unknown;
@@ -686,9 +569,7 @@ async function readApprovedDraft(
     result.value.maintainerApprovalStatus !== "approved" &&
     result.value.maintainerApprovalStatus !== "auto_approved"
   ) {
-    throw new Error(
-      "promote-draft requires maintainerApprovalStatus approved or auto_approved.",
-    );
+    throw new Error("promote-draft requires maintainerApprovalStatus approved or auto_approved.");
   }
 
   return result.value;
@@ -712,9 +593,7 @@ async function prepareActionAssessment(
   input: ActionDryRunInput,
 ): Promise<PreparedActionAssessment> {
   const source = selectInputSource(input);
-  const eventPayload = JSON.parse(
-    await readFile(source.path, "utf8"),
-  ) as unknown;
+  const eventPayload = JSON.parse(await readFile(source.path, "utf8")) as unknown;
   const resolution =
     source.kind === "github_fixture"
       ? {
@@ -749,10 +628,7 @@ async function prepareActionAssessment(
   return {
     kind: "assessment",
     inputSource: source.kind,
-    assessment: applyFixtureApproval(
-      draft,
-      parseFixtureApprovalStatus(eventPayload),
-    ),
+    assessment: applyFixtureApproval(draft, parseFixtureApprovalStatus(eventPayload)),
     redactionChanged: preparedEvidence.redactionReport.changed,
     redactionMatchCount: preparedEvidence.redactionReport.occurrences.length,
   };
@@ -763,9 +639,7 @@ function selectInputSource(input: ActionDryRunInput): {
   readonly path: string;
 } {
   if (input.eventPath !== undefined && input.githubFixturePath !== undefined) {
-    throw new ActionUsageError(
-      "Use only one action input source: eventPath or githubFixturePath.",
-    );
+    throw new ActionUsageError("Use only one action input source: eventPath or githubFixturePath.");
   }
 
   if (input.githubFixturePath !== undefined) {
@@ -787,9 +661,7 @@ function selectInputSource(input: ActionDryRunInput): {
   );
 }
 
-function parseFixtureApprovalStatus(
-  value: unknown,
-): ApprovalStatus | undefined {
+function parseFixtureApprovalStatus(value: unknown): ApprovalStatus | undefined {
   if (!isRecord(value) || value.maintainerApprovalStatus === undefined) {
     return undefined;
   }
@@ -798,9 +670,7 @@ function parseFixtureApprovalStatus(
     typeof value.maintainerApprovalStatus !== "string" ||
     !isApprovalStatus(value.maintainerApprovalStatus)
   ) {
-    throw new ActionUsageError(
-      "maintainerApprovalStatus must be a known approval status.",
-    );
+    throw new ActionUsageError("maintainerApprovalStatus must be a known approval status.");
   }
 
   return value.maintainerApprovalStatus;
@@ -837,55 +707,39 @@ function requireEnvInput(value: string | undefined, name: string): string {
   return normalized;
 }
 
-function requireProviderEnvInput(
-  value: string | undefined,
-  name: string,
-): string {
+function requireProviderEnvInput(value: string | undefined, name: string): string {
   const normalized = readEnvInput(value);
   if (normalized === undefined) {
-    throw new ActionUsageError(
-      `${name} is required for the openai-compatible provider.`,
-    );
+    throw new ActionUsageError(`${name} is required for the openai-compatible provider.`);
   }
 
   return normalized;
 }
 
-async function loadActionConfigFromEnvironment(
-  env: NodeJS.ProcessEnv,
-): Promise<ClarissimiConfig> {
+async function loadActionConfigFromEnvironment(env: NodeJS.ProcessEnv): Promise<ClarissimiConfig> {
   const configPath = readEnvInput(env.INPUT_CONFIG_PATH);
   if (configPath === undefined) {
     return {};
   }
 
   const workspace = readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd();
-  const resolvedPath = isAbsolute(configPath)
-    ? configPath
-    : join(workspace, configPath);
+  const resolvedPath = isAbsolute(configPath) ? configPath : join(workspace, configPath);
   const parsed = await loadActionConfigValue(configPath, resolvedPath);
   const result = validateClarissimiConfig(parsed);
   if (!result.ok) {
-    throw new ActionUsageError(
-      formatActionConfigValidationIssue(result.issues[0]),
-    );
+    throw new ActionUsageError(formatActionConfigValidationIssue(result.issues[0]));
   }
 
   return result.value;
 }
 
-async function loadActionConfigValue(
-  configPath: string,
-  resolvedPath: string,
-): Promise<unknown> {
+async function loadActionConfigValue(configPath: string, resolvedPath: string): Promise<unknown> {
   if (resolvedPath.endsWith(".json")) {
     try {
       return JSON.parse(await readFile(resolvedPath, "utf8")) as unknown;
     } catch (error) {
       if (error instanceof SyntaxError) {
-        throw new ActionUsageError(
-          `Invalid JSON in Action config ${configPath}.`,
-        );
+        throw new ActionUsageError(`Invalid JSON in Action config ${configPath}.`);
       }
 
       throw new ActionUsageError(`Unable to read Action config ${configPath}.`);
@@ -897,9 +751,7 @@ async function loadActionConfigValue(
     try {
       module = await import(pathToFileURL(resolvedPath).href);
     } catch {
-      throw new ActionUsageError(
-        `Failed to load TypeScript Action config ${configPath}.`,
-      );
+      throw new ActionUsageError(`Failed to load TypeScript Action config ${configPath}.`);
     }
 
     if (!("default" in module)) {
@@ -916,9 +768,7 @@ async function loadActionConfigValue(
   );
 }
 
-function formatActionConfigValidationIssue(
-  issue: ValidationIssue | undefined,
-): string {
+function formatActionConfigValidationIssue(issue: ValidationIssue | undefined): string {
   if (issue === undefined) {
     return "Action config is invalid.";
   }
@@ -944,8 +794,7 @@ function resolveActionProvider(
   runtime: ActionEnvironmentRuntime,
   config: ClarissimiConfig,
 ): ContributionDraftProvider {
-  const providerId =
-    readEnvInput(env.INPUT_PROVIDER) ?? config.provider ?? "fake";
+  const providerId = readEnvInput(env.INPUT_PROVIDER) ?? config.provider ?? "fake";
   if (!isConfigProvider(providerId)) {
     throw new ActionUsageError(`Unsupported provider: ${providerId}.`);
   }
@@ -955,17 +804,12 @@ function resolveActionProvider(
   }
 
   if (providerId === "openai-compatible") {
-    const options: Parameters<
-      typeof createOpenAiCompatibleContributionDraftProvider
-    >[0] = {
+    const options: Parameters<typeof createOpenAiCompatibleContributionDraftProvider>[0] = {
       model: requireProviderEnvInput(
         readEnvInput(env.INPUT_PROVIDER_MODEL) ?? config.providerModel,
         "INPUT_PROVIDER_MODEL or config providerModel",
       ),
-      token: requireProviderEnvInput(
-        env.CLARISSIMI_PROVIDER_TOKEN,
-        "CLARISSIMI_PROVIDER_TOKEN",
-      ),
+      token: requireProviderEnvInput(env.CLARISSIMI_PROVIDER_TOKEN, "CLARISSIMI_PROVIDER_TOKEN"),
     };
     assignOptional(
       options,
@@ -975,9 +819,7 @@ function resolveActionProvider(
     assignOptional(
       options,
       "thinking",
-      parseProviderThinking(
-        readEnvInput(env.INPUT_PROVIDER_THINKING) ?? config.providerThinking,
-      ),
+      parseProviderThinking(readEnvInput(env.INPUT_PROVIDER_THINKING) ?? config.providerThinking),
     );
     assignOptional(options, "fetch", runtime.fetch);
     return createOpenAiCompatibleContributionDraftProvider(options);
@@ -986,17 +828,13 @@ function resolveActionProvider(
   throw new ActionUsageError(`Unsupported provider: ${providerId}.`);
 }
 
-function parseProviderThinking(
-  value: string | undefined,
-): ConfigProviderThinking | undefined {
+function parseProviderThinking(value: string | undefined): ConfigProviderThinking | undefined {
   if (value === undefined) {
     return undefined;
   }
 
   if (!isConfigProviderThinking(value)) {
-    throw new ActionUsageError(
-      "INPUT_PROVIDER_THINKING supports only disabled.",
-    );
+    throw new ActionUsageError("INPUT_PROVIDER_THINKING supports only disabled.");
   }
 
   return value;
@@ -1006,14 +844,9 @@ function resolveActionMarkdownSummary(
   env: NodeJS.ProcessEnv,
   config: ClarissimiConfig,
 ): NonNullable<ClarissimiConfig["markdownSummary"]> {
-  const value =
-    readEnvInput(env.INPUT_MARKDOWN_SUMMARY) ??
-    config.markdownSummary ??
-    "none";
+  const value = readEnvInput(env.INPUT_MARKDOWN_SUMMARY) ?? config.markdownSummary ?? "none";
   if (!isConfigMarkdownSummary(value)) {
-    throw new ActionUsageError(
-      "INPUT_MARKDOWN_SUMMARY supports only none or table.",
-    );
+    throw new ActionUsageError("INPUT_MARKDOWN_SUMMARY supports only none or table.");
   }
 
   return value;
@@ -1068,11 +901,7 @@ async function writeActionSummaryJson(
   }
 
   await mkdir(dirname(summaryJsonPath), { recursive: true });
-  await writeFile(
-    summaryJsonPath,
-    `${JSON.stringify(summary, null, 2)}\n`,
-    "utf8",
-  );
+  await writeFile(summaryJsonPath, `${JSON.stringify(summary, null, 2)}\n`, "utf8");
 }
 
 async function writeGitHubStepSummary(

@@ -51,8 +51,7 @@ test("GitHub API client fetches merged pull request evidence surfaces", async ()
         {
           id: 9001,
           body: "Looks covered.",
-          html_url:
-            "https://github.com/sample/project/pull/42#discussion_r9001",
+          html_url: "https://github.com/sample/project/pull/42#discussion_r9001",
           path: "tests/parser.spec.ts",
           diff_hunk: "@@ -0,0 +1,12 @@",
           user: {

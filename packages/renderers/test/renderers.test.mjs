@@ -60,22 +60,14 @@ test("renders approved assessments as parseable JSONL", () => {
 
   assert.equal(jsonl.endsWith("\n"), true);
   assert.equal(parsed.length, 1);
-  assert.equal(
-    parsed[0].publicRecognitionText,
-    "Added regression coverage for the parser crash.",
-  );
+  assert.equal(parsed[0].publicRecognitionText, "Added regression coverage for the parser crash.");
 });
 
 test("keeps approved ledger output on the MVP single-file path", () => {
   assert.equal(CONTRIBUTIONS_JSONL_PATH, ".clarissimi/contributions.jsonl");
+  assert.equal(RENDERED_OUTPUT_PATHS.contributionsJsonl, CONTRIBUTIONS_JSONL_PATH);
   assert.equal(
-    RENDERED_OUTPUT_PATHS.contributionsJsonl,
-    CONTRIBUTIONS_JSONL_PATH,
-  );
-  assert.equal(
-    Object.values(RENDERED_OUTPUT_PATHS).includes(
-      ".clarissimi/contributions/2026.jsonl",
-    ),
+    Object.values(RENDERED_OUTPUT_PATHS).includes(".clarissimi/contributions/2026.jsonl"),
     false,
   );
 });
@@ -149,10 +141,7 @@ test("rejects duplicate identities already present in a ledger before appending"
       ),
     (error) => {
       assert.equal(error instanceof RendererValidationError, true);
-      assert.equal(
-        error.message,
-        "Ledger contains duplicate contribution records.",
-      );
+      assert.equal(error.message, "Ledger contains duplicate contribution records.");
       return true;
     },
   );
@@ -160,10 +149,7 @@ test("rejects duplicate identities already present in a ledger before appending"
 
 test("rejects draft assessments before rendering public outputs", () => {
   assert.throws(
-    () =>
-      renderContributionsJsonl([
-        assessment({ maintainerApprovalStatus: "draft" }),
-      ]),
+    () => renderContributionsJsonl([assessment({ maintainerApprovalStatus: "draft" })]),
     RendererValidationError,
   );
 });
@@ -198,10 +184,7 @@ test("renders sanitized draft review JSON for inbox staging", () => {
 });
 
 test("rejects approved assessments before rendering draft review JSON", () => {
-  assert.throws(
-    () => renderDraftReviewJson(assessment()),
-    RendererValidationError,
-  );
+  assert.throws(() => renderDraftReviewJson(assessment()), RendererValidationError);
 });
 
 test("derives contributor profiles without public ranking fields", () => {
@@ -215,18 +198,14 @@ test("derives contributor profiles without public ranking fields", () => {
       contributionType: "documentation",
       affectedArea: "setup guide",
       suggestedBadge: "Docs Pathfinder",
-      publicRecognitionText:
-        "Improved setup documentation for first-time contributors.",
+      publicRecognitionText: "Improved setup documentation for first-time contributors.",
     }),
   ]);
 
   assert.equal(document.schemaVersion, "clarissimi.contributors/v1");
   assert.equal(document.contributors.length, 1);
   assert.equal(document.contributors[0].contributionCount, 2);
-  assert.deepEqual(document.contributors[0].contributionTypes, [
-    "documentation",
-    "test",
-  ]);
+  assert.deepEqual(document.contributors[0].contributionTypes, ["documentation", "test"]);
   assert.equal(JSON.stringify(document).includes("score"), false);
   assert.equal(JSON.stringify(document).includes("rank"), false);
 });
@@ -317,10 +296,7 @@ test("builds maintainer-only recent recognition share analytics", () => {
   assert.equal(document.contributors[0].recognitionCount, 2);
   assert.equal(document.contributors[0].recognitionWeight, 5);
   assert.equal(document.contributors[0].recognitionShare, 0.833333);
-  assert.deepEqual(document.contributors[0].contributionTypes, [
-    "documentation",
-    "test",
-  ]);
+  assert.deepEqual(document.contributors[0].contributionTypes, ["documentation", "test"]);
   assert.equal(document.contributors[1].contributor.login, "maintainer-helper");
   assert.equal(document.contributors[1].recognitionShare, 0.166667);
   assert.equal(JSON.stringify(document).includes("rank"), false);
@@ -353,8 +329,7 @@ test("renders per-contributor totals and deterministic type counts without score
       contributionType: "documentation",
       affectedArea: "setup guide",
       suggestedBadge: "Docs Pathfinder",
-      publicRecognitionText:
-        "Improved setup documentation for first-time contributors.",
+      publicRecognitionText: "Improved setup documentation for first-time contributors.",
       source: {
         ...source,
         pullRequestNumber: 44,
@@ -370,8 +345,7 @@ test("renders per-contributor totals and deterministic type counts without score
       contributionType: "security",
       affectedArea: "token handling",
       suggestedBadge: "Security Steward",
-      publicRecognitionText:
-        "Hardened token handling at the provider boundary.",
+      publicRecognitionText: "Hardened token handling at the provider boundary.",
       source: {
         ...source,
         pullRequestNumber: 45,
@@ -380,15 +354,11 @@ test("renders per-contributor totals and deterministic type counts without score
   ]);
 
   assert.equal(
-    markdown.includes(
-      "## maintainer\\-helper\n\n**1 recognized contribution** · security 1",
-    ),
+    markdown.includes("## maintainer\\-helper\n\n**1 recognized contribution** · security 1"),
     true,
   );
   assert.equal(
-    markdown.includes(
-      "## octocat\n\n**3 recognized contributions** · documentation 1 · test 2",
-    ),
+    markdown.includes("## octocat\n\n**3 recognized contributions** · documentation 1 · test 2"),
     true,
   );
   assert.equal(markdown.includes("score"), false);
@@ -424,10 +394,7 @@ test("renders an optional contributor summary table before the detailed sections
     { summary: "table" },
   );
 
-  assert.equal(
-    markdown.includes("| Contributor | Total | Types |\n| --- | ---: | --- |"),
-    true,
-  );
+  assert.equal(markdown.includes("| Contributor | Total | Types |\n| --- | ---: | --- |"), true);
   assert.equal(
     markdown.includes(
       "| [@maintainer\\-helper](https://github.com/maintainer-helper) | 1 | security 1 |",
@@ -435,18 +402,12 @@ test("renders an optional contributor summary table before the detailed sections
     true,
   );
   assert.equal(
-    markdown.includes(
-      "| [@octocat](https://github.com/octocat) | 2 | documentation 1 · test 1 |",
-    ),
+    markdown.includes("| [@octocat](https://github.com/octocat) | 2 | documentation 1 · test 1 |"),
     true,
   );
+  assert.equal(markdown.indexOf("| Contributor |"), markdown.lastIndexOf("| Contributor |"));
   assert.equal(
-    markdown.indexOf("| Contributor |"),
-    markdown.lastIndexOf("| Contributor |"),
-  );
-  assert.equal(
-    markdown.indexOf("| Contributor |") <
-      markdown.indexOf("## maintainer\\-helper"),
+    markdown.indexOf("| Contributor |") < markdown.indexOf("## maintainer\\-helper"),
     true,
   );
   assert.equal(markdown.includes("## octocat"), true);
@@ -474,24 +435,9 @@ test("renders all repository output targets consistently", () => {
     summary: "table",
   });
 
-  assert.equal(
-    outputs.contributionsJsonl.includes("clarissimi.assessment/v1"),
-    true,
-  );
-  assert.equal(
-    outputs.contributorsJson.includes("clarissimi.contributors/v1"),
-    true,
-  );
-  assert.equal(
-    outputs.contributorsMarkdown.includes("Added regression coverage"),
-    true,
-  );
-  assert.equal(
-    outputs.contributorsMarkdown.includes("| Contributor | Total | Types |"),
-    true,
-  );
-  assert.equal(
-    outputs.staticDataJson.includes("clarissimi.static-contributions/v1"),
-    true,
-  );
+  assert.equal(outputs.contributionsJsonl.includes("clarissimi.assessment/v1"), true);
+  assert.equal(outputs.contributorsJson.includes("clarissimi.contributors/v1"), true);
+  assert.equal(outputs.contributorsMarkdown.includes("Added regression coverage"), true);
+  assert.equal(outputs.contributorsMarkdown.includes("| Contributor | Total | Types |"), true);
+  assert.equal(outputs.staticDataJson.includes("clarissimi.static-contributions/v1"), true);
 });

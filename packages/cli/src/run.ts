@@ -89,16 +89,16 @@ const COMMAND_FLAGS: Readonly<Record<string, ReadonlySet<string>>> = {
 };
 
 export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExitCode> {
+  let args: ParsedArgs | undefined;
   try {
-    const args = parseArgs(argv);
+    args = parseArgs(argv);
     rejectUnsupportedFlags(args);
 
     if (args.command === undefined || args.command === "help" || getBooleanFlag(args, "help")) {
       if (args.command === "help") {
         const positionalError = rejectUnexpectedPositionals(args, "help");
         if (positionalError !== undefined) {
-          io.stderr(positionalError);
-          return CLI_EXIT_CODES.usage;
+          throw new CliUsageError(positionalError);
         }
       }
       io.stdout(renderHelp());
@@ -123,16 +123,21 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExi
       case "analytics":
         return await runAnalytics(args, io);
       default:
-        io.stderr(`Unknown command: ${args.command}\n`);
-        return CLI_EXIT_CODES.usage;
+        throw new CliUsageError(`Unknown command: ${args.command}`);
     }
   } catch (error) {
     if (error instanceof CliUsageError) {
-      io.stderr(`${error.message}\n`);
-      return CLI_EXIT_CODES.usage;
+      return writeUsageFailure(io, args, argv, error.message);
     }
 
-    io.stderr(`${error instanceof Error ? error.message : String(error)}\n`);
+    const message = error instanceof Error ? error.message : String(error);
+    if (isJsonRequested(args, argv)) {
+      io.stdout(
+        `${JSON.stringify({ ok: false, command: resolveCommandName(args, argv), message }, null, 2)}\n`,
+      );
+    } else {
+      io.stderr(`${message}\n`);
+    }
     return CLI_EXIT_CODES.providerFailure;
   }
 }
@@ -154,8 +159,7 @@ function rejectUnsupportedFlags(args: ParsedArgs): void {
 async function runValidateConfig(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const positionalError = rejectUnexpectedPositionals(args, "validate-config");
   if (positionalError !== undefined) {
-    io.stderr(positionalError);
-    return CLI_EXIT_CODES.usage;
+    throw new CliUsageError(positionalError);
   }
 
   try {
@@ -180,8 +184,7 @@ async function runValidateConfig(args: ParsedArgs, io: CliIo): Promise<CliExitCo
 async function runValidateLedger(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const positionalError = rejectUnexpectedPositionals(args, "validate-ledger");
   if (positionalError !== undefined) {
-    io.stderr(positionalError);
-    return CLI_EXIT_CODES.usage;
+    throw new CliUsageError(positionalError);
   }
 
   try {
@@ -210,34 +213,33 @@ async function runValidateLedger(args: ParsedArgs, io: CliIo): Promise<CliExitCo
 async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const positionalError = rejectUnexpectedPositionals(args, "recognize");
   if (positionalError !== undefined) {
-    io.stderr(positionalError);
-    return CLI_EXIT_CODES.usage;
+    throw new CliUsageError(positionalError);
   }
 
   const fixturePath = getStringFlag(args, "fixture");
   const githubFixturePath = getStringFlag(args, "github-fixture");
   if (fixturePath === undefined && githubFixturePath === undefined) {
-    io.stderr("recognize requires --fixture <path> or --github-fixture <path>.\n");
-    return CLI_EXIT_CODES.usage;
+    throw new CliUsageError("recognize requires --fixture <path> or --github-fixture <path>.");
   }
 
   if (fixturePath !== undefined && githubFixturePath !== undefined) {
-    io.stderr("recognize accepts only one fixture input: use --fixture or --github-fixture.\n");
-    return CLI_EXIT_CODES.usage;
+    throw new CliUsageError(
+      "recognize accepts only one fixture input: use --fixture or --github-fixture.",
+    );
   }
 
   try {
     const config = (await validateConfigFile(io.cwd, getStringFlag(args, "config"))).config;
     const mode = getStringFlag(args, "mode") ?? config.mode ?? "dry-run";
     if (mode !== "dry-run") {
-      io.stderr("The fixture-first recognize command currently supports only --mode dry-run.\n");
-      return CLI_EXIT_CODES.usage;
+      throw new CliUsageError(
+        "The fixture-first recognize command currently supports only --mode dry-run.",
+      );
     }
 
     const selectedFixturePath = fixturePath ?? githubFixturePath;
     if (selectedFixturePath === undefined) {
-      io.stderr("recognize requires a fixture path.\n");
-      return CLI_EXIT_CODES.usage;
+      throw new CliUsageError("recognize requires a fixture path.");
     }
 
     const provider = await resolveRecognitionProvider(args, io, config);
@@ -281,8 +283,7 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
     return CLI_EXIT_CODES.success;
   } catch (error) {
     if (error instanceof CliUsageError) {
-      io.stderr(`${error.message}\n`);
-      return CLI_EXIT_CODES.usage;
+      throw error;
     }
 
     writeFailure(io, args, "recognize", error);
@@ -295,14 +296,12 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
 async function runStageDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const positionalError = rejectUnexpectedPositionals(args, "stage-draft");
   if (positionalError !== undefined) {
-    io.stderr(positionalError);
-    return CLI_EXIT_CODES.usage;
+    throw new CliUsageError(positionalError);
   }
 
   const draftPath = getStringFlag(args, "draft");
   if (draftPath === undefined) {
-    io.stderr("stage-draft requires --draft <path>.\n");
-    return CLI_EXIT_CODES.usage;
+    throw new CliUsageError("stage-draft requires --draft <path>.");
   }
 
   const draftsDir = resolveFromCwd(
@@ -353,14 +352,12 @@ async function runStageDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> 
 async function runApproveDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const positionalError = rejectUnexpectedPositionals(args, "approve-draft");
   if (positionalError !== undefined) {
-    io.stderr(positionalError);
-    return CLI_EXIT_CODES.usage;
+    throw new CliUsageError(positionalError);
   }
 
   const draftPath = getStringFlag(args, "draft");
   if (draftPath === undefined) {
-    io.stderr("approve-draft requires --draft <path>.\n");
-    return CLI_EXIT_CODES.usage;
+    throw new CliUsageError("approve-draft requires --draft <path>.");
   }
 
   const resolvedDraftPath = resolveFromCwd(io.cwd, draftPath);
@@ -397,14 +394,12 @@ async function runApproveDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode
 async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const positionalError = rejectUnexpectedPositionals(args, "import-draft");
   if (positionalError !== undefined) {
-    io.stderr(positionalError);
-    return CLI_EXIT_CODES.usage;
+    throw new CliUsageError(positionalError);
   }
 
   const draftPath = getStringFlag(args, "draft");
   if (draftPath === undefined) {
-    io.stderr("import-draft requires --draft <path>.\n");
-    return CLI_EXIT_CODES.usage;
+    throw new CliUsageError("import-draft requires --draft <path>.");
   }
 
   const ledgerPath = resolveFromCwd(
@@ -469,8 +464,7 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
     return CLI_EXIT_CODES.success;
   } catch (error) {
     if (error instanceof CliUsageError) {
-      io.stderr(`${error.message}\n`);
-      return CLI_EXIT_CODES.usage;
+      throw error;
     }
 
     writeFailure(io, args, "import-draft", error);
@@ -536,8 +530,7 @@ function resolveMarkdownSummary(args: ParsedArgs, config: CliConfig): ConfigMark
 async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const positionalError = rejectUnexpectedPositionals(args, "rebuild");
   if (positionalError !== undefined) {
-    io.stderr(positionalError);
-    return CLI_EXIT_CODES.usage;
+    throw new CliUsageError(positionalError);
   }
 
   const ledgerPath = resolveFromCwd(
@@ -580,8 +573,7 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
     return CLI_EXIT_CODES.success;
   } catch (error) {
     if (error instanceof CliUsageError) {
-      io.stderr(`${error.message}\n`);
-      return CLI_EXIT_CODES.usage;
+      throw error;
     }
 
     writeFailure(io, args, "rebuild", error);
@@ -594,8 +586,7 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
 async function runAnalytics(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const [subcommand, ...extraPositionals] = args.positionals;
   if (subcommand !== "recent-share" || extraPositionals.length > 0) {
-    io.stderr("analytics requires the recent-share subcommand.\n");
-    return CLI_EXIT_CODES.usage;
+    throw new CliUsageError("analytics requires the recent-share subcommand.");
   }
 
   const ledgerPath = resolveFromCwd(
@@ -624,8 +615,7 @@ async function runAnalytics(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
     return CLI_EXIT_CODES.success;
   } catch (error) {
     if (error instanceof CliUsageError) {
-      io.stderr(`${error.message}\n`);
-      return CLI_EXIT_CODES.usage;
+      throw error;
     }
 
     writeFailure(io, args, "analytics", error);
@@ -642,6 +632,41 @@ function writeOutput(io: CliIo, args: ParsedArgs, value: Record<string, unknown>
   }
 
   io.stdout(`${value.message ?? "Command completed."}\n`);
+}
+
+function writeUsageFailure(
+  io: CliIo,
+  args: ParsedArgs | undefined,
+  argv: readonly string[],
+  message: string,
+): CliExitCode {
+  const normalizedMessage = message.trimEnd();
+  if (isJsonRequested(args, argv)) {
+    io.stdout(
+      `${JSON.stringify(
+        { ok: false, command: resolveCommandName(args, argv), message: normalizedMessage },
+        null,
+        2,
+      )}\n`,
+    );
+  } else {
+    io.stderr(`${normalizedMessage}\n`);
+  }
+
+  return CLI_EXIT_CODES.usage;
+}
+
+function isJsonRequested(args: ParsedArgs | undefined, argv: readonly string[]): boolean {
+  return args?.flags.get("json") === true || (args === undefined && argv.includes("--json"));
+}
+
+function resolveCommandName(args: ParsedArgs | undefined, argv: readonly string[]): string {
+  if (args !== undefined) {
+    return args.command ?? "clarissimi";
+  }
+
+  const first = argv[0];
+  return first !== undefined && !first.startsWith("--") ? first : "clarissimi";
 }
 
 function writeFailure(io: CliIo, args: ParsedArgs, command: string, error: unknown): void {
@@ -679,7 +704,7 @@ function rejectUnexpectedPositionals(args: ParsedArgs, command: string): string 
     return undefined;
   }
 
-  return `${command} does not accept positional arguments: ${args.positionals.join(" ")}\n`;
+  return `${command} does not accept positional arguments: ${args.positionals.join(" ")}`;
 }
 
 function renderRecentShareMessage(

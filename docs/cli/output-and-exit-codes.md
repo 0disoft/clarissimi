@@ -27,6 +27,12 @@ JSON output should be stable enough for CI and must not include:
 - secrets or redacted source text
 - private environment values
 
+When the exact boolean `--json` flag is present, both success and failure write one JSON document to
+stdout and leave stderr empty. Failure documents contain `ok: false`, the command name, and a
+sanitized `message`; the process exit code remains the authoritative failure category. This also
+applies to argument parsing and usage errors. Without `--json`, failures remain human-readable on
+stderr.
+
 ## Exit Codes
 
 - `0`: success

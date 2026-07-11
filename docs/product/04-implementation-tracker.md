@@ -848,6 +848,34 @@ Validation:
 - `pnpm run check`
 - `pnpm run contract`
 
+### 21. Consistent CLI JSON Failure Output
+
+Source: `docs/cli/output-and-exit-codes.md`
+
+Status: Completed in `packages/cli/src/run.ts`.
+
+Goal: make `--json` reliable for CI consumers across success, domain failure, and usage failure
+paths.
+
+Completed deliverables:
+
+- the exact boolean `--json` flag writes one JSON document to stdout and leaves stderr empty
+- usage and argument-parser failures use the same `{ ok, command, message }` failure envelope
+- parser failures recover the command name without mistaking global option values for commands
+- invalid assigned forms such as `--json=true` remain human-readable usage errors
+- process exit codes remain authoritative and unchanged
+- human-mode failures continue to use stderr
+
+Validation:
+
+- CLI output and usage tests
+- `pnpm run docs`
+- `pnpm run release-readiness`
+- `pnpm run format`
+- `pnpm run lint`
+- `pnpm run check`
+- `pnpm run contract`
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

@@ -302,10 +302,6 @@ test("commands reject unknown and cross-command flags before reading files", asy
         argv: ["validate-ledger", "--config", "missing.json"],
         message: "Unknown option for validate-ledger: --config.",
       },
-      {
-        argv: ["--json"],
-        message: "Unknown option for global CLI: --json.",
-      },
     ];
 
     for (const { argv, message } of cases) {
@@ -328,6 +324,49 @@ test("commands reject repeated flags instead of silently choosing a value", asyn
     assert.equal(result.exitCode, 1);
     assert.equal(result.stdout, "");
     assert.equal(result.stderr, "--ledger cannot be repeated.\n");
+  });
+});
+
+test("json mode renders argument parsing and usage failures as JSON", async () => {
+  await withTempDir(async (dir) => {
+    const global = await run(["--json"], dir);
+    const globalWithValue = await run(["--config", "ignored.json", "--json"], dir);
+    const duplicate = await run(
+      ["validate-ledger", "--json", "--ledger", "first.jsonl", "--ledger", "second.jsonl"],
+      dir,
+    );
+
+    assert.equal(global.exitCode, 1);
+    assert.equal(global.stderr, "");
+    assert.deepEqual(JSON.parse(global.stdout), {
+      ok: false,
+      command: "clarissimi",
+      message: "Unknown option for global CLI: --json.",
+    });
+    assert.equal(globalWithValue.exitCode, 1);
+    assert.equal(globalWithValue.stderr, "");
+    assert.deepEqual(JSON.parse(globalWithValue.stdout), {
+      ok: false,
+      command: "clarissimi",
+      message: "Unknown option for global CLI: --config.",
+    });
+    assert.equal(duplicate.exitCode, 1);
+    assert.equal(duplicate.stderr, "");
+    assert.deepEqual(JSON.parse(duplicate.stdout), {
+      ok: false,
+      command: "validate-ledger",
+      message: "--ledger cannot be repeated.",
+    });
+  });
+});
+
+test("assigned json values remain human-readable usage errors", async () => {
+  await withTempDir(async (dir) => {
+    const result = await run(["validate-config", "--json=true"], dir);
+
+    assert.equal(result.exitCode, 1);
+    assert.equal(result.stdout, "");
+    assert.equal(result.stderr, "--json does not accept a value.\n");
   });
 });
 
@@ -540,8 +579,12 @@ test("analytics recent-share rejects invalid as-of values as usage errors", asyn
     );
 
     assert.equal(result.exitCode, 1);
-    assert.equal(result.stdout, "");
-    assert.match(result.stderr, /--as-of must be an ISO-compatible date time/);
+    assert.equal(result.stderr, "");
+    assert.deepEqual(JSON.parse(result.stdout), {
+      ok: false,
+      command: "analytics",
+      message: "--as-of must be an ISO-compatible date time.",
+    });
   });
 });
 
@@ -556,8 +599,12 @@ test("analytics recent-share rejects invalid window-day values as usage errors",
     );
 
     assert.equal(result.exitCode, 1);
-    assert.equal(result.stdout, "");
-    assert.match(result.stderr, /--window-days must be a positive integer/);
+    assert.equal(result.stderr, "");
+    assert.deepEqual(JSON.parse(result.stdout), {
+      ok: false,
+      command: "analytics",
+      message: "--window-days must be a positive integer.",
+    });
   });
 });
 

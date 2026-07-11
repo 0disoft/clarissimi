@@ -623,6 +623,8 @@ test("release readiness rejects CLI output and exit codes drift", () => {
     .replace("raw provider response", "provider response")
     .replace("raw diff", "diff")
     .replace("private environment values", "environment values")
+    .replace("both success and failure write one JSON document to", "only success writes JSON to")
+    .replace("applies to argument parsing and usage errors.", "does not apply to usage errors.")
     .replace("- `1`: usage error", "- `1`: error")
     .replace("- `7`: write failure", "- `7`: failure")
     .replace(
@@ -635,6 +637,8 @@ test("release readiness rejects CLI output and exit codes drift", () => {
     "docs/cli/output-and-exit-codes.md must include raw provider response.",
     "docs/cli/output-and-exit-codes.md must include raw diff.",
     "docs/cli/output-and-exit-codes.md must include private environment values.",
+    "docs/cli/output-and-exit-codes.md must include both success and failure write one JSON document to.",
+    "docs/cli/output-and-exit-codes.md must include applies to argument parsing and usage errors..",
     "docs/cli/output-and-exit-codes.md must include - `1`: usage error.",
     "docs/cli/output-and-exit-codes.md must include - `7`: write failure.",
     "docs/cli/output-and-exit-codes.md must include Output implies a recognition entry was approved when it is only a draft..",
@@ -2289,6 +2293,12 @@ function createCliOutputExitCodesDocumentText() {
     "- raw patch excerpt",
     "- secrets or redacted source text",
     "- private environment values",
+    "",
+    "When the exact boolean `--json` flag is present, both success and failure write one JSON document to",
+    "stdout and leave stderr empty. Failure documents contain `ok: false`, the command name, and a",
+    "sanitized `message`; the process exit code remains the authoritative failure category. This also",
+    "applies to argument parsing and usage errors. Without `--json`, failures remain human-readable on",
+    "stderr.",
     "",
     "- `0`: success",
     "- `1`: usage error",

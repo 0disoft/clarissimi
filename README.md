@@ -146,6 +146,10 @@ tag or use `0disoft/clarissimi@v0` to follow maintainer-approved `0.x` Action re
 release, `v0.1.0`, remains immutable, and `main` is never a consumer release channel. npm packages
 and GitHub Marketplace publication remain intentionally unavailable.
 
+See [`0disoft/clarissimi-example`](https://github.com/0disoft/clarissimi-example) for a public,
+synthetic consumer repository with a read-only `v0` workflow, a manual recognition proposal, and
+the merged contributor summary produced by [proposal PR #1](https://github.com/0disoft/clarissimi-example/pull/1).
+
 The `v0.1.1` release executes the committed Action bundle rather than installing pnpm dependencies
 and compiling TypeScript in each consumer run. `v0.1.0` keeps its published source-build runtime
 behavior unchanged. Ubuntu, macOS, and Windows runners have passed external dry-run and full-write

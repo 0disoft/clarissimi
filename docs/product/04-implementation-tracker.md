@@ -509,6 +509,9 @@ Release follow-up:
 - ADR 0034 accepts moving major alias `v0` only for an explicitly selected immutable `v0.x.y`
   release. Alias verification compares the remote alias, immutable tag, GitHub Release, and
   expected consumer checkout SHA before the channel is considered healthy.
+- public repository `0disoft/clarissimi-example` consumes `0disoft/clarissimi@v0` without secrets,
+  passed its read-only workflow, and merged synthetic recognition proposal PR `#1` through the
+  normal pull-request boundary with the compact contributor summary table
 - Public package publication and GitHub Marketplace publication remain blocked until a separate
   accepted release decision changes `docs/ops/release.md`.
 

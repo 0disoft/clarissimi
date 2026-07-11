@@ -41,6 +41,10 @@ Use `0disoft/clarissimi@v0` for maintainer-approved `0.x` updates, or pin
 reserved for this repository's development and dogfood workflows. Immutable version tags never
 move.
 
+The public [`clarissimi-example`](https://github.com/0disoft/clarissimi-example) consumer shows the
+copyable read-only workflow, the manual least-privilege proposal workflow, and a merged synthetic
+recognition result with the contributor summary table.
+
 The current `action.yml` defaults to `propose` mode and also supports explicit read-only `dry-run`
 and write-mode `stage-draft`. The `v0.1.1` release executes the committed `action-dist/index.js`
 bundle without consumer-time package installation or TypeScript compilation. `v0.1.0` remains

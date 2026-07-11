@@ -48,6 +48,7 @@ async function run(argv, runtime) {
   }
 
   await command(runtime, "gh", ["--version"], "find GitHub CLI");
+  await preflight(runtime, { repo, branch, externalRepo, externalRef, sha });
   await requireSecret(runtime, repo, "CLARISSIMI_PROVIDER_TOKEN");
 
   const ciRun = await findRun(runtime, { repo, workflow: "CI", branch, headSha: sha });
@@ -127,6 +128,38 @@ async function run(argv, runtime) {
     }
   }, null, 2));
   return 0;
+}
+
+async function preflight(runtime, options) {
+  const resolvedSha = await commandText(
+    runtime,
+    "gh",
+    ["api", `repos/${options.repo}/commits/${encodeURIComponent(options.externalRef)}`, "--jq", ".sha"],
+    `resolve candidate ref ${options.externalRef}`
+  );
+  if (resolvedSha.toLowerCase() !== options.sha.toLowerCase()) {
+    throw new Error(
+      `Candidate ref ${options.externalRef} resolves to ${resolvedSha}, expected ${options.sha}. `
+      + "No workflow was dispatched."
+    );
+  }
+
+  const workflows = [
+    { repo: options.repo, ref: options.branch, workflow: "CI" },
+    { repo: options.repo, ref: options.branch, workflow: "clarissimi-live-provider-smoke.yml" },
+    { repo: options.externalRepo, ref: "main", workflow: "clarissimi.yml" },
+    { repo: options.externalRepo, ref: "main", workflow: "clarissimi-full-write-smoke.yml" },
+    { repo: options.externalRepo, ref: "main", workflow: "clarissimi-orphan-audit.yml" }
+  ];
+  for (const workflow of workflows) {
+    await command(
+      runtime,
+      "gh",
+      ["workflow", "view", workflow.workflow, "--repo", workflow.repo, "--ref", workflow.ref, "--yaml"],
+      `preflight ${workflow.repo} workflow ${workflow.workflow}`
+    );
+  }
+  runtime.log(`preflight passed for ${options.repo}@${options.externalRef} and ${options.externalRepo}`);
 }
 
 function parseArgs(argv, runtime) {

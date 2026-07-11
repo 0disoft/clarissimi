@@ -33,6 +33,20 @@ test("rejects a mismatched source-only external ref before dispatch", async () =
   assert.equal(runtime.calls.length, 0);
 });
 
+test("rejects a candidate ref that does not resolve to the requested SHA before dispatch", async () => {
+  const runtime = fakeRuntime({ resolvedSha: "abcdefabcdefabcdefabcdefabcdefabcdefabcd" });
+  assert.equal(await runReleaseCandidateEvidenceOrchestrator(["--provider-model", "gpt-4.1-mini", "--sha", sha], runtime), 1);
+  assert.equal(runtime.calls.some((call) => call.command === "gh" && call.args[0] === "workflow" && call.args[1] === "run"), false);
+  assert.match(runtime.errors.at(-1), /No workflow was dispatched/);
+});
+
+test("preflights every workflow before checking the provider secret or dispatching", async () => {
+  const runtime = fakeRuntime({ missingWorkflow: "clarissimi-full-write-smoke.yml" });
+  assert.equal(await runReleaseCandidateEvidenceOrchestrator(["--provider-model", "gpt-4.1-mini", "--sha", sha], runtime), 1);
+  assert.equal(runtime.calls.some((call) => call.command === "gh" && call.args[0] === "secret"), false);
+  assert.equal(runtime.calls.some((call) => call.command === "gh" && call.args[0] === "workflow" && call.args[1] === "run"), false);
+});
+
 function fakeRuntime(options = {}) {
   let now = Date.parse("2026-07-11T00:00:00Z");
   let nextRun = 102;
@@ -49,6 +63,10 @@ function fakeRuntime(options = {}) {
     runCommand: async (command, args) => {
       calls.push({ command, args });
       if (command === "gh" && args[0] === "--version") return ok("gh version 2");
+      if (command === "gh" && args[0] === "api") return ok(options.resolvedSha ?? sha);
+      if (command === "gh" && args[0] === "workflow" && args[1] === "view") {
+        return args.includes(options.missingWorkflow) ? { exitCode: 1, stdout: "", stderr: "workflow not found" } : ok("name: workflow");
+      }
       if (command === "gh" && args[0] === "secret") return ok('[{"name":"CLARISSIMI_PROVIDER_TOKEN"}]');
       if (command === "gh" && args[0] === "workflow") return ok();
       if (command === "gh" && args[0] === "run" && args[1] === "list") {

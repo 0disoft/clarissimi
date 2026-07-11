@@ -25,16 +25,22 @@ Replace the placeholder with a manifest-backed compatibility gate.
 - the current assessment schema version
 - every known persisted assessment version in oldest-to-newest order
 - one accepted compatibility fixture per known version
-- an explicit migration edge between every adjacent version
+- an explicit migration edge and repository-local migration module between every adjacent version
 - one rejected fixture carrying an unregistered future version
 
 For the current v1-only ledger, zero migration edges is correct. Adding another known version
-without an adjacent migration edge and compatibility fixture must fail.
+without an adjacent migration edge, executable migration module, and compatibility fixture must
+fail.
 
-`pnpm run migration-check` must build the schema package, execute the compatibility checker, accept
-the committed v1 fixture, reject the unknown-version fixture at `$.schemaVersion`, and run as its
-own hosted CI step. `release-readiness` must protect the package script, checker, manifest, tests,
-and hosted workflow registration.
+`pnpm run migration-check` must build the schema package, execute every historical fixture through
+each adjacent migration module, require deterministic results from repeated execution, validate the
+final value against the current assessment schema, accept the committed v1 fixture, reject the
+unknown-version fixture at `$.schemaVersion`, and run as its own hosted CI step.
+`release-readiness` must protect the package script, checker, manifest, tests, and hosted workflow
+registration.
+
+Migration module paths and their resolved filesystem targets must remain inside the repository.
+Invalid or escaping paths fail before module loading.
 
 The gate validates compatibility evidence; it does not rewrite ledgers, invent a v2 schema, create
 partitions, or claim that a migration has already occurred.

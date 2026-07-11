@@ -2114,7 +2114,8 @@ function createReadmeValidationText() {
     "`format` runs the repository-wide Oxfmt baseline accepted by ADR 0036.",
     "`oxlint` remains the JavaScript and TypeScript lint gate.",
     "`migration-check` builds the schema package and validates the committed persisted-schema",
-    "compatibility manifest, accepted v1 fixture, required migration edges, and unknown-version",
+    "compatibility manifest, accepted historical fixtures, executable deterministic migration chains,",
+    "current-schema validation, and the unknown-version fail-closed fixture accepted by ADR 0037.",
     "",
   ].join("\n");
 }

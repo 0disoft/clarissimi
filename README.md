@@ -291,8 +291,8 @@ Release-only credentialed checks are:
 TypeScript, JavaScript, JSON, Markdown, and YAML sources while ignoring generated Action bundles
 and build/cache output. `oxlint` remains the JavaScript and TypeScript lint gate.
 `migration-check` builds the schema package and validates the committed persisted-schema
-compatibility manifest, accepted v1 fixture, required migration edges, and unknown-version
-fail-closed fixture accepted by ADR 0037.
+compatibility manifest, accepted historical fixtures, executable deterministic migration chains,
+current-schema validation, and the unknown-version fail-closed fixture accepted by ADR 0037.
 
 `package.json` is project-owned after the first implementation package. `ssealed doctor` remains
 useful for scaffold provenance, but it is not the implementation merge gate once runner scripts are

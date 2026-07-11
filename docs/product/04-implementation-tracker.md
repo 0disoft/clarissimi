@@ -789,6 +789,38 @@ Validation:
 - `pnpm run check`
 - `pnpm run contract`
 
+### 19. Executable Migration Compatibility Gate
+
+Source: `docs/adr/0037-add-migration-compatibility-gate.md`,
+`docs/engineering/09-data-integrity.md`, `docs/product/03-risk-register.md`
+
+Status: Completed for the current v1 ledger and future adjacent-version migration registration.
+
+Goal: make `migration-check` prove executable persisted-record compatibility instead of accepting
+metadata-only migration declarations.
+
+Completed deliverables:
+
+- the migration manifest owns known versions, accepted historical fixtures, adjacent migration
+  modules, and the rejected unknown-version fixture
+- every historical fixture is migrated through the complete adjacent-version chain
+- each migration module path and resolved target must stay inside the repository and export
+  `migrate`; invalid paths fail before module loading
+- repeated execution against cloned input must produce the same result
+- the final migrated value must pass the current assessment schema validator
+- v1-only repositories correctly require zero migration edges without pretending a migration ran
+- hosted CI runs the gate as an independent validation step
+
+Validation:
+
+- `pnpm run migration-check`
+- `pnpm run docs`
+- `pnpm run release-readiness`
+- `pnpm run lint`
+- `pnpm run format`
+- `pnpm run check`
+- `pnpm run contract`
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

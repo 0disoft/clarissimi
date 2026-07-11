@@ -57,8 +57,9 @@ The current local CI parity commands are:
 - `pnpm run format`: runs Oxfmt in check mode across maintained TypeScript, JavaScript, JSON,
   Markdown, and YAML files. Generated Action bundles and build/cache output are ignored.
 - `pnpm run migration-check`: builds the schema package, validates the persisted-schema migration
-  manifest and accepted compatibility fixture, requires explicit adjacent-version migration edges,
-  and verifies unknown assessment versions fail closed.
+  manifest and accepted compatibility fixtures, executes every repository-local adjacent-version
+  migration twice to prove deterministic output, validates the final current-schema value, and
+  verifies unknown assessment versions fail closed.
 - `pnpm run check`: runs typecheck and the package test suite.
 - `pnpm run contract`: runs typecheck and tests as the current contract gate.
 

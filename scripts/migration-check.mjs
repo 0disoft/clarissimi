@@ -1,5 +1,5 @@
 import { readFile, realpath } from "node:fs/promises";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
@@ -267,7 +267,7 @@ async function loadMigrationModule(repoRoot, modulePath) {
   const resolvedRoot = await realpath(resolve(repoRoot));
   const resolvedModule = await realpath(resolve(repoRoot, modulePath));
   const relativePath = relative(resolvedRoot, resolvedModule);
-  if (relativePath === ".." || relativePath.startsWith(`..\\`) || isAbsolute(relativePath)) {
+  if (relativePath === ".." || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath)) {
     throw new Error("resolved migration module must stay inside the repository");
   }
   return import(pathToFileURL(resolvedModule).href);
@@ -289,7 +289,7 @@ function isRepoRelativePath(repoRoot, candidate) {
   const resolvedRoot = resolve(repoRoot);
   const resolvedCandidate = resolve(repoRoot, candidate);
   const relativePath = relative(resolvedRoot, resolvedCandidate);
-  return relativePath !== ".." && !relativePath.startsWith(`..\\`) && !isAbsolute(relativePath);
+  return relativePath !== ".." && !relativePath.startsWith(`..${sep}`) && !isAbsolute(relativePath);
 }
 
 function isDeepEqual(left, right) {

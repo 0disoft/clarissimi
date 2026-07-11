@@ -1201,6 +1201,8 @@ test("release readiness rejects missing rollback procedure coverage", () => {
     .replace("`pnpm run check`, `pnpm run contract`, `actionlint`, `ssealed doctor . --json`, YAML parsing,", "`pnpm run check`,")
     .replace("Delete the temporary staging directory.", "Clean up temporary files.")
     .replace("Close the proposal pull request and delete the proposal branch.", "Resolve the proposal.")
+    .replace("`pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`", "")
+    .replace("do not delete broad `clarissimi/*` patterns", "delete matching branches")
     .replace("Revert the recognition pull request", "Undo the recognition change")
     .replace("Published Action tag with a normal defect", "Published tag")
     .replace("do not move or overwrite the existing tag.", "Move the tag.")
@@ -1211,6 +1213,8 @@ test("release readiness rejects missing rollback procedure coverage", () => {
     "docs/ops/rollback.md must include `pnpm run check`, `pnpm run contract`, `actionlint`, `ssealed doctor . --json`, YAML parsing,.",
     "docs/ops/rollback.md must include Delete the temporary staging directory..",
     "docs/ops/rollback.md must include Close the proposal pull request and delete the proposal branch..",
+    "docs/ops/rollback.md must include `pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`.",
+    "docs/ops/rollback.md must include do not delete broad `clarissimi/*` patterns.",
     "docs/ops/rollback.md must include Revert the recognition pull request.",
     "docs/ops/rollback.md must include Published Action tag with a normal defect.",
     "docs/ops/rollback.md must include do not move or overwrite the existing tag..",
@@ -1663,6 +1667,7 @@ function createReleasePolicyText() {
     "`pnpm run hosted-ci-validation`",
     "`pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
     "`pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
+    "`pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`",
     "release PR, release issue, or GitHub release notes",
     "Do not make an evidence-only commit after final candidate validation",
     "docs/ops/release-candidate-evidence.md",
@@ -1778,6 +1783,7 @@ function createDocsValidationScriptText() {
     "  \"scripts/hosted-external-consumer-smoke.mjs\",",
     "  \"scripts/hosted-live-provider-smoke.mjs\",",
     "  \"scripts/release-candidate-evidence-orchestrator.mjs\",",
+    "  \"scripts/release-evidence-cleanup.mjs\",",
     "  \"scripts/release-candidate-evidence-issue.mjs\",",
     "  \"scripts/release-readiness.mjs\",",
     "  \"scripts/verify-action-major-tag.mjs\",",
@@ -2502,6 +2508,7 @@ function createRollbackProcedureText() {
     "| Local proposal branch only | Delete the local `clarissimi/recognition/<source-kind>-<source-id>` branch. |",
     "| Published proposal branch without pull request | Delete the remote proposal branch. |",
     "| Open proposal pull request before merge | Close the proposal pull request and delete the proposal branch. |",
+    "| Failed integration-lab full-write smoke leaves run-scoped resources | Preview `pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`. |",
     "| Merged recognition pull request | Revert the recognition pull request and run the rebuild path for derived outputs. |",
     "| Published Action tag with a normal defect | Keep the tag immutable and publish a corrective patch tag. |",
     "| Moving `v0` alias fails verification | Restore the recorded previous SHA with a lease. |",
@@ -2512,6 +2519,8 @@ function createRollbackProcedureText() {
     "```",
     "",
     "After the revert lands, regenerate derived outputs with the configured rebuild command.",
+    "For smoke cleanup, do not delete broad `clarissimi/*` patterns. Add `--apply` only after reviewing the preview.",
+    "The cleanup command fails if any matched pull request or branch remains. Rerun the Clarissimi smoke orphan audit.",
     "For a published Action tag with a normal defect, do not move or overwrite the existing tag.",
     "Restore `v0` to the SHA recorded before promotion.",
     "An urgent security or supply-chain incident records the old SHA, replacement SHA, affected users, and verification evidence.",

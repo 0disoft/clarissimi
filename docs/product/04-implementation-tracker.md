@@ -72,6 +72,9 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   orphan audit, preflight candidate-ref and workflow availability before dispatch, pass one
   correlation id through every workflow so concurrent runs cannot be confused, then pass collected
   run IDs to the evidence issue helper in preview mode by default
+- root `package.json`: configured `release-evidence-cleanup` recovery script with read-only preview
+  by default, exact completed full-write run validation, deterministic run-owned PR and branch
+  matching, explicit `--apply`, best-effort bounded cleanup, and final empty-state verification
 - `.github/workflows/clarissimi-dry-run.yml`: read-only dogfood for `github-fixture` and
   `event-path` inputs, including the sanitized JSON summary artifact path
 - `.github/workflows/clarissimi-propose-fixture.yml`: manual-only fixture propose dogfood

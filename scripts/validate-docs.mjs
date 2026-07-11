@@ -44,6 +44,7 @@ export const requiredDocumentationPaths = [
   "scripts/hosted-external-consumer-smoke.mjs",
   "scripts/hosted-live-provider-smoke.mjs",
   "scripts/release-candidate-evidence-orchestrator.mjs",
+  "scripts/release-evidence-cleanup.mjs",
   "scripts/release-candidate-evidence-issue.mjs",
   "scripts/release-readiness.mjs",
   "scripts/verify-action-major-tag.mjs"

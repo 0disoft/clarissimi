@@ -64,6 +64,10 @@ export const requiredPackageScripts = [
     includes: ["scripts/release-candidate-evidence-orchestrator.mjs"]
   },
   {
+    name: "release-evidence-cleanup",
+    includes: ["scripts/release-evidence-cleanup.mjs"]
+  },
+  {
     name: "release-candidate-evidence-issue",
     includes: ["scripts/release-candidate-evidence-issue.mjs"]
   }
@@ -140,6 +144,7 @@ export const releasePolicyDocumentContract = {
     "`pnpm run hosted-ci-validation`",
     "`pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
     "`pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
+    "`pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`",
     "release PR, release issue, or GitHub release notes",
     "Do not make an evidence-only commit after final candidate validation",
     "docs/ops/release-candidate-evidence.md",
@@ -262,6 +267,7 @@ export const docsValidationScriptContract = {
     "\"scripts/hosted-external-consumer-smoke.mjs\"",
     "\"scripts/hosted-live-provider-smoke.mjs\"",
     "\"scripts/release-candidate-evidence-orchestrator.mjs\"",
+    "\"scripts/release-evidence-cleanup.mjs\"",
     "\"scripts/release-candidate-evidence-issue.mjs\"",
     "\"scripts/release-readiness.mjs\"",
     "\"scripts/verify-action-major-tag.mjs\""
@@ -939,6 +945,11 @@ export const rollbackProcedureContract = {
     "git branch --delete clarissimi/recognition/<source-kind>-<source-id>",
     "git push origin --delete clarissimi/recognition/<source-kind>-<source-id>",
     "Close the proposal pull request and delete the proposal branch.",
+    "`pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`",
+    "do not delete broad `clarissimi/*` patterns",
+    "Add `--apply` only after",
+    "fails if any matched pull request or branch remains",
+    "Clarissimi smoke orphan audit",
     "Revert the recognition pull request",
     "configured rebuild command",
     "Published Action tag with a normal defect",

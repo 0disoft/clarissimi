@@ -240,6 +240,9 @@ Maintainers can collect the complete hosted evidence set and render the issue bo
 `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`. This
 defaults to an issue preview; `--create-issue` is required for GitHub issue creation. Preview mode
 still dispatches the credentialed, external dry-run, full-write, and orphan-audit workflows.
+If the full-write run leaves integration-lab residue, preview the bounded recovery set with
+`pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`. Apply cleanup only after
+reviewing that output, then rerun the read-only orphan audit.
 
 ## Owners
 

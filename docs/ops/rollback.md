@@ -31,6 +31,7 @@ Choose the narrowest rollback path:
 | Local proposal branch only | Delete the local `clarissimi/recognition/<source-kind>-<source-id>` branch. |
 | Published proposal branch without pull request | Delete the remote proposal branch. |
 | Open proposal pull request before merge | Close the proposal pull request and delete the proposal branch. |
+| Failed integration-lab full-write smoke leaves run-scoped resources | Preview `pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`, apply it explicitly, then rerun the orphan audit. |
 | Merged recognition pull request | Revert the recognition pull request and run the rebuild path for derived outputs. |
 | Published Action tag with a normal defect | Keep the tag immutable and publish a corrective patch tag. |
 | Moving `v0` alias fails verification | Restore the recorded previous SHA with a lease, or delete only a newly created alias. |
@@ -59,6 +60,14 @@ git push origin --delete clarissimi/recognition/<source-kind>-<source-id>
 For an open proposal pull request, close the pull request first, then delete the remote branch. The
 pull request title starts with `Clarissimi recognition:` and the branch is scoped under
 `clarissimi/recognition/`.
+
+For integration-lab full-write smoke residue, do not delete broad `clarissimi/*` patterns. Run
+`pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>` first and inspect its JSON
+preview. The tool verifies that the run is a completed `Clarissimi full write smoke` dispatch and
+matches only the exact run-scoped base, draft, and recognition branches. Add `--apply` only after
+reviewing that list. The command attempts every bounded cleanup action, reads repository state
+again, and fails if any matched pull request or branch remains. Finish by rerunning the read-only
+`Clarissimi smoke orphan audit` workflow.
 
 For a merged recognition pull request, revert the merge or the exact recognition commit with the
 repository's normal GitHub workflow. After the revert lands, regenerate derived outputs with the

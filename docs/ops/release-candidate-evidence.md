@@ -25,6 +25,17 @@ Action tag, also pass `--release-type versioned-action-tag --release-version <v0
 version tag becomes the external consumer ref. If the full-write smoke fails after dispatch, the
 orchestrator still runs the orphan audit before returning failure.
 
+If a failed full-write run leaves reserved smoke resources, inspect the exact completed run first:
+
+```powershell
+pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>
+```
+
+The command defaults to a JSON preview. It matches only open pull requests and branches whose names
+are deterministically reserved for that run's Ubuntu, macOS, and Windows jobs. After reviewing the
+preview, add `--apply` to close those pull requests and delete those branches. The apply path makes a
+second read and fails unless all matched residue is gone. Rerun the read-only orphan audit afterward.
+
 - Status: Draft
 
 ## Purpose

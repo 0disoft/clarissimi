@@ -411,8 +411,10 @@ Completed deliverables:
   Markdown, JSON, YAML, TypeScript, and JavaScript support
 - generated Action bundles and build/cache output remain excluded from formatting; the existing
   bundle freshness check continues to own `action-dist/index.js`
-- release-readiness verifies that `pnpm run migration-check` remains intentionally fail-closed
-  until a real migration validation owner and command are accepted
+- ADR 0037 replaces the fail-closed `migration-check` placeholder with a manifest-backed
+  persisted-schema compatibility gate
+- migration compatibility fixtures prove current v1 acceptance, unknown-version rejection, and
+  mandatory adjacent-version edges before a future persisted schema version is registered
 - release-readiness verifies that package test globs still include package and script test suites
 - release-readiness verifies that `pnpm-workspace.yaml` keeps the `packages/*` workspace glob and
   that workspace package names stay aligned with their `packages/<name>` directories

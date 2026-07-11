@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "clarissimi.assessment/v999",
+  "contributor": {
+    "platform": "github",
+    "id": "migration-fixture-unknown",
+    "login": "migration-fixture",
+    "profileUrl": "https://github.com/migration-fixture"
+  },
+  "contributionType": "maintenance",
+  "affectedArea": "ledger compatibility",
+  "impactLevel": "medium",
+  "evidenceSummary": "Exercises fail-closed handling for an unknown ledger version.",
+  "evidenceRefs": [
+    {
+      "kind": "test",
+      "id": "migration-unknown",
+      "title": "Unknown assessment version fixture"
+    }
+  ],
+  "suggestedBadge": "Compatibility Guard",
+  "publicRecognitionText": "Helped preserve ledger compatibility.",
+  "confidence": 0.9,
+  "maintainerApprovalStatus": "approved",
+  "source": {
+    "repository": "0disoft/clarissimi",
+    "event": "merged_pull_request",
+    "pullRequestNumber": 999,
+    "mergedAt": "2026-07-11T00:00:00.000Z"
+  }
+}

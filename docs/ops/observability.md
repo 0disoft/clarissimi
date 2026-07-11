@@ -51,7 +51,7 @@ release evidence when a manual dogfood run proves a gate.
 
 ## Validation
 
-- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`
+- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`
 - Release status: versioned Action tags are allowed by ADR 0031 after release gates pass; public
   package publication remains blocked by `docs/ops/release.md`.
 - Recent hosted live-provider evidence is recorded in `docs/ops/release.md`; refresh it with

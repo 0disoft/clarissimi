@@ -257,8 +257,8 @@ before code is generated.
 ## Validation
 
 Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,
-`pnpm run format`, `pnpm run smoke`, `pnpm run check`, and `pnpm run contract`, plus repository
-hygiene checks.
+`pnpm run format`, `pnpm run migration-check`, `pnpm run smoke`, `pnpm run check`, and
+`pnpm run contract`, plus repository hygiene checks.
 
 The current executable checks are:
 
@@ -266,6 +266,7 @@ The current executable checks are:
 - `pnpm run test`
 - `pnpm run lint`
 - `pnpm run format`
+- `pnpm run migration-check`
 - `pnpm run contract`
 - `pnpm run smoke`
 - `pnpm run docs`
@@ -289,7 +290,9 @@ Release-only credentialed checks are:
 `format` runs the repository-wide Oxfmt baseline accepted by ADR 0036. It checks maintained
 TypeScript, JavaScript, JSON, Markdown, and YAML sources while ignoring generated Action bundles
 and build/cache output. `oxlint` remains the JavaScript and TypeScript lint gate.
-`migration-check` intentionally fails until configured.
+`migration-check` builds the schema package and validates the committed persisted-schema
+compatibility manifest, accepted v1 fixture, required migration edges, and unknown-version
+fail-closed fixture accepted by ADR 0037.
 
 `package.json` is project-owned after the first implementation package. `ssealed doctor` remains
 useful for scaffold provenance, but it is not the implementation merge gate once runner scripts are

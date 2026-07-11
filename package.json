@@ -12,7 +12,7 @@
     "typecheck": "tsc -b --pretty false",
     "test": "pnpm run build && node --test packages/schemas/test/*.test.mjs packages/redaction/test/*.test.mjs packages/core/test/*.test.mjs packages/github/test/*.test.mjs packages/providers/test/*.test.mjs packages/renderers/test/*.test.mjs packages/cli/test/*.test.mjs packages/action/test/*.test.mjs scripts/test/*.test.mjs",
     "contract": "pnpm run typecheck && pnpm run test",
-    "migration-check": "node -e \"console.error('migration-check is not configured. Configure this validation before relying on pnpm run migration-check.'); process.exit(1)\"",
+    "migration-check": "pnpm run build && node scripts/migration-check.mjs",
     "smoke": "pnpm run build && node scripts/smoke.mjs",
     "live-provider-smoke": "pnpm run build && node scripts/live-provider-smoke.mjs",
     "hosted-ci-validation": "node scripts/hosted-ci-validation.mjs",

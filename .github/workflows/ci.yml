@@ -76,6 +76,9 @@ jobs:
       - name: Run format validation
         run: pnpm run format
 
+      - name: Run migration compatibility validation
+        run: pnpm run migration-check
+
       - name: Run smoke validation
         run: pnpm run smoke
 

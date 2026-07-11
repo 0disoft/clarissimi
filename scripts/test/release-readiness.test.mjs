@@ -5,6 +5,7 @@ import {
   dogfoodWorkflowContracts,
   findHighRiskSecretLines,
   formatterContract,
+  migrationCompatibilityContract,
   packageOwnershipContract,
   packageReleasePolicy,
   requiredPackageScripts,
@@ -27,6 +28,7 @@ import {
   validateDocsValidationScriptContract,
   validateEngineeringValidationDocumentContract,
   validateFormatterContract,
+  validateMigrationCompatibilityContract,
   validateHostedLiveProviderWorkflowContract,
   validateHostedCiEvidence,
   validateIncidentResponseDocumentContract,
@@ -90,7 +92,7 @@ test("release readiness rejects drifted release-critical script commands", () =>
   ]);
 });
 
-test("release readiness keeps deferred validations intentionally fail-closed", () => {
+test("release readiness accepts all required validation scripts", () => {
   const scripts = createValidScripts();
 
   assert.deepEqual(validatePackageScriptRegistration({ scripts }), []);
@@ -140,13 +142,59 @@ test("release readiness rejects formatter dependency, config, and ignore drift",
   );
 });
 
-test("release readiness rejects fake migration-check command drift", () => {
+test("release readiness accepts the migration compatibility contract", () => {
+  assert.deepEqual(
+    validateMigrationCompatibilityContract(
+      createMigrationCompatibilityTexts(),
+      createMigrationManifest(),
+    ),
+    [],
+  );
+});
+
+test("release readiness rejects migration compatibility contract drift", () => {
+  const texts = createMigrationCompatibilityTexts();
+  texts["docs/adr/0037-add-migration-compatibility-gate.md"] = "No compatibility contract.";
+  const manifest = createMigrationManifest();
+  manifest.currentSchemaVersion = "clarissimi.assessment/v2";
+  delete manifest.acceptedFixtures["clarissimi.assessment/v1"];
+  manifest.rejectedUnknownVersionFixture = "fixtures/migrations/missing.json";
+
+  const issues = validateMigrationCompatibilityContract(texts, manifest);
+
+  assert.equal(
+    issues.includes(
+      "fixtures/migrations/manifest.json currentSchemaVersion must remain clarissimi.assessment/v1.",
+    ),
+    true,
+  );
+  assert.equal(
+    issues.includes(
+      "fixtures/migrations/manifest.json acceptedFixtures must map clarissimi.assessment/v1 to fixtures/migrations/assessment-v1.json.",
+    ),
+    true,
+  );
+  assert.equal(
+    issues.includes(
+      "fixtures/migrations/manifest.json rejectedUnknownVersionFixture must remain fixtures/migrations/assessment-unknown-version.json.",
+    ),
+    true,
+  );
+  assert.equal(
+    issues.some((issue) =>
+      issue.startsWith("docs/adr/0037-add-migration-compatibility-gate.md must include"),
+    ),
+    true,
+  );
+});
+
+test("release readiness rejects migration-check command drift", () => {
   const scripts = createValidScripts();
   scripts["migration-check"] = "node -e \"console.log('no migrations')\"";
 
   assert.deepEqual(validatePackageScriptRegistration({ scripts }), [
-    "package.json scripts.migration-check must include migration-check is not configured.",
-    "package.json scripts.migration-check must include process.exit(1).",
+    "package.json scripts.migration-check must include pnpm run build.",
+    "package.json scripts.migration-check must include scripts/migration-check.mjs.",
   ]);
 });
 
@@ -353,6 +401,10 @@ test("release readiness rejects README validation drift", () => {
     .replace(
       "`oxlint` remains the JavaScript and TypeScript lint gate",
       "`eslint` is the lint gate",
+    )
+    .replace(
+      "`migration-check` builds the schema package and validates the committed persisted-schema",
+      "`migration-check` is optional",
     );
 
   assert.deepEqual(validateReadmeValidationContract(text), [
@@ -371,6 +423,7 @@ test("release readiness rejects README validation drift", () => {
     "README.md must include Release-only credentialed checks are:.",
     "README.md must include `format` runs the repository-wide Oxfmt baseline accepted by ADR 0036.",
     "README.md must include `oxlint` remains the JavaScript and TypeScript lint gate.",
+    "README.md must include `migration-check` builds the schema package and validates the committed persisted-schema.",
   ]);
 });
 
@@ -663,7 +716,7 @@ test("release readiness accepts the CI operational document contract", () => {
 test("release readiness rejects CI operational document drift", () => {
   const text = createCiOperationalDocumentText()
     .replace(
-      "`lint`, `format`, `smoke`, `check`, and `contract` with Node.js 24",
+      "`lint`, `format`, `migration-check`, `smoke`, `check`, and `contract` with Node.js 24",
       "`smoke`, `check`, and `contract` with Node.js 24",
     )
     .replace(
@@ -675,7 +728,7 @@ test("release readiness rejects CI operational document drift", () => {
       "with repository-owner recovery.",
     )
     .replace(
-      "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+      "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
       "- Required validation names: `docs`, `smoke`, `check`, `contract`",
     );
   const withoutHostedCiValidation = text
@@ -683,12 +736,12 @@ test("release readiness rejects CI operational document drift", () => {
     .replace("uses `gh run list` to find the `CI` workflow run", "uses the GitHub UI");
 
   assert.deepEqual(validateCiOperationalDocumentContract(withoutHostedCiValidation), [
-    "docs/ops/ci.md must include `lint`, `format`, `smoke`, `check`, and `contract` with Node.js 24.",
+    "docs/ops/ci.md must include `lint`, `format`, `migration-check`, `smoke`, `check`, and `contract` with Node.js 24.",
     "docs/ops/ci.md must include `pnpm run hosted-ci-validation`.",
     "docs/ops/ci.md must include uses `gh run list` to find the `CI` workflow run.",
     "docs/ops/ci.md must include The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`.",
     "docs/ops/ci.md must include to pass with strict up-to-date status checks. Administrator enforcement is disabled.",
-    "docs/ops/ci.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`.",
+    "docs/ops/ci.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`.",
   ]);
 });
 
@@ -710,14 +763,14 @@ test("release readiness rejects operational contract document drift", () => {
       "`pnpm run smoke`, `pnpm run check`, and `pnpm run contract` should usually pass.",
     )
     .replace(
-      "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+      "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
       "- Required validation names: `docs`, `smoke`, `check`, `contract`",
     );
 
   assert.deepEqual(validateOperationalContractDocumentContract(text), [
     "docs/ops/00-operational-contract.md must include Correctness gate: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,.",
     "docs/ops/00-operational-contract.md must include `pnpm run smoke`, `pnpm run check`, and `pnpm run contract` must pass before source-only merges..",
-    "docs/ops/00-operational-contract.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`.",
+    "docs/ops/00-operational-contract.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`.",
   ]);
 });
 
@@ -742,7 +795,7 @@ test("release readiness rejects observability document drift", () => {
     .replace("- `pnpm run release-readiness`", "")
     .replace("- `pnpm run lint`", "")
     .replace(
-      "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+      "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
       "- Required validation names: `docs`, `smoke`, `check`, `contract`",
     );
 
@@ -752,7 +805,7 @@ test("release readiness rejects observability document drift", () => {
     "docs/ops/observability.md must include Maintainers should preserve workflow URLs and PR URLs in.",
     "docs/ops/observability.md must include - `pnpm run release-readiness`.",
     "docs/ops/observability.md must include - `pnpm run lint`.",
-    "docs/ops/observability.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`.",
+    "docs/ops/observability.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`.",
   ]);
 });
 
@@ -767,13 +820,13 @@ test("release readiness rejects service levels document drift", () => {
       "Source-only merge readiness | Local `docs`, `smoke`, `check`, `contract`, and hygiene checks pass before push.",
     )
     .replace(
-      "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+      "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
       "- Required validation names: `docs`, `smoke`, `check`, `contract`",
     );
 
   assert.deepEqual(validateServiceLevelsDocumentContract(text), [
     "docs/ops/service-levels.md must include Source-only merge readiness | Local `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`, and hygiene checks pass before push..",
-    "docs/ops/service-levels.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`.",
+    "docs/ops/service-levels.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`.",
   ]);
 });
 
@@ -792,14 +845,14 @@ test("release readiness rejects secrets document drift", () => {
       "`pnpm run smoke`, `pnpm run check`, and `pnpm run contract` when convenient.",
     )
     .replace(
-      "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+      "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
       "- Required validation names: `docs`, `smoke`, `check`, `contract`",
     );
 
   assert.deepEqual(validateSecretsDocumentContract(text), [
     "docs/ops/secrets.md must include Rerun secret scan, `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,.",
     "docs/ops/secrets.md must include `pnpm run smoke`, `pnpm run check`, and `pnpm run contract`..",
-    "docs/ops/secrets.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`.",
+    "docs/ops/secrets.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`.",
   ]);
 });
 
@@ -816,7 +869,7 @@ test("release readiness rejects backup and restore document drift", () => {
       "manual review",
     )
     .replace(
-      "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+      "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
       "- Required validation names: `docs`, `smoke`, `check`, `contract`",
     );
 
@@ -824,7 +877,7 @@ test("release readiness rejects backup and restore document drift", () => {
     "docs/ops/backup-and-restore.md must include - `pnpm run release-readiness`.",
     "docs/ops/backup-and-restore.md must include - `pnpm run lint`.",
     "docs/ops/backup-and-restore.md must include secret scan for committed provider tokens, GitHub tokens, private keys, and environment files.",
-    "docs/ops/backup-and-restore.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`.",
+    "docs/ops/backup-and-restore.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`.",
   ]);
 });
 
@@ -1078,13 +1131,13 @@ test("release readiness accepts ops validation footer contracts", () => {
 test("release readiness rejects ops validation footer drift", () => {
   const texts = createOpsValidationFooterTexts();
   texts["docs/ops/incident-response.md"] = texts["docs/ops/incident-response.md"].replace(
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
     "- Required validation names: `docs`, `smoke`, `check`, `contract`",
   );
   delete texts["docs/ops/rollback.md"];
 
   assert.deepEqual(validateOpsValidationFooterContract(texts), [
-    "docs/ops/incident-response.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`.",
+    "docs/ops/incident-response.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`.",
     "docs/ops/rollback.md must be readable for ops validation footer contract.",
   ]);
 });
@@ -1870,8 +1923,6 @@ test("release readiness rejects hosted live provider trigger, permission, and pr
 
 function createValidScripts() {
   const scripts = {
-    "migration-check":
-      "node -e \"console.error('migration-check is not configured. Configure this validation before relying on pnpm run migration-check.'); process.exit(1)\"",
     test: `node --test ${requiredTestGlobs.join(" ")}`,
   };
 
@@ -1883,6 +1934,29 @@ function createValidScripts() {
   scripts.contract = "pnpm run typecheck && pnpm run test";
 
   return scripts;
+}
+
+function createMigrationCompatibilityTexts() {
+  return Object.fromEntries(
+    migrationCompatibilityContract.documents.map((document) => [
+      document.path,
+      `${document.requiredSnippets.join("\n")}\n`,
+    ]),
+  );
+}
+
+function createMigrationManifest() {
+  return {
+    schemaVersion: migrationCompatibilityContract.manifestSchemaVersion,
+    currentSchemaVersion: migrationCompatibilityContract.currentSchemaVersion,
+    knownVersions: [migrationCompatibilityContract.currentSchemaVersion],
+    acceptedFixtures: {
+      [migrationCompatibilityContract.currentSchemaVersion]:
+        migrationCompatibilityContract.acceptedFixturePath,
+    },
+    rejectedUnknownVersionFixture: migrationCompatibilityContract.rejectedFixturePath,
+    migrations: [],
+  };
 }
 
 function createSmokeScriptText() {
@@ -1948,7 +2022,8 @@ function createReleasePolicyText() {
     "create another moving major alias",
     "",
     "Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,",
-    "`pnpm run lint`, `pnpm run format`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and",
+    "`pnpm run lint`, `pnpm run format`, `pnpm run migration-check`, `pnpm run smoke`,",
+    "`pnpm run check`, `pnpm run contract`, and repository hygiene checks pass.",
     "",
     "- Public package publication: blocked.",
     "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0031",
@@ -1970,9 +2045,9 @@ function createReleasePolicyText() {
     "Do not make an evidence-only commit after final candidate validation",
     "docs/ops/release-candidate-evidence.md",
     "public product-positioning guardrails",
-    "repository-wide `format` and intentionally fail-closed `migration-check`",
+    "repository-wide `format` and migration compatibility gates",
     "",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
     "",
     "- Release status: immutable `v0.x.y` Action tags are allowed by ADR 0031",
     "package publication and GitHub Marketplace publication remain blocked",
@@ -2012,12 +2087,14 @@ function createReadmeValidationText() {
     "- comment updates or default-branch mutation",
     "",
     "Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
-    "`pnpm run format`, `pnpm run smoke`, `pnpm run check`, and `pnpm run contract`, plus repository hygiene checks.",
+    "`pnpm run format`, `pnpm run migration-check`, `pnpm run smoke`, `pnpm run check`, and",
+    "`pnpm run contract`, plus repository hygiene checks.",
     "",
     "- `pnpm run docs`",
     "- `pnpm run release-readiness`",
     "- `pnpm run lint`",
     "- `pnpm run format`",
+    "- `pnpm run migration-check`",
     "- `pnpm run smoke`",
     "- `pnpm run check`",
     "- `pnpm run contract`",
@@ -2036,7 +2113,8 @@ function createReadmeValidationText() {
     "",
     "`format` runs the repository-wide Oxfmt baseline accepted by ADR 0036.",
     "`oxlint` remains the JavaScript and TypeScript lint gate.",
-    "`migration-check` intentionally fails until configured.",
+    "`migration-check` builds the schema package and validates the committed persisted-schema",
+    "compatibility manifest, accepted v1 fixture, required migration edges, and unknown-version",
     "",
   ].join("\n");
 }
@@ -2301,7 +2379,7 @@ function createCiOperationalDocumentText() {
   return [
     "The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and",
     "manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,",
-    "`lint`, `format`, `smoke`, `check`, and `contract` with Node.js 24 and the package-manager version declared",
+    "`lint`, `format`, `migration-check`, `smoke`, `check`, and `contract` with Node.js 24 and the package-manager version declared",
     "by `package.json`.",
     "",
     "`pnpm run hosted-ci-validation` uses `gh run list` to find the `CI` workflow run",
@@ -2311,7 +2389,7 @@ function createCiOperationalDocumentText() {
     "to pass with strict up-to-date status checks. Administrator enforcement is disabled so repository",
     "owners can recover from CI or protection misconfiguration without changing the branch rule first.",
     "",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
     "",
   ].join("\n");
 }
@@ -2323,7 +2401,7 @@ function createOperationalContractDocumentText() {
     "",
     "## Validation",
     "",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
     "",
   ].join("\n");
 }
@@ -2347,7 +2425,7 @@ function createObservabilityDocumentText() {
     "",
     "## Validation",
     "",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
     "",
   ].join("\n");
 }
@@ -2360,7 +2438,7 @@ function createServiceLevelsDocumentText() {
     "",
     "## Validation",
     "",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
     "",
   ].join("\n");
 }
@@ -2372,7 +2450,7 @@ function createSecretsDocumentText() {
     "",
     "## Validation",
     "",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
     "",
   ].join("\n");
 }
@@ -2392,7 +2470,7 @@ function createBackupRestoreDocumentText() {
     "",
     "## Validation",
     "",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
     "",
   ].join("\n");
 }
@@ -2613,7 +2691,7 @@ function createOpsValidationFooterTexts() {
   const footer = [
     "## Validation",
     "",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
     "",
   ].join("\n");
 
@@ -2946,6 +3024,7 @@ function createCiWorkflowText() {
     "      - run: pnpm run release-readiness",
     "      - run: pnpm run lint",
     "      - run: pnpm run format",
+    "      - run: pnpm run migration-check",
     "      - run: pnpm run smoke",
     "      - run: pnpm run check",
     "      - run: pnpm run contract",

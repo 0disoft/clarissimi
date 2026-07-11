@@ -33,8 +33,8 @@ The current local CI parity commands are:
   package publication policy, Action release policy document status, public product-positioning
   guardrails, workspace package publish surface, package ownership table coverage, package
   publication metadata, internal workspace dependency graph, TypeScript project-reference build
-  graph, recorded dry-run and write-mode dogfood evidence, the real repository-wide `format` gate
-  and intentionally fail-closed `migration-check` placeholder, release tool availability, CI runtime and release-tool pin
+  graph, recorded dry-run and write-mode dogfood evidence, the repository-wide `format` gate and
+  manifest-backed `migration-check`, release tool availability, CI runtime and release-tool pin
   drift, `ssealed doctor`, workflow `actionlint`, YAML parsing, `git diff --check`, tracked
   generated-output drift, high-risk secret patterns, and hosted CI validation wrapper registration.
   The sole generated release-artifact exception is `action-dist/index.js`; release readiness
@@ -56,12 +56,15 @@ The current local CI parity commands are:
   gate.
 - `pnpm run format`: runs Oxfmt in check mode across maintained TypeScript, JavaScript, JSON,
   Markdown, and YAML files. Generated Action bundles and build/cache output are ignored.
+- `pnpm run migration-check`: builds the schema package, validates the persisted-schema migration
+  manifest and accepted compatibility fixture, requires explicit adjacent-version migration edges,
+  and verifies unknown assessment versions fail closed.
 - `pnpm run check`: runs typecheck and the package test suite.
 - `pnpm run contract`: runs typecheck and tests as the current contract gate.
 
 ADR 0036 accepts the corrected Oxfmt baseline and `release-readiness` protects its package,
-configuration, ignore, and CI contracts. `migration-check` remains intentionally unconfigured,
-fails closed, and is protected by `release-readiness` until its owner defines a real check.
+configuration, ignore, and CI contracts. ADR 0037 accepts the manifest-backed migration
+compatibility gate and `release-readiness` protects its script, fixtures, tests, and CI contract.
 
 `pnpm run bundle:action` compiles the workspace and writes the reviewable Action runtime bundle.
 `pnpm run bundle:action:check` compiles the same graph without rewriting the tracked artifact and
@@ -71,7 +74,7 @@ smoke cover that artifact instead.
 
 The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and
 manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,
-`lint`, `format`, `smoke`, `check`, and `contract` with Node.js 24 and the package-manager version declared
+`lint`, `format`, `migration-check`, `smoke`, `check`, and `contract` with Node.js 24 and the package-manager version declared
 by `package.json`.
 
 Before public package publication or a versioned Action tag, release maintainers should run:
@@ -145,7 +148,7 @@ owners can recover from CI or protection misconfiguration without changing the b
 
 ## Validation
 
-- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`
+- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`
 - Release status: versioned Action tags are allowed by ADR 0031 after release gates pass; public
   package publication remains blocked by `docs/ops/release.md`.
 - Recent hosted live-provider evidence is recorded in `docs/ops/release.md`; refresh it with

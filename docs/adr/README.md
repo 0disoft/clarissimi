@@ -58,6 +58,8 @@ engine.
   enforce it in hosted CI; superseded by ADR 0036
 - `0036-replace-prettier-with-oxfmt.md`: correct the formatter evidence and replace Prettier with a
   pinned repository-wide Oxfmt baseline
+- `0037-add-migration-compatibility-gate.md`: replace the fail-closed placeholder with a
+  manifest-backed persisted-schema compatibility gate
 
 ## Review Blockers
 

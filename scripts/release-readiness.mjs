@@ -32,6 +32,10 @@ export const requiredPackageScripts = [
     includes: ["oxfmt --check"],
   },
   {
+    name: "migration-check",
+    includes: ["pnpm run build", "scripts/migration-check.mjs"],
+  },
+  {
     name: "check",
     includes: ["pnpm run typecheck", "pnpm run test"],
   },
@@ -77,14 +81,6 @@ export const requiredPackageScripts = [
   },
 ];
 
-export const deferredPackageScripts = [
-  {
-    name: "migration-check",
-    requiredSnippets: ["migration-check is not configured", "process.exit(1)"],
-    forbiddenSnippets: [],
-  },
-];
-
 export const requiredTestGlobs = [
   "packages/schemas/test/*.test.mjs",
   "packages/redaction/test/*.test.mjs",
@@ -126,6 +122,48 @@ export const formatterContract = {
   ],
 };
 
+export const migrationCompatibilityContract = {
+  documents: [
+    {
+      path: "docs/adr/0037-add-migration-compatibility-gate.md",
+      requiredSnippets: [
+        "Replace the placeholder with a manifest-backed compatibility gate.",
+        "the current assessment schema version",
+        "every known persisted assessment version",
+        "an explicit migration edge between every adjacent version",
+        "one rejected fixture carrying an unregistered future version",
+        "Adding another known version",
+        "without an adjacent migration edge and compatibility fixture must fail.",
+        "The gate validates compatibility evidence; it does not rewrite ledgers",
+      ],
+    },
+    {
+      path: "scripts/migration-check.mjs",
+      requiredSnippets: [
+        "ASSESSMENT_SCHEMA_VERSION",
+        "validateContributionAssessment",
+        "manifest.knownVersions",
+        "manifest.migrations",
+        "rejected unknown-version fixture must use an unregistered schemaVersion",
+        "unknown-version fixture must fail current validation at $.schemaVersion",
+      ],
+    },
+    {
+      path: "scripts/test/migration-check.test.mjs",
+      requiredSnippets: [
+        "migration check accepts the committed v1 compatibility contract",
+        "migration check requires an explicit edge when a later version is registered",
+        "migration check requires the negative fixture to use an unknown version",
+      ],
+    },
+  ],
+  manifestPath: "fixtures/migrations/manifest.json",
+  manifestSchemaVersion: "clarissimi.migration-manifest/v1",
+  currentSchemaVersion: "clarissimi.assessment/v1",
+  acceptedFixturePath: "fixtures/migrations/assessment-v1.json",
+  rejectedFixturePath: "fixtures/migrations/assessment-unknown-version.json",
+};
+
 export const releasePolicyDocumentContract = {
   path: "docs/ops/release.md",
   requiredSnippets: [
@@ -136,7 +174,8 @@ export const releasePolicyDocumentContract = {
     "Do not bump package versions,",
     "create another moving major alias",
     "Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,",
-    "`pnpm run lint`, `pnpm run format`, `pnpm run smoke`, `pnpm run check`, `pnpm run contract`, and",
+    "`pnpm run lint`, `pnpm run format`, `pnpm run migration-check`, `pnpm run smoke`,",
+    "`pnpm run check`, `pnpm run contract`, and repository hygiene checks pass.",
     "- Public package publication: blocked.",
     "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0031",
     "- Moving GitHub Action major alias: `v0` is allowed under ADR 0034",
@@ -156,8 +195,8 @@ export const releasePolicyDocumentContract = {
     "Do not make an evidence-only commit after final candidate validation",
     "docs/ops/release-candidate-evidence.md",
     "public product-positioning guardrails",
-    "repository-wide `format` and intentionally fail-closed `migration-check`",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+    "repository-wide `format` and migration compatibility gates",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
     "Release status: immutable `v0.x.y` Action tags are allowed by ADR 0031",
     "package publication and GitHub Marketplace publication remain blocked",
   ],
@@ -210,11 +249,13 @@ export const readmeValidationContract = {
     "repository write modes such as direct `commit`",
     "comment updates or default-branch mutation",
     "Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
-    "`pnpm run format`, `pnpm run smoke`, `pnpm run check`, and `pnpm run contract`",
+    "`pnpm run format`, `pnpm run migration-check`, `pnpm run smoke`, `pnpm run check`, and",
+    "`pnpm run contract`, plus repository hygiene checks.",
     "- `pnpm run docs`",
     "- `pnpm run release-readiness`",
     "- `pnpm run lint`",
     "- `pnpm run format`",
+    "- `pnpm run migration-check`",
     "- `pnpm run smoke`",
     "- `pnpm run check`",
     "- `pnpm run contract`",
@@ -229,7 +270,8 @@ export const readmeValidationContract = {
     "- `pnpm run hosted-live-provider-smoke -- --model <provider-model>`",
     "`format` runs the repository-wide Oxfmt baseline accepted by ADR 0036",
     "`oxlint` remains the JavaScript and TypeScript lint gate",
-    "`migration-check` intentionally fails until configured",
+    "`migration-check` builds the schema package and validates the committed persisted-schema",
+    "compatibility manifest, accepted v1 fixture, required migration edges, and unknown-version",
   ],
 };
 
@@ -428,12 +470,12 @@ export const ciOperationalDocumentContract = {
   requiredSnippets: [
     "The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and",
     "manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,",
-    "`lint`, `format`, `smoke`, `check`, and `contract` with Node.js 24",
+    "`lint`, `format`, `migration-check`, `smoke`, `check`, and `contract` with Node.js 24",
     "`pnpm run hosted-ci-validation`",
     "uses `gh run list` to find the `CI` workflow run",
     "The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`",
     "to pass with strict up-to-date status checks. Administrator enforcement is disabled",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
   ],
 };
 
@@ -442,7 +484,7 @@ export const operationalContractDocumentContract = {
   requiredSnippets: [
     "Correctness gate: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
     "`pnpm run smoke`, `pnpm run check`, and `pnpm run contract` must pass before source-only merges.",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
   ],
 };
 
@@ -454,7 +496,7 @@ export const observabilityDocumentContract = {
     "Maintainers should preserve workflow URLs and PR URLs in",
     "- `pnpm run release-readiness`",
     "- `pnpm run lint`",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
   ],
 };
 
@@ -462,7 +504,7 @@ export const serviceLevelsDocumentContract = {
   path: "docs/ops/service-levels.md",
   requiredSnippets: [
     "Source-only merge readiness | Local `docs`, `release-readiness`, `lint`, `smoke`, `check`, `contract`, and hygiene checks pass before push.",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
   ],
 };
 
@@ -471,7 +513,7 @@ export const secretsDocumentContract = {
   requiredSnippets: [
     "Rerun secret scan, `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
     "`pnpm run smoke`, `pnpm run check`, and `pnpm run contract`.",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
   ],
 };
 
@@ -485,7 +527,7 @@ export const backupRestoreDocumentContract = {
     "- `pnpm run check`",
     "- `pnpm run contract`",
     "secret scan for committed provider tokens, GitHub tokens, private keys, and environment files",
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
   ],
 };
 
@@ -650,7 +692,7 @@ export const opsValidationFooterContract = {
     "docs/ops/rollback.md",
   ],
   requiredSnippets: [
-    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, `contract`",
+    "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
   ],
 };
 
@@ -1062,6 +1104,7 @@ export const ciWorkflowContract = {
     "pnpm run release-readiness",
     "pnpm run lint",
     "pnpm run format",
+    "pnpm run migration-check",
     "pnpm run smoke",
     "pnpm run check",
     "pnpm run contract",
@@ -1229,6 +1272,7 @@ export async function runReleaseReadiness(options = {}) {
 
   await runPackageScriptRegistrationCheck(repoRoot);
   await runFormatterContractCheck(repoRoot);
+  await runMigrationCompatibilityContractCheck(repoRoot);
   await runRootPackageManagerContractCheck(repoRoot);
   await runSmokePackCandidateContractCheck(repoRoot);
   await runWorkspaceContractCheck(repoRoot);
@@ -2236,6 +2280,28 @@ async function runFormatterContractCheck(repoRoot) {
   console.log("formatter contract passed");
 }
 
+async function runMigrationCompatibilityContractCheck(repoRoot) {
+  const textsByPath = {};
+  let manifest;
+  try {
+    for (const document of migrationCompatibilityContract.documents) {
+      textsByPath[document.path] = await readFile(join(repoRoot, document.path), "utf8");
+    }
+    manifest = JSON.parse(
+      await readFile(join(repoRoot, migrationCompatibilityContract.manifestPath), "utf8"),
+    );
+  } catch (error) {
+    throw new Error(`migration compatibility contract files are invalid: ${error.message}`);
+  }
+
+  const issues = validateMigrationCompatibilityContract(textsByPath, manifest);
+  if (issues.length > 0) {
+    throw new Error(`migration compatibility contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("migration compatibility contract passed");
+}
+
 async function runPackageReleasePolicyCheck(repoRoot) {
   const packageJsonPath = join(repoRoot, "package.json");
   let packageJson;
@@ -2913,30 +2979,6 @@ export function validatePackageScriptRegistration(packageJson) {
     }
   }
 
-  for (const script of deferredPackageScripts) {
-    const value = scripts[script.name];
-    if (typeof value !== "string") {
-      issues.push(
-        `package.json scripts.${script.name} must remain explicitly fail-closed until configured.`,
-      );
-      continue;
-    }
-
-    for (const expected of script.requiredSnippets) {
-      if (!value.includes(expected)) {
-        issues.push(`package.json scripts.${script.name} must include ${expected}.`);
-      }
-    }
-
-    for (const forbidden of script.forbiddenSnippets) {
-      if (value.includes(forbidden)) {
-        issues.push(
-          `package.json scripts.${script.name} must not use ${forbidden} until a formatter baseline is accepted.`,
-        );
-      }
-    }
-  }
-
   const testScript = scripts.test;
   if (typeof testScript !== "string") {
     issues.push("package.json scripts.test must be configured.");
@@ -2984,6 +3026,53 @@ export function validateFormatterContract(packageJson, config, contract = format
     if (!ignorePatterns.has(pattern)) {
       issues.push(`${contract.configPath} ignorePatterns must include ${pattern}.`);
     }
+  }
+
+  return issues;
+}
+
+export function validateMigrationCompatibilityContract(
+  textsByPath,
+  manifest,
+  contract = migrationCompatibilityContract,
+) {
+  const issues = [];
+
+  for (const document of contract.documents) {
+    const text = textsByPath[document.path];
+    for (const snippet of document.requiredSnippets) {
+      if (typeof text !== "string" || !text.includes(snippet)) {
+        issues.push(`${document.path} must include ${snippet}.`);
+      }
+    }
+  }
+
+  if (manifest?.schemaVersion !== contract.manifestSchemaVersion) {
+    issues.push(
+      `${contract.manifestPath} schemaVersion must remain ${contract.manifestSchemaVersion}.`,
+    );
+  }
+  if (manifest?.currentSchemaVersion !== contract.currentSchemaVersion) {
+    issues.push(
+      `${contract.manifestPath} currentSchemaVersion must remain ${contract.currentSchemaVersion}.`,
+    );
+  }
+  if (!manifest?.knownVersions?.includes(contract.currentSchemaVersion)) {
+    issues.push(
+      `${contract.manifestPath} knownVersions must include ${contract.currentSchemaVersion}.`,
+    );
+  }
+  if (
+    manifest?.acceptedFixtures?.[contract.currentSchemaVersion] !== contract.acceptedFixturePath
+  ) {
+    issues.push(
+      `${contract.manifestPath} acceptedFixtures must map ${contract.currentSchemaVersion} to ${contract.acceptedFixturePath}.`,
+    );
+  }
+  if (manifest?.rejectedUnknownVersionFixture !== contract.rejectedFixturePath) {
+    issues.push(
+      `${contract.manifestPath} rejectedUnknownVersionFixture must remain ${contract.rejectedFixturePath}.`,
+    );
   }
 
   return issues;

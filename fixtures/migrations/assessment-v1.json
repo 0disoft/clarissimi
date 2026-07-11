@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "clarissimi.assessment/v1",
+  "contributor": {
+    "platform": "github",
+    "id": "migration-fixture-v1",
+    "login": "migration-fixture",
+    "profileUrl": "https://github.com/migration-fixture"
+  },
+  "contributionType": "maintenance",
+  "affectedArea": "ledger compatibility",
+  "impactLevel": "medium",
+  "evidenceSummary": "Preserves a committed v1 ledger compatibility fixture.",
+  "evidenceRefs": [
+    {
+      "kind": "test",
+      "id": "migration-v1",
+      "title": "Assessment v1 compatibility fixture"
+    }
+  ],
+  "suggestedBadge": "Compatibility Guard",
+  "publicRecognitionText": "Helped preserve ledger compatibility.",
+  "confidence": 0.9,
+  "maintainerApprovalStatus": "approved",
+  "source": {
+    "repository": "0disoft/clarissimi",
+    "event": "merged_pull_request",
+    "pullRequestNumber": 1,
+    "mergedAt": "2026-07-11T00:00:00.000Z"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "clarissimi.migration-manifest/v1",
+  "currentSchemaVersion": "clarissimi.assessment/v1",
+  "knownVersions": ["clarissimi.assessment/v1"],
+  "acceptedFixtures": {
+    "clarissimi.assessment/v1": "fixtures/migrations/assessment-v1.json"
+  },
+  "rejectedUnknownVersionFixture": "fixtures/migrations/assessment-unknown-version.json",
+  "migrations": []
+}

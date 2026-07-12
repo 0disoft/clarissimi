@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -699,6 +699,39 @@ test("environment runner rejects summary artifact paths outside the workspace be
     assert.equal(stdout, "");
     assert.equal(stderr, "INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.\n");
     assert.deepEqual(requests, []);
+  });
+});
+
+test("environment runner rejects summary artifact paths through workspace symlinks", async () => {
+  await withTempDir(async (dir) => {
+    const outsideDir = await mkdtemp(join(tmpdir(), "clarissimi-summary-outside-"));
+    try {
+      const fixturePath = join(dir, "github-fixture.json");
+      await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+      await symlink(outsideDir, join(dir, "artifact-link"), "junction");
+      let stderr = "";
+
+      const exitCode = await runActionFromEnvironment(
+        {
+          GITHUB_WORKSPACE: dir,
+          INPUT_GITHUB_FIXTURE: fixturePath,
+          INPUT_MODE: "dry-run",
+          INPUT_SUMMARY_PATH: "artifact-link/summary.json",
+        },
+        {
+          stdout: () => {},
+          stderr: (value) => {
+            stderr += value;
+          },
+        },
+      );
+
+      assert.equal(exitCode, 1);
+      assert.match(stderr, /must not traverse symbolic links/);
+      await assert.rejects(() => readFile(join(outsideDir, "summary.json")));
+    } finally {
+      await rm(outsideDir, { force: true, recursive: true });
+    }
   });
 });
 

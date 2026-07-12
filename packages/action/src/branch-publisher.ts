@@ -39,11 +39,13 @@ export async function publishProposalBranch(
     );
   }
 
+  const remoteRef = `refs/heads/${input.branch.branchName}`;
+  const remoteSha = await remoteBranchSha(input.repositoryDir, remoteName, remoteRef);
   await git(input.repositoryDir, [
     "push",
-    "--force-with-lease",
+    `--force-with-lease=${remoteRef}:${remoteSha ?? ""}`,
     remoteName,
-    `${input.branch.branchName}:${input.branch.branchName}`,
+    `${input.branch.branchName}:${remoteRef}`,
   ]);
 
   return {
@@ -52,6 +54,27 @@ export async function publishProposalBranch(
     commitSha: input.branch.commitSha,
     rollbackHint: `Delete remote branch ${remoteName}/${input.branch.branchName} before merge to discard this proposal.`,
   };
+}
+
+async function remoteBranchSha(
+  repositoryDir: string,
+  remoteName: string,
+  remoteRef: string,
+): Promise<string | undefined> {
+  const output = await git(repositoryDir, ["ls-remote", "--heads", remoteName, remoteRef]);
+  if (output.length === 0) {
+    return undefined;
+  }
+
+  const [sha, ref, ...extra] = output.split(/\s+/);
+  if (sha === undefined || ref !== remoteRef || extra.length > 0 || !/^[a-f0-9]{40}$/i.test(sha)) {
+    throw new ProposalBranchPublisherError(
+      "invalid_remote_ref",
+      "Proposal branch publisher received malformed remote branch metadata.",
+    );
+  }
+
+  return sha;
 }
 
 function validatePublisherInput(input: ProposalBranchPublisherInput): void {

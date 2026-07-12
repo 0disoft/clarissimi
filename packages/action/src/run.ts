@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { appendFile, lstat, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
@@ -351,7 +351,7 @@ export async function runActionFromEnvironment(
       githubFixturePath === undefined && explicitMode !== "promote-draft"
         ? readEnvInput(env.GITHUB_EVENT_PATH)
         : undefined;
-    const summaryJsonPath = resolveActionSummaryPath(env);
+    const summaryJsonPath = await resolveActionSummaryPath(env);
 
     const config =
       explicitMode === "promote-draft" ? {} : await loadActionConfigFromEnvironment(env);
@@ -390,7 +390,7 @@ export async function runActionFromEnvironment(
   }
 }
 
-function resolveActionSummaryPath(env: NodeJS.ProcessEnv): string | undefined {
+async function resolveActionSummaryPath(env: NodeJS.ProcessEnv): Promise<string | undefined> {
   const inputPath = readEnvInput(env.INPUT_SUMMARY_PATH);
   if (inputPath === undefined) {
     return undefined;
@@ -406,6 +406,31 @@ function resolveActionSummaryPath(env: NodeJS.ProcessEnv): string | undefined {
   const resolvedPath = resolve(workspace, inputPath);
   if (!isPathInside(workspace, resolvedPath)) {
     throw new ActionUsageError("INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.");
+  }
+
+  const workspaceRoot = await realpath(workspace);
+  let currentPath = workspaceRoot;
+  const relativePath = relative(workspace, resolvedPath);
+  for (const segment of relativePath.split(/[\\/]+/).filter((value) => value.length > 0)) {
+    currentPath = join(currentPath, segment);
+    try {
+      const stats = await lstat(currentPath);
+      if (stats.isSymbolicLink() || (stats.isFile() && stats.nlink > 1)) {
+        throw new ActionUsageError(
+          "INPUT_SUMMARY_PATH must not traverse symbolic links, junctions, or hard links.",
+        );
+      }
+
+      const resolvedCurrentPath = await realpath(currentPath);
+      if (!isPathInside(workspaceRoot, resolvedCurrentPath)) {
+        throw new ActionUsageError("INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.");
+      }
+    } catch (error) {
+      if (isNodeError(error) && error.code === "ENOENT") {
+        continue;
+      }
+      throw error;
+    }
   }
 
   return resolvedPath;

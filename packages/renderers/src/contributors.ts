@@ -45,15 +45,15 @@ export function renderContributorsJson(values: readonly unknown[]): string {
 function toContributorProfile(
   records: readonly PublicContributionRecord[],
 ): ContributorRecognitionProfile {
-  const first = records[0];
-  if (first === undefined) {
+  const latest = records.at(-1);
+  if (latest === undefined) {
     throw new Error("Contributor profile requires at least one contribution record.");
   }
 
   const recognitions = records.map(toRecognitionSummary).sort(compareRecognitionSummaries);
 
   return {
-    contributor: first.contributor,
+    contributor: latest.contributor,
     contributionCount: records.length,
     contributionTypes: uniqueSorted(records.map((record) => record.contributionType)),
     affectedAreas: uniqueSorted(records.map((record) => record.affectedArea)),
@@ -74,7 +74,7 @@ function toRecognitionSummary(record: PublicContributionRecord): PublicRecogniti
 }
 
 function contributorKey(record: PublicContributionRecord): string {
-  return `${record.contributor.platform}:${record.contributor.id}:${record.contributor.login}`;
+  return `${record.contributor.platform}:${record.contributor.id}`;
 }
 
 function compareContributorProfiles(

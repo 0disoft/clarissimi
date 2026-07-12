@@ -9,6 +9,7 @@ import type {
 
 const DEFAULT_GITHUB_API_URL = "https://api.github.com";
 const DEFAULT_PAGE_SIZE = 100;
+const MAX_LIST_PAGES = 10;
 
 export interface GitHubApiClientOptions {
   readonly token?: string;
@@ -43,17 +44,12 @@ export function createGitHubApiClient(options: GitHubApiClientOptions = {}): Liv
     async listPullRequestFiles(
       input: LiveGitHubPullRequestLookup,
     ): Promise<readonly LiveGitHubPullRequestFile[]> {
-      const response = await requestJson(
+      const response = await requestPaginatedArray(
         fetchImpl,
         options.token,
-        `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/files?per_page=${DEFAULT_PAGE_SIZE}`,
+        `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/files`,
+        "GitHub pull request files response must be an array.",
       );
-      if (!Array.isArray(response)) {
-        throw new GitHubApiClientError(
-          "unexpected_response",
-          "GitHub pull request files response must be an array.",
-        );
-      }
 
       return response.map(parsePullRequestFile);
     },
@@ -61,21 +57,46 @@ export function createGitHubApiClient(options: GitHubApiClientOptions = {}): Liv
     async listPullRequestReviewComments(
       input: LiveGitHubPullRequestLookup,
     ): Promise<readonly LiveGitHubReviewComment[]> {
-      const response = await requestJson(
+      const response = await requestPaginatedArray(
         fetchImpl,
         options.token,
-        `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/comments?per_page=${DEFAULT_PAGE_SIZE}`,
+        `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/comments`,
+        "GitHub pull request review comments response must be an array.",
       );
-      if (!Array.isArray(response)) {
-        throw new GitHubApiClientError(
-          "unexpected_response",
-          "GitHub pull request review comments response must be an array.",
-        );
-      }
 
       return response.map(parseReviewComment);
     },
   };
+}
+
+async function requestPaginatedArray(
+  fetchImpl: typeof fetch,
+  token: string | undefined,
+  baseUrl: string,
+  invalidResponseMessage: string,
+): Promise<readonly unknown[]> {
+  const entries: unknown[] = [];
+
+  for (let page = 1; page <= MAX_LIST_PAGES; page += 1) {
+    const response = await requestJson(
+      fetchImpl,
+      token,
+      `${baseUrl}?per_page=${DEFAULT_PAGE_SIZE}&page=${page}`,
+    );
+    if (!Array.isArray(response)) {
+      throw new GitHubApiClientError("unexpected_response", invalidResponseMessage);
+    }
+
+    entries.push(...response);
+    if (response.length < DEFAULT_PAGE_SIZE) {
+      return entries;
+    }
+  }
+
+  throw new GitHubApiClientError(
+    "response_too_large",
+    `GitHub list response exceeded ${MAX_LIST_PAGES * DEFAULT_PAGE_SIZE} items.`,
+  );
 }
 
 async function requestJson(

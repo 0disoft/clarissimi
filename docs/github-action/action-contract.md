@@ -95,7 +95,8 @@ does not load config, but it accepts the explicit presentation input.
 `summary-path` is explicit and optional. When set, it must be a relative path that stays inside
 `GITHUB_WORKSPACE`. The Action writes the same sanitized JSON summary that it prints to stdout and
 emits the resolved path through `summary-json-path`. Invalid summary paths fail before provider
-calls or write-mode mutation.
+calls or write-mode mutation. Existing path components must not be symbolic links, junctions, or
+hard-linked files, and their resolved paths must remain inside the workspace.
 
 Dry-run mode reads provider credentials only when `provider` is explicitly set to
 `openai-compatible`. The default provider is `fake`. The default Action mode is `propose`, which
@@ -129,6 +130,10 @@ already-recorded contribution identities also fail before branch mutation.
 Proposal branch commits use a Clarissimi-owned bot author instead of relying on runner-global git
 identity. This keeps maintainer workstations and GitHub-hosted runners from becoming part of the
 public recognition commit identity.
+
+Proposal updates use an explicit force-with-lease expectation derived from the remote branch SHA
+observed immediately before publication. This works on fresh runners without local remote-tracking
+state while still rejecting a concurrent remote branch update.
 
 Before copying staged files into the checked-out repository, the branch writer validates every
 existing output path component. Symbolic links, junctions, hard-linked files, and resolved paths

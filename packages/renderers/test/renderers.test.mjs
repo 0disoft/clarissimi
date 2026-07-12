@@ -210,6 +210,33 @@ test("derives contributor profiles without public ranking fields", () => {
   assert.equal(JSON.stringify(document).includes("rank"), false);
 });
 
+test("groups renamed contributor logins by stable platform identity", () => {
+  const renamed = {
+    platform: "github",
+    id: "123456",
+    login: "new-login",
+    profileUrl: "https://github.com/new-login",
+  };
+  const records = [
+    assessment(),
+    assessment({
+      contributor: renamed,
+      source: { ...source, pullRequestNumber: 43 },
+    }),
+  ];
+  const contributors = buildContributorsJsonDocument(records);
+  const analytics = buildMaintainerRecentRecognitionShareDocument(records, {
+    asOf: "2026-07-09T00:00:00.000Z",
+  });
+
+  assert.equal(contributors.contributors.length, 1);
+  assert.equal(contributors.contributors[0].contributor.login, "new-login");
+  assert.equal(contributors.contributors[0].contributionCount, 2);
+  assert.equal(analytics.contributors.length, 1);
+  assert.equal(analytics.contributors[0].contributor.login, "new-login");
+  assert.equal(analytics.contributors[0].recognitionCount, 2);
+});
+
 test("derived public profile and static data omit score-share ingredients", () => {
   const contributorDocument = buildContributorsJsonDocument([assessment()]);
   const staticDocument = buildStaticContributionsDocument([assessment()]);

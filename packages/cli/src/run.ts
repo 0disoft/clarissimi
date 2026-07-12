@@ -51,6 +51,8 @@ import {
   parseJsonText,
   readTextFile,
   resolveFromCwd,
+  withFileLock,
+  writeTextFilesAtomically,
   writeTextFile,
   type CliIo,
 } from "./io.js";
@@ -423,18 +425,30 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
       );
     }
 
-    const existingLedgerText = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
-    const existingRecords = parseContributionsJsonl(existingLedgerText);
-    const nextRecords = appendPublicContributionRecord(existingRecords, validation.value);
-    const outputs = renderRecognitionOutputs(nextRecords, {
-      summary: resolveMarkdownSummary(args, config),
+    const outputDirectory = outDir === undefined ? undefined : resolveFromCwd(io.cwd, outDir);
+    const recordCount = await withFileLock(`${ledgerPath}.lock`, async () => {
+      const existingLedgerText = (await fileExists(ledgerPath))
+        ? await readTextFile(ledgerPath)
+        : "";
+      const existingRecords = parseContributionsJsonl(existingLedgerText);
+      const nextRecords = appendPublicContributionRecord(existingRecords, validation.value);
+      const outputs = renderRecognitionOutputs(nextRecords, {
+        summary: resolveMarkdownSummary(args, config),
+      });
+      const files = new Map<string, string>();
+      if (outputDirectory !== undefined) {
+        files.set(join(outputDirectory, CONTRIBUTIONS_JSONL_PATH), outputs.contributionsJsonl);
+        files.set(join(outputDirectory, CONTRIBUTORS_JSON_PATH), outputs.contributorsJson);
+        files.set(join(outputDirectory, CONTRIBUTORS_MARKDOWN_PATH), outputs.contributorsMarkdown);
+        files.set(join(outputDirectory, STATIC_DATA_JSON_PATH), outputs.staticDataJson);
+      }
+      files.set(ledgerPath, outputs.contributionsJsonl);
+      await writeTextFilesAtomically(
+        Array.from(files, ([path, value]) => ({ path, value })),
+        ledgerPath,
+      );
+      return nextRecords.length;
     });
-
-    await writeTextFile(ledgerPath, outputs.contributionsJsonl);
-
-    if (outDir !== undefined) {
-      await writeRenderedOutputs(resolveFromCwd(io.cwd, outDir), outputs);
-    }
 
     writeOutput(io, args, {
       ok: true,
@@ -442,7 +456,7 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
       draftFormat: draftInput.format,
       draftPath,
       ledgerPath,
-      records: nextRecords.length,
+      records: recordCount,
       imported: 1,
       approvalStatus: validation.value.maintainerApprovalStatus,
       wroteDerivedFiles: outDir !== undefined,

@@ -48,6 +48,7 @@ export function buildMaintainerRecentRecognitionShareDocument(
     const weight = IMPACT_LEVEL_RECOGNITION_WEIGHTS[record.impactLevel];
     const key = contributorKey(record);
     const existing = grouped.get(key) ?? createContributorAccumulator(record);
+    existing.contributor = record.contributor;
     existing.recognitionCount += 1;
     existing.recognitionWeight += weight;
     existing.contributionTypes.add(record.contributionType);
@@ -163,7 +164,7 @@ function roundShare(value: number): number {
 }
 
 function contributorKey(record: PublicContributionRecord): string {
-  return `${record.contributor.platform}:${record.contributor.id}:${record.contributor.login}`;
+  return `${record.contributor.platform}:${record.contributor.id}`;
 }
 
 function uniqueSorted<T extends string | ContributionType>(values: readonly T[]): readonly T[] {
@@ -171,7 +172,7 @@ function uniqueSorted<T extends string | ContributionType>(values: readonly T[])
 }
 
 interface ContributorAccumulator {
-  readonly contributor: PublicContributionRecord["contributor"];
+  contributor: PublicContributionRecord["contributor"];
   recognitionCount: number;
   recognitionWeight: number;
   readonly contributionTypes: Set<ContributionType>;

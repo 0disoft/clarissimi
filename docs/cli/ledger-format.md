@@ -92,6 +92,10 @@ Within a ledger, public records must be unique for contributor platform, contrib
 event, and pull request number. `validate-ledger`, `import-draft`, and `rebuild` reject duplicate
 contribution identities so derived outputs do not double-count recognition.
 
+Derived profiles and analytics group records by the stable contributor `platform` and platform-issued
+`id`. The newest approved record supplies mutable display fields such as login and profile URL, so an
+account rename preserves one contributor identity.
+
 ## No Public Scores
 
 Ledger records must not contain public contributor scores, average scores, ranks, leaderboard
@@ -156,3 +160,14 @@ If ledger size or merge conflicts become a real operational problem, the accepte
 yearly partitions plus an index, as described in
 [`ADR 0022`](../adr/0022-keep-ledger-single-file-with-partition-path.md). Monthly partitions remain
 deferred until repository volume justifies the extra lookup and migration complexity.
+
+## Local Write Coordination
+
+`import-draft` serializes Clarissimi CLI writers with an exclusive sibling lock before it rereads
+and appends to the canonical ledger. It stages a complete output generation in same-directory
+temporary files, replaces derived outputs first, and replaces the canonical ledger last. The ledger
+rename is the commit point; if a process terminates during replacement, the ledger remains the
+recovery source and `rebuild` restores derived outputs.
+
+The lock is local coordination, not a distributed lock. Clarissimi does not automatically delete a
+stale lock because it cannot safely prove that another writer is dead.

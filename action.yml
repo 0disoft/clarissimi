@@ -95,6 +95,9 @@ outputs:
   direct-commit-branch:
     description: Target branch used by explicit commit mode.
     value: ${{ steps.clarissimi.outputs.direct-commit-branch }}
+  direct-commit-base-sha:
+    description: Base commit SHA observed before explicit commit mode writes.
+    value: ${{ steps.clarissimi.outputs.direct-commit-base-sha }}
   direct-commit-sha:
     description: Commit SHA created or confirmed by explicit commit mode.
     value: ${{ steps.clarissimi.outputs.direct-commit-sha }}

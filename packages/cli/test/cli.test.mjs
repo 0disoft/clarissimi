@@ -890,6 +890,73 @@ test("import-draft appends an approved agent draft and writes derived outputs", 
   });
 });
 
+test("import-draft serializes concurrent ledger updates without losing successful imports", async () => {
+  await withTempDir(async (dir) => {
+    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+    const draftPaths = await Promise.all(
+      Array.from({ length: 8 }, async (_, index) => {
+        const draftPath = join(dir, `draft-${index}.json`);
+        await writeFile(
+          draftPath,
+          JSON.stringify(
+            assessment({
+              source: {
+                repository: "example/project",
+                event: "merged_pull_request",
+                pullRequestNumber: 100 + index,
+                mergedAt: "2026-07-08T00:00:00.000Z",
+              },
+            }),
+          ),
+          "utf8",
+        );
+        return draftPath;
+      }),
+    );
+
+    const results = await Promise.all(
+      draftPaths.map((draftPath) =>
+        run(["import-draft", "--draft", draftPath, "--ledger", ledger, "--json"], dir),
+      ),
+    );
+    const records = (await readFile(ledger, "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+
+    assert.equal(
+      results.every((result) => result.exitCode === 0),
+      true,
+    );
+    assert.equal(records.length, 8);
+    assert.deepEqual(
+      records.map((record) => record.source.pullRequestNumber).sort((left, right) => left - right),
+      [100, 101, 102, 103, 104, 105, 106, 107],
+    );
+    await assert.rejects(() => readFile(`${ledger}.lock`, "utf8"));
+  });
+});
+
+test("import-draft preserves the canonical ledger when a derived destination is invalid", async () => {
+  await withTempDir(async (dir) => {
+    const draftPath = join(dir, "agent-draft.json");
+    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+    const outDir = join(dir, "out");
+    await writeFile(draftPath, JSON.stringify(assessment()), "utf8");
+    await mkdir(join(outDir, "CONTRIBUTORS.md"), { recursive: true });
+
+    const result = await run(
+      ["import-draft", "--draft", draftPath, "--ledger", ledger, "--out-dir", outDir, "--json"],
+      dir,
+    );
+
+    assert.equal(result.exitCode, 7);
+    assert.match(JSON.parse(result.stdout).message, /destination must be a file/);
+    await assert.rejects(() => readFile(ledger, "utf8"));
+    await assert.rejects(() => readFile(join(outDir, ".clarissimi", "contributors.json"), "utf8"));
+  });
+});
+
 test("import-draft accepts a delegated LLM draft envelope without storing provenance", async () => {
   await withTempDir(async (dir) => {
     const draftPath = join(dir, "delegated-draft.json");

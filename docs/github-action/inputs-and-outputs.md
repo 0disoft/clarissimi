@@ -79,6 +79,7 @@ inapplicable; the approved draft file is the only assessment input. The independ
 - `proposal-pull-request-action`
 - `summary-json-path` when `summary-path` is set
 - `direct-commit-branch`
+- `direct-commit-base-sha`
 - `direct-commit-sha`
 - `direct-commit-created`
 - `direct-commit-pushed`

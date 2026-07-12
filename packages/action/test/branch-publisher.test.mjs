@@ -129,6 +129,50 @@ test("rejects publishing when the local branch no longer matches the writer resu
   });
 });
 
+test("updates an existing proposal branch from a fresh clone with an explicit lease", async () => {
+  await withTempDir(async (dir) => {
+    const remoteDir = join(dir, "remote.git");
+    const firstRepositoryDir = join(dir, "first");
+    const secondRepositoryDir = join(dir, "second");
+    await initRepositoryWithRemote(firstRepositoryDir, remoteDir);
+
+    const firstStaging = await stageProposalRecognitionOutputs({
+      outputDir: join(dir, "first-staged"),
+      assessments: [assessment()],
+      redactionMatchCount: 0,
+    });
+    const firstBranch = await writeProposalBranch({
+      repositoryDir: firstRepositoryDir,
+      stagedOutputDir: firstStaging.outputDir,
+      manifest: firstStaging.manifest,
+      baseBranch: "main",
+    });
+    await publishProposalBranch({ repositoryDir: firstRepositoryDir, branch: firstBranch });
+
+    await git(dir, ["clone", "--branch", "main", remoteDir, secondRepositoryDir]);
+    await git(secondRepositoryDir, ["config", "user.name", "Clarissimi Tests"]);
+    await git(secondRepositoryDir, ["config", "user.email", "clarissimi-tests.invalid"]);
+    const secondStaging = await stageProposalRecognitionOutputs({
+      outputDir: join(dir, "second-staged"),
+      assessments: [assessment()],
+      redactionMatchCount: 1,
+    });
+    const secondBranch = await writeProposalBranch({
+      repositoryDir: secondRepositoryDir,
+      stagedOutputDir: secondStaging.outputDir,
+      manifest: secondStaging.manifest,
+      baseBranch: "main",
+      commitMessage: "Refresh Clarissimi recognition proposal",
+    });
+
+    await publishProposalBranch({ repositoryDir: secondRepositoryDir, branch: secondBranch });
+    assert.equal(
+      await remoteBranchSha(secondRepositoryDir, secondBranch.branchName),
+      secondBranch.commitSha,
+    );
+  });
+});
+
 test("rejects missing publisher metadata before git push", async () => {
   await assert.rejects(
     () =>

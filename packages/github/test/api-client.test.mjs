@@ -79,8 +79,8 @@ test("GitHub API client fetches merged pull request evidence surfaces", async ()
     requests.map((request) => request.url),
     [
       "https://api.github.com/repos/sample/project/pulls/42",
-      "https://api.github.com/repos/sample/project/pulls/42/files?per_page=100",
-      "https://api.github.com/repos/sample/project/pulls/42/comments?per_page=100",
+      "https://api.github.com/repos/sample/project/pulls/42/files?per_page=100&page=1",
+      "https://api.github.com/repos/sample/project/pulls/42/comments?per_page=100&page=1",
     ],
   );
   assert.equal(
@@ -91,6 +91,31 @@ test("GitHub API client fetches merged pull request evidence surfaces", async ()
     requests.every((request) => request.authorization === "Bearer test-token"),
     true,
   );
+});
+
+test("GitHub API client paginates pull request files and review comments", async () => {
+  const requests = [];
+  const page = (prefix, count) =>
+    Array.from({ length: count }, (_, index) => ({
+      filename: `${prefix}-${index}.ts`,
+      id: `${prefix}-${index}`,
+    }));
+  const client = createGitHubApiClient({
+    fetch: async (url) => {
+      const value = String(url);
+      requests.push(value);
+      const isFirstPage = value.endsWith("page=1");
+      if (value.includes("/files?")) {
+        return jsonResponse(page("file", isFirstPage ? 100 : 1));
+      }
+      return jsonResponse(page("comment", isFirstPage ? 100 : 1));
+    },
+  });
+  const lookup = { repository: "sample/project", pullRequestNumber: 42 };
+
+  assert.equal((await client.listPullRequestFiles(lookup)).length, 101);
+  assert.equal((await client.listPullRequestReviewComments(lookup)).length, 101);
+  assert.equal(requests.filter((url) => url.endsWith("page=2")).length, 2);
 });
 
 test("GitHub API client can make unauthenticated public requests", async () => {

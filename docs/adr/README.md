@@ -62,6 +62,8 @@ engine.
   manifest-backed persisted-schema compatibility gate
 - `0038-add-explicit-direct-commit-mode.md`: add opt-in Action commits with clean-checkout,
   expected-HEAD, owned-path, and fast-forward push boundaries
+- `0039-serialize-cli-ledger-writes.md`: serialize CLI imports and make the canonical ledger the
+  final commit point of a staged output generation
 
 ## Review Blockers
 

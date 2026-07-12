@@ -31,11 +31,13 @@ async function publishProposalBranch(input) {
   if (localSha !== input.branch.commitSha) {
     throw new ProposalBranchPublisherError("branch_commit_mismatch", "Proposal branch publisher refuses to push when the local branch no longer matches the branch writer result.");
   }
+  const remoteRef = `refs/heads/${input.branch.branchName}`;
+  const remoteSha = await remoteBranchSha(input.repositoryDir, remoteName, remoteRef);
   await git(input.repositoryDir, [
     "push",
-    "--force-with-lease",
+    `--force-with-lease=${remoteRef}:${remoteSha ?? ""}`,
     remoteName,
-    `${input.branch.branchName}:${input.branch.branchName}`
+    `${input.branch.branchName}:${remoteRef}`
   ]);
   return {
     remoteName,
@@ -43,6 +45,17 @@ async function publishProposalBranch(input) {
     commitSha: input.branch.commitSha,
     rollbackHint: `Delete remote branch ${remoteName}/${input.branch.branchName} before merge to discard this proposal.`
   };
+}
+async function remoteBranchSha(repositoryDir, remoteName, remoteRef) {
+  const output = await git(repositoryDir, ["ls-remote", "--heads", remoteName, remoteRef]);
+  if (output.length === 0) {
+    return void 0;
+  }
+  const [sha, ref, ...extra] = output.split(/\s+/);
+  if (sha === void 0 || ref !== remoteRef || extra.length > 0 || !/^[a-f0-9]{40}$/i.test(sha)) {
+    throw new ProposalBranchPublisherError("invalid_remote_ref", "Proposal branch publisher received malformed remote branch metadata.");
+  }
+  return sha;
 }
 function validatePublisherInput(input) {
   if (input.repositoryDir.trim().length === 0) {
@@ -1738,13 +1751,13 @@ function renderContributorsJson(values) {
   return renderPrettyJson(buildContributorsJsonDocument(values));
 }
 function toContributorProfile(records) {
-  const first = records[0];
-  if (first === void 0) {
+  const latest = records.at(-1);
+  if (latest === void 0) {
     throw new Error("Contributor profile requires at least one contribution record.");
   }
   const recognitions = records.map(toRecognitionSummary).sort(compareRecognitionSummaries);
   return {
-    contributor: first.contributor,
+    contributor: latest.contributor,
     contributionCount: records.length,
     contributionTypes: uniqueSorted(records.map((record) => record.contributionType)),
     affectedAreas: uniqueSorted(records.map((record) => record.affectedArea)),
@@ -1763,7 +1776,7 @@ function toRecognitionSummary(record) {
   };
 }
 function contributorKey(record) {
-  return `${record.contributor.platform}:${record.contributor.id}:${record.contributor.login}`;
+  return `${record.contributor.platform}:${record.contributor.id}`;
 }
 function compareContributorProfiles(left, right) {
   return left.contributor.login.localeCompare(right.contributor.login) || left.contributor.id.localeCompare(right.contributor.id);
@@ -2048,7 +2061,7 @@ function assertClarissimiOutputPath(path) {
 }
 
 // packages/action/dist/run.js
-import { appendFile, mkdir as mkdir3, readFile as readFile2, realpath as realpath2, writeFile as writeFile3 } from "node:fs/promises";
+import { appendFile, lstat as lstat2, mkdir as mkdir3, readFile as readFile2, realpath as realpath2, writeFile as writeFile3 } from "node:fs/promises";
 import { basename, dirname as dirname3, isAbsolute as isAbsolute3, join as join3, relative as relative2, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
@@ -2056,6 +2069,7 @@ import { pathToFileURL } from "node:url";
 // packages/github/dist/api-client.js
 var DEFAULT_GITHUB_API_URL2 = "https://api.github.com";
 var DEFAULT_PAGE_SIZE = 100;
+var MAX_LIST_PAGES = 10;
 var GitHubApiClientError = class extends Error {
   code;
   constructor(code, message) {
@@ -2073,20 +2087,28 @@ function createGitHubApiClient(options = {}) {
       return parsePullRequest2(response);
     },
     async listPullRequestFiles(input) {
-      const response = await requestJson2(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/files?per_page=${DEFAULT_PAGE_SIZE}`);
-      if (!Array.isArray(response)) {
-        throw new GitHubApiClientError("unexpected_response", "GitHub pull request files response must be an array.");
-      }
+      const response = await requestPaginatedArray(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/files`, "GitHub pull request files response must be an array.");
       return response.map(parsePullRequestFile);
     },
     async listPullRequestReviewComments(input) {
-      const response = await requestJson2(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/comments?per_page=${DEFAULT_PAGE_SIZE}`);
-      if (!Array.isArray(response)) {
-        throw new GitHubApiClientError("unexpected_response", "GitHub pull request review comments response must be an array.");
-      }
+      const response = await requestPaginatedArray(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/comments`, "GitHub pull request review comments response must be an array.");
       return response.map(parseReviewComment);
     }
   };
+}
+async function requestPaginatedArray(fetchImpl, token, baseUrl, invalidResponseMessage) {
+  const entries = [];
+  for (let page = 1; page <= MAX_LIST_PAGES; page += 1) {
+    const response = await requestJson2(fetchImpl, token, `${baseUrl}?per_page=${DEFAULT_PAGE_SIZE}&page=${page}`);
+    if (!Array.isArray(response)) {
+      throw new GitHubApiClientError("unexpected_response", invalidResponseMessage);
+    }
+    entries.push(...response);
+    if (response.length < DEFAULT_PAGE_SIZE) {
+      return entries;
+    }
+  }
+  throw new GitHubApiClientError("response_too_large", `GitHub list response exceeded ${MAX_LIST_PAGES * DEFAULT_PAGE_SIZE} items.`);
 }
 async function requestJson2(fetchImpl, token, url) {
   const headers = {
@@ -3388,7 +3410,7 @@ async function runActionFromEnvironment(env, io, runtime = {}) {
     const modeInput = readEnvInput(env.INPUT_MODE);
     const explicitMode = modeInput === void 0 ? void 0 : normalizeActionMode(modeInput);
     const fallbackEventPath = githubFixturePath === void 0 && explicitMode !== "promote-draft" ? readEnvInput(env.GITHUB_EVENT_PATH) : void 0;
-    const summaryJsonPath = resolveActionSummaryPath(env);
+    const summaryJsonPath = await resolveActionSummaryPath(env);
     const config = explicitMode === "promote-draft" ? {} : await loadActionConfigFromEnvironment(env);
     const mode = explicitMode ?? normalizeActionMode(config.mode ?? "propose");
     const input = {
@@ -3419,7 +3441,7 @@ async function runActionFromEnvironment(env, io, runtime = {}) {
     return error instanceof ActionUsageError ? 1 : 4;
   }
 }
-function resolveActionSummaryPath(env) {
+async function resolveActionSummaryPath(env) {
   const inputPath = readEnvInput(env.INPUT_SUMMARY_PATH);
   if (inputPath === void 0) {
     return void 0;
@@ -3431,6 +3453,27 @@ function resolveActionSummaryPath(env) {
   const resolvedPath = resolve(workspace, inputPath);
   if (!isPathInside(workspace, resolvedPath)) {
     throw new ActionUsageError("INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.");
+  }
+  const workspaceRoot = await realpath2(workspace);
+  let currentPath = workspaceRoot;
+  const relativePath = relative2(workspace, resolvedPath);
+  for (const segment of relativePath.split(/[\\/]+/).filter((value) => value.length > 0)) {
+    currentPath = join3(currentPath, segment);
+    try {
+      const stats = await lstat2(currentPath);
+      if (stats.isSymbolicLink() || stats.isFile() && stats.nlink > 1) {
+        throw new ActionUsageError("INPUT_SUMMARY_PATH must not traverse symbolic links, junctions, or hard links.");
+      }
+      const resolvedCurrentPath = await realpath2(currentPath);
+      if (!isPathInside(workspaceRoot, resolvedCurrentPath)) {
+        throw new ActionUsageError("INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.");
+      }
+    } catch (error) {
+      if (isNodeError2(error) && error.code === "ENOENT") {
+        continue;
+      }
+      throw error;
+    }
   }
   return resolvedPath;
 }

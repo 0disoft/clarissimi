@@ -6,6 +6,7 @@ import { spawn } from "node:child_process";
 import test from "node:test";
 
 import {
+  runActionCommit,
   runActionFromEnvironment,
   runActionPromoteDraft,
   runActionPropose,
@@ -205,6 +206,36 @@ test("propose mode preserves existing ledger records when rendering a new contri
     assert.equal(records.length, 2);
     assert.equal(records[0].contributor.login, "hubot");
     assert.equal(records[1].contributor.login, "octocat");
+  });
+});
+
+test("runs fixture-first commit mode through direct fast-forward publication", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const remoteDir = join(dir, "remote.git");
+    const stagingDir = join(dir, "staged");
+    const fixturePath = join(dir, "github-fixture.json");
+    await initRepositoryWithRemote(repositoryDir, remoteDir);
+    await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+    const baseCommitSha = await git(repositoryDir, ["rev-parse", "HEAD"]);
+
+    const summary = await runActionCommit({
+      mode: "commit",
+      githubFixturePath: fixturePath,
+      repositoryDir,
+      stagingDir,
+      targetBranch: "main",
+      expectedHeadSha: baseCommitSha,
+    });
+
+    assert.equal(summary.mode, "commit");
+    assert.equal(summary.inputSource, "github_fixture");
+    assert.equal(summary.approvalStatus, "approved");
+    assert.equal(summary.directCommitBranch, "main");
+    assert.equal(summary.directCommitBaseSha, baseCommitSha);
+    assert.equal(summary.directCommitCreated, true);
+    assert.equal(summary.directCommitPushed, true);
+    assert.equal(await remoteBranchSha(repositoryDir, "main"), summary.directCommitSha);
   });
 });
 
@@ -526,6 +557,55 @@ test("environment runner writes bounded propose outputs and step summary", async
     assert.equal(summaryText.includes("## Clarissimi propose summary"), true);
     assert.equal(summaryText.includes("PATCH_EXCERPT_SENTINEL"), false);
     assert.equal(client.created[0].repository, "0disoft/clarissimi");
+  });
+});
+
+test("environment runner writes bounded direct commit outputs and step summary", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const remoteDir = join(dir, "remote.git");
+    const stagingDir = join(dir, "staged");
+    const fixturePath = join(dir, "github-fixture.json");
+    const outputPath = join(dir, "github-output.txt");
+    const summaryPath = join(dir, "step-summary.md");
+    await initRepositoryWithRemote(repositoryDir, remoteDir);
+    await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+    const githubSha = await git(repositoryDir, ["rev-parse", "HEAD"]);
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        GITHUB_OUTPUT: outputPath,
+        GITHUB_STEP_SUMMARY: summaryPath,
+        GITHUB_WORKSPACE: repositoryDir,
+        GITHUB_SHA: githubSha,
+        INPUT_BASE_BRANCH: "main",
+        INPUT_GITHUB_FIXTURE: fixturePath,
+        INPUT_MODE: "commit",
+        INPUT_STAGING_DIR: stagingDir,
+        GITHUB_TOKEN: "test-token",
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        },
+      },
+    );
+    const parsed = JSON.parse(stdout);
+    const outputText = await readFile(outputPath, "utf8");
+    const summaryText = await readFile(summaryPath, "utf8");
+
+    assert.equal(exitCode, 0);
+    assert.equal(stderr, "");
+    assert.equal(parsed.mode, "commit");
+    assert.equal(outputText.includes("direct-commit-branch=main"), true);
+    assert.equal(outputText.includes("direct-commit-pushed=true"), true);
+    assert.equal(summaryText.includes("## Clarissimi commit summary"), true);
+    assert.equal(summaryText.includes("PATCH_EXCERPT_SENTINEL"), false);
   });
 });
 

@@ -60,6 +60,8 @@ engine.
   pinned repository-wide Oxfmt baseline
 - `0037-add-migration-compatibility-gate.md`: replace the fail-closed placeholder with a
   manifest-backed persisted-schema compatibility gate
+- `0038-add-explicit-direct-commit-mode.md`: add opt-in Action commits with clean-checkout,
+  expected-HEAD, owned-path, and fast-forward push boundaries
 
 ## Review Blockers
 

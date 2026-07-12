@@ -83,12 +83,12 @@ Implemented MVP slices:
   help output; config loading supports `clarissimi.config.ts` and `.clarissimi/config.json`
 - `packages/action`: GitHub Action entrypoint for dry-run summaries, fixture-first proposal
   branch/pull-request flows, draft review proposals, explicit config-path loading, optional
-  sanitized JSON summary artifacts, and event-path live GitHub collection in write modes
+  sanitized JSON summary artifacts, explicit direct commits, and event-path live GitHub collection
+  in write modes
 
 Not implemented yet:
 
-- repository write modes such as direct `commit`
-- comment updates or default-branch mutation
+- comment updates
 
 ## Fixture-First CLI
 
@@ -168,11 +168,17 @@ The Action also accepts `GITHUB_EVENT_PATH` for a merged pull request event payl
 bounded dry-run summary and does not render public outputs or propose repository changes in
 `dry-run` mode.
 
-The root `action.yml` defaults to `propose` mode and still supports explicit `dry-run` and
+The root `action.yml` defaults to `propose` mode and also supports explicit `dry-run`, `commit`, and
 `stage-draft` modes. Propose mode requires explicit write permissions, an approved or auto-approved
 fixture, and a checked-out repository. It stages public output, publishes
 `clarissimi/recognition/<source-kind>-<source-id>`, and opens or updates a pull request for
 maintainer review.
+
+Commit mode is an explicit automation-first path for approved or auto-approved recognition. It
+requires `contents: write`, a clean checkout, and a checkout HEAD matching `GITHUB_SHA`; it rebuilds
+the complete ledger, creates a bot-authored commit when outputs changed, and pushes normally to
+`base-branch`. It does not open a pull request or force-push, so branch protection and concurrent
+updates can still reject publication.
 
 Propose and promote-draft modes preserve the checked-out append-only ledger: they validate existing
 records, reject duplicate contribution identities, append the new approved record, and rebuild all

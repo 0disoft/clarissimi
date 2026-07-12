@@ -8,6 +8,7 @@
 - Action behavior: `docs/github-action/action-contract.md`
 - Product behavior: `docs/product/02-spec.md`
 - Default mode: `docs/adr/0008-propose-mode-default.md`
+- Direct commit mode: `docs/adr/0038-add-explicit-direct-commit-mode.md`
 - Draft review mode: `docs/adr/0023-add-action-draft-inbox-proposal-mode.md`
 
 ## Current Inputs
@@ -16,7 +17,7 @@
 - `github-fixture`: explicit GitHub merged pull request fixture path for fixture-first runs
 - `config-path`: optional explicit path to a JSON Clarissimi config file or `clarissimi.config.ts`
 - `markdown-summary`: `none` or `table`; `table` adds a compact summary before contributor details
-- `mode`: `dry-run`, `propose`, `stage-draft`, or `promote-draft`, default `propose`
+- `mode`: `dry-run`, `propose`, `commit`, `stage-draft`, or `promote-draft`, default `propose`
 - `draft-path`: approved `.clarissimi/drafts/*.json` path required by `promote-draft`
 - `base-branch`: base branch for proposal pull requests
 - `remote-name`: Git remote used to publish proposal branches
@@ -29,13 +30,12 @@
 
 ## Future Inputs
 
-- `mode`: `commit`
 - `pull-request`: explicit pull request number when event resolution is not enough
 - `min-confidence`: minimum draft confidence for policy consideration
 
 Provider API keys and GitHub tokens are not plain inputs. They must come from secrets or the
-workflow environment. The current Action reads `GITHUB_TOKEN` only in `propose`, `stage-draft`, and
-`promote-draft` modes for proposal branch and pull request creation or update. It reads
+workflow environment. The current Action reads `GITHUB_TOKEN` in `propose`, `commit`, `stage-draft`,
+and `promote-draft` modes for live collection and repository publication. It reads
 `CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.
 
 The current package supports `INPUT_EVENT_PATH`, `GITHUB_EVENT_PATH`, `INPUT_GITHUB_FIXTURE`,
@@ -56,7 +56,7 @@ summary artifact contains the same sanitized JSON summary as stdout.
 An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`
 fallback. An explicit `event-path` and `github-fixture` must not be provided together.
 In `dry-run`, event payloads are mapped from the local event file without live GitHub API calls.
-In `propose` and `stage-draft`, event payloads route to the live GitHub collector when no explicit
+In `propose`, `commit`, and `stage-draft`, event payloads route to the live GitHub collector when no explicit
 fixture is provided.
 In `promote-draft`, event, fixture, config, and provider inputs are ignored or rejected as
 inapplicable; the approved draft file is the only assessment input. The independent
@@ -78,9 +78,16 @@ inapplicable; the approved draft file is the only assessment input. The independ
 - `proposal-pull-request-url`
 - `proposal-pull-request-action`
 - `summary-json-path` when `summary-path` is set
+- `direct-commit-branch`
+- `direct-commit-sha`
+- `direct-commit-created`
+- `direct-commit-pushed`
 
 The proposal fields are populated after successful `propose`, `stage-draft`, and `promote-draft`
 runs. Dry-run leaves proposal fields empty.
+
+The direct commit fields are populated after successful `commit` runs. Other modes leave them
+empty.
 
 Outputs must not include raw provider output, raw diff text, raw issue text, tokens, private keys,
 raw pull request bodies, raw patch excerpts, or sensitive security details.

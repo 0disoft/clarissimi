@@ -81,6 +81,11 @@ Expected permissions:
 - `pull-requests: read`
 - `issues: read`
 
+Commit mode writes only Clarissimi-owned recognition files, requires a clean checkout and matching
+expected HEAD, and pushes without force to the configured target branch. A concurrent update or
+branch protection rejection fails closed. Repository owners should retain branch protection when
+they want CI, signed-commit, or actor restrictions beyond Clarissimi's file and validation boundary.
+
 ## Promote-Draft Mode
 
 Expected permissions:
@@ -98,7 +103,7 @@ call a provider or write directly to the default branch.
 Avoid default `pull_request_target` examples. Do not checkout or execute untrusted pull request head
 code.
 
-`propose` and `stage-draft` modes should run after safe post-merge events, explicit manual
+`propose`, `commit`, and `stage-draft` modes should run after safe post-merge events, explicit manual
 dispatch, or another event that does not require running untrusted pull request head code.
 
 ## Review Blockers

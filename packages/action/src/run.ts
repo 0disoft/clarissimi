@@ -32,6 +32,7 @@ import {
 
 import { publishProposalBranch } from "./branch-publisher.js";
 import { writeProposalBranch } from "./branch-writer.js";
+import { createDirectCommit, publishDirectCommit } from "./direct-commit.js";
 import { resolveGitHubEventPayload } from "./event.js";
 import { createGitHubPullRequestClient } from "./github-client.js";
 import {
@@ -42,6 +43,8 @@ import { stageProposalDraftReviewOutput, stageProposalRecognitionOutputs } from 
 import { sanitizeAssessmentForActionSummary } from "./summary.js";
 import type {
   ActionMode,
+  ActionCommitInput,
+  ActionCommitSummary,
   ActionDryRunInput,
   ActionDryRunSummary,
   ActionInputSource,
@@ -50,6 +53,7 @@ import type {
   ActionProposeSummary,
   ActionProcessIo,
   ActionStageDraftInput,
+  ActionRunSummary,
 } from "./types.js";
 import { isActionMode } from "./types.js";
 
@@ -149,6 +153,54 @@ export async function runActionPropose(input: ActionProposeInput): Promise<Actio
     proposalPullRequestNumber: pullRequest.pullRequest.number,
     proposalPullRequestUrl: pullRequest.pullRequest.url,
     proposalPullRequestAction: pullRequest.action,
+  };
+}
+
+export async function runActionCommit(input: ActionCommitInput): Promise<ActionCommitSummary> {
+  const prepared = await prepareActionAssessment(input);
+  if (prepared.kind === "skipped") {
+    throw new ActionUsageError("Commit mode requires a merged pull request input.");
+  }
+
+  const staging = await stageProposalRecognitionOutputs({
+    outputDir: input.stagingDir,
+    assessments: [prepared.assessment],
+    existingRecords: await readExistingRecognitionRecords(input.repositoryDir),
+    redactionMatchCount: prepared.redactionMatchCount,
+    ...(input.markdownSummary === undefined ? {} : { markdownSummary: input.markdownSummary }),
+  });
+  const commitInput: Parameters<typeof createDirectCommit>[0] = {
+    repositoryDir: input.repositoryDir,
+    stagedOutputDir: input.stagingDir,
+    manifest: staging.manifest,
+    targetBranch: input.targetBranch,
+  };
+  assignOptional(commitInput, "expectedHeadSha", input.expectedHeadSha);
+  const commit = await createDirectCommit(commitInput);
+  const publishInput: Parameters<typeof publishDirectCommit>[0] = {
+    repositoryDir: input.repositoryDir,
+    commit,
+  };
+  assignOptional(publishInput, "remoteName", input.remoteName);
+  const published = await publishDirectCommit(publishInput);
+
+  return {
+    ok: true,
+    mode: "commit",
+    inputSource: prepared.inputSource,
+    draftCount: 1,
+    proposedEntryCount: 1,
+    skippedEntryCount: 0,
+    publicOutputsRendered: true,
+    approvalStatus: prepared.assessment.maintainerApprovalStatus as "approved" | "auto_approved",
+    redactionChanged: prepared.redactionChanged,
+    redactionMatchCount: prepared.redactionMatchCount,
+    stagedFileCount: staging.manifest.files.length,
+    directCommitBranch: commit.targetBranch,
+    directCommitBaseSha: commit.baseCommitSha,
+    directCommitSha: commit.commitSha,
+    directCommitCreated: commit.commitCreated,
+    directCommitPushed: published.pushed,
   };
 }
 
@@ -368,11 +420,15 @@ async function runActionMode(
   input: ActionDryRunInput,
   env: NodeJS.ProcessEnv,
   runtime: ActionEnvironmentRuntime,
-): Promise<ActionDryRunSummary | ActionProposeSummary> {
+): Promise<ActionRunSummary> {
   const mode = normalizeActionMode(input.mode ?? "dry-run");
 
   if (mode === "propose") {
     return runActionPropose(buildActionWriteInput(input, env, runtime, "propose"));
+  }
+
+  if (mode === "commit") {
+    return runActionCommit(buildActionCommitInput(input, env, runtime));
   }
 
   if (mode === "stage-draft") {
@@ -387,6 +443,33 @@ async function runActionMode(
     ...input,
     mode,
   });
+}
+
+function buildActionCommitInput(
+  input: ActionDryRunInput,
+  env: NodeJS.ProcessEnv,
+  runtime: ActionEnvironmentRuntime,
+): ActionCommitInput {
+  requireEnvInput(env.GITHUB_TOKEN, "GITHUB_TOKEN");
+  const clientOptions: Parameters<typeof createGitHubApiClient>[0] = {
+    token: env.GITHUB_TOKEN as string,
+  };
+  assignOptional(clientOptions, "apiUrl", readEnvInput(env.GITHUB_API_URL));
+  assignOptional(clientOptions, "fetch", runtime.fetch);
+
+  const commitInput: ActionCommitInput = {
+    ...input,
+    mode: "commit",
+    repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
+    stagingDir:
+      readEnvInput(env.INPUT_STAGING_DIR) ??
+      join(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-commit"),
+    targetBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
+    liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(clientOptions),
+  };
+  assignOptional(commitInput, "expectedHeadSha", readEnvInput(env.GITHUB_SHA));
+  assignOptional(commitInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
+  return commitInput;
 }
 
 function normalizeActionMode(value: string): ActionMode {
@@ -854,7 +937,7 @@ function resolveActionMarkdownSummary(
 
 async function writeGitHubOutputs(
   outputPath: string | undefined,
-  summary: ActionDryRunSummary | ActionProposeSummary,
+  summary: ActionRunSummary,
   summaryJsonPath: string | undefined,
 ): Promise<void> {
   if (outputPath === undefined || outputPath.trim().length === 0) {
@@ -889,12 +972,23 @@ async function writeGitHubOutputs(
     );
   }
 
+  if (summary.mode === "commit") {
+    lines.push(
+      `staged-file-count=${summary.stagedFileCount}`,
+      `direct-commit-branch=${summary.directCommitBranch}`,
+      `direct-commit-base-sha=${summary.directCommitBaseSha}`,
+      `direct-commit-sha=${summary.directCommitSha}`,
+      `direct-commit-created=${summary.directCommitCreated}`,
+      `direct-commit-pushed=${summary.directCommitPushed}`,
+    );
+  }
+
   await appendFile(outputPath, `${lines.join("\n")}\n`, "utf8");
 }
 
 async function writeActionSummaryJson(
   summaryJsonPath: string | undefined,
-  summary: ActionDryRunSummary | ActionProposeSummary,
+  summary: ActionRunSummary,
 ): Promise<void> {
   if (summaryJsonPath === undefined) {
     return;
@@ -906,7 +1000,7 @@ async function writeActionSummaryJson(
 
 async function writeGitHubStepSummary(
   summaryPath: string | undefined,
-  summary: ActionDryRunSummary | ActionProposeSummary,
+  summary: ActionRunSummary,
 ): Promise<void> {
   if (summaryPath === undefined || summaryPath.trim().length === 0) {
     return;
@@ -928,6 +1022,16 @@ async function writeGitHubStepSummary(
       ["Proposal branch", summary.proposalBranch],
       ["Proposal pull request", summary.proposalPullRequestUrl],
       ["Proposal PR action", summary.proposalPullRequestAction],
+    );
+  }
+
+  if (summary.mode === "commit") {
+    rows.push(
+      ["Staged files", String(summary.stagedFileCount)],
+      ["Target branch", summary.directCommitBranch],
+      ["Commit SHA", summary.directCommitSha],
+      ["Commit created", String(summary.directCommitCreated)],
+      ["Commit pushed", String(summary.directCommitPushed)],
     );
   }
 

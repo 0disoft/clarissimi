@@ -43,10 +43,11 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   `.clarissimi/config.json`; flag-only commands reject unexpected positional arguments before
   reading configs, ledgers, providers, or draft files
 - `packages/action`: Action runner for dry-run summaries, fixture-first public recognition
-  proposals, fixture-first draft review proposals, and event-path live GitHub collection in write
-  modes with explicit config-path loading, optional sanitized JSON summary artifacts, explicit
-  fake or OpenAI-compatible provider selection, and approved draft promotion without provider calls
-- root `action.yml`: composite Action defaulting to `propose`, exposing explicit `dry-run` and
+  proposals, explicit direct commits, fixture-first draft review proposals, and event-path live
+  GitHub collection in write modes with explicit config-path loading, optional sanitized JSON
+  summary artifacts, explicit fake or OpenAI-compatible provider selection, and approved draft
+  promotion without provider calls
+- root `action.yml`: composite Action defaulting to `propose`, exposing explicit `dry-run`, `commit`, and
   config-path loading, and executing the committed `action-dist/index.js` release bundle without
   consumer-time package installation or compilation
 - `scripts/bundle-action.mjs`: pinned esbuild bundle generation and byte-for-byte freshness checks
@@ -353,8 +354,8 @@ Completed deliverables:
   `release-readiness`, `lint`, `smoke`, `check`, and `contract`
 - release-readiness validates that README validation guidance names the source-only merge gate,
   release-only live provider smoke commands, and fail-closed `format` and `migration-check`
-- release-readiness validates that README keeps direct commit, comment update, and default-branch
-  mutation paths marked as not implemented
+- release-readiness validates that README keeps comment updates marked as not implemented and
+  documents explicit direct commit safety boundaries
 - release-readiness validates that README validation guidance keeps `oxlint` as the current lint
   gate and does not imply `oxfmt` is already wired as the repository formatter
 - release-readiness validates the fixture dogfood workflow permission, mode, fixture, and output

@@ -17,16 +17,17 @@
 - Approved draft promotion boundary: `docs/adr/0033-promote-approved-drafts.md`
 - Explicit Action config path: `docs/adr/0029-add-explicit-action-config-path.md`
 - Action summary artifact: `docs/adr/0030-add-action-summary-artifact.md`
+- Explicit direct commit mode: `docs/adr/0038-add-explicit-direct-commit-mode.md`
 
 ## Inputs
 
-The Action supports dry-run summaries, public recognition proposals, and draft inbox proposals. It
-accepts:
+The Action supports dry-run summaries, public recognition proposals, direct commits, and draft
+inbox proposals. It accepts:
 
 - `GITHUB_EVENT_PATH`: GitHub event payload path
 - `INPUT_EVENT_PATH`: explicit event payload path override for tests and local runs
 - `INPUT_GITHUB_FIXTURE`: explicit GitHub merged pull request fixture path
-- `INPUT_MODE`: `dry-run`, `propose`, `stage-draft`, or `promote-draft`, default `propose`
+- `INPUT_MODE`: `dry-run`, `propose`, `commit`, `stage-draft`, or `promote-draft`, default `propose`
 - `INPUT_DRAFT_PATH`: approved `.clarissimi/drafts/*.json` path required by `promote-draft`
 - `INPUT_CONFIG_PATH`: optional explicit path to a Clarissimi config file
 - `INPUT_BASE_BRANCH`: base branch for proposal pull requests, default `main`
@@ -39,8 +40,7 @@ accepts:
 - `INPUT_PROVIDER_THINKING`: optional OpenAI-compatible thinking mode, currently only `disabled`
 - `CLARISSIMI_PROVIDER_TOKEN`: provider token required only for `openai-compatible`
 - `GITHUB_REPOSITORY`: target repository for proposal pull requests in `propose` mode
-- `GITHUB_TOKEN`: token used only by `propose` mode for live GitHub collection and proposal pull
-  request creation or update
+- `GITHUB_TOKEN`: token used by write modes for live GitHub collection and repository publication
 
 The root `action.yml` exposes the same surface as a composite action:
 
@@ -73,7 +73,6 @@ dependency review should pin the immutable patch tag or commit SHA instead of th
 
 The future expanded action contract should include:
 
-- mode: `commit`
 - pull request number or event-derived target
 - minimum confidence threshold
 
@@ -107,6 +106,13 @@ before branch mutation. Before rendering, propose mode parses the checked-out
 `.clarissimi/contributions.jsonl` when present, rejects malformed or duplicate existing records,
 and appends the new contribution identity. It rebuilds all derived outputs from that complete
 ledger; it must never replace prior recognition history with only the new assessment.
+
+`commit` uses the same assessment and complete-ledger contract as `propose`, but writes the staged
+outputs directly to `INPUT_BASE_BRANCH`. It requires a clean checkout, checks HEAD against
+`GITHUB_SHA` when present, creates a bot-authored commit only when outputs changed, and pushes with
+normal fast-forward semantics. Dirty worktrees, stale expected HEAD, concurrent target updates,
+branch protection rejection, unsafe paths, and non-approved assessments fail closed. It never
+force-pushes or opens a pull request.
 
 `stage-draft` mode reads `GITHUB_TOKEN` for live GitHub collection and proposal pull request
 creation or update. It succeeds only for normal `draft` assessments and stages sanitized
@@ -159,6 +165,15 @@ In `propose`, `stage-draft`, and `promote-draft` modes, the Action also emits:
 - `proposal-pull-request-action`
 - `summary-json-path` when `summary-path` is set
 
+In `commit` mode, the Action also emits:
+
+- `staged-file-count`
+- `direct-commit-branch`
+- `direct-commit-sha`
+- `direct-commit-created`
+- `direct-commit-pushed`
+- `summary-json-path` when `summary-path` is set
+
 When `GITHUB_STEP_SUMMARY` is available, the Action appends a bounded Markdown summary with the
 same count and status fields. The step summary must not include raw pull request bodies, raw patch
 excerpts, raw diffs, provider raw output, tokens, or secrets.
@@ -178,6 +193,11 @@ The Action uses the following process outcomes:
 - Unmerged pull request event: exit `0`, JSON stdout with `skipped-entry-count=1`, and bounded step
   summary when `GITHUB_STEP_SUMMARY` is available.
 - Missing `GITHUB_TOKEN` in `propose` mode: exit `1`, empty stdout, usage message on stderr.
+- Missing `GITHUB_TOKEN` in `commit` mode: exit `1`, empty stdout, usage message on stderr.
+- Dirty checkout or stale `GITHUB_SHA` in `commit` mode: exit `4`, empty stdout, diagnostic on
+  stderr before repository output mutation.
+- Concurrent update or branch protection rejection in `commit` mode: exit `4`, empty stdout,
+  diagnostic on stderr; no force push is attempted.
 - Missing `CLARISSIMI_PROVIDER_TOKEN` or `INPUT_PROVIDER_MODEL` for `openai-compatible`: exit `1`,
   empty stdout, usage message on stderr.
 - Draft, rejected, or skipped assessment in `propose` mode: exit `4`, empty stdout, diagnostic on
@@ -192,8 +212,8 @@ The Action uses the following process outcomes:
 ## Permissions
 
 Dry-run mode should need read permissions only. Propose, stage-draft, and promote-draft modes need
-the minimum write permissions required to create a proposal branch and pull request.
-Commit mode is not implemented.
+the minimum write permissions required to create a proposal branch and pull request. Commit mode
+needs `contents: write` and no pull-request write permission.
 
 ## Review Blockers
 

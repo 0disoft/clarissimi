@@ -27,13 +27,13 @@ Sensitive outputs:
 
 Trust boundaries and mitigations:
 
-| Boundary                              | Risk                                          | Mitigation                                                             |
-| ------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------- |
-| Repository evidence to provider input | prompt injection, secrets, oversized evidence | prepare and redact evidence before provider calls                      |
-| Provider output to assessment         | malformed or overreaching claims              | schema validation and maintainer approval                              |
-| Draft inbox to public ledger          | unapproved recognition                        | `import-draft` rejects draft, rejected, skipped, and duplicate records |
-| Action write mode to repository       | default-branch mutation or unsafe files       | staging, branch writer, publisher, pull request boundaries             |
-| Logs and summaries                    | secret or raw evidence leakage                | bounded outputs and no raw provider bodies                             |
+| Boundary                              | Risk                                          | Mitigation                                                                               |
+| ------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Repository evidence to provider input | prompt injection, secrets, oversized evidence | prepare and redact evidence before provider calls                                        |
+| Provider output to assessment         | malformed or overreaching claims              | schema validation and maintainer approval                                                |
+| Draft inbox to public ledger          | unapproved recognition                        | `import-draft` rejects draft, rejected, skipped, and duplicate records                   |
+| Action write mode to repository       | unauthorized branch mutation or unsafe files  | explicit mode, clean and expected HEAD, owned paths, non-force push, proposal boundaries |
+| Logs and summaries                    | secret or raw evidence leakage                | bounded outputs and no raw provider bodies                                               |
 
 ## Required Evidence
 

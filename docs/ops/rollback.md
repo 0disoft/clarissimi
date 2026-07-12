@@ -18,6 +18,8 @@ Stop the current release, dogfood run, or source-only merge when any of these ha
 - A proposal pull request contains raw evidence, provider raw output, secrets, raw diffs, or patch
   excerpts.
 - The proposal branch mutates the default branch or cannot prove its base commit.
+- `commit` mode writes outside Clarissimi-owned outputs, starts from a dirty or unexpected HEAD, or
+  attempts a force push.
 - The Action uses broader permissions than `docs/github-action/permissions.md` allows.
 - `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`, `pnpm run smoke`,
   `pnpm run check`, `pnpm run contract`, `actionlint`, `ssealed doctor . --json`, YAML parsing,
@@ -33,6 +35,7 @@ Choose the narrowest rollback path:
 | Open proposal pull request before merge                               | Close the proposal pull request and delete the proposal branch.                                                                |
 | Failed integration-lab full-write smoke leaves run-scoped resources   | Preview `pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`, apply it explicitly, then rerun the orphan audit. |
 | Merged recognition pull request                                       | Revert the recognition pull request and run the rebuild path for derived outputs.                                              |
+| Published direct recognition commit                                   | Revert the exact Clarissimi commit and run the rebuild path for derived outputs.                                               |
 | Published Action tag with a normal defect                             | Keep the tag immutable and publish a corrective patch tag.                                                                     |
 | Moving `v0` alias fails verification                                  | Restore the recorded previous SHA with a lease, or delete only a newly created alias.                                          |
 | Published Action tag with an urgent security or supply-chain incident | Document impact and recovery, then delete or replace the tag only when continued availability is more dangerous.               |

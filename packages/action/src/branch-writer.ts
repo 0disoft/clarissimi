@@ -160,7 +160,9 @@ async function assertExistingProposalBranchIsOwned(
   }
 }
 
-async function writeStagedFilesToRepository(input: ProposalBranchWriterInput): Promise<void> {
+export async function writeStagedFilesToRepository(
+  input: ProposalBranchWriterInput,
+): Promise<void> {
   for (const file of input.manifest.files) {
     assertOwnedStagedPath(file);
     await assertSafeRepositoryOutputPath(input.repositoryDir, file.path);

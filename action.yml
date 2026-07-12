@@ -4,7 +4,7 @@ author: 0disoft
 
 inputs:
   mode:
-    description: Action mode. Use dry-run for summaries, propose for approved event drafts, stage-draft for draft review PRs, or promote-draft for an approved draft file.
+    description: Action mode. Use dry-run for summaries, propose for approved event drafts, commit for an explicit direct commit, stage-draft for draft review PRs, or promote-draft for an approved draft file.
     required: false
     default: propose
   event-path:
@@ -92,6 +92,18 @@ outputs:
   summary-json-path:
     description: Absolute path to the sanitized JSON summary artifact when summary-path is set.
     value: ${{ steps.clarissimi.outputs.summary-json-path }}
+  direct-commit-branch:
+    description: Target branch used by explicit commit mode.
+    value: ${{ steps.clarissimi.outputs.direct-commit-branch }}
+  direct-commit-sha:
+    description: Commit SHA created or confirmed by explicit commit mode.
+    value: ${{ steps.clarissimi.outputs.direct-commit-sha }}
+  direct-commit-created:
+    description: Whether explicit commit mode created a new commit.
+    value: ${{ steps.clarissimi.outputs.direct-commit-created }}
+  direct-commit-pushed:
+    description: Whether explicit commit mode pushed a new commit.
+    value: ${{ steps.clarissimi.outputs.direct-commit-pushed }}
 
 runs:
   using: composite
@@ -100,7 +112,7 @@ runs:
       id: clarissimi
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ (inputs.mode == 'propose' || inputs.mode == 'stage-draft' || inputs.mode == 'promote-draft') && github.token || '' }}
+        GITHUB_TOKEN: ${{ (inputs.mode == 'propose' || inputs.mode == 'commit' || inputs.mode == 'stage-draft' || inputs.mode == 'promote-draft') && github.token || '' }}
         INPUT_MODE: ${{ inputs.mode }}
         INPUT_EVENT_PATH: ${{ inputs.event-path }}
         INPUT_GITHUB_FIXTURE: ${{ inputs.github-fixture }}

@@ -6,8 +6,8 @@
 ## Purpose
 
 The GitHub Action is the installable automation surface for public repositories. It should collect
-safe post-merge evidence, draft recognition, and propose repository-owned recognition files for
-maintainer review.
+safe post-merge evidence, draft recognition, and either propose or explicitly commit
+repository-owned recognition files.
 
 The Action is a thin entrypoint. Domain logic belongs in core packages and the CLI orchestration
 layer.
@@ -19,8 +19,8 @@ layer.
 - Collects bounded public GitHub evidence.
 - Runs redaction before provider calls.
 - Validates provider output against schemas.
-- Produces a dry-run summary, proposed recognition pull request, or proposed draft review pull
-  request.
+- Produces a dry-run summary, proposed recognition pull request, explicit direct commit, or
+  proposed draft review pull request.
 
 ## Default Write Mode
 
@@ -46,12 +46,14 @@ copyable read-only workflow, the manual least-privilege proposal workflow, and a
 recognition result with the contributor summary table.
 
 The current `action.yml` defaults to `propose` mode and also supports explicit read-only `dry-run`
-and write-mode `stage-draft`. The `v0.1.1` release executes the committed `action-dist/index.js`
+plus write modes `commit` and `stage-draft`. The `v0.1.1` release executes the committed `action-dist/index.js`
 bundle without consumer-time package installation or TypeScript compilation. `v0.1.0` remains
 immutable and retains its published source-build behavior. Dry-run mode emits a bounded summary and does not read provider credentials, use
 GitHub write tokens, create branches, open pull requests, or update repository files. Propose mode
 stages approved recognition output, publishes a proposal branch, and opens or updates a pull
-request. Stage-draft mode stages only sanitized `.clarissimi/drafts/*.json` review files and opens
+request. Commit mode performs the same approved recognition rebuild and directly pushes one
+bot-authored commit without force. Stage-draft mode stages only sanitized
+`.clarissimi/drafts/*.json` review files and opens
 or updates a draft review pull request. When `propose` or `stage-draft` receives
 `GITHUB_EVENT_PATH`, it routes the merged pull request through the live GitHub collector using
 `GITHUB_TOKEN`; fixture inputs remain the deterministic local and test path.
@@ -217,6 +219,30 @@ steps:
       github-fixture: fixtures/github-merged-pr-approved.json
       base-branch: main
 ```
+
+Explicit commit mode removes the proposal round trip. It requires only repository content write
+permission beyond the read permissions used for evidence collection. Pin a release or commit that
+contains ADR 0038; immutable `v0.1.1` does not contain this mode.
+
+```yaml
+permissions:
+  contents: write
+  pull-requests: read
+  issues: read
+
+steps:
+  - uses: actions/checkout@v7
+    with:
+      fetch-depth: 0
+  - uses: 0disoft/clarissimi@<release-or-commit>
+    with:
+      mode: commit
+      base-branch: main
+```
+
+The checkout must be clean and must still point at `GITHUB_SHA`. Clarissimi creates no commit when
+the deterministic rebuild is unchanged, never force-pushes, and fails when the target branch
+advanced or branch protection rejects the update.
 
 Stage-draft mode proposes an unapproved draft inbox file for maintainer review. It uses the same
 write permissions as propose mode but does not update public recognition outputs:

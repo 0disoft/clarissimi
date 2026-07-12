@@ -43,8 +43,8 @@ maintainer approval allow it.
 
 - `dry-run`: print or upload a summary without writing recognition files
 - `propose`: create a pull request with ledger and renderer changes
-- `commit`: reserved future direct-write mode for explicitly configured small repositories; not
-  implemented in the current CLI or Action paths
+- `commit`: explicit Action direct-write mode for approved recognition; requires a clean checkout,
+  expected HEAD match, owned output paths, and a non-force fast-forward push
 
 Default mode should be `propose`.
 

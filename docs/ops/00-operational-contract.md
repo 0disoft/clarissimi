@@ -22,7 +22,8 @@ Operational priorities:
 
 1. Do not publish unapproved, rejected, skipped, or raw AI/provider output as public recognition.
 2. Do not leak tokens, private keys, raw diffs, raw provider responses, or sensitive evidence.
-3. Do not mutate the default branch directly from write-mode automation.
+3. Mutate the default branch only through explicit `commit` mode with approved recognition,
+   clean-checkout, expected-HEAD, owned-path, and non-force push gates.
 4. Keep derived outputs rebuildable from `.clarissimi/contributions.jsonl`.
 5. Keep release and dogfood gates reproducible through documented commands and workflow runs.
 

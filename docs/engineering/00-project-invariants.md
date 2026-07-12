@@ -18,7 +18,8 @@ Clarissimi's non-negotiable invariants are:
 - The canonical approved ledger is `.clarissimi/contributions.jsonl`.
 - Derived contributor JSON, Markdown, and static data must be rebuildable from approved ledger
   records.
-- Write-mode automation must not mutate the default branch directly.
+- Write-mode automation must not mutate the default branch unless the maintainer explicitly selects
+  `commit` mode and clean-checkout, expected-HEAD, approval, owned-path, and non-force push gates pass.
 - Correctness tests use deterministic providers, injected clients, fake fetches, fixtures, or
   temporary repositories instead of live credentials.
 - Live provider smoke is explicit, credentialed, and release-only.

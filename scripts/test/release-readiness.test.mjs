@@ -370,8 +370,8 @@ test("release readiness accepts the README validation contract", () => {
 test("release readiness rejects README validation drift", () => {
   const text = createReadmeValidationText()
     .replace("Not implemented yet:", "Implemented now:")
-    .replace("repository write modes such as direct `commit`", "repository direct commit mode")
-    .replace("comment updates or default-branch mutation", "comment and default branch updates")
+    .replace("- comment updates", "- no pending updates")
+    .replace("Commit mode is an explicit automation-first path", "Commit mode is unavailable")
     .replace(
       "Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
       "Source-only merges require `pnpm run docs`,",
@@ -409,8 +409,8 @@ test("release readiness rejects README validation drift", () => {
 
   assert.deepEqual(validateReadmeValidationContract(text), [
     "README.md must include Not implemented yet:.",
-    "README.md must include repository write modes such as direct `commit`.",
-    "README.md must include comment updates or default-branch mutation.",
+    "README.md must include - comment updates.",
+    "README.md must include Commit mode is an explicit automation-first path.",
     "README.md must include Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,.",
     "README.md must include - `pnpm run release-readiness`.",
     "README.md must include Release-only hosted checks are:.",
@@ -967,7 +967,7 @@ test("release readiness accepts the Action inputs and outputs document contract"
 test("release readiness rejects Action inputs and outputs document drift", () => {
   const text = createActionInputsOutputsDocumentText()
     .replace(
-      "- `mode`: `dry-run`, `propose`, `stage-draft`, or `promote-draft`, default `propose`",
+      "- `mode`: `dry-run`, `propose`, `commit`, `stage-draft`, or `promote-draft`, default `propose`",
       "- `mode`: `dry-run`",
     )
     .replace(
@@ -975,7 +975,7 @@ test("release readiness rejects Action inputs and outputs document drift", () =>
       "Provider API keys can be inputs.",
     )
     .replace(
-      "reads `GITHUB_TOKEN` only in `propose`, `stage-draft`, and",
+      "reads `GITHUB_TOKEN` in `propose`, `commit`, `stage-draft`,",
       "reads `GITHUB_TOKEN` in all modes",
     )
     .replace(
@@ -997,9 +997,9 @@ test("release readiness rejects Action inputs and outputs document drift", () =>
     .replace("raw-evidence exclusion rules as action outputs.", "summary rules.");
 
   assert.deepEqual(validateActionInputsOutputsDocumentContract(text), [
-    "docs/github-action/inputs-and-outputs.md must include - `mode`: `dry-run`, `propose`, `stage-draft`, or `promote-draft`, default `propose`.",
+    "docs/github-action/inputs-and-outputs.md must include - `mode`: `dry-run`, `propose`, `commit`, `stage-draft`, or `promote-draft`, default `propose`.",
     "docs/github-action/inputs-and-outputs.md must include Provider API keys and GitHub tokens are not plain inputs..",
-    "docs/github-action/inputs-and-outputs.md must include reads `GITHUB_TOKEN` only in `propose`, `stage-draft`, and.",
+    "docs/github-action/inputs-and-outputs.md must include reads `GITHUB_TOKEN` in `propose`, `commit`, `stage-draft`,.",
     "docs/github-action/inputs-and-outputs.md must include `config-path` is explicit-only; the Action does not automatically discover repository config files..",
     "docs/github-action/inputs-and-outputs.md must include `summary-path` is explicit-only, must be relative, and must stay inside `GITHUB_WORKSPACE`..",
     "docs/github-action/inputs-and-outputs.md must include An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`.",
@@ -1015,7 +1015,7 @@ test("release readiness accepts the Action contract document contract", () => {
 test("release readiness rejects Action contract document drift", () => {
   const text = createActionContractDocumentText()
     .replace(
-      "The Action supports dry-run summaries, public recognition proposals, and draft inbox proposals.",
+      "The Action supports dry-run summaries, public recognition proposals, direct commits, and draft inbox proposals.",
       "The Action supports recognition automation.",
     )
     .replace(
@@ -1060,7 +1060,7 @@ test("release readiness rejects Action contract document drift", () => {
     );
 
   assert.deepEqual(validateActionContractDocumentContract(text), [
-    "docs/github-action/action-contract.md must include The Action supports dry-run summaries, public recognition proposals, and draft inbox proposals..",
+    "docs/github-action/action-contract.md must include The Action supports dry-run summaries, public recognition proposals, direct commits.",
     "docs/github-action/action-contract.md must include Secret values must be read from GitHub Actions secrets or environment variables, not action inputs..",
     "docs/github-action/action-contract.md must include Unsupported `INPUT_MODE` values must fail.",
     "docs/github-action/action-contract.md must include Invalid summary paths fail before provider.",
@@ -2091,8 +2091,9 @@ function createReadmeValidationText() {
   return [
     "Not implemented yet:",
     "",
-    "- repository write modes such as direct `commit`",
-    "- comment updates or default-branch mutation",
+    "- comment updates",
+    "",
+    "Commit mode is an explicit automation-first path for approved recognition.",
     "",
     "Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
     "`pnpm run format`, `pnpm run migration-check`, `pnpm run smoke`, `pnpm run check`, and",
@@ -2525,7 +2526,7 @@ function createDisasterRecoveryDocumentText() {
     "",
     "- public recognition output contains raw evidence, provider raw output, secrets, raw diffs, or",
     "  patch excerpts",
-    "- write-mode automation mutates the default branch directly",
+    "- write-mode automation mutates the default branch without explicit `commit` mode",
     "- branch protection no longer requires the hosted `Validation` check",
     "- provider credentials are committed, logged, or copied into public artifacts",
     "- `.clarissimi/contributions.jsonl` cannot be parsed or rebuilt into derived outputs",
@@ -2546,7 +2547,7 @@ function createDisasterRecoveryDocumentText() {
 
 function createActionInputsOutputsDocumentText() {
   return [
-    "- `mode`: `dry-run`, `propose`, `stage-draft`, or `promote-draft`, default `propose`",
+    "- `mode`: `dry-run`, `propose`, `commit`, `stage-draft`, or `promote-draft`, default `propose`",
     "- `draft-path`: approved `.clarissimi/drafts/*.json` path required by `promote-draft`",
     "- `summary-path`: optional workspace-relative path for a sanitized JSON summary artifact",
     "- `provider`: `fake` or `openai-compatible`; omitted values fall back to config, then `fake`",
@@ -2554,8 +2555,8 @@ function createActionInputsOutputsDocumentText() {
     "- `markdown-summary`: `none` or `table`",
     "",
     "Provider API keys and GitHub tokens are not plain inputs. They must come from secrets or the",
-    "workflow environment. The current Action reads `GITHUB_TOKEN` only in `propose`, `stage-draft`, and",
-    "`promote-draft` modes for proposal branch and pull request creation or update. It reads",
+    "workflow environment. The current Action reads `GITHUB_TOKEN` in `propose`, `commit`, `stage-draft`,",
+    "and `promote-draft` modes for live collection and repository publication. It reads",
     "`CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.",
     "",
     "`INPUT_CONFIG_PATH`, `INPUT_DRAFT_PATH`, `INPUT_MODE`, `INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`,",
@@ -2572,12 +2573,13 @@ function createActionInputsOutputsDocumentText() {
     "`summary-path` is explicit-only, must be relative, and must stay inside `GITHUB_WORKSPACE`.",
     "An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`",
     "fallback.",
-    "In `propose` and `stage-draft`, event payloads route to the live GitHub collector when no explicit",
+    "In `propose`, `commit`, and `stage-draft`, event payloads route to the live GitHub collector when no explicit",
     "fixture is provided.",
     "In `promote-draft`, event, fixture, config, and provider inputs are ignored or rejected as",
     "inapplicable; the approved draft file is the only assessment input.",
     "",
     "- `summary-json-path` when `summary-path` is set",
+    "- `direct-commit-sha`",
     "",
     "Outputs must not include raw provider output, raw diff text, raw issue text, tokens, private keys,",
     "raw pull request bodies, raw patch excerpts, or sensitive security details.",
@@ -2589,16 +2591,15 @@ function createActionInputsOutputsDocumentText() {
 
 function createActionContractDocumentText() {
   return [
-    "The Action supports dry-run summaries, public recognition proposals, and draft inbox proposals.",
+    "The Action supports dry-run summaries, public recognition proposals, direct commits, and draft inbox proposals.",
     "",
-    "- `INPUT_MODE`: `dry-run`, `propose`, `stage-draft`, or `promote-draft`, default `propose`",
+    "- `INPUT_MODE`: `dry-run`, `propose`, `commit`, `stage-draft`, or `promote-draft`, default `propose`",
     "- `INPUT_DRAFT_PATH`: approved `.clarissimi/drafts/*.json` path required by `promote-draft`",
     "- `INPUT_SUMMARY_PATH`: optional workspace-relative path for a sanitized JSON summary artifact",
     "- `markdown-summary`: optional `none` or `table` layout for generated `CONTRIBUTORS.md`",
     "- `INPUT_PROVIDER`: `fake` or `openai-compatible`, default `fake`",
     "- `CLARISSIMI_PROVIDER_TOKEN`: provider token required only for `openai-compatible`",
-    "- `GITHUB_TOKEN`: token used only by `propose` mode for live GitHub collection and proposal pull",
-    "  request creation or update",
+    "- `GITHUB_TOKEN`: token used by write modes for live GitHub collection and repository publication",
     "",
     "Secret values must be read from GitHub Actions secrets or environment variables, not action inputs.",
     "Unsupported `INPUT_MODE` values must fail as usage errors before collection, provider, staging,",
@@ -2649,7 +2650,7 @@ function createActionContractDocumentText() {
     "  diagnostic on stderr before branch mutation.",
     "",
     "Dry-run mode should need read permissions only.",
-    "Commit mode is not implemented.",
+    "Commit mode needs `contents: write` and no pull-request write permission.",
     "",
     "- Default behavior requires broad write permissions.",
     "- Provider secrets are modeled as plain action inputs.",
@@ -2670,6 +2671,7 @@ function createActionPermissionsDocumentText() {
     "| `propose` | `write` | `write` | `read` | Proposal branch only | Yes |",
     "| `stage-draft` | `write` | `write` | `read` | Draft proposal branch only | Yes |",
     "| `promote-draft` | `write` | `write` | `read` | Recognition proposal branch only | Yes |",
+    "| `commit` | `write` | `read` | `read` | Current branch | No |",
     "",
     "Any permission not listed in a workflow should remain unset, which GitHub treats as `none` when",
     "the workflow uses an explicit `permissions` block.",
@@ -2695,6 +2697,7 @@ function createActionPermissionsDocumentText() {
     "Promotion reads one approved draft under `.clarissimi/drafts/`, writes only Clarissimi recognition",
     "",
     "Commit mode requires explicit configuration and should not be the default.",
+    "Commit mode pushes without force to the configured target branch.",
     "",
     "Avoid default `pull_request_target` examples. Do not checkout or execute untrusted pull request head",
     "code.",
@@ -2980,12 +2983,20 @@ function createActionManifestText() {
     "    value: ${{ steps.clarissimi.outputs.proposal-pull-request-action }}",
     "  summary-json-path:",
     "    value: ${{ steps.clarissimi.outputs.summary-json-path }}",
+    "  direct-commit-branch:",
+    "    value: ${{ steps.clarissimi.outputs.direct-commit-branch }}",
+    "  direct-commit-sha:",
+    "    value: ${{ steps.clarissimi.outputs.direct-commit-sha }}",
+    "  direct-commit-created:",
+    "    value: ${{ steps.clarissimi.outputs.direct-commit-created }}",
+    "  direct-commit-pushed:",
+    "    value: ${{ steps.clarissimi.outputs.direct-commit-pushed }}",
     "runs:",
     "  using: composite",
     "  steps:",
     "    - name: Run Clarissimi",
     "      env:",
-    "        GITHUB_TOKEN: ${{ (inputs.mode == 'propose' || inputs.mode == 'stage-draft' || inputs.mode == 'promote-draft') && github.token || '' }}",
+    "        GITHUB_TOKEN: ${{ (inputs.mode == 'propose' || inputs.mode == 'commit' || inputs.mode == 'stage-draft' || inputs.mode == 'promote-draft') && github.token || '' }}",
     "        INPUT_MODE: ${{ inputs.mode }}",
     "        INPUT_EVENT_PATH: ${{ inputs.event-path }}",
     "        INPUT_GITHUB_FIXTURE: ${{ inputs.github-fixture }}",

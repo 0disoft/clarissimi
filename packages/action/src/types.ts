@@ -3,7 +3,13 @@ import type { LiveGitHubClient } from "@clarissimi/github";
 import type { ContributionDraftProvider } from "@clarissimi/providers";
 import type { ProposalPullRequestClient } from "./pull-request.js";
 
-export const ACTION_MODES = ["dry-run", "propose", "stage-draft", "promote-draft"] as const;
+export const ACTION_MODES = [
+  "dry-run",
+  "propose",
+  "commit",
+  "stage-draft",
+  "promote-draft",
+] as const;
 
 export type ActionMode = (typeof ACTION_MODES)[number];
 
@@ -30,6 +36,15 @@ export interface ActionProposeInput extends ActionDryRunInput {
   readonly remoteName?: string;
   readonly targetRepository?: string;
   readonly pullRequestClient: ProposalPullRequestClient;
+}
+
+export interface ActionCommitInput extends ActionDryRunInput {
+  readonly mode: "commit";
+  readonly repositoryDir: string;
+  readonly stagingDir: string;
+  readonly targetBranch: string;
+  readonly expectedHeadSha?: string;
+  readonly remoteName?: string;
 }
 
 export interface ActionStageDraftInput extends Omit<ActionProposeInput, "mode"> {
@@ -78,7 +93,26 @@ export interface ActionProposeSummary {
   readonly proposalPullRequestAction: "created" | "updated";
 }
 
-export type ActionRunSummary = ActionDryRunSummary | ActionProposeSummary;
+export interface ActionCommitSummary {
+  readonly ok: true;
+  readonly mode: "commit";
+  readonly inputSource: ActionInputSource;
+  readonly draftCount: 1;
+  readonly proposedEntryCount: 1;
+  readonly skippedEntryCount: 0;
+  readonly publicOutputsRendered: true;
+  readonly approvalStatus: "approved" | "auto_approved";
+  readonly redactionChanged: boolean;
+  readonly redactionMatchCount: number;
+  readonly stagedFileCount: number;
+  readonly directCommitBranch: string;
+  readonly directCommitBaseSha: string;
+  readonly directCommitSha: string;
+  readonly directCommitCreated: boolean;
+  readonly directCommitPushed: boolean;
+}
+
+export type ActionRunSummary = ActionDryRunSummary | ActionProposeSummary | ActionCommitSummary;
 
 export type SanitizedContributionAssessment = Omit<ContributionAssessment, "evidenceRefs"> & {
   readonly evidenceRefs: readonly SanitizedEvidenceRef[];

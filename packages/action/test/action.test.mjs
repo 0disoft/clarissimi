@@ -809,7 +809,7 @@ test("environment runner returns usage failure for unsupported mode", async () =
   const exitCode = await runActionFromEnvironment(
     {
       INPUT_GITHUB_FIXTURE: "unused.json",
-      INPUT_MODE: "commit",
+      INPUT_MODE: "execute",
     },
     {
       stdout: (value) => {
@@ -823,7 +823,7 @@ test("environment runner returns usage failure for unsupported mode", async () =
 
   assert.equal(exitCode, 1);
   assert.equal(stdout, "");
-  assert.equal(stderr, "Unsupported action mode: commit.\n");
+  assert.equal(stderr, "Unsupported action mode: execute.\n");
 });
 
 test("environment runner rejects unsupported Markdown summary inputs", async () => {
@@ -857,7 +857,7 @@ test("environment runner validates unsupported mode before resolving provider cr
   const exitCode = await runActionFromEnvironment(
     {
       INPUT_GITHUB_FIXTURE: "unused.json",
-      INPUT_MODE: "commit",
+      INPUT_MODE: "execute",
       INPUT_PROVIDER: "openai-compatible",
     },
     {
@@ -872,7 +872,7 @@ test("environment runner validates unsupported mode before resolving provider cr
 
   assert.equal(exitCode, 1);
   assert.equal(stdout, "");
-  assert.equal(stderr, "Unsupported action mode: commit.\n");
+  assert.equal(stderr, "Unsupported action mode: execute.\n");
 });
 
 test("environment runner validates unsupported mode before loading config-path", async () => {
@@ -890,7 +890,7 @@ test("environment runner validates unsupported mode before loading config-path",
         GITHUB_WORKSPACE: dir,
         INPUT_CONFIG_PATH: "clarissimi.config.ts",
         INPUT_GITHUB_FIXTURE: "unused.json",
-        INPUT_MODE: "commit",
+        INPUT_MODE: "execute",
       },
       {
         stdout: (value) => {
@@ -904,7 +904,7 @@ test("environment runner validates unsupported mode before loading config-path",
 
     assert.equal(exitCode, 1);
     assert.equal(stdout, "");
-    assert.equal(stderr, "Unsupported action mode: commit.\n");
+    assert.equal(stderr, "Unsupported action mode: execute.\n");
   });
 });
 

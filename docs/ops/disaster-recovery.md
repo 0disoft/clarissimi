@@ -14,7 +14,8 @@ Disaster triggers:
 
 - public recognition output contains raw evidence, provider raw output, secrets, raw diffs, or
   patch excerpts
-- write-mode automation mutates the default branch directly
+- write-mode automation mutates the default branch without explicit `commit` mode, owned-path
+  validation, or a matching expected HEAD
 - branch protection no longer requires the hosted `Validation` check
 - provider credentials are committed, logged, or copied into public artifacts
 - `.clarissimi/contributions.jsonl` cannot be parsed or rebuilt into derived outputs

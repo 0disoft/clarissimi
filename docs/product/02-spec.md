@@ -230,6 +230,12 @@ Default write mode:
 
 - `propose`
 
+An explicit `commit` mode may write approved or auto-approved recognition directly to the
+configured target branch. It preserves the same validation, append-only ledger, duplicate
+rejection, complete derived-output rebuild, and owned-path checks as `propose`. It additionally
+requires a clean checkout, rejects a stale expected HEAD, uses a bot-authored commit, and performs
+only a normal fast-forward push. It must never infer approval, force-push, or become the default.
+
 The Action may also support `stage-draft` mode. This mode creates a proposal pull request containing
 only sanitized `.clarissimi/drafts/*.json` review files for normal unapproved drafts. It must not
 write public recognition outputs or imply maintainer approval.
@@ -243,6 +249,8 @@ Both `propose` and `promote-draft` must preserve the append-only ledger. They pa
 checked-out canonical JSONL, reject malformed or duplicate existing identities, reject a new
 contributor/source identity that is already present, append the new approved record, and rebuild
 derived outputs from the complete ledger before any branch mutation.
+
+`commit` follows the same ledger preservation contract before direct branch mutation.
 
 All Action write modes must reject repository output paths that resolve through symbolic links,
 junctions, hard-linked files, or outside the checked-out repository. This validation happens before

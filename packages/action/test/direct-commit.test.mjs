@@ -174,7 +174,7 @@ test("refuses non-fast-forward publication after the target branch advances", as
     });
 
     const competingDir = join(repositoryDir, "..", "competing");
-    await git(join(repositoryDir, ".."), ["clone", remoteDir, competingDir]);
+    await git(join(repositoryDir, ".."), ["clone", "--branch", "main", remoteDir, competingDir]);
     await git(competingDir, ["config", "user.name", "Competing Writer"]);
     await git(competingDir, ["config", "user.email", "competing.invalid"]);
     await writeFile(join(competingDir, "COMPETING.md"), "# Concurrent update\n", "utf8");

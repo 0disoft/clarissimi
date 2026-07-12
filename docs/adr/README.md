@@ -64,6 +64,8 @@ engine.
   expected-HEAD, owned-path, and fast-forward push boundaries
 - `0039-serialize-cli-ledger-writes.md`: serialize CLI imports and make the canonical ledger the
   final commit point of a staged output generation
+- `0040-bound-external-http-requests.md`: bound GitHub and provider request duration and response
+  size while exposing structured retryability without automatic retries
 
 ## Review Blockers
 

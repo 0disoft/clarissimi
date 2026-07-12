@@ -13,6 +13,8 @@ const DEFAULT_PROVIDER_ID = "openai-compatible";
 const DEFAULT_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 const DEFAULT_TEMPERATURE = 0.2;
 const DEFAULT_MAX_TOKENS = 1200;
+const DEFAULT_REQUEST_TIMEOUT_MS = 120_000;
+const DEFAULT_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const THINKING_TYPES = ["disabled"] as const;
 
 export type OpenAiCompatibleThinkingType = (typeof THINKING_TYPES)[number];
@@ -20,6 +22,9 @@ export type OpenAiCompatibleThinkingType = (typeof THINKING_TYPES)[number];
 export type OpenAiCompatibleProviderErrorCode =
   | "invalid_options"
   | "http_error"
+  | "network_error"
+  | "timeout"
+  | "response_too_large"
   | "invalid_response"
   | "invalid_json"
   | "invalid_assessment";
@@ -32,21 +37,26 @@ export interface OpenAiCompatibleProviderOptions {
   readonly fetch?: typeof fetch;
   readonly temperature?: number;
   readonly maxTokens?: number;
+  readonly timeoutMs?: number;
+  readonly maxResponseBytes?: number;
   readonly thinking?: OpenAiCompatibleThinkingType;
 }
 
 export class OpenAiCompatibleProviderError extends Error {
   readonly code: OpenAiCompatibleProviderErrorCode;
+  readonly retryable: boolean;
   readonly issues?: readonly ValidationIssue[];
 
   constructor(
     code: OpenAiCompatibleProviderErrorCode,
     message: string,
     issues?: readonly ValidationIssue[],
+    retryable = false,
   ) {
     super(message);
     this.name = "OpenAiCompatibleProviderError";
     this.code = code;
+    this.retryable = retryable;
     if (issues !== undefined) {
       this.issues = issues;
     }
@@ -62,6 +72,14 @@ export function createOpenAiCompatibleContributionDraftProvider(
   const fetchImpl = options.fetch ?? fetch;
   const temperature = finiteNumberOption(options.temperature ?? DEFAULT_TEMPERATURE, "temperature");
   const maxTokens = positiveIntegerOption(options.maxTokens ?? DEFAULT_MAX_TOKENS, "maxTokens");
+  const timeoutMs = positiveIntegerOption(
+    options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
+    "timeoutMs",
+  );
+  const maxResponseBytes = positiveIntegerOption(
+    options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES,
+    "maxResponseBytes",
+  );
   const thinking = optionalEnumOption(options.thinking, THINKING_TYPES, "thinking");
 
   return {
@@ -74,6 +92,8 @@ export function createOpenAiCompatibleContributionDraftProvider(
         fetchImpl,
         temperature,
         maxTokens,
+        timeoutMs,
+        maxResponseBytes,
         input,
         ...(thinking === undefined ? {} : { thinking }),
       } satisfies RequestAssessmentDraftInput;
@@ -91,6 +111,8 @@ interface RequestAssessmentDraftInput {
   readonly fetchImpl: typeof fetch;
   readonly temperature: number;
   readonly maxTokens: number;
+  readonly timeoutMs: number;
+  readonly maxResponseBytes: number;
   readonly thinking?: OpenAiCompatibleThinkingType;
   readonly input: ProviderAssessmentInput;
 }
@@ -121,21 +143,48 @@ async function requestAssessmentDraft(options: RequestAssessmentDraftInput): Pro
     };
   }
 
-  const response = await options.fetchImpl(options.endpoint, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${options.token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(requestBody),
-  });
+  let response: Response;
+  let text: string;
+  try {
+    ({ response, text } = await withTimeout(options.timeoutMs, async (signal) => {
+      const result = await options.fetchImpl(options.endpoint, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${options.token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+        signal,
+      });
+      return {
+        response: result,
+        text: await readBoundedResponseText(result, options.maxResponseBytes),
+      };
+    }));
+  } catch (error) {
+    if (error instanceof OpenAiCompatibleProviderError) {
+      throw error;
+    }
+    if (error instanceof RequestTimeoutError) {
+      throw providerTransportError(
+        "timeout",
+        "OpenAI-compatible provider request timed out.",
+        true,
+      );
+    }
+    throw providerTransportError(
+      "network_error",
+      "OpenAI-compatible provider request failed before a response.",
+      true,
+    );
+  }
 
-  const text = await response.text();
   if (!response.ok) {
-    throw new OpenAiCompatibleProviderError(
+    throw providerTransportError(
       "http_error",
       `OpenAI-compatible provider request failed with status ${response.status}.`,
+      response.status === 429 || response.status >= 500,
     );
   }
 
@@ -150,6 +199,85 @@ async function requestAssessmentDraft(options: RequestAssessmentDraftInput): Pro
   }
 
   return extractMessageContent(responseBody);
+}
+
+async function readBoundedResponseText(response: Response, maxBytes: number): Promise<string> {
+  const contentLength = response.headers?.get?.("content-length");
+  if (contentLength !== null && contentLength !== undefined) {
+    const declaredBytes = Number(contentLength);
+    if (Number.isFinite(declaredBytes) && declaredBytes > maxBytes) {
+      throw new OpenAiCompatibleProviderError(
+        "response_too_large",
+        `OpenAI-compatible provider response exceeded ${maxBytes} bytes.`,
+      );
+    }
+  }
+
+  if (response.body === null || response.body === undefined) {
+    const text = await response.text();
+    if (new TextEncoder().encode(text).byteLength > maxBytes) {
+      throw new OpenAiCompatibleProviderError(
+        "response_too_large",
+        `OpenAI-compatible provider response exceeded ${maxBytes} bytes.`,
+      );
+    }
+    return text;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let bytes = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        return text + decoder.decode();
+      }
+      bytes += value.byteLength;
+      if (bytes > maxBytes) {
+        await reader.cancel();
+        throw new OpenAiCompatibleProviderError(
+          "response_too_large",
+          `OpenAI-compatible provider response exceeded ${maxBytes} bytes.`,
+        );
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+async function withTimeout<T>(
+  timeoutMs: number,
+  task: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new RequestTimeoutError());
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([task(controller.signal), timeout]);
+  } finally {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+  }
+}
+
+class RequestTimeoutError extends Error {}
+
+function providerTransportError(
+  code: OpenAiCompatibleProviderErrorCode,
+  message: string,
+  retryable: boolean,
+): OpenAiCompatibleProviderError {
+  return new OpenAiCompatibleProviderError(code, message, undefined, retryable);
 }
 
 function buildSystemPrompt(): string {

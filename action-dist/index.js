@@ -2070,36 +2070,42 @@ import { pathToFileURL } from "node:url";
 var DEFAULT_GITHUB_API_URL2 = "https://api.github.com";
 var DEFAULT_PAGE_SIZE = 100;
 var MAX_LIST_PAGES = 10;
+var DEFAULT_REQUEST_TIMEOUT_MS = 3e4;
+var DEFAULT_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 var GitHubApiClientError = class extends Error {
   code;
+  retryable;
   constructor(code, message) {
     super(message);
     this.name = "GitHubApiClientError";
     this.code = code;
+    this.retryable = isRetryableCode(code);
   }
 };
 function createGitHubApiClient(options = {}) {
   const apiUrl = normalizeApiUrl2(options.apiUrl);
   const fetchImpl = options.fetch ?? fetch;
+  const timeoutMs = positiveIntegerOption(options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS, "timeoutMs");
+  const maxResponseBytes = positiveIntegerOption(options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES, "maxResponseBytes");
   return {
     async getPullRequest(input) {
-      const response = await requestJson2(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}`);
+      const response = await requestJson2(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}`, timeoutMs, maxResponseBytes);
       return parsePullRequest2(response);
     },
     async listPullRequestFiles(input) {
-      const response = await requestPaginatedArray(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/files`, "GitHub pull request files response must be an array.");
+      const response = await requestPaginatedArray(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/files`, "GitHub pull request files response must be an array.", timeoutMs, maxResponseBytes);
       return response.map(parsePullRequestFile);
     },
     async listPullRequestReviewComments(input) {
-      const response = await requestPaginatedArray(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/comments`, "GitHub pull request review comments response must be an array.");
+      const response = await requestPaginatedArray(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/comments`, "GitHub pull request review comments response must be an array.", timeoutMs, maxResponseBytes);
       return response.map(parseReviewComment);
     }
   };
 }
-async function requestPaginatedArray(fetchImpl, token, baseUrl, invalidResponseMessage) {
+async function requestPaginatedArray(fetchImpl, token, baseUrl, invalidResponseMessage, timeoutMs, maxResponseBytes) {
   const entries = [];
   for (let page = 1; page <= MAX_LIST_PAGES; page += 1) {
-    const response = await requestJson2(fetchImpl, token, `${baseUrl}?per_page=${DEFAULT_PAGE_SIZE}&page=${page}`);
+    const response = await requestJson2(fetchImpl, token, `${baseUrl}?per_page=${DEFAULT_PAGE_SIZE}&page=${page}`, timeoutMs, maxResponseBytes);
     if (!Array.isArray(response)) {
       throw new GitHubApiClientError("unexpected_response", invalidResponseMessage);
     }
@@ -2110,7 +2116,7 @@ async function requestPaginatedArray(fetchImpl, token, baseUrl, invalidResponseM
   }
   throw new GitHubApiClientError("response_too_large", `GitHub list response exceeded ${MAX_LIST_PAGES * DEFAULT_PAGE_SIZE} items.`);
 }
-async function requestJson2(fetchImpl, token, url) {
+async function requestJson2(fetchImpl, token, url, timeoutMs, maxResponseBytes) {
   const headers = {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28"
@@ -2119,16 +2125,29 @@ async function requestJson2(fetchImpl, token, url) {
   if (normalizedToken !== void 0 && normalizedToken.length > 0) {
     headers.Authorization = `Bearer ${normalizedToken}`;
   }
-  const response = await fetchImpl(url, {
-    method: "GET",
-    headers
-  });
-  const text = await response.text();
-  const body = parseOptionalJson2(text);
-  if (response.ok) {
-    return body;
+  try {
+    return await withTimeout(timeoutMs, async (signal) => {
+      const response = await fetchImpl(url, {
+        method: "GET",
+        headers,
+        signal
+      });
+      const text = await readBoundedResponseText(response, maxResponseBytes);
+      const body = parseOptionalJson2(text);
+      if (response.ok) {
+        return body;
+      }
+      throw mapGitHubApiError(response.status, body);
+    });
+  } catch (error) {
+    if (error instanceof GitHubApiClientError) {
+      throw error;
+    }
+    if (error instanceof RequestTimeoutError) {
+      throw new GitHubApiClientError("timeout", "GitHub API request timed out.");
+    }
+    throw new GitHubApiClientError("network_error", "GitHub API request failed before a response.");
   }
-  throw mapGitHubApiError(response.status, body);
 }
 function parsePullRequest2(value) {
   assertRecord(value, "pull request");
@@ -2205,7 +2224,74 @@ function mapGitHubApiError(status, body) {
   if (status === 429) {
     return new GitHubApiClientError("rate_limited", message);
   }
+  if (status >= 500) {
+    return new GitHubApiClientError("server_error", message);
+  }
   return new GitHubApiClientError("request_failed", message);
+}
+async function readBoundedResponseText(response, maxBytes) {
+  const contentLength = response.headers?.get?.("content-length");
+  if (contentLength !== null && contentLength !== void 0) {
+    const declaredBytes = Number(contentLength);
+    if (Number.isFinite(declaredBytes) && declaredBytes > maxBytes) {
+      throw new GitHubApiClientError("response_too_large", `GitHub API response exceeded ${maxBytes} bytes.`);
+    }
+  }
+  if (response.body === null || response.body === void 0) {
+    const text2 = await response.text();
+    if (new TextEncoder().encode(text2).byteLength > maxBytes) {
+      throw new GitHubApiClientError("response_too_large", `GitHub API response exceeded ${maxBytes} bytes.`);
+    }
+    return text2;
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let bytes = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        return text + decoder.decode();
+      }
+      bytes += value.byteLength;
+      if (bytes > maxBytes) {
+        await reader.cancel();
+        throw new GitHubApiClientError("response_too_large", `GitHub API response exceeded ${maxBytes} bytes.`);
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+async function withTimeout(timeoutMs, task) {
+  const controller = new AbortController();
+  let timer;
+  const timeout = new Promise((_resolve, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new RequestTimeoutError());
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([task(controller.signal), timeout]);
+  } finally {
+    if (timer !== void 0) {
+      clearTimeout(timer);
+    }
+  }
+}
+var RequestTimeoutError = class extends Error {
+};
+function positiveIntegerOption(value, name) {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new GitHubApiClientError("invalid_options", `GitHub API client ${name} must be a positive integer.`);
+  }
+  return value;
+}
+function isRetryableCode(code) {
+  return ["rate_limited", "server_error", "network_error", "timeout"].includes(code);
 }
 function normalizeApiUrl2(value) {
   const normalized = value?.replace(/\/+$/g, "").trim();
@@ -2934,14 +3020,18 @@ var DEFAULT_PROVIDER_ID2 = "openai-compatible";
 var DEFAULT_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 var DEFAULT_TEMPERATURE = 0.2;
 var DEFAULT_MAX_TOKENS = 1200;
+var DEFAULT_REQUEST_TIMEOUT_MS2 = 12e4;
+var DEFAULT_MAX_RESPONSE_BYTES2 = 2 * 1024 * 1024;
 var THINKING_TYPES = ["disabled"];
 var OpenAiCompatibleProviderError = class extends Error {
   code;
+  retryable;
   issues;
-  constructor(code, message, issues) {
+  constructor(code, message, issues, retryable = false) {
     super(message);
     this.name = "OpenAiCompatibleProviderError";
     this.code = code;
+    this.retryable = retryable;
     if (issues !== void 0) {
       this.issues = issues;
     }
@@ -2953,7 +3043,9 @@ function createOpenAiCompatibleContributionDraftProvider(options) {
   const token = nonEmptyOption(options.token, "token");
   const fetchImpl = options.fetch ?? fetch;
   const temperature = finiteNumberOption(options.temperature ?? DEFAULT_TEMPERATURE, "temperature");
-  const maxTokens = positiveIntegerOption(options.maxTokens ?? DEFAULT_MAX_TOKENS, "maxTokens");
+  const maxTokens = positiveIntegerOption2(options.maxTokens ?? DEFAULT_MAX_TOKENS, "maxTokens");
+  const timeoutMs = positiveIntegerOption2(options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS2, "timeoutMs");
+  const maxResponseBytes = positiveIntegerOption2(options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES2, "maxResponseBytes");
   const thinking = optionalEnumOption(options.thinking, THINKING_TYPES, "thinking");
   return {
     id: options.id ?? DEFAULT_PROVIDER_ID2,
@@ -2965,6 +3057,8 @@ function createOpenAiCompatibleContributionDraftProvider(options) {
         fetchImpl,
         temperature,
         maxTokens,
+        timeoutMs,
+        maxResponseBytes,
         input,
         ...thinking === void 0 ? {} : { thinking }
       };
@@ -2997,18 +3091,36 @@ async function requestAssessmentDraft(options) {
       type: options.thinking
     };
   }
-  const response = await options.fetchImpl(options.endpoint, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${options.token}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(requestBody)
-  });
-  const text = await response.text();
+  let response;
+  let text;
+  try {
+    ({ response, text } = await withTimeout2(options.timeoutMs, async (signal) => {
+      const result = await options.fetchImpl(options.endpoint, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${options.token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(requestBody),
+        signal
+      });
+      return {
+        response: result,
+        text: await readBoundedResponseText2(result, options.maxResponseBytes)
+      };
+    }));
+  } catch (error) {
+    if (error instanceof OpenAiCompatibleProviderError) {
+      throw error;
+    }
+    if (error instanceof RequestTimeoutError2) {
+      throw providerTransportError("timeout", "OpenAI-compatible provider request timed out.", true);
+    }
+    throw providerTransportError("network_error", "OpenAI-compatible provider request failed before a response.", true);
+  }
   if (!response.ok) {
-    throw new OpenAiCompatibleProviderError("http_error", `OpenAI-compatible provider request failed with status ${response.status}.`);
+    throw providerTransportError("http_error", `OpenAI-compatible provider request failed with status ${response.status}.`, response.status === 429 || response.status >= 500);
   }
   let responseBody;
   try {
@@ -3017,6 +3129,64 @@ async function requestAssessmentDraft(options) {
     throw new OpenAiCompatibleProviderError("invalid_response", "OpenAI-compatible provider returned a non-JSON response.");
   }
   return extractMessageContent(responseBody);
+}
+async function readBoundedResponseText2(response, maxBytes) {
+  const contentLength = response.headers?.get?.("content-length");
+  if (contentLength !== null && contentLength !== void 0) {
+    const declaredBytes = Number(contentLength);
+    if (Number.isFinite(declaredBytes) && declaredBytes > maxBytes) {
+      throw new OpenAiCompatibleProviderError("response_too_large", `OpenAI-compatible provider response exceeded ${maxBytes} bytes.`);
+    }
+  }
+  if (response.body === null || response.body === void 0) {
+    const text2 = await response.text();
+    if (new TextEncoder().encode(text2).byteLength > maxBytes) {
+      throw new OpenAiCompatibleProviderError("response_too_large", `OpenAI-compatible provider response exceeded ${maxBytes} bytes.`);
+    }
+    return text2;
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let bytes = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        return text + decoder.decode();
+      }
+      bytes += value.byteLength;
+      if (bytes > maxBytes) {
+        await reader.cancel();
+        throw new OpenAiCompatibleProviderError("response_too_large", `OpenAI-compatible provider response exceeded ${maxBytes} bytes.`);
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+async function withTimeout2(timeoutMs, task) {
+  const controller = new AbortController();
+  let timer;
+  const timeout = new Promise((_resolve, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new RequestTimeoutError2());
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([task(controller.signal), timeout]);
+  } finally {
+    if (timer !== void 0) {
+      clearTimeout(timer);
+    }
+  }
+}
+var RequestTimeoutError2 = class extends Error {
+};
+function providerTransportError(code, message, retryable) {
+  return new OpenAiCompatibleProviderError(code, message, void 0, retryable);
 }
 function buildSystemPrompt() {
   return [
@@ -3136,7 +3306,7 @@ function finiteNumberOption(value, name) {
   }
   return value;
 }
-function positiveIntegerOption(value, name) {
+function positiveIntegerOption2(value, name) {
   if (!Number.isInteger(value) || value <= 0) {
     throw new OpenAiCompatibleProviderError("invalid_options", `OpenAI-compatible provider ${name} must be a positive integer.`);
   }

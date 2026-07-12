@@ -10,26 +10,52 @@ import type {
 const DEFAULT_GITHUB_API_URL = "https://api.github.com";
 const DEFAULT_PAGE_SIZE = 100;
 const MAX_LIST_PAGES = 10;
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
+const DEFAULT_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+
+export type GitHubApiClientErrorCode =
+  | "invalid_options"
+  | "permission_denied"
+  | "not_found"
+  | "rate_limited"
+  | "server_error"
+  | "request_failed"
+  | "network_error"
+  | "timeout"
+  | "response_too_large"
+  | "unexpected_response";
 
 export interface GitHubApiClientOptions {
   readonly token?: string;
   readonly apiUrl?: string;
   readonly fetch?: typeof fetch;
+  readonly timeoutMs?: number;
+  readonly maxResponseBytes?: number;
 }
 
 export class GitHubApiClientError extends Error {
-  readonly code: string;
+  readonly code: GitHubApiClientErrorCode;
+  readonly retryable: boolean;
 
-  constructor(code: string, message: string) {
+  constructor(code: GitHubApiClientErrorCode, message: string) {
     super(message);
     this.name = "GitHubApiClientError";
     this.code = code;
+    this.retryable = isRetryableCode(code);
   }
 }
 
 export function createGitHubApiClient(options: GitHubApiClientOptions = {}): LiveGitHubClient {
   const apiUrl = normalizeApiUrl(options.apiUrl);
   const fetchImpl = options.fetch ?? fetch;
+  const timeoutMs = positiveIntegerOption(
+    options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
+    "timeoutMs",
+  );
+  const maxResponseBytes = positiveIntegerOption(
+    options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES,
+    "maxResponseBytes",
+  );
 
   return {
     async getPullRequest(input: LiveGitHubPullRequestLookup): Promise<LiveGitHubPullRequest> {
@@ -37,6 +63,8 @@ export function createGitHubApiClient(options: GitHubApiClientOptions = {}): Liv
         fetchImpl,
         options.token,
         `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}`,
+        timeoutMs,
+        maxResponseBytes,
       );
       return parsePullRequest(response);
     },
@@ -49,6 +77,8 @@ export function createGitHubApiClient(options: GitHubApiClientOptions = {}): Liv
         options.token,
         `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/files`,
         "GitHub pull request files response must be an array.",
+        timeoutMs,
+        maxResponseBytes,
       );
 
       return response.map(parsePullRequestFile);
@@ -62,6 +92,8 @@ export function createGitHubApiClient(options: GitHubApiClientOptions = {}): Liv
         options.token,
         `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/comments`,
         "GitHub pull request review comments response must be an array.",
+        timeoutMs,
+        maxResponseBytes,
       );
 
       return response.map(parseReviewComment);
@@ -74,6 +106,8 @@ async function requestPaginatedArray(
   token: string | undefined,
   baseUrl: string,
   invalidResponseMessage: string,
+  timeoutMs: number,
+  maxResponseBytes: number,
 ): Promise<readonly unknown[]> {
   const entries: unknown[] = [];
 
@@ -82,6 +116,8 @@ async function requestPaginatedArray(
       fetchImpl,
       token,
       `${baseUrl}?per_page=${DEFAULT_PAGE_SIZE}&page=${page}`,
+      timeoutMs,
+      maxResponseBytes,
     );
     if (!Array.isArray(response)) {
       throw new GitHubApiClientError("unexpected_response", invalidResponseMessage);
@@ -103,6 +139,8 @@ async function requestJson(
   fetchImpl: typeof fetch,
   token: string | undefined,
   url: string,
+  timeoutMs: number,
+  maxResponseBytes: number,
 ): Promise<unknown> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
@@ -113,17 +151,30 @@ async function requestJson(
     headers.Authorization = `Bearer ${normalizedToken}`;
   }
 
-  const response = await fetchImpl(url, {
-    method: "GET",
-    headers,
-  });
-  const text = await response.text();
-  const body = parseOptionalJson(text);
-  if (response.ok) {
-    return body;
-  }
+  try {
+    return await withTimeout(timeoutMs, async (signal) => {
+      const response = await fetchImpl(url, {
+        method: "GET",
+        headers,
+        signal,
+      });
+      const text = await readBoundedResponseText(response, maxResponseBytes);
+      const body = parseOptionalJson(text);
+      if (response.ok) {
+        return body;
+      }
 
-  throw mapGitHubApiError(response.status, body);
+      throw mapGitHubApiError(response.status, body);
+    });
+  } catch (error) {
+    if (error instanceof GitHubApiClientError) {
+      throw error;
+    }
+    if (error instanceof RequestTimeoutError) {
+      throw new GitHubApiClientError("timeout", "GitHub API request timed out.");
+    }
+    throw new GitHubApiClientError("network_error", "GitHub API request failed before a response.");
+  }
 }
 
 function parsePullRequest(value: unknown): LiveGitHubPullRequest {
@@ -235,7 +286,96 @@ function mapGitHubApiError(status: number, body: unknown): GitHubApiClientError 
     return new GitHubApiClientError("rate_limited", message);
   }
 
+  if (status >= 500) {
+    return new GitHubApiClientError("server_error", message);
+  }
+
   return new GitHubApiClientError("request_failed", message);
+}
+
+async function readBoundedResponseText(response: Response, maxBytes: number): Promise<string> {
+  const contentLength = response.headers?.get?.("content-length");
+  if (contentLength !== null && contentLength !== undefined) {
+    const declaredBytes = Number(contentLength);
+    if (Number.isFinite(declaredBytes) && declaredBytes > maxBytes) {
+      throw new GitHubApiClientError(
+        "response_too_large",
+        `GitHub API response exceeded ${maxBytes} bytes.`,
+      );
+    }
+  }
+
+  if (response.body === null || response.body === undefined) {
+    const text = await response.text();
+    if (new TextEncoder().encode(text).byteLength > maxBytes) {
+      throw new GitHubApiClientError(
+        "response_too_large",
+        `GitHub API response exceeded ${maxBytes} bytes.`,
+      );
+    }
+    return text;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let bytes = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        return text + decoder.decode();
+      }
+      bytes += value.byteLength;
+      if (bytes > maxBytes) {
+        await reader.cancel();
+        throw new GitHubApiClientError(
+          "response_too_large",
+          `GitHub API response exceeded ${maxBytes} bytes.`,
+        );
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+async function withTimeout<T>(
+  timeoutMs: number,
+  task: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new RequestTimeoutError());
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([task(controller.signal), timeout]);
+  } finally {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+  }
+}
+
+class RequestTimeoutError extends Error {}
+
+function positiveIntegerOption(value: number, name: string): number {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new GitHubApiClientError(
+      "invalid_options",
+      `GitHub API client ${name} must be a positive integer.`,
+    );
+  }
+  return value;
+}
+
+function isRetryableCode(code: GitHubApiClientErrorCode): boolean {
+  return ["rate_limited", "server_error", "network_error", "timeout"].includes(code);
 }
 
 function normalizeApiUrl(value: string | undefined): string {

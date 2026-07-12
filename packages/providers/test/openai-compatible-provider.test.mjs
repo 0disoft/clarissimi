@@ -253,9 +253,78 @@ test("does not expose raw provider error bodies", async () => {
     (error) =>
       error instanceof OpenAiCompatibleProviderError &&
       error.code === "http_error" &&
+      error.retryable === true &&
       error.message.includes("500") &&
       !error.message.includes("RAW_PROVIDER_ERROR_BODY"),
   );
+});
+
+test("times out stalled provider requests without exposing request data", async () => {
+  const provider = createOpenAiCompatibleContributionDraftProvider({
+    model: "clarissimi-test-model",
+    token: "unit-token",
+    timeoutMs: 5,
+    fetch: async () => new Promise(() => {}),
+  });
+
+  await assert.rejects(
+    () =>
+      provider.createAssessment({
+        contributor,
+        preparedEvidence: preparedEvidence(),
+      }),
+    (error) =>
+      error instanceof OpenAiCompatibleProviderError &&
+      error.code === "timeout" &&
+      error.retryable === true &&
+      !error.message.includes("unit-token"),
+  );
+});
+
+test("rejects oversized provider responses as permanent failures", async () => {
+  const provider = createOpenAiCompatibleContributionDraftProvider({
+    model: "clarissimi-test-model",
+    token: "unit-token",
+    maxResponseBytes: 16,
+    fetch: async () => new Response(JSON.stringify({ choices: [{ message: { content: "x" } }] })),
+  });
+
+  await assert.rejects(
+    () =>
+      provider.createAssessment({
+        contributor,
+        preparedEvidence: preparedEvidence(),
+      }),
+    (error) =>
+      error instanceof OpenAiCompatibleProviderError &&
+      error.code === "response_too_large" &&
+      error.retryable === false,
+  );
+});
+
+test("classifies provider HTTP failures by retryability", async () => {
+  for (const [status, retryable] of [
+    [400, false],
+    [429, true],
+    [503, true],
+  ]) {
+    const provider = createOpenAiCompatibleContributionDraftProvider({
+      model: "clarissimi-test-model",
+      token: "unit-token",
+      fetch: async () => jsonResponse({ error: { message: "raw" } }, status),
+    });
+    await assert.rejects(
+      () =>
+        provider.createAssessment({
+          contributor,
+          preparedEvidence: preparedEvidence(),
+        }),
+      (error) =>
+        error instanceof OpenAiCompatibleProviderError &&
+        error.code === "http_error" &&
+        error.retryable === retryable,
+    );
+  }
 });
 
 test("rejects invalid model drafts after schema validation", async () => {
@@ -359,6 +428,21 @@ test("rejects unsupported thinking modes without reading environment variables",
       error instanceof OpenAiCompatibleProviderError &&
       error.code === "invalid_options" &&
       error.message.includes("thinking"),
+  );
+});
+
+test("rejects invalid provider transport budgets", () => {
+  assert.throws(
+    () =>
+      createOpenAiCompatibleContributionDraftProvider({
+        model: "clarissimi-test-model",
+        token: "unit-token",
+        maxResponseBytes: 0,
+      }),
+    (error) =>
+      error instanceof OpenAiCompatibleProviderError &&
+      error.code === "invalid_options" &&
+      error.retryable === false,
   );
 });
 

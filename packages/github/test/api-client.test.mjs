@@ -169,7 +169,62 @@ test("GitHub API client maps permission failures without leaking tokens", async 
     (error) =>
       error instanceof GitHubApiClientError &&
       error.code === "permission_denied" &&
+      error.retryable === false &&
       !error.message.includes("secret-token"),
+  );
+});
+
+test("GitHub API client times out stalled requests as retryable failures", async () => {
+  const client = createGitHubApiClient({
+    timeoutMs: 5,
+    fetch: async () => new Promise(() => {}),
+  });
+
+  await assert.rejects(
+    () => client.getPullRequest({ repository: "sample/project", pullRequestNumber: 42 }),
+    (error) =>
+      error instanceof GitHubApiClientError && error.code === "timeout" && error.retryable === true,
+  );
+});
+
+test("GitHub API client rejects oversized responses without marking them retryable", async () => {
+  const client = createGitHubApiClient({
+    maxResponseBytes: 16,
+    fetch: async () => new Response(JSON.stringify({ message: "oversized response" })),
+  });
+
+  await assert.rejects(
+    () => client.getPullRequest({ repository: "sample/project", pullRequestNumber: 42 }),
+    (error) =>
+      error instanceof GitHubApiClientError &&
+      error.code === "response_too_large" &&
+      error.retryable === false,
+  );
+});
+
+test("GitHub API client classifies rate limits and server failures as retryable", async () => {
+  for (const [status, code] of [
+    [429, "rate_limited"],
+    [503, "server_error"],
+  ]) {
+    const client = createGitHubApiClient({
+      fetch: async () => jsonResponse({ message: "temporary failure" }, status),
+    });
+    await assert.rejects(
+      () => client.getPullRequest({ repository: "sample/project", pullRequestNumber: 42 }),
+      (error) =>
+        error instanceof GitHubApiClientError && error.code === code && error.retryable === true,
+    );
+  }
+});
+
+test("GitHub API client validates transport budgets before requests", () => {
+  assert.throws(
+    () => createGitHubApiClient({ timeoutMs: 0 }),
+    (error) =>
+      error instanceof GitHubApiClientError &&
+      error.code === "invalid_options" &&
+      error.retryable === false,
   );
 });
 

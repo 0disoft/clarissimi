@@ -1077,6 +1077,7 @@ function assignOptional3(target, key, value) {
 var ASSESSMENT_SCHEMA_VERSION = "clarissimi.assessment/v1";
 var CONFIG_PROVIDERS = ["fake", "openai-compatible"];
 var CONFIG_PROVIDER_THINKING_VALUES = ["disabled"];
+var CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES = ["public", "private-network"];
 var CONFIG_MODES = ["dry-run", "propose", "commit"];
 var CONFIG_MARKDOWN_SUMMARIES = ["none", "table"];
 var CONTRIBUTION_TYPES = [
@@ -1189,6 +1190,9 @@ function isConfigProvider(value) {
 function isConfigProviderThinking(value) {
   return CONFIG_PROVIDER_THINKING_VALUES.includes(value);
 }
+function isConfigProviderEndpointTrust(value) {
+  return CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES.includes(value);
+}
 function isConfigMode(value) {
   return CONFIG_MODES.includes(value);
 }
@@ -1253,6 +1257,7 @@ function validateClarissimiConfig(value) {
   }
   const provider = expectOptionalEnum(value.provider, isConfigProvider, "$.provider", issues);
   const providerEndpoint = expectOptionalHttpUrl(value.providerEndpoint, "$.providerEndpoint", issues);
+  const providerEndpointTrust = expectOptionalEnum(value.providerEndpointTrust, isConfigProviderEndpointTrust, "$.providerEndpointTrust", issues);
   const providerModel = expectOptionalNonEmptyString(value.providerModel, "$.providerModel", issues);
   const providerThinking = expectOptionalEnum(value.providerThinking, isConfigProviderThinking, "$.providerThinking", issues);
   const mode = expectOptionalEnum(value.mode, isConfigMode, "$.mode", issues);
@@ -1266,6 +1271,9 @@ function validateClarissimiConfig(value) {
   }
   if (providerEndpoint !== void 0) {
     config.providerEndpoint = providerEndpoint;
+  }
+  if (providerEndpointTrust !== void 0) {
+    config.providerEndpointTrust = providerEndpointTrust;
   }
   if (providerModel !== void 0) {
     config.providerModel = providerModel;
@@ -3038,7 +3046,8 @@ var OpenAiCompatibleProviderError = class extends Error {
   }
 };
 function createOpenAiCompatibleContributionDraftProvider(options) {
-  const endpoint = parseEndpoint(options.endpoint ?? DEFAULT_ENDPOINT);
+  const endpointTrust = endpointTrustOption(options.endpointTrust);
+  const endpoint = parseEndpoint(options.endpoint ?? DEFAULT_ENDPOINT, endpointTrust);
   const model = nonEmptyOption(options.model, "model");
   const token = nonEmptyOption(options.token, "token");
   const fetchImpl = options.fetch ?? fetch;
@@ -3278,20 +3287,75 @@ function extractMessageContent(value) {
   }
   throw new OpenAiCompatibleProviderError("invalid_response", "OpenAI-compatible provider message content must be non-empty text.");
 }
-function parseEndpoint(value) {
+function parseEndpoint(value, trust) {
   const normalized = value.trim();
   if (normalized.length === 0) {
     throw new OpenAiCompatibleProviderError("invalid_options", "OpenAI-compatible provider endpoint must be non-empty.");
   }
   try {
     const endpoint = new URL(normalized);
-    if (endpoint.protocol !== "https:" && endpoint.protocol !== "http:") {
+    if (endpoint.username.length > 0 || endpoint.password.length > 0) {
+      throw new Error("embedded credentials");
+    }
+    if (trust === "public" && endpoint.protocol !== "https:") {
+      throw new Error("public endpoint requires https");
+    }
+    if (trust === "private-network" && endpoint.protocol !== "https:" && endpoint.protocol !== "http:") {
       throw new Error("unsupported protocol");
+    }
+    if (trust === "public" && !isPublicEndpointHostname(endpoint.hostname)) {
+      throw new Error("non-public endpoint");
     }
     return endpoint;
   } catch {
-    throw new OpenAiCompatibleProviderError("invalid_options", "OpenAI-compatible provider endpoint must be an HTTP(S) URL.");
+    throw new OpenAiCompatibleProviderError("invalid_options", trust === "public" ? "OpenAI-compatible provider endpoint must be a credential-free HTTPS URL with a public hostname." : "OpenAI-compatible provider endpoint must be a credential-free HTTP(S) URL.");
   }
+}
+var reservedHostnameSuffixes = [
+  ".localhost",
+  ".local",
+  ".internal",
+  ".home.arpa",
+  ".test",
+  ".example",
+  ".invalid"
+];
+function isPublicEndpointHostname(value) {
+  const hostname = value.toLowerCase().replace(/^\[(.*)\]$/, "$1").replace(/\.$/, "");
+  if (hostname.includes(":")) {
+    return !isNonPublicIpv6(hostname);
+  }
+  const ipv4 = parseIpv4(hostname);
+  if (ipv4 !== void 0) {
+    return !isNonPublicIpv4(ipv4);
+  }
+  if (hostname.length === 0 || !hostname.includes(".") || hostname === "localhost") {
+    return false;
+  }
+  return !reservedHostnameSuffixes.some((suffix) => hostname === suffix.slice(1) || hostname.endsWith(suffix));
+}
+function parseIpv4(value) {
+  const parts = value.split(".");
+  if (parts.length !== 4) {
+    return void 0;
+  }
+  const octets = parts.map(Number);
+  if (octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
+    return void 0;
+  }
+  return octets;
+}
+function isNonPublicIpv4([first, second, third]) {
+  return first === 0 || first === 10 || first === 100 && second >= 64 && second <= 127 || first === 127 || first === 169 && second === 254 || first === 172 && second >= 16 && second <= 31 || first === 192 && second === 0 && third === 0 || first === 192 && second === 0 && third === 2 || first === 192 && second === 168 || first === 198 && (second === 18 || second === 19) || first === 198 && second === 51 && third === 100 || first === 203 && second === 0 && third === 113 || first >= 224;
+}
+function isNonPublicIpv6(value) {
+  return value === "::" || value === "::1" || value.startsWith("::ffff:") || value.startsWith("64:ff9b:") || value.startsWith("100:") || value.startsWith("2001:db8:") || value.startsWith("fc") || value.startsWith("fd") || /^fe[89ab]/.test(value) || value.startsWith("ff");
+}
+function endpointTrustOption(value) {
+  if (value === void 0 || value === "public" || value === "private-network") {
+    return value ?? "public";
+  }
+  throw new OpenAiCompatibleProviderError("invalid_options", "OpenAI-compatible provider endpointTrust must be public or private-network.");
 }
 function nonEmptyOption(value, name) {
   const normalized = value.trim();
@@ -3964,6 +4028,7 @@ function resolveActionProvider(env, runtime, config) {
       token: requireProviderEnvInput(env.CLARISSIMI_PROVIDER_TOKEN, "CLARISSIMI_PROVIDER_TOKEN")
     };
     assignOptional7(options, "endpoint", readEnvInput(env.INPUT_PROVIDER_ENDPOINT) ?? config.providerEndpoint);
+    assignOptional7(options, "endpointTrust", parseProviderEndpointTrust(readEnvInput(env.INPUT_PROVIDER_ENDPOINT_TRUST) ?? config.providerEndpointTrust));
     assignOptional7(options, "thinking", parseProviderThinking(readEnvInput(env.INPUT_PROVIDER_THINKING) ?? config.providerThinking));
     assignOptional7(options, "fetch", runtime.fetch);
     return createOpenAiCompatibleContributionDraftProvider(options);
@@ -3976,6 +4041,15 @@ function parseProviderThinking(value) {
   }
   if (!isConfigProviderThinking(value)) {
     throw new ActionUsageError("INPUT_PROVIDER_THINKING supports only disabled.");
+  }
+  return value;
+}
+function parseProviderEndpointTrust(value) {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (!isConfigProviderEndpointTrust(value)) {
+    throw new ActionUsageError("INPUT_PROVIDER_ENDPOINT_TRUST supports only public or private-network.");
   }
   return value;
 }

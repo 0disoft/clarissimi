@@ -4,6 +4,7 @@ import {
   CONFIG_MODES,
   CONFIG_MARKDOWN_SUMMARIES,
   CONFIG_PROVIDERS,
+  CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES,
   CONFIG_PROVIDER_THINKING_VALUES,
   CONTRIBUTION_TYPES,
   EVIDENCE_KINDS,
@@ -14,6 +15,7 @@ import {
   type ConfigMode,
   type ConfigMarkdownSummary,
   type ConfigProvider,
+  type ConfigProviderEndpointTrust,
   type ConfigProviderThinking,
   type ContributionType,
   type EvidenceKind,
@@ -97,6 +99,10 @@ export function isConfigProvider(value: string): value is ConfigProvider {
 
 export function isConfigProviderThinking(value: string): value is ConfigProviderThinking {
   return (CONFIG_PROVIDER_THINKING_VALUES as readonly string[]).includes(value);
+}
+
+export function isConfigProviderEndpointTrust(value: string): value is ConfigProviderEndpointTrust {
+  return (CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES as readonly string[]).includes(value);
 }
 
 export function isConfigMode(value: string): value is ConfigMode {
@@ -187,6 +193,12 @@ export function validateClarissimiConfig(value: unknown): ValidationResult<Clari
     "$.providerEndpoint",
     issues,
   );
+  const providerEndpointTrust = expectOptionalEnum(
+    value.providerEndpointTrust,
+    isConfigProviderEndpointTrust,
+    "$.providerEndpointTrust",
+    issues,
+  );
   const providerModel = expectOptionalNonEmptyString(
     value.providerModel,
     "$.providerModel",
@@ -213,6 +225,7 @@ export function validateClarissimiConfig(value: unknown): ValidationResult<Clari
   const config: {
     provider?: ConfigProvider;
     providerEndpoint?: string;
+    providerEndpointTrust?: ConfigProviderEndpointTrust;
     providerModel?: string;
     providerThinking?: ConfigProviderThinking;
     mode?: ConfigMode;
@@ -225,6 +238,10 @@ export function validateClarissimiConfig(value: unknown): ValidationResult<Clari
 
   if (providerEndpoint !== undefined) {
     config.providerEndpoint = providerEndpoint;
+  }
+
+  if (providerEndpointTrust !== undefined) {
+    config.providerEndpointTrust = providerEndpointTrust;
   }
 
   if (providerModel !== undefined) {

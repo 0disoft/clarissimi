@@ -1150,6 +1150,10 @@ test("recognize can use the OpenAI-compatible provider when explicitly selected"
         "openai-compatible",
         "--provider-model",
         "clarissimi-test-model",
+        "--provider-endpoint",
+        "http://127.0.0.1:11434/v1/chat/completions",
+        "--provider-endpoint-trust",
+        "private-network",
         "--provider-thinking",
         "disabled",
         "--json",
@@ -1194,6 +1198,7 @@ test("recognize can use the OpenAI-compatible provider when explicitly selected"
       "Added regression coverage for the parser.",
     );
     assert.equal(requests.length, 1);
+    assert.equal(requests[0].url, "http://127.0.0.1:11434/v1/chat/completions");
     assert.deepEqual(requests[0].body.thinking, { type: "disabled" });
     assert.equal(JSON.stringify(requests[0].body).includes("person@example.com"), false);
   });
@@ -1211,6 +1216,8 @@ test("recognize uses JSON config provider values when flags are omitted", async 
       JSON.stringify({
         provider: "openai-compatible",
         providerModel: "config-model",
+        providerEndpoint: "http://127.0.0.1:11434/v1/chat/completions",
+        providerEndpointTrust: "private-network",
         providerThinking: "disabled",
         mode: "dry-run",
       }),
@@ -1251,6 +1258,7 @@ test("recognize uses JSON config provider values when flags are omitted", async 
     assert.equal(output.provider, "openai-compatible");
     assert.equal(output.mode, "dry-run");
     assert.equal(requests.length, 1);
+    assert.equal(requests[0].url, "http://127.0.0.1:11434/v1/chat/completions");
     assert.equal(requests[0].body.model, "config-model");
     assert.deepEqual(requests[0].body.thinking, { type: "disabled" });
   });

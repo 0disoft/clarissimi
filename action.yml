@@ -45,6 +45,9 @@ inputs:
   provider-endpoint:
     description: Optional OpenAI-compatible chat completions endpoint.
     required: false
+  provider-endpoint-trust:
+    description: Endpoint trust policy. Use private-network only for an explicitly trusted self-hosted endpoint.
+    required: false
   provider-thinking:
     description: Optional OpenAI-compatible thinking mode. Use disabled for providers that emit hidden reasoning in message content.
     required: false
@@ -129,6 +132,7 @@ runs:
         INPUT_PROVIDER: ${{ inputs.provider }}
         INPUT_PROVIDER_MODEL: ${{ inputs.provider-model }}
         INPUT_PROVIDER_ENDPOINT: ${{ inputs.provider-endpoint }}
+        INPUT_PROVIDER_ENDPOINT_TRUST: ${{ inputs.provider-endpoint-trust }}
         INPUT_PROVIDER_THINKING: ${{ inputs.provider-thinking }}
         CLARISSIMI_PROVIDER_TOKEN: ${{ env.CLARISSIMI_PROVIDER_TOKEN }}
       run: |

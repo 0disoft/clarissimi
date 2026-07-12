@@ -45,7 +45,7 @@ function preparedEvidence() {
 test("creates a draft assessment from an OpenAI-compatible response", async () => {
   const requests = [];
   const provider = createOpenAiCompatibleContributionDraftProvider({
-    endpoint: "https://provider.example/v1/chat/completions",
+    endpoint: "https://provider.example.com/v1/chat/completions",
     model: "clarissimi-test-model",
     token: "unit-token",
     fetch: async (url, init) => {
@@ -101,7 +101,7 @@ test("creates a draft assessment from an OpenAI-compatible response", async () =
   assert.deepEqual(assessment.source, source);
   assert.deepEqual(assessment.evidenceRefs, evidence.evidenceRefs);
   assert.equal(requests.length, 1);
-  assert.equal(requests[0].url, "https://provider.example/v1/chat/completions");
+  assert.equal(requests[0].url, "https://provider.example.com/v1/chat/completions");
   assert.equal(requests[0].headers.Authorization, "Bearer unit-token");
   assert.equal(requests[0].body.model, "clarissimi-test-model");
   assert.equal(requests[0].body.response_format.type, "json_object");
@@ -443,6 +443,71 @@ test("rejects invalid provider transport budgets", () => {
       error instanceof OpenAiCompatibleProviderError &&
       error.code === "invalid_options" &&
       error.retryable === false,
+  );
+});
+
+test("rejects non-public endpoints under the default trust policy", () => {
+  for (const endpoint of [
+    "http://provider.example.com/v1/chat/completions",
+    "https://localhost/v1/chat/completions",
+    "https://service.internal/v1/chat/completions",
+    "https://127.0.0.1/v1/chat/completions",
+    "https://10.0.0.1/v1/chat/completions",
+    "https://[::1]/v1/chat/completions",
+    "https://user:password@provider.example.com/v1/chat/completions",
+  ]) {
+    assert.throws(
+      () =>
+        createOpenAiCompatibleContributionDraftProvider({
+          endpoint,
+          model: "clarissimi-test-model",
+          token: "unit-token",
+        }),
+      (error) => error instanceof OpenAiCompatibleProviderError && error.code === "invalid_options",
+    );
+  }
+});
+
+test("allows explicitly trusted private-network endpoints without URL credentials", async () => {
+  const requests = [];
+  const provider = createOpenAiCompatibleContributionDraftProvider({
+    endpoint: "http://127.0.0.1:11434/v1/chat/completions",
+    endpointTrust: "private-network",
+    model: "clarissimi-test-model",
+    token: "unit-token",
+    fetch: async (url) => {
+      requests.push(String(url));
+      return jsonResponse({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                contributionType: "test",
+                affectedArea: "parser regression coverage",
+                impactLevel: "medium",
+                evidenceSummary: "Added regression coverage based on test evidence.",
+                suggestedBadge: "Regression Shield",
+                publicRecognitionText: "Added regression coverage for the parser.",
+                confidence: 0.78,
+              }),
+            },
+          },
+        ],
+      });
+    },
+  });
+
+  await provider.createAssessment({ contributor, preparedEvidence: preparedEvidence() });
+  assert.deepEqual(requests, ["http://127.0.0.1:11434/v1/chat/completions"]);
+  assert.throws(
+    () =>
+      createOpenAiCompatibleContributionDraftProvider({
+        endpoint: "http://user:password@127.0.0.1:11434/v1/chat/completions",
+        endpointTrust: "private-network",
+        model: "clarissimi-test-model",
+        token: "unit-token",
+      }),
+    (error) => error instanceof OpenAiCompatibleProviderError && error.code === "invalid_options",
   );
 });
 

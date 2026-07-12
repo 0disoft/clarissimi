@@ -18,6 +18,7 @@ const DEFAULT_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const THINKING_TYPES = ["disabled"] as const;
 
 export type OpenAiCompatibleThinkingType = (typeof THINKING_TYPES)[number];
+export type OpenAiCompatibleEndpointTrust = "public" | "private-network";
 
 export type OpenAiCompatibleProviderErrorCode =
   | "invalid_options"
@@ -32,6 +33,7 @@ export type OpenAiCompatibleProviderErrorCode =
 export interface OpenAiCompatibleProviderOptions {
   readonly id?: string;
   readonly endpoint?: string;
+  readonly endpointTrust?: OpenAiCompatibleEndpointTrust;
   readonly model: string;
   readonly token: string;
   readonly fetch?: typeof fetch;
@@ -66,7 +68,8 @@ export class OpenAiCompatibleProviderError extends Error {
 export function createOpenAiCompatibleContributionDraftProvider(
   options: OpenAiCompatibleProviderOptions,
 ): ContributionDraftProvider {
-  const endpoint = parseEndpoint(options.endpoint ?? DEFAULT_ENDPOINT);
+  const endpointTrust = endpointTrustOption(options.endpointTrust);
+  const endpoint = parseEndpoint(options.endpoint ?? DEFAULT_ENDPOINT, endpointTrust);
   const model = nonEmptyOption(options.model, "model");
   const token = nonEmptyOption(options.token, "token");
   const fetchImpl = options.fetch ?? fetch;
@@ -408,7 +411,7 @@ function extractMessageContent(value: unknown): string {
   );
 }
 
-function parseEndpoint(value: string): URL {
+function parseEndpoint(value: string, trust: OpenAiCompatibleEndpointTrust): URL {
   const normalized = value.trim();
   if (normalized.length === 0) {
     throw new OpenAiCompatibleProviderError(
@@ -419,16 +422,119 @@ function parseEndpoint(value: string): URL {
 
   try {
     const endpoint = new URL(normalized);
-    if (endpoint.protocol !== "https:" && endpoint.protocol !== "http:") {
+    if (endpoint.username.length > 0 || endpoint.password.length > 0) {
+      throw new Error("embedded credentials");
+    }
+    if (trust === "public" && endpoint.protocol !== "https:") {
+      throw new Error("public endpoint requires https");
+    }
+    if (
+      trust === "private-network" &&
+      endpoint.protocol !== "https:" &&
+      endpoint.protocol !== "http:"
+    ) {
       throw new Error("unsupported protocol");
+    }
+    if (trust === "public" && !isPublicEndpointHostname(endpoint.hostname)) {
+      throw new Error("non-public endpoint");
     }
     return endpoint;
   } catch {
     throw new OpenAiCompatibleProviderError(
       "invalid_options",
-      "OpenAI-compatible provider endpoint must be an HTTP(S) URL.",
+      trust === "public"
+        ? "OpenAI-compatible provider endpoint must be a credential-free HTTPS URL with a public hostname."
+        : "OpenAI-compatible provider endpoint must be a credential-free HTTP(S) URL.",
     );
   }
+}
+
+const reservedHostnameSuffixes = [
+  ".localhost",
+  ".local",
+  ".internal",
+  ".home.arpa",
+  ".test",
+  ".example",
+  ".invalid",
+] as const;
+
+function isPublicEndpointHostname(value: string): boolean {
+  const hostname = value
+    .toLowerCase()
+    .replace(/^\[(.*)\]$/, "$1")
+    .replace(/\.$/, "");
+  if (hostname.includes(":")) {
+    return !isNonPublicIpv6(hostname);
+  }
+  const ipv4 = parseIpv4(hostname);
+  if (ipv4 !== undefined) {
+    return !isNonPublicIpv4(ipv4);
+  }
+
+  if (hostname.length === 0 || !hostname.includes(".") || hostname === "localhost") {
+    return false;
+  }
+  return !reservedHostnameSuffixes.some(
+    (suffix) => hostname === suffix.slice(1) || hostname.endsWith(suffix),
+  );
+}
+
+function parseIpv4(value: string): readonly [number, number, number, number] | undefined {
+  const parts = value.split(".");
+  if (parts.length !== 4) {
+    return undefined;
+  }
+  const octets = parts.map(Number);
+  if (octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
+    return undefined;
+  }
+  return octets as [number, number, number, number];
+}
+
+function isNonPublicIpv4([first, second, third]: readonly number[]): boolean {
+  return (
+    first === 0 ||
+    first === 10 ||
+    (first === 100 && second >= 64 && second <= 127) ||
+    first === 127 ||
+    (first === 169 && second === 254) ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 0 && third === 0) ||
+    (first === 192 && second === 0 && third === 2) ||
+    (first === 192 && second === 168) ||
+    (first === 198 && (second === 18 || second === 19)) ||
+    (first === 198 && second === 51 && third === 100) ||
+    (first === 203 && second === 0 && third === 113) ||
+    first >= 224
+  );
+}
+
+function isNonPublicIpv6(value: string): boolean {
+  return (
+    value === "::" ||
+    value === "::1" ||
+    value.startsWith("::ffff:") ||
+    value.startsWith("64:ff9b:") ||
+    value.startsWith("100:") ||
+    value.startsWith("2001:db8:") ||
+    value.startsWith("fc") ||
+    value.startsWith("fd") ||
+    /^fe[89ab]/.test(value) ||
+    value.startsWith("ff")
+  );
+}
+
+function endpointTrustOption(
+  value: OpenAiCompatibleEndpointTrust | undefined,
+): OpenAiCompatibleEndpointTrust {
+  if (value === undefined || value === "public" || value === "private-network") {
+    return value ?? "public";
+  }
+  throw new OpenAiCompatibleProviderError(
+    "invalid_options",
+    "OpenAI-compatible provider endpointTrust must be public or private-network.",
+  );
 }
 
 function nonEmptyOption(value: string, name: string): string {

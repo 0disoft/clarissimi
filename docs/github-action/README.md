@@ -65,6 +65,8 @@ The Action defaults to the fake provider when no provider input or config value 
 OpenAI-compatible provider, pass `provider: openai-compatible` and `provider-model`, or provide
 those values through `config-path`. Expose `CLARISSIMI_PROVIDER_TOKEN` from the workflow secret
 boundary. Do not pass provider tokens as action inputs.
+Custom endpoints use public HTTPS trust by default. A trusted self-hosted HTTP or private-network
+gateway also requires `provider-endpoint-trust: private-network`.
 
 Repository config-file loading is explicit through `config-path`; the Action does not automatically
 discover config files. Action inputs and workflow environment values take precedence over config

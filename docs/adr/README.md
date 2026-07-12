@@ -66,6 +66,8 @@ engine.
   final commit point of a staged output generation
 - `0040-bound-external-http-requests.md`: bound GitHub and provider request duration and response
   size while exposing structured retryability without automatic retries
+- `0041-restrict-provider-endpoint-trust.md`: require public HTTPS provider endpoints by default
+  and make trusted private-network access an explicit opt-in
 
 ## Review Blockers
 

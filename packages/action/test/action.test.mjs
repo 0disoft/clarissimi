@@ -260,6 +260,8 @@ test("environment runner can use the OpenAI-compatible provider when explicitly 
         INPUT_MODE: "dry-run",
         INPUT_PROVIDER: "openai-compatible",
         INPUT_PROVIDER_MODEL: "clarissimi-test-model",
+        INPUT_PROVIDER_ENDPOINT: "http://127.0.0.1:11434/v1/chat/completions",
+        INPUT_PROVIDER_ENDPOINT_TRUST: "private-network",
         INPUT_PROVIDER_THINKING: "disabled",
         CLARISSIMI_PROVIDER_TOKEN: "unit-token",
       },
@@ -306,6 +308,7 @@ test("environment runner can use the OpenAI-compatible provider when explicitly 
       "Added regression coverage for the parser.",
     );
     assert.equal(requests.length, 1);
+    assert.equal(requests[0].url, "http://127.0.0.1:11434/v1/chat/completions");
     assert.deepEqual(requests[0].body.thinking, { type: "disabled" });
     assert.equal(JSON.stringify(requests[0].body).includes("person@example.com"), false);
   });
@@ -323,6 +326,8 @@ test("environment runner can use OpenAI-compatible provider values from JSON con
       JSON.stringify({
         provider: "openai-compatible",
         providerModel: "action-config-model",
+        providerEndpoint: "http://127.0.0.1:11434/v1/chat/completions",
+        providerEndpointTrust: "private-network",
         providerThinking: "disabled",
       }),
       "utf8",
@@ -377,6 +382,7 @@ test("environment runner can use OpenAI-compatible provider values from JSON con
     assert.equal(stderr, "");
     assert.equal(JSON.parse(stdout).approvalStatus, "draft");
     assert.equal(requests.length, 1);
+    assert.equal(requests[0].url, "http://127.0.0.1:11434/v1/chat/completions");
     assert.equal(requests[0].body.model, "action-config-model");
     assert.deepEqual(requests[0].body.thinking, { type: "disabled" });
   });

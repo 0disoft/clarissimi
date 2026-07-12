@@ -316,6 +316,7 @@ test("accepts supported Clarissimi config values", () => {
     provider: "openai-compatible",
     providerModel: "example-model",
     providerEndpoint: "https://example.com/v1/chat/completions",
+    providerEndpointTrust: "private-network",
     providerThinking: "disabled",
     mode: "dry-run",
     markdownSummary: "table",
@@ -323,6 +324,7 @@ test("accepts supported Clarissimi config values", () => {
 
   assert.equal(result.ok, true);
   assert.equal(result.value.provider, "openai-compatible");
+  assert.equal(result.value.providerEndpointTrust, "private-network");
   assert.equal(result.value.markdownSummary, "table");
 });
 
@@ -349,10 +351,15 @@ test("rejects unsupported provider endpoint config values", () => {
 test("rejects unsupported Clarissimi config values", () => {
   const result = validateClarissimiConfig({
     provider: "leaderboard-provider",
+    providerEndpointTrust: "unrestricted",
     markdownSummary: "leaderboard",
   });
 
   assert.equal(result.ok, false);
+  assert.equal(
+    result.issues.some((issue) => issue.path === "$.providerEndpointTrust"),
+    true,
+  );
   assert.equal(
     result.issues.some((issue) => issue.path === "$.provider"),
     true,

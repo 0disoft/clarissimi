@@ -28,11 +28,13 @@ import {
 } from "@clarissimi/providers";
 import {
   isConfigProvider,
+  isConfigProviderEndpointTrust,
   isConfigProviderThinking,
   isConfigMarkdownSummary,
   validateContributionAssessment,
   type ConfigMarkdownSummary,
   type ConfigProviderThinking,
+  type ConfigProviderEndpointTrust,
   type ValidationIssue,
 } from "@clarissimi/schemas";
 
@@ -71,6 +73,7 @@ const COMMAND_FLAGS: Readonly<Record<string, ReadonlySet<string>>> = {
     "provider",
     "provider-model",
     "provider-endpoint",
+    "provider-endpoint-trust",
     "provider-thinking",
     "json",
     "help",
@@ -703,7 +706,7 @@ function renderHelp(): string {
     "  clarissimi --help",
     "  clarissimi validate-config [--config <path>] [--json]",
     "  clarissimi validate-ledger [--ledger <path>] [--json]",
-    "  clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run [--config <path>] [--markdown-summary none|table] [--provider <id>] [--provider-model <model>] [--provider-endpoint <url>] [--provider-thinking disabled] [--json]",
+    "  clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run [--config <path>] [--markdown-summary none|table] [--provider <id>] [--provider-model <model>] [--provider-endpoint <url>] [--provider-endpoint-trust public|private-network] [--provider-thinking disabled] [--json]",
     "  clarissimi stage-draft --draft <path> [--drafts-dir <path>] [--json]",
     "  clarissimi approve-draft --draft <path> [--json]",
     "  clarissimi import-draft --draft <path> [--ledger <path>] [--out-dir <path>] [--config <path>] [--markdown-summary none|table] [--json]",
@@ -797,6 +800,13 @@ async function resolveRecognitionProvider(
     );
     assignOptional(
       options,
+      "endpointTrust",
+      parseProviderEndpointTrust(
+        getStringFlag(args, "provider-endpoint-trust") ?? config.providerEndpointTrust,
+      ),
+    );
+    assignOptional(
+      options,
       "thinking",
       parseProviderThinking(getStringFlag(args, "provider-thinking") ?? config.providerThinking),
     );
@@ -830,6 +840,22 @@ function parseProviderThinking(value: string | undefined): ConfigProviderThinkin
 
   if (!isConfigProviderThinking(value)) {
     throw new CliUsageError("OpenAI-compatible provider thinking supports only disabled.");
+  }
+
+  return value;
+}
+
+function parseProviderEndpointTrust(
+  value: string | undefined,
+): ConfigProviderEndpointTrust | undefined {
+  if (value === undefined || value.trim().length === 0) {
+    return undefined;
+  }
+
+  if (!isConfigProviderEndpointTrust(value)) {
+    throw new CliUsageError(
+      "OpenAI-compatible provider endpoint trust supports only public or private-network.",
+    );
   }
 
   return value;

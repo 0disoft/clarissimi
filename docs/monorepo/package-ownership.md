@@ -32,7 +32,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
   docs/adr/0030-add-action-summary-artifact.md,
   docs/adr/0038-add-explicit-direct-commit-mode.md,
   docs/adr/0039-serialize-cli-ledger-writes.md,
-  docs/adr/0040-bound-external-http-requests.md
+  docs/adr/0040-bound-external-http-requests.md,
+  docs/adr/0041-restrict-provider-endpoint-trust.md
 
 ## Required Decisions
 

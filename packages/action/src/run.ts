@@ -18,12 +18,14 @@ import {
 } from "@clarissimi/providers";
 import {
   isConfigProvider,
+  isConfigProviderEndpointTrust,
   isConfigProviderThinking,
   isConfigMarkdownSummary,
   isApprovalStatus,
   type ApprovalStatus,
   type ClarissimiConfig,
   type ConfigProviderThinking,
+  type ConfigProviderEndpointTrust,
   type ContributionAssessment,
   type ValidationIssue,
   validateClarissimiConfig,
@@ -926,6 +928,13 @@ function resolveActionProvider(
     );
     assignOptional(
       options,
+      "endpointTrust",
+      parseProviderEndpointTrust(
+        readEnvInput(env.INPUT_PROVIDER_ENDPOINT_TRUST) ?? config.providerEndpointTrust,
+      ),
+    );
+    assignOptional(
+      options,
       "thinking",
       parseProviderThinking(readEnvInput(env.INPUT_PROVIDER_THINKING) ?? config.providerThinking),
     );
@@ -943,6 +952,22 @@ function parseProviderThinking(value: string | undefined): ConfigProviderThinkin
 
   if (!isConfigProviderThinking(value)) {
     throw new ActionUsageError("INPUT_PROVIDER_THINKING supports only disabled.");
+  }
+
+  return value;
+}
+
+function parseProviderEndpointTrust(
+  value: string | undefined,
+): ConfigProviderEndpointTrust | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!isConfigProviderEndpointTrust(value)) {
+    throw new ActionUsageError(
+      "INPUT_PROVIDER_ENDPOINT_TRUST supports only public or private-network.",
+    );
   }
 
   return value;

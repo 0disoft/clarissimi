@@ -26,6 +26,8 @@
 - `provider`: `fake` or `openai-compatible`; omitted values fall back to config, then `fake`
 - `provider-model`: model name required when `provider` is `openai-compatible`
 - `provider-endpoint`: optional OpenAI-compatible chat completions endpoint
+- `provider-endpoint-trust`: `public` or `private-network`, default `public`; use private-network
+  only for an explicitly trusted self-hosted gateway
 - `provider-thinking`: optional OpenAI-compatible thinking mode; currently only `disabled`
 
 ## Future Inputs
@@ -41,11 +43,13 @@ and `promote-draft` modes for live collection and repository publication. It rea
 The current package supports `INPUT_EVENT_PATH`, `GITHUB_EVENT_PATH`, `INPUT_GITHUB_FIXTURE`,
 `INPUT_CONFIG_PATH`, `INPUT_DRAFT_PATH`, `INPUT_MODE`, `INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`, `INPUT_STAGING_DIR`,
 `INPUT_SUMMARY_PATH`, `INPUT_PROVIDER`, `INPUT_PROVIDER_MODEL`, `INPUT_PROVIDER_ENDPOINT`, and
-`INPUT_PROVIDER_THINKING`. It also supports `INPUT_MARKDOWN_SUMMARY` for derived Markdown layout.
+`INPUT_PROVIDER_ENDPOINT_TRUST`, `INPUT_PROVIDER_THINKING`. It also supports
+`INPUT_MARKDOWN_SUMMARY` for derived Markdown layout.
 
 The root `action.yml` currently exposes `event-path`, `github-fixture`, `draft-path`, `mode`,
 `base-branch`, `remote-name`, `staging-dir`, `summary-path`, `config-path`, `provider`, `provider-model`,
-`provider-endpoint`, and `provider-thinking`. It also exposes `markdown-summary`.
+`provider-endpoint`, `provider-endpoint-trust`, and `provider-thinking`.
+`markdown-summary` is also exposed.
 `config-path` is explicit-only; the Action does not automatically discover repository config files.
 Action inputs and workflow environment values take precedence over config values. Omitted provider
 inputs fall back to config values, then `fake`.

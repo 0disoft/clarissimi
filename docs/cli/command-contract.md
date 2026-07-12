@@ -62,6 +62,8 @@ Provider selection flags:
 - `--provider openai-compatible`: explicit live provider path
 - `--provider-model <model>`: required for `openai-compatible`
 - `--provider-endpoint <url>`: optional OpenAI-compatible chat completions endpoint
+- `--provider-endpoint-trust <public|private-network>`: endpoint trust policy, default `public`;
+  private-network is an explicit opt-in for trusted self-hosted gateways
 - `--provider-thinking disabled`: optional compatibility setting for providers that emit hidden
   reasoning in message content unless thinking is disabled
 

@@ -8,6 +8,10 @@ export const CONFIG_PROVIDER_THINKING_VALUES = ["disabled"] as const;
 
 export type ConfigProviderThinking = (typeof CONFIG_PROVIDER_THINKING_VALUES)[number];
 
+export const CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES = ["public", "private-network"] as const;
+
+export type ConfigProviderEndpointTrust = (typeof CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES)[number];
+
 export const CONFIG_MODES = ["dry-run", "propose", "commit"] as const;
 
 export type ConfigMode = (typeof CONFIG_MODES)[number];
@@ -67,6 +71,7 @@ export type EvidenceKind = (typeof EVIDENCE_KINDS)[number];
 export interface ClarissimiConfig {
   readonly provider?: ConfigProvider;
   readonly providerEndpoint?: string;
+  readonly providerEndpointTrust?: ConfigProviderEndpointTrust;
   readonly providerModel?: string;
   readonly providerThinking?: ConfigProviderThinking;
   readonly mode?: ConfigMode;

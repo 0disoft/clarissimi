@@ -400,7 +400,9 @@ timeout_seconds = 60
 stdin = "closed"
 success_exit_codes = [0]
 writes = [".git/index"]
-effects = [{ type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" }]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
 network = false
 destructive = false
 required_after = ["contributor_feature_validation_complete"]
@@ -410,18 +412,15 @@ status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 description = "Commit the reviewed contributor gallery and automation recognition feature set."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "feat(contributors): recognize automation by default",
-]
+argv = ["git", "commit", "-m", "feat(contributors): recognize automation by default"]
 cwd = "."
 timeout_seconds = 120
 stdin = "closed"
 success_exit_codes = [0]
 writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [{ type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" }]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
 network = false
 destructive = false
 required_after = ["git_stage_contributor_features"]
@@ -437,7 +436,9 @@ timeout_seconds = 120
 stdin = "closed"
 success_exit_codes = [0]
 writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [{ type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" }]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
 network = false
 destructive = false
 required_after = ["git_stage_contributor_features", "push_approval_contract_change"]
@@ -457,3 +458,55 @@ effects = []
 network = true
 destructive = false
 required_after = ["git_commit_contributor_features", "user_authorized_push"]
+
+[intents.git_stage_ci_format_fix]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Stage only the reviewed Clarissimi CI command-contract formatting fix."
+argv = ["git", "add", "--", ".mustflow/config/commands.toml"]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["ci_format_fix_validation_complete"]
+
+[intents.git_commit_ci_format_fix]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Commit the reviewed Clarissimi CI command-contract formatting fix."
+argv = ["git", "commit", "-m", "fix(ci): format local command contract"]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_ci_format_fix"]
+
+[intents.git_push_main_ci_format_fix]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Push the validated Clarissimi CI formatting fix on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_ci_format_fix", "user_authorized_push"]

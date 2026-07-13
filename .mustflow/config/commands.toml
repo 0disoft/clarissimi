@@ -557,6 +557,8 @@ stdin = "closed"
 success_exit_codes = [0]
 writes = []
 effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
 required_after = ["hosted_ci_success", "user_authorized_release"]
@@ -575,6 +577,8 @@ writes = [".git/refs/tags/v0.2.0", ".git/logs/**", ".git/objects/**"]
 effects = [
   { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
 ]
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
 required_after = ["release_v0_2_0_evidence", "user_authorized_release"]
@@ -604,6 +608,8 @@ stdin = "closed"
 success_exit_codes = [0]
 writes = []
 effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
 required_after = ["release_v0_2_0_publish"]
@@ -678,3 +684,55 @@ effects = []
 network = true
 destructive = false
 required_after = ["git_commit_release_v0_2_0", "user_authorized_push"]
+
+[intents.git_stage_release_auth_fix]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Stage only the reviewed GitHub CLI authentication environment boundary for release intents."
+argv = ["git", "add", "--", ".mustflow/config/commands.toml"]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["release_auth_fix_validation_complete"]
+
+[intents.git_commit_release_auth_fix]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Commit the reviewed GitHub CLI authentication environment boundary for release intents."
+argv = ["git", "commit", "-m", "fix(release): preserve gh authentication config"]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_release_auth_fix"]
+
+[intents.git_push_main_release_auth_fix]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Push the validated GitHub CLI release authentication fix on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_release_auth_fix", "user_authorized_push"]

@@ -10,7 +10,8 @@ Cover release types, versioning, pre-release checklist, deployment flow, post-de
 
 Clarissimi is not ready for public package publication. ADR 0031 authorizes immutable root GitHub
 Action releases beginning with `v0.1.0` after every gate in this document passes for the exact tag
-target commit. ADR 0034 authorizes moving major alias `v0` only after it is tied to one explicitly
+target commit. ADR 0044 authorizes subsequent immutable `v0.x.y` releases within the same root
+Action distribution boundary. ADR 0034 authorizes moving major alias `v0` only after it is tied to one explicitly
 selected, already validated immutable `v0.x.y` release.
 
 The current root and workspace packages stay private at `0.0.0`. Do not bump package versions,
@@ -25,7 +26,7 @@ GitHub Marketplace until a separate accepted release decision changes those boun
 - Dogfood workflow update: allowed when Action examples, permissions, `actionlint`, and root
   `action.yml` parsing pass.
 - Public package publication: blocked.
-- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0031 after all
+- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044 after all
   pre-release gates pass for the exact tag target commit.
 - Moving GitHub Action major alias: `v0` is allowed under ADR 0034 after the selected immutable
   release passes the alias verification and external consumer gates.
@@ -90,6 +91,19 @@ the old SHA, replacement SHA, user impact, and recovery path in a public issue.
 For releases after `v0.1.0`, regenerate `action-dist/index.js` before candidate validation and
 verify it with `pnpm run bundle:action:check`. The immutable `v0.1.0` tag keeps its original
 consumer-time install and build behavior; do not move it to adopt the bundle.
+
+After the versioned evidence issue exists for the exact candidate SHA, publish the selected
+immutable tag and GitHub pre-release with the repository-owned publisher:
+
+```powershell
+pnpm run publish-action-release -- --version <v0.x.y> --sha <candidate-sha>
+```
+
+The publisher requires a clean worktree, one exact matching release evidence issue, and a remote
+candidate commit. It refuses mismatched existing tags, creates only an annotated immutable tag,
+verifies the GitHub pre-release and resolved tag commit, and closes the completed evidence issue.
+If tag publication succeeds but release creation fails, rerun the same command; it accepts only the
+same immutable tag target and continues the missing release step.
 
 ## Major Alias Promotion
 
@@ -253,7 +267,7 @@ reviewing that output, then rerun the read-only orphan audit.
 ## Validation
 
 - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`
-- Release status: immutable `v0.x.y` Action tags are allowed by ADR 0031 and moving major alias
+- Release status: immutable `v0.x.y` Action tags are allowed by ADR 0044 and moving major alias
   `v0` is allowed by ADR 0034 after exact-SHA verification; public package publication and GitHub Marketplace publication remain blocked
 - Recent hosted CI validation evidence: `CI` workflow run `29052254866` passed on
   `2026-07-09T21:42:23Z` for validated source commit

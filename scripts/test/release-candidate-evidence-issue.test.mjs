@@ -122,6 +122,54 @@ test("release candidate evidence issue prints a validated evidence body", async 
   assert.equal(harness.logs.join("\n").includes("provider-token-value"), false);
 });
 
+test("versioned evidence accepts the pre-tag candidate SHA as the external ref", async () => {
+  const harness = createHarness({
+    headSha: exampleSha,
+    runs: {
+      12345: createRun({ databaseId: 12345, workflowName: "CI" }),
+      67890: createRun({
+        databaseId: 67890,
+        workflowName: "Clarissimi live provider smoke",
+        event: "workflow_dispatch",
+      }),
+      24680: createExternalRun(exampleSha),
+      13579: createExternalWriteRun(exampleSha),
+    },
+  });
+
+  const exitCode = await runReleaseCandidateEvidenceIssue(
+    [
+      "--sha",
+      exampleSha,
+      "--release-type",
+      "versioned-action-tag",
+      "--release-version",
+      "v0.2.0",
+      "--external-ref",
+      exampleSha,
+      "--ci-run",
+      "12345",
+      "--live-run",
+      "67890",
+      "--external-run",
+      "24680",
+      "--external-write-run",
+      "13579",
+      "--provider-model",
+      "gpt-4.1-mini",
+      "--print",
+    ],
+    harness.runtime,
+  );
+
+  assert.equal(exitCode, 0);
+  assert.equal(harness.logs.join("\n").includes(`Clarissimi ref: \`${exampleSha}\``), true);
+  assert.equal(
+    harness.logs.join("\n").includes("versioned Action tag `v0.2.0` under ADR 0044"),
+    true,
+  );
+});
+
 test("release candidate evidence issue resolves HEAD and creates an issue with body on stdin", async () => {
   const harness = createHarness({
     headSha: exampleSha,
@@ -461,7 +509,7 @@ test("release candidate evidence issue rejects invalid inputs before calling git
       "--release-type",
       "versioned-action-tag",
       "--release-version",
-      "v0.2.0",
+      "v1.0.0",
     ],
     invalidReleaseVersion.runtime,
   );
@@ -469,7 +517,7 @@ test("release candidate evidence issue rejects invalid inputs before calling git
   assert.equal(invalidReleaseVersionExitCode, 2);
   assert.equal(
     invalidReleaseVersion.errors.includes(
-      "--release-version requires a v0.1.x tag authorized by ADR 0031.",
+      "--release-version requires a v0.x.y tag authorized by ADR 0044.",
     ),
     true,
   );

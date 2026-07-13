@@ -41,8 +41,7 @@ async function run(argv, runtime) {
   const releaseType = args.releaseType ?? defaults.releaseType;
   const sha =
     args.sha ?? (await commandText(runtime, "git", ["rev-parse", "HEAD"], "resolve current HEAD"));
-  const externalRef =
-    args.externalRef ?? (releaseType === "versioned-action-tag" ? args.releaseVersion : sha);
+  const externalRef = args.externalRef ?? sha;
   const evidenceId = runtime.randomEvidenceId();
 
   if (!isRepo(repo) || !isRepo(externalRepo))
@@ -160,6 +159,7 @@ async function run(argv, runtime) {
   ];
   appendOption(evidenceArgs, "--evidence-id", evidenceId);
   appendOption(evidenceArgs, "--release-version", args.releaseVersion);
+  appendOption(evidenceArgs, "--external-ref", externalRef);
   appendOption(evidenceArgs, "--provider-endpoint", args.providerEndpoint);
   appendOption(evidenceArgs, "--provider-thinking", args.providerThinking);
   if (!args.createIssue) evidenceArgs.push("--print");

@@ -47,6 +47,54 @@ test("create-issue is explicit and omits preview flag", async () => {
   );
 });
 
+test("versioned evidence defaults external consumers to the pre-tag candidate SHA", async () => {
+  const runtime = fakeRuntime();
+  assert.equal(
+    await runReleaseCandidateEvidenceOrchestrator(
+      [
+        "--provider-model",
+        "gpt-4.1-mini",
+        "--sha",
+        sha,
+        "--release-type",
+        "versioned-action-tag",
+        "--release-version",
+        "v0.2.0",
+      ],
+      runtime,
+    ),
+    0,
+  );
+
+  const dispatches = runtime.calls.filter(
+    (call) => call.command === "gh" && call.args[0] === "workflow" && call.args[1] === "run",
+  );
+  const externalDispatches = dispatches.filter(
+    (call) =>
+      call.args.includes("clarissimi.yml") || call.args.includes("clarissimi-full-write-smoke.yml"),
+  );
+  assert.equal(
+    externalDispatches.every((call) => call.args.includes(`clarissimi-ref=${sha}`)),
+    true,
+  );
+
+  const evidence = runtime.calls.find((call) => call.command === "pnpm");
+  assert.deepEqual(
+    evidence.args.slice(
+      evidence.args.indexOf("--external-ref"),
+      evidence.args.indexOf("--external-ref") + 2,
+    ),
+    ["--external-ref", sha],
+  );
+  assert.deepEqual(
+    evidence.args.slice(
+      evidence.args.indexOf("--release-version"),
+      evidence.args.indexOf("--release-version") + 2,
+    ),
+    ["--release-version", "v0.2.0"],
+  );
+});
+
 test("runs orphan audit after a full-write failure", async () => {
   const runtime = fakeRuntime({ failWatchId: 104 });
   assert.equal(

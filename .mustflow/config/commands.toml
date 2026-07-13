@@ -510,3 +510,171 @@ effects = []
 network = true
 destructive = false
 required_after = ["git_commit_ci_format_fix", "user_authorized_push"]
+
+[intents.test_release_publication]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Run focused Clarissimi release evidence and immutable publication regression tests."
+argv = [
+  "node",
+  "--test",
+  "scripts/test/release-candidate-evidence-issue.test.mjs",
+  "scripts/test/release-candidate-evidence-orchestrator.test.mjs",
+  "scripts/test/publish-action-release.test.mjs",
+]
+cwd = "."
+timeout_seconds = 300
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+required_after = ["release_evidence_change", "release_publication_change"]
+
+[intents.release_v0_2_0_evidence]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Collect exact-HEAD v0.2.0 candidate evidence, dispatch bounded hosted smokes, and create the validated release evidence issue."
+argv = [
+  "pnpm",
+  "run",
+  "release-candidate-evidence-orchestrator",
+  "--",
+  "--provider-model",
+  "gpt-4.1-mini",
+  "--release-type",
+  "versioned-action-tag",
+  "--release-version",
+  "v0.2.0",
+  "--create-issue",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["hosted_ci_success", "user_authorized_release"]
+
+[intents.release_v0_2_0_publish]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Publish immutable v0.2.0 and its GitHub pre-release from the validated exact-HEAD evidence issue."
+argv = ["pnpm", "run", "publish-action-release", "--", "--version", "v0.2.0"]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/refs/tags/v0.2.0", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = true
+destructive = false
+required_after = ["release_v0_2_0_evidence", "user_authorized_release"]
+
+[intents.release_v0_2_0_post_tag_evidence]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Revalidate the published v0.2.0 tag with hosted live-provider, external dry-run, full-write, and orphan-audit workflows."
+argv = [
+  "pnpm",
+  "run",
+  "release-candidate-evidence-orchestrator",
+  "--",
+  "--provider-model",
+  "gpt-4.1-mini",
+  "--release-type",
+  "versioned-action-tag",
+  "--release-version",
+  "v0.2.0",
+  "--external-ref",
+  "v0.2.0",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["release_v0_2_0_publish"]
+
+[intents.git_stage_release_v0_2_0]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Stage the reviewed v0.2.0 release evidence, publisher, ADR, documentation, tests, package script, and command-contract changes."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  "package.json",
+  "scripts/release-candidate-evidence-orchestrator.mjs",
+  "scripts/release-candidate-evidence-issue.mjs",
+  "scripts/release-readiness.mjs",
+  "scripts/publish-action-release.mjs",
+  "scripts/release-notes/v0.2.0.md",
+  "scripts/test/release-candidate-evidence-orchestrator.test.mjs",
+  "scripts/test/release-candidate-evidence-issue.test.mjs",
+  "scripts/test/release-readiness.test.mjs",
+  "scripts/test/publish-action-release.test.mjs",
+  "docs/adr/0044-authorize-v0-action-release-line.md",
+  "docs/adr/README.md",
+  "docs/ops/release-candidate-evidence.md",
+  "docs/ops/release.md",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["release_v0_2_0_validation_complete"]
+
+[intents.git_commit_release_v0_2_0]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Commit the reviewed v0.2.0 release workflow and policy changes."
+argv = ["git", "commit", "-m", "fix(release): support pre-tag v0 evidence"]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_release_v0_2_0"]
+
+[intents.git_push_main_release_v0_2_0]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Push the validated Clarissimi v0.2.0 release workflow commit on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_release_v0_2_0", "user_authorized_push"]

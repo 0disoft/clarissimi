@@ -20,6 +20,7 @@
     "hosted-live-provider-smoke": "node scripts/hosted-live-provider-smoke.mjs",
     "verify-action-major-tag": "node scripts/verify-action-major-tag.mjs",
     "release-candidate-evidence-orchestrator": "node scripts/release-candidate-evidence-orchestrator.mjs",
+    "publish-action-release": "node scripts/publish-action-release.mjs",
     "release-evidence-cleanup": "node scripts/release-evidence-cleanup.mjs",
     "release-candidate-evidence-issue": "node scripts/release-candidate-evidence-issue.mjs",
     "release-readiness": "node scripts/release-readiness.mjs",

@@ -72,6 +72,10 @@ export const requiredPackageScripts = [
     includes: ["scripts/release-candidate-evidence-orchestrator.mjs"],
   },
   {
+    name: "publish-action-release",
+    includes: ["scripts/publish-action-release.mjs"],
+  },
+  {
     name: "release-evidence-cleanup",
     includes: ["scripts/release-evidence-cleanup.mjs"],
   },
@@ -178,6 +182,7 @@ export const releasePolicyDocumentContract = {
   requiredSnippets: [
     "Clarissimi is not ready for public package publication.",
     "ADR 0031 authorizes immutable root GitHub",
+    "ADR 0044 authorizes subsequent immutable `v0.x.y` releases",
     "ADR 0034 authorizes moving major alias `v0`",
     "The current root and workspace packages stay private at `0.0.0`.",
     "Do not bump package versions,",
@@ -186,7 +191,7 @@ export const releasePolicyDocumentContract = {
     "`pnpm run lint`, `pnpm run format`, `pnpm run migration-check`, `pnpm run smoke`,",
     "`pnpm run check`, `pnpm run contract`, and repository hygiene checks pass.",
     "- Public package publication: blocked.",
-    "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0031",
+    "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044",
     "- Moving GitHub Action major alias: `v0` is allowed under ADR 0034",
     "- GitHub Marketplace publication: blocked.",
     "The versioned Action tag requires:",
@@ -199,6 +204,7 @@ export const releasePolicyDocumentContract = {
     "`pnpm run hosted-ci-validation`",
     "`pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
     "`pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
+    "pnpm run publish-action-release -- --version <v0.x.y> --sha <candidate-sha>",
     "`pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`",
     "release PR, release issue, or GitHub release notes",
     "Do not make an evidence-only commit after final candidate validation",
@@ -206,7 +212,7 @@ export const releasePolicyDocumentContract = {
     "public product-positioning guardrails",
     "repository-wide `format` and migration compatibility gates",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
-    "Release status: immutable `v0.x.y` Action tags are allowed by ADR 0031",
+    "Release status: immutable `v0.x.y` Action tags are allowed by ADR 0044",
     "package publication and GitHub Marketplace publication remain blocked",
   ],
 };
@@ -1422,7 +1428,7 @@ export async function runReleaseReadiness(options = {}) {
   console.log(
     "hosted CI, dry-run, write-mode, and credentialed release evidence recorded in docs/ops/release.md",
   );
-  console.log("immutable v0.x.y Action tags are allowed by ADR 0031 after all release gates pass");
+  console.log("immutable v0.x.y Action tags are allowed by ADR 0044 after all release gates pass");
   console.log(
     "moving Action alias v0 is allowed by ADR 0034 after exact-SHA post-promotion verification",
   );

@@ -291,10 +291,14 @@ test("release readiness rejects release policy document drift", () => {
       "Clarissimi can publish packages.",
     )
     .replace("ADR 0031 authorizes immutable root GitHub", "No immutable release decision exists.")
+    .replace(
+      "ADR 0044 authorizes subsequent immutable `v0.x.y` releases",
+      "No continuing v0 release decision exists.",
+    )
     .replace("ADR 0034 authorizes moving major alias `v0`", "No alias release decision exists.")
     .replace("- Public package publication: blocked.", "- Public package publication: allowed.")
     .replace(
-      "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0031",
+      "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044",
       "- Versioned GitHub Action tag: moving latest.",
     )
     .replace(
@@ -310,6 +314,7 @@ test("release readiness rejects release policy document drift", () => {
       "`pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
       "",
     )
+    .replace("pnpm run publish-action-release -- --version <v0.x.y> --sha <candidate-sha>", "")
     .replace("## Major Alias Promotion", "## Unverified Alias Promotion")
     .replace(
       "`pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
@@ -319,15 +324,17 @@ test("release readiness rejects release policy document drift", () => {
   assert.deepEqual(validateReleasePolicyDocumentContract(text), [
     "docs/ops/release.md must include Clarissimi is not ready for public package publication..",
     "docs/ops/release.md must include ADR 0031 authorizes immutable root GitHub.",
+    "docs/ops/release.md must include ADR 0044 authorizes subsequent immutable `v0.x.y` releases.",
     "docs/ops/release.md must include ADR 0034 authorizes moving major alias `v0`.",
     "docs/ops/release.md must include - Public package publication: blocked..",
-    "docs/ops/release.md must include - Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0031.",
+    "docs/ops/release.md must include - Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044.",
     "docs/ops/release.md must include - Moving GitHub Action major alias: `v0` is allowed under ADR 0034.",
     "docs/ops/release.md must include - GitHub Marketplace publication: blocked..",
     "docs/ops/release.md must include ## Major Alias Promotion.",
     "docs/ops/release.md must include `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`.",
     "docs/ops/release.md must include `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`.",
     "docs/ops/release.md must include `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`.",
+    "docs/ops/release.md must include pnpm run publish-action-release -- --version <v0.x.y> --sha <candidate-sha>.",
   ]);
 });
 
@@ -2024,6 +2031,7 @@ function createReleasePolicyText() {
   return [
     "Clarissimi is not ready for public package publication.",
     "ADR 0031 authorizes immutable root GitHub",
+    "ADR 0044 authorizes subsequent immutable `v0.x.y` releases",
     "ADR 0034 authorizes moving major alias `v0`",
     "The current root and workspace packages stay private at `0.0.0`.",
     "Do not bump package versions,",
@@ -2034,7 +2042,7 @@ function createReleasePolicyText() {
     "`pnpm run check`, `pnpm run contract`, and repository hygiene checks pass.",
     "",
     "- Public package publication: blocked.",
-    "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0031",
+    "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044",
     "- Moving GitHub Action major alias: `v0` is allowed under ADR 0034",
     "- GitHub Marketplace publication: blocked.",
     "",
@@ -2048,6 +2056,7 @@ function createReleasePolicyText() {
     "`pnpm run hosted-ci-validation`",
     "`pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
     "`pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
+    "pnpm run publish-action-release -- --version <v0.x.y> --sha <candidate-sha>",
     "`pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`",
     "release PR, release issue, or GitHub release notes",
     "Do not make an evidence-only commit after final candidate validation",
@@ -2057,7 +2066,7 @@ function createReleasePolicyText() {
     "",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
     "",
-    "- Release status: immutable `v0.x.y` Action tags are allowed by ADR 0031",
+    "- Release status: immutable `v0.x.y` Action tags are allowed by ADR 0044",
     "package publication and GitHub Marketplace publication remain blocked",
     "",
   ].join("\n");

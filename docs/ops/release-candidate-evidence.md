@@ -21,9 +21,12 @@ preview and does not create an issue. It still dispatches hosted workflows and t
 temporarily creates synthetic pull requests and branches before cleanup.
 
 After reviewing the preview, add `--create-issue` to create the evidence issue. For a versioned
-Action tag, also pass `--release-type versioned-action-tag --release-version <v0.x.y>`; the immutable
-version tag becomes the external consumer ref. If the full-write smoke fails after dispatch, the
-orchestrator still runs the orphan audit before returning failure.
+Action tag, also pass `--release-type versioned-action-tag --release-version <v0.x.y>`. Before the
+tag exists, the orchestrator uses the candidate SHA as the immutable external consumer ref and
+records both the intended release version and tested SHA in the evidence issue. An explicit
+`--external-ref <v0.x.y>` remains available when revalidating an already-created immutable tag. If
+the full-write smoke fails after dispatch, the orchestrator still runs the orphan audit before
+returning failure.
 
 If a failed full-write run leaves reserved smoke resources, inspect the exact completed run first:
 
@@ -167,9 +170,9 @@ Use `--print` to preview the issue body without creating a public GitHub issue. 
 that hosted CI and live-provider runs completed successfully, match the selected branch, and
 validate the same candidate SHA. It also inspects the external run in `0disoft/integration-lab`,
 requires workflow `Clarissimi external consumer` on `main`, and checks that its display title names
-the exact immutable Clarissimi ref. Source-only evidence defaults that ref to the candidate SHA;
-versioned Action evidence defaults it to the release version. Use `--external-ref` only to state the
-same expected value explicitly. The helper also requires the full-write matrix to contain successful
+the exact immutable Clarissimi ref. Source-only evidence defaults that ref to the candidate SHA.
+Versioned Action evidence defaults it to the release version for direct helper calls, but an explicit
+candidate SHA is accepted for pre-tag evidence. The helper also requires the full-write matrix to contain successful
 Ubuntu, macOS, and Windows jobs with successful stage, approval, promotion, recognition
 verification, and cleanup steps. It records only the secret name
 `CLARISSIMI_PROVIDER_TOKEN`, never the secret value.

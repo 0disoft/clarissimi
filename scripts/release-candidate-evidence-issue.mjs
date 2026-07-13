@@ -28,7 +28,7 @@ const defaults = {
 
 const usageText = [
   "Usage:",
-  "  pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --external-run <run-id> --external-write-run <run-id> --provider-model <model> [--evidence-id <32-hex>] [--external-ref <immutable-tag-or-sha>] [--external-repo <owner/name>] [--release-type <source-only|versioned-action-tag>] [--release-version <v0.1.x>] [--provider-endpoint <chat-completions-url>] [--provider-thinking <mode>] [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch-name>] [--title <issue-title>] [--print]",
+  "  pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --external-run <run-id> --external-write-run <run-id> --provider-model <model> [--evidence-id <32-hex>] [--external-ref <immutable-tag-or-sha>] [--external-repo <owner/name>] [--release-type <source-only|versioned-action-tag>] [--release-version <v0.x.y>] [--provider-endpoint <chat-completions-url>] [--provider-thinking <mode>] [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch-name>] [--title <issue-title>] [--print]",
   "",
   "Examples:",
   "  pnpm run release-candidate-evidence-issue -- --ci-run 12345 --live-run 67890 --external-run 24680 --external-write-run 13579 --provider-model gpt-4.1-mini",
@@ -105,7 +105,7 @@ async function run(argv, runtime) {
   }
 
   if (releaseType === "versioned-action-tag" && !isVersionTag(args.releaseVersion)) {
-    return usageFailure(runtime, "--release-version requires a v0.1.x tag authorized by ADR 0031.");
+    return usageFailure(runtime, "--release-version requires a v0.x.y tag authorized by ADR 0044.");
   }
 
   if (releaseType === "source-only" && args.releaseVersion !== undefined) {
@@ -146,10 +146,14 @@ async function run(argv, runtime) {
   if (releaseType === "source-only" && externalRef !== sha) {
     return usageFailure(runtime, "source-only evidence requires --external-ref to equal --sha.");
   }
-  if (releaseType === "versioned-action-tag" && externalRef !== args.releaseVersion) {
+  if (
+    releaseType === "versioned-action-tag" &&
+    externalRef !== args.releaseVersion &&
+    externalRef !== sha
+  ) {
     return usageFailure(
       runtime,
-      "versioned Action evidence requires --external-ref to equal --release-version.",
+      "versioned Action evidence requires --external-ref to equal --release-version or --sha.",
     );
   }
 
@@ -326,7 +330,7 @@ function isEvidenceId(value) {
 }
 
 function isVersionTag(value) {
-  return typeof value === "string" && /^v0\.1\.(?:0|[1-9][0-9]*)$/.test(value);
+  return typeof value === "string" && /^v0\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$/.test(value);
 }
 
 function isImmutableClarissimiRef(value) {
@@ -559,6 +563,9 @@ function validateExternalWriteRun(run, options) {
 }
 
 function renderIssueBody(options) {
+  const versionedReleaseDecision = options.releaseVersion?.startsWith("v0.1.")
+    ? "ADR 0031"
+    : "ADR 0044";
   const liveProviderCommand = [
     "pnpm run hosted-live-provider-smoke --",
     `--model ${options.providerModel}`,
@@ -587,15 +594,15 @@ function renderIssueBody(options) {
     .join(" ");
   const releaseType =
     options.releaseType === "versioned-action-tag"
-      ? `versioned Action tag \`${options.releaseVersion}\` under ADR 0031`
+      ? `versioned Action tag \`${options.releaseVersion}\` under ${versionedReleaseDecision}`
       : "source-only merge evidence";
   const releaseDecision =
     options.releaseType === "versioned-action-tag"
-      ? "ADR 0031"
+      ? versionedReleaseDecision
       : "`docs/ops/release.md` source-only merge policy";
   const releasePolicyConclusion =
     options.releaseType === "versioned-action-tag"
-      ? `This evidence supports publishing immutable tag \`${options.releaseVersion}\` at \`${options.sha}\` and creating its GitHub pre-release. Do not create a moving \`v0\` alias.`
+      ? `This evidence supports publishing immutable tag \`${options.releaseVersion}\` at \`${options.sha}\` and creating its GitHub pre-release. Moving alias \`v0\` remains a separate ADR 0034 step after post-tag verification.`
       : "This evidence supports a source-only merge. A versioned Action tag requires the release type and version to be recorded explicitly.";
 
   return [

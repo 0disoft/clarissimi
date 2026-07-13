@@ -72,6 +72,8 @@ engine.
   `CONTRIBUTORS.md` summary without replacing evidence-linked details
 - `0043-include-automation-contributors-by-default.md`: include approved bot and AI-agent
   contributors by default with a display-only opt-out
+- `0044-authorize-v0-action-release-line.md`: authorize immutable `v0.x.y` root Action releases,
+  including pre-tag candidate-SHA evidence, while package and Marketplace publication stay blocked
 
 ## Review Blockers
 

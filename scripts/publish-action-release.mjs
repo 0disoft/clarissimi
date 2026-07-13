@@ -5,13 +5,14 @@ import { pathToFileURL } from "node:url";
 const defaults = {
   repo: "0disoft/clarissimi",
   branch: "main",
+  releaseKind: "prerelease",
 };
 
 const usageText = [
   "Usage:",
-  "  pnpm run publish-action-release -- --version <v0.x.y> [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch>] [--notes-template <path>]",
+  "  pnpm run publish-action-release -- --version <v0.x.y> [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch>] [--notes-template <path>] [--release-kind <prerelease|stable>]",
   "",
-  "Publishes an immutable annotated tag and GitHub pre-release only after finding one matching release evidence issue.",
+  "Publishes an immutable annotated tag and GitHub release only after finding one matching release evidence issue.",
 ].join("\n");
 
 export async function runPublishActionRelease(argv, runtime = defaultRuntime()) {
@@ -33,10 +34,13 @@ async function run(argv, runtime) {
 
   const repo = args.repo ?? defaults.repo;
   const branch = args.branch ?? defaults.branch;
+  const releaseKind = args.releaseKind ?? defaults.releaseKind;
   if (!isRepo(repo)) return usageFailure(runtime, "--repo must use owner/name format.");
   if (!isVersion(args.version))
     return usageFailure(runtime, "--version requires an immutable v0.x.y tag.");
   if (branch.trim() === "") return usageFailure(runtime, "--branch requires a non-empty value.");
+  if (!["prerelease", "stable"].includes(releaseKind))
+    return usageFailure(runtime, "--release-kind supports prerelease or stable.");
   if (args.sha !== undefined && !isSha(args.sha))
     return usageFailure(runtime, "--sha must be a 40-character commit SHA.");
 
@@ -81,28 +85,25 @@ async function run(argv, runtime) {
 
   let release = await readRelease(runtime, repo, args.version);
   if (release === undefined) {
-    await command(
-      runtime,
-      "gh",
-      [
-        "release",
-        "create",
-        args.version,
-        "--repo",
-        repo,
-        "--title",
-        `Clarissimi ${args.version}`,
-        "--prerelease",
-        "--verify-tag",
-        "--notes-file",
-        "-",
-      ],
-      `create GitHub pre-release ${args.version}`,
-      { input: releaseNotes },
-    );
+    const createArgs = [
+      "release",
+      "create",
+      args.version,
+      "--repo",
+      repo,
+      "--title",
+      `Clarissimi ${args.version}`,
+      "--verify-tag",
+      "--notes-file",
+      "-",
+    ];
+    if (releaseKind === "prerelease") createArgs.splice(8, 0, "--prerelease");
+    await command(runtime, "gh", createArgs, `create GitHub ${releaseKind} ${args.version}`, {
+      input: releaseNotes,
+    });
     release = await readRelease(runtime, repo, args.version);
   }
-  validateRelease(release, args.version);
+  validateRelease(release, args.version, releaseKind);
 
   const publishedSha = await commandText(
     runtime,
@@ -136,6 +137,7 @@ async function run(argv, runtime) {
         version: args.version,
         sha,
         releaseUrl: release.url,
+        releaseKind,
         evidenceIssueUrl: issue.url,
       },
       null,
@@ -235,17 +237,18 @@ async function readRelease(runtime, repo, version) {
   return parseJson(result.stdout, "gh release view");
 }
 
-function validateRelease(release, version) {
+function validateRelease(release, version, releaseKind) {
+  const expectedPrerelease = releaseKind === "prerelease";
   if (
     release === undefined ||
     release.tagName !== version ||
     release.isDraft !== false ||
-    release.isPrerelease !== true ||
+    release.isPrerelease !== expectedPrerelease ||
     typeof release.url !== "string" ||
     release.url === ""
   ) {
     throw new Error(
-      `GitHub release ${version} is missing or does not match the pre-release contract.`,
+      `GitHub release ${version} is missing or does not match the ${releaseKind} contract.`,
     );
   }
 }
@@ -268,6 +271,7 @@ function parseArgs(argv, runtime) {
     ["repo", "repo"],
     ["branch", "branch"],
     ["notes-template", "notesTemplate"],
+    ["release-kind", "releaseKind"],
   ]);
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];

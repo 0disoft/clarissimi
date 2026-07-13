@@ -35,6 +35,34 @@ test("publishes an immutable pre-release from one matching evidence issue", asyn
   );
 });
 
+test("publishes an immutable stable release for Marketplace distribution", async () => {
+  const runtime = fakeRuntime({ version: "v0.3.0", releaseKind: "stable" });
+  const exitCode = await runPublishActionRelease(
+    ["--version", "v0.3.0", "--sha", sha, "--release-kind", "stable"],
+    runtime,
+  );
+
+  assert.equal(exitCode, 0);
+  const createRelease = runtime.calls.find(
+    (call) => call.command === "gh" && call.args[0] === "release" && call.args[1] === "create",
+  );
+  assert.ok(createRelease);
+  assert.equal(createRelease.args.includes("--prerelease"), false);
+  assert.equal(JSON.parse(runtime.logs.at(-1)).releaseKind, "stable");
+});
+
+test("rejects unsupported release kinds before publication", async () => {
+  const runtime = fakeRuntime();
+  const exitCode = await runPublishActionRelease(
+    ["--version", "v0.2.0", "--sha", sha, "--release-kind", "rolling"],
+    runtime,
+  );
+
+  assert.equal(exitCode, 2);
+  assert.match(runtime.errors.at(-2), /supports prerelease or stable/);
+  assert.equal(runtime.calls.length, 0);
+});
+
 test("rejects a remote tag that points to another commit before publication", async () => {
   const runtime = fakeRuntime({ remoteTagSha: "ffffffffffffffffffffffffffffffffffffffff" });
   const exitCode = await runPublishActionRelease(["--version", "v0.2.0", "--sha", sha], runtime);
@@ -54,6 +82,8 @@ function fakeRuntime(options = {}) {
   const logs = [];
   const errors = [];
   let releaseCreated = false;
+  const version = options.version ?? "v0.2.0";
+  const isPrerelease = (options.releaseKind ?? "prerelease") === "prerelease";
   return {
     calls,
     logs,
@@ -72,8 +102,8 @@ function fakeRuntime(options = {}) {
           JSON.stringify([
             {
               number: 10,
-              title: `Release candidate evidence for v0.2.0 at ${sha.slice(0, 7)}`,
-              body: `Candidate \`${sha}\`; version \`v0.2.0\``,
+              title: `Release candidate evidence for ${version} at ${sha.slice(0, 7)}`,
+              body: `Candidate \`${sha}\`; version \`${version}\``,
               url: "https://github.com/0disoft/clarissimi/issues/10",
               state: "OPEN",
             },
@@ -83,7 +113,7 @@ function fakeRuntime(options = {}) {
       if (command === "git" && args[0] === "ls-remote") {
         return options.remoteTagSha === undefined
           ? ok()
-          : ok(`${options.remoteTagSha}\trefs/tags/v0.2.0^{}`);
+          : ok(`${options.remoteTagSha}\trefs/tags/${version}^{}`);
       }
       if (command === "git" && args[0] === "rev-parse") return fail("unknown revision");
       if (command === "git" && args[0] === "tag") return ok();
@@ -92,10 +122,10 @@ function fakeRuntime(options = {}) {
         return releaseCreated
           ? ok(
               JSON.stringify({
-                tagName: "v0.2.0",
+                tagName: version,
                 isDraft: false,
-                isPrerelease: true,
-                url: "https://github.com/0disoft/clarissimi/releases/tag/v0.2.0",
+                isPrerelease,
+                url: `https://github.com/0disoft/clarissimi/releases/tag/${version}`,
               }),
             )
           : fail("release not found");

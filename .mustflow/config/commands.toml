@@ -860,3 +860,195 @@ effects = []
 network = true
 destructive = false
 required_after = ["git_commit_release_auth_fix", "user_authorized_push"]
+
+[intents.test_marketplace_release]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Run focused Marketplace release metadata, evidence, publisher, and release-policy regressions."
+argv = [
+  "node",
+  "--test",
+  "scripts/test/release-candidate-evidence-issue.test.mjs",
+  "scripts/test/release-candidate-evidence-orchestrator.test.mjs",
+  "scripts/test/publish-action-release.test.mjs",
+  "scripts/test/release-readiness.test.mjs",
+]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+required_after = ["marketplace_release_change"]
+
+[intents.git_stage_marketplace_release]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Stage the reviewed Marketplace ADR, Action metadata, release automation, docs, tests, notes, and command contract."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  "action.yml",
+  "README.md",
+  "docs/adr/0045-publish-action-to-github-marketplace.md",
+  "docs/adr/README.md",
+  "docs/ops/release.md",
+  "docs/product/04-implementation-tracker.md",
+  "scripts/publish-action-release.mjs",
+  "scripts/release-candidate-evidence-issue.mjs",
+  "scripts/release-candidate-evidence-orchestrator.mjs",
+  "scripts/release-notes/v0.3.0.md",
+  "scripts/release-readiness.mjs",
+  "scripts/test/publish-action-release.test.mjs",
+  "scripts/test/release-candidate-evidence-issue.test.mjs",
+  "scripts/test/release-candidate-evidence-orchestrator.test.mjs",
+  "scripts/test/release-readiness.test.mjs",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["marketplace_release_validation_complete"]
+
+[intents.git_commit_marketplace_release]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Commit the reviewed GitHub Marketplace distribution boundary and v0.3.0 release preparation."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "feat(release): authorize Marketplace distribution",
+  "-m",
+  "Validation: docs, release-readiness, lint, format, migration-check, smoke, check, contract",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_marketplace_release"]
+
+[intents.git_push_main_marketplace_release]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Push the validated Marketplace release preparation on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_marketplace_release", "user_authorized_push"]
+
+[intents.release_v0_3_0_marketplace_evidence]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Collect exact-HEAD v0.3.0 Marketplace candidate evidence and create the validated external evidence issue."
+argv = [
+  "pnpm",
+  "run",
+  "release-candidate-evidence-orchestrator",
+  "--",
+  "--provider-model",
+  "gpt-4.1-mini",
+  "--release-type",
+  "marketplace-action-tag",
+  "--release-version",
+  "v0.3.0",
+  "--create-issue",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["hosted_ci_success", "user_authorized_release"]
+
+[intents.release_v0_3_0_stable_publish]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Publish immutable v0.3.0 as a non-prerelease GitHub Release from exact candidate evidence."
+argv = [
+  "pnpm",
+  "run",
+  "publish-action-release",
+  "--",
+  "--version",
+  "v0.3.0",
+  "--release-kind",
+  "stable",
+]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/refs/tags/v0.3.0", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["release_v0_3_0_marketplace_evidence", "user_authorized_release"]
+
+[intents.release_v0_3_0_post_tag_evidence]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Revalidate published v0.3.0 with hosted live-provider, external dry-run, full-write, and orphan-audit workflows."
+argv = [
+  "pnpm",
+  "run",
+  "release-candidate-evidence-orchestrator",
+  "--",
+  "--provider-model",
+  "gpt-4.1-mini",
+  "--release-type",
+  "marketplace-action-tag",
+  "--release-version",
+  "v0.3.0",
+  "--external-ref",
+  "v0.3.0",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["release_v0_3_0_stable_publish"]

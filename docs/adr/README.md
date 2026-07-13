@@ -74,6 +74,8 @@ engine.
   contributors by default with a display-only opt-out
 - `0044-authorize-v0-action-release-line.md`: authorize immutable `v0.x.y` root Action releases,
   including pre-tag candidate-SHA evidence, while package and Marketplace publication stay blocked
+- `0045-publish-action-to-github-marketplace.md`: authorize the root Action for free GitHub
+  Marketplace distribution beginning with non-prerelease release `v0.3.0`, while npm stays blocked
 
 ## Review Blockers
 

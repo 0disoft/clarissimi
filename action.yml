@@ -2,6 +2,10 @@ name: Clarissimi
 description: Draft maintainer-approved contribution recognition summaries.
 author: 0disoft
 
+branding:
+  icon: award
+  color: purple
+
 inputs:
   mode:
     description: Action mode. Use dry-run for summaries, propose for approved event drafts, commit for an explicit direct commit, stage-draft for draft review PRs, or promote-draft for an approved draft file.

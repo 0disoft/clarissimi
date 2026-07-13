@@ -931,6 +931,30 @@ Validation completed:
 - Action bundle regeneration and freshness validation
 - `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, and `contract`
 
+### 24. GitHub Marketplace Distribution
+
+Source: `docs/adr/0045-publish-action-to-github-marketplace.md`, `docs/ops/release.md`
+
+Status: In progress for `v0.3.0`.
+
+Goal: make the validated root Action discoverable in GitHub Marketplace without publishing npm
+packages or weakening the immutable tag and maintainer-approval boundaries.
+
+Accepted deliverables:
+
+- root `action.yml` Marketplace branding with one root Action metadata file
+- non-prerelease `v0.3.0` GitHub Release backed by exact candidate evidence
+- Marketplace categories `Code review` and `Utilities`
+- interactive developer-agreement, publication toggle, and public listing verification
+- post-tag external consumer evidence and separate compare-and-swap `v0` promotion
+- npm and workspace-package publication remain blocked
+
+Validation required:
+
+- release publisher and evidence regression tests
+- `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, and `contract`
+- hosted CI, live-provider, external dry-run, full-write, and orphan-audit evidence
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

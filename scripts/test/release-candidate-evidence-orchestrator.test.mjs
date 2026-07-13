@@ -95,6 +95,48 @@ test("versioned evidence defaults external consumers to the pre-tag candidate SH
   );
 });
 
+test("Marketplace evidence defaults external consumers to the pre-tag candidate SHA", async () => {
+  const runtime = fakeRuntime();
+  assert.equal(
+    await runReleaseCandidateEvidenceOrchestrator(
+      [
+        "--provider-model",
+        "gpt-4.1-mini",
+        "--sha",
+        sha,
+        "--release-type",
+        "marketplace-action-tag",
+        "--release-version",
+        "v0.3.0",
+      ],
+      runtime,
+    ),
+    0,
+  );
+
+  const dispatches = runtime.calls.filter(
+    (call) => call.command === "gh" && call.args[0] === "workflow" && call.args[1] === "run",
+  );
+  const externalDispatches = dispatches.filter(
+    (call) =>
+      call.args.includes("clarissimi.yml") || call.args.includes("clarissimi-full-write-smoke.yml"),
+  );
+  assert.equal(
+    externalDispatches.every((call) => call.args.includes(`clarissimi-ref=${sha}`)),
+    true,
+  );
+
+  const evidence = runtime.calls.find((call) => call.command === "pnpm");
+  assert.equal(evidence.args.includes("marketplace-action-tag"), true);
+  assert.deepEqual(
+    evidence.args.slice(
+      evidence.args.indexOf("--release-version"),
+      evidence.args.indexOf("--release-version") + 2,
+    ),
+    ["--release-version", "v0.3.0"],
+  );
+});
+
 test("major alias evidence pins v0 to the expected SHA on both external workflows", async () => {
   const runtime = fakeRuntime({ externalRef: "v0" });
   assert.equal(

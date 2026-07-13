@@ -296,6 +296,7 @@ test("release readiness rejects release policy document drift", () => {
       "No continuing v0 release decision exists.",
     )
     .replace("ADR 0034 authorizes moving major alias `v0`", "No alias release decision exists.")
+    .replace("ADR 0045 authorizes free GitHub Marketplace", "No Marketplace decision exists.")
     .replace("- Public package publication: blocked.", "- Public package publication: allowed.")
     .replace(
       "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044",
@@ -306,8 +307,19 @@ test("release readiness rejects release policy document drift", () => {
       "- Moving alias: ungoverned.",
     )
     .replace(
+      "- GitHub Marketplace publication: allowed for the validated root Action under ADR 0045",
       "- GitHub Marketplace publication: blocked.",
-      "- GitHub Marketplace publication: allowed.",
+    )
+    .replace("## Marketplace Release Procedure", "## Uncontrolled Marketplace Publication")
+    .replace("release type `marketplace-action-tag`", "")
+    .replace(
+      "pnpm run publish-action-release -- --version v0.3.0 --sha <candidate-sha> --release-kind stable",
+      "",
+    )
+    .replace("primary category `Code review` and secondary category `Utilities`", "")
+    .replace(
+      "Marketplace rollback: clear the Marketplace setting without deleting or moving the immutable tag.",
+      "",
     )
     .replace("`pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`", "")
     .replace(
@@ -330,10 +342,16 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include ADR 0031 authorizes immutable root GitHub.",
     "docs/ops/release.md must include ADR 0044 authorizes subsequent immutable `v0.x.y` releases.",
     "docs/ops/release.md must include ADR 0034 authorizes moving major alias `v0`.",
+    "docs/ops/release.md must include ADR 0045 authorizes free GitHub Marketplace.",
     "docs/ops/release.md must include - Public package publication: blocked..",
     "docs/ops/release.md must include - Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044.",
     "docs/ops/release.md must include - Moving GitHub Action major alias: `v0` is allowed under ADR 0034.",
-    "docs/ops/release.md must include - GitHub Marketplace publication: blocked..",
+    "docs/ops/release.md must include - GitHub Marketplace publication: allowed for the validated root Action under ADR 0045.",
+    "docs/ops/release.md must include ## Marketplace Release Procedure.",
+    "docs/ops/release.md must include release type `marketplace-action-tag`.",
+    "docs/ops/release.md must include pnpm run publish-action-release -- --version v0.3.0 --sha <candidate-sha> --release-kind stable.",
+    "docs/ops/release.md must include primary category `Code review` and secondary category `Utilities`.",
+    "docs/ops/release.md must include Marketplace rollback: clear the Marketplace setting without deleting or moving the immutable tag..",
     "docs/ops/release.md must include ## Major Alias Promotion.",
     "docs/ops/release.md must include `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`.",
     "docs/ops/release.md must include pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>.",
@@ -1702,6 +1720,17 @@ test("release readiness accepts the Action manifest contract", () => {
   assert.deepEqual(validateActionManifestContract(createActionManifestText()), []);
 });
 
+test("release readiness rejects Marketplace branding drift", () => {
+  const text = createActionManifestText()
+    .replace("icon: award", "icon: coffee")
+    .replace("color: purple", "color: teal");
+
+  assert.deepEqual(validateActionManifestContract(text), [
+    "action.yml branding icon must be award.",
+    "action.yml branding color must be purple.",
+  ]);
+});
+
 test("release readiness rejects Action manifest input default drift and secret inputs", () => {
   const text = createActionManifestText()
     .replace("default: propose", "default: dry-run")
@@ -2045,6 +2074,7 @@ function createReleasePolicyText() {
     "ADR 0031 authorizes immutable root GitHub",
     "ADR 0044 authorizes subsequent immutable `v0.x.y` releases",
     "ADR 0034 authorizes moving major alias `v0`",
+    "ADR 0045 authorizes free GitHub Marketplace",
     "The current root and workspace packages stay private at `0.0.0`.",
     "Do not bump package versions,",
     "create another moving major alias",
@@ -2056,10 +2086,15 @@ function createReleasePolicyText() {
     "- Public package publication: blocked.",
     "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044",
     "- Moving GitHub Action major alias: `v0` is allowed under ADR 0034",
-    "- GitHub Marketplace publication: blocked.",
+    "- GitHub Marketplace publication: allowed for the validated root Action under ADR 0045",
     "",
     "The versioned Action tag requires:",
     "Public package publication remains blocked even when every technical gate above passes.",
+    "## Marketplace Release Procedure",
+    "release type `marketplace-action-tag`",
+    "pnpm run publish-action-release -- --version v0.3.0 --sha <candidate-sha> --release-kind stable",
+    "primary category `Code review` and secondary category `Utilities`",
+    "Marketplace rollback: clear the Marketplace setting without deleting or moving the immutable tag.",
     "## First Action Release Procedure",
     "release type `versioned-action-tag`",
     "## Major Alias Promotion",
@@ -2080,7 +2115,8 @@ function createReleasePolicyText() {
     "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
     "",
     "- Release status: immutable `v0.x.y` Action tags are allowed by ADR 0044",
-    "package publication and GitHub Marketplace publication remain blocked",
+    "free root Action Marketplace publication",
+    "public package publication remains blocked",
     "",
   ].join("\n");
 }
@@ -2967,6 +3003,9 @@ function createRollbackProcedureText() {
 function createActionManifestText() {
   return [
     "name: Clarissimi",
+    "branding:",
+    "  icon: award",
+    "  color: purple",
     "inputs:",
     "  mode:",
     "    required: false",

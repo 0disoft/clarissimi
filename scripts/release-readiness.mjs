@@ -188,6 +188,7 @@ export const releasePolicyDocumentContract = {
     "ADR 0031 authorizes immutable root GitHub",
     "ADR 0044 authorizes subsequent immutable `v0.x.y` releases",
     "ADR 0034 authorizes moving major alias `v0`",
+    "ADR 0045 authorizes free GitHub Marketplace",
     "The current root and workspace packages stay private at `0.0.0`.",
     "Do not bump package versions,",
     "create another moving major alias",
@@ -197,9 +198,14 @@ export const releasePolicyDocumentContract = {
     "- Public package publication: blocked.",
     "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044",
     "- Moving GitHub Action major alias: `v0` is allowed under ADR 0034",
-    "- GitHub Marketplace publication: blocked.",
+    "- GitHub Marketplace publication: allowed for the validated root Action under ADR 0045",
     "The versioned Action tag requires:",
     "Public package publication remains blocked even when every technical gate above passes.",
+    "## Marketplace Release Procedure",
+    "release type `marketplace-action-tag`",
+    "pnpm run publish-action-release -- --version v0.3.0 --sha <candidate-sha> --release-kind stable",
+    "primary category `Code review` and secondary category `Utilities`",
+    "Marketplace rollback: clear the Marketplace setting without deleting or moving the immutable tag.",
     "## First Action Release Procedure",
     "release type `versioned-action-tag`",
     "## Major Alias Promotion",
@@ -218,7 +224,8 @@ export const releasePolicyDocumentContract = {
     "repository-wide `format` and migration compatibility gates",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
     "Release status: immutable `v0.x.y` Action tags are allowed by ADR 0044",
-    "package publication and GitHub Marketplace publication remain blocked",
+    "free root Action Marketplace publication",
+    "public package publication remains blocked",
   ],
 };
 
@@ -1165,6 +1172,7 @@ export const ciWorkflowContract = {
 
 export const actionManifestContract = {
   path: "action.yml",
+  branding: { icon: "award", color: "purple" },
   requiredInputs: [
     { name: "mode", default: "propose" },
     { name: "event-path" },
@@ -1440,7 +1448,7 @@ export async function runReleaseReadiness(options = {}) {
     "moving Action alias v0 is allowed by ADR 0034 after exact-SHA post-promotion verification",
   );
   console.log(
-    "public package publication and GitHub Marketplace publication remain blocked by release policy",
+    "free root Action Marketplace publication is allowed by ADR 0045; public package publication remains blocked",
   );
 }
 
@@ -2055,8 +2063,18 @@ export function validateCiWorkflowContract(text, contract = ciWorkflowContract) 
 
 export function validateActionManifestContract(text, contract = actionManifestContract) {
   const issues = [];
+  const brandingBlock = findRequiredYamlMappingBlock(text, contract.path, "branding", issues);
   const inputsBlock = findRequiredYamlMappingBlock(text, contract.path, "inputs", issues);
   const outputsBlock = findRequiredYamlMappingBlock(text, contract.path, "outputs", issues);
+
+  if (brandingBlock !== undefined) {
+    for (const [key, expected] of Object.entries(contract.branding ?? {})) {
+      const value = findYamlScalarValue(brandingBlock, key);
+      if (value !== expected) {
+        issues.push(`${contract.path} branding ${key} must be ${expected}.`);
+      }
+    }
+  }
 
   for (const input of contract.requiredInputs) {
     const block =

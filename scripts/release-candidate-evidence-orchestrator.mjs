@@ -11,7 +11,7 @@ const defaults = {
 
 const usageText = [
   "Usage:",
-  "  pnpm run release-candidate-evidence-orchestrator -- --provider-model <model> [--sha <commit-sha>] [--external-ref <tag-or-sha|v0>] [--release-type <source-only|versioned-action-tag|major-alias>] [--release-version <v0.x.y>] [--create-issue]",
+  "  pnpm run release-candidate-evidence-orchestrator -- --provider-model <model> [--sha <commit-sha>] [--external-ref <tag-or-sha|v0>] [--release-type <source-only|versioned-action-tag|marketplace-action-tag|major-alias>] [--release-version <v0.x.y>] [--create-issue]",
   "",
   "The default is an issue preview. Hosted workflows still run, including the full-write smoke and orphan audit.",
   "Use --create-issue only after reviewing the generated evidence body.",
@@ -298,18 +298,22 @@ function validateArgs(args, runtime) {
   if (args.providerModel === undefined || args.providerModel.trim() === "")
     return usageFailure(runtime, "--provider-model is required.");
   const releaseType = args.releaseType ?? defaults.releaseType;
-  if (!["source-only", "versioned-action-tag", "major-alias"].includes(releaseType))
+  if (
+    !["source-only", "versioned-action-tag", "marketplace-action-tag", "major-alias"].includes(
+      releaseType,
+    )
+  )
     return usageFailure(
       runtime,
-      "--release-type must be source-only, versioned-action-tag, or major-alias.",
+      "--release-type must be source-only, versioned-action-tag, marketplace-action-tag, or major-alias.",
     );
   if (
-    ["versioned-action-tag", "major-alias"].includes(releaseType) &&
+    ["versioned-action-tag", "marketplace-action-tag", "major-alias"].includes(releaseType) &&
     !/^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(args.releaseVersion ?? "")
   ) {
     return usageFailure(
       runtime,
-      "versioned-action-tag evidence requires --release-version <v0.x.y>.",
+      "versioned and Marketplace Action evidence requires --release-version <v0.x.y>.",
     );
   }
   if (releaseType === "major-alias" && args.externalRef !== "v0")

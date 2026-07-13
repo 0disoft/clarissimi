@@ -12,11 +12,12 @@ Clarissimi is not ready for public package publication. ADR 0031 authorizes immu
 Action releases beginning with `v0.1.0` after every gate in this document passes for the exact tag
 target commit. ADR 0044 authorizes subsequent immutable `v0.x.y` releases within the same root
 Action distribution boundary. ADR 0034 authorizes moving major alias `v0` only after it is tied to one explicitly
-selected, already validated immutable `v0.x.y` release.
+selected, already validated immutable `v0.x.y` release. ADR 0045 authorizes free GitHub Marketplace
+publication beginning with non-prerelease release `v0.3.0`.
 
 The current root and workspace packages stay private at `0.0.0`. Do not bump package versions,
-remove `private: true`, publish npm packages, create another moving major alias, or publish to
-GitHub Marketplace until a separate accepted release decision changes those boundaries.
+remove `private: true`, publish npm packages, or create another moving major alias. Marketplace
+publication is limited to the root Action release boundary accepted by ADR 0045.
 
 ## Release Types
 
@@ -30,7 +31,8 @@ GitHub Marketplace until a separate accepted release decision changes those boun
   pre-release gates pass for the exact tag target commit.
 - Moving GitHub Action major alias: `v0` is allowed under ADR 0034 after the selected immutable
   release passes the alias verification and external consumer gates.
-- GitHub Marketplace publication: blocked.
+- GitHub Marketplace publication: allowed for the validated root Action under ADR 0045; npm and
+  workspace-package publication remain blocked.
 
 ## Pre-Release Gates
 
@@ -70,6 +72,35 @@ Public package publication remains blocked even when every technical gate above 
 separate accepted release decision covering package versions, registry authentication, provenance,
 workspace publication scope, and package rollback.
 
+## Marketplace Release Procedure
+
+The first Marketplace release is `v0.3.0`. It follows every versioned Action gate above and adds
+the following requirements:
+
+1. Root `action.yml` remains the only Action metadata file and includes supported Marketplace
+   branding.
+2. A public Marketplace search finds no existing Action named `Clarissimi` before publication.
+3. Candidate evidence uses release type `marketplace-action-tag`, release version `v0.3.0`, and the
+   exact candidate SHA.
+4. Publish the immutable tag as a non-draft, non-prerelease GitHub Release:
+
+   ```powershell
+   pnpm run publish-action-release -- --version v0.3.0 --sha <candidate-sha> --release-kind stable
+   ```
+
+5. In GitHub's release UI, enable `Publish this Action to the GitHub Marketplace`, choose the
+   primary category `Code review` and secondary category `Utilities`, and complete the GitHub-owned
+   developer-agreement and two-factor-authentication gates when requested.
+6. Verify the public Marketplace listing resolves to `0disoft/clarissimi`, identifies release
+   `v0.3.0`, and shows the configured branding.
+7. Run post-tag evidence for `v0.3.0`, then promote `v0` separately through ADR 0034.
+
+Marketplace publication is intentionally interactive because GitHub owns the agreement, category,
+and release checkbox state.
+
+- Marketplace rollback: clear the Marketplace setting without deleting or moving the immutable tag.
+- Code rollback: publish a corrective immutable release and move `v0` only after verification.
+
 ## First Action Release Procedure
 
 1. Run the local validation and hygiene gates against the final candidate checkout.
@@ -93,7 +124,7 @@ verify it with `pnpm run bundle:action:check`. The immutable `v0.1.0` tag keeps 
 consumer-time install and build behavior; do not move it to adopt the bundle.
 
 After the versioned evidence issue exists for the exact candidate SHA, publish the selected
-immutable tag and GitHub pre-release with the repository-owned publisher:
+immutable tag and GitHub release with the repository-owned publisher:
 
 ```powershell
 pnpm run publish-action-release -- --version <v0.x.y> --sha <candidate-sha>
@@ -101,7 +132,8 @@ pnpm run publish-action-release -- --version <v0.x.y> --sha <candidate-sha>
 
 The publisher requires a clean worktree, one exact matching release evidence issue, and a remote
 candidate commit. It refuses mismatched existing tags, creates only an annotated immutable tag,
-verifies the GitHub pre-release and resolved tag commit, and closes the completed evidence issue.
+verifies the requested prerelease or stable GitHub Release kind and resolved tag commit, and closes
+the completed evidence issue.
 If tag publication succeeds but release creation fails, rerun the same command; it accepts only the
 same immutable tag target and continues the missing release step.
 
@@ -275,8 +307,9 @@ reviewing that output, then rerun the read-only orphan audit.
 ## Validation
 
 - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`
-- Release status: immutable `v0.x.y` Action tags are allowed by ADR 0044 and moving major alias
-  `v0` is allowed by ADR 0034 after exact-SHA verification; public package publication and GitHub Marketplace publication remain blocked
+- Release status: immutable `v0.x.y` Action tags are allowed by ADR 0044, moving major alias `v0`
+  is allowed by ADR 0034 after exact-SHA verification, and free root Action Marketplace publication
+  is allowed by ADR 0045; public package publication remains blocked
 - Recent hosted CI validation evidence: `CI` workflow run `29052254866` passed on
   `2026-07-09T21:42:23Z` for validated source commit
   `eaf22e44f5ef87391a16cf5a6597395826f05b7d` on `main` and validated `docs`,

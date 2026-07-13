@@ -76,6 +76,10 @@ export const requiredPackageScripts = [
     includes: ["scripts/publish-action-release.mjs"],
   },
   {
+    name: "promote-action-major-alias",
+    includes: ["scripts/promote-action-major-alias.mjs"],
+  },
+  {
     name: "release-evidence-cleanup",
     includes: ["scripts/release-evidence-cleanup.mjs"],
   },
@@ -200,6 +204,7 @@ export const releasePolicyDocumentContract = {
     "release type `versioned-action-tag`",
     "## Major Alias Promotion",
     "`pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
+    "pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>",
     "publish a corrective patch tag such as `v0.1.1`",
     "`pnpm run hosted-ci-validation`",
     "`pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
@@ -284,6 +289,7 @@ export const readmeValidationContract = {
     "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
     "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>`",
     "- `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
+    "- `pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>`",
     "- `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
     "Release-only credentialed checks are:",
     "- `pnpm run hosted-live-provider-smoke -- --model <provider-model>`",
@@ -343,6 +349,7 @@ export const docsValidationScriptContract = {
     '"scripts/release-candidate-evidence-issue.mjs"',
     '"scripts/release-readiness.mjs"',
     '"scripts/verify-action-major-tag.mjs"',
+    '"scripts/promote-action-major-alias.mjs"',
   ],
 };
 

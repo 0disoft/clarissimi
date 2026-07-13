@@ -170,6 +170,57 @@ test("versioned evidence accepts the pre-tag candidate SHA as the external ref",
   );
 });
 
+test("major alias evidence records v0 with the exact expected SHA", async () => {
+  const harness = createHarness({
+    headSha: exampleSha,
+    runs: {
+      12345: createRun({ databaseId: 12345, workflowName: "CI" }),
+      67890: createRun({
+        databaseId: 67890,
+        workflowName: "Clarissimi live provider smoke",
+        event: "workflow_dispatch",
+        headBranch: "v0.2.0",
+      }),
+      24680: createExternalRun("v0"),
+      13579: createExternalWriteRun("v0"),
+    },
+  });
+
+  const exitCode = await runReleaseCandidateEvidenceIssue(
+    [
+      "--sha",
+      exampleSha,
+      "--release-type",
+      "major-alias",
+      "--release-version",
+      "v0.2.0",
+      "--external-ref",
+      "v0",
+      "--live-ref",
+      "v0.2.0",
+      "--ci-run",
+      "12345",
+      "--live-run",
+      "67890",
+      "--external-run",
+      "24680",
+      "--external-write-run",
+      "13579",
+      "--provider-model",
+      "gpt-4.1-mini",
+      "--print",
+    ],
+    harness.runtime,
+  );
+
+  const body = harness.logs.join("\n");
+  assert.equal(exitCode, 0);
+  assert.match(body, /moving Action alias `v0` to `v0\.2\.0` under ADR 0034/);
+  assert.match(body, new RegExp(`--clarissimi-ref v0 --expected-sha ${exampleSha}`));
+  assert.match(body, new RegExp(`-f clarissimi-ref=v0 -f expected-sha=${exampleSha}`));
+  assert.match(body, /supports keeping moving alias `v0`/);
+});
+
 test("release candidate evidence issue resolves HEAD and creates an issue with body on stdin", async () => {
   const harness = createHarness({
     headSha: exampleSha,
@@ -491,7 +542,7 @@ test("release candidate evidence issue rejects invalid inputs before calling git
   assert.equal(unsupportedReleaseTypeExitCode, 2);
   assert.equal(
     unsupportedReleaseType.errors.includes(
-      "--release-type supports source-only or versioned-action-tag.",
+      "--release-type supports source-only, versioned-action-tag, or major-alias.",
     ),
     true,
   );

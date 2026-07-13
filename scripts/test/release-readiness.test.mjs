@@ -315,6 +315,10 @@ test("release readiness rejects release policy document drift", () => {
       "",
     )
     .replace("pnpm run publish-action-release -- --version <v0.x.y> --sha <candidate-sha>", "")
+    .replace(
+      "pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>",
+      "",
+    )
     .replace("## Major Alias Promotion", "## Unverified Alias Promotion")
     .replace(
       "`pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
@@ -332,6 +336,7 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include - GitHub Marketplace publication: blocked..",
     "docs/ops/release.md must include ## Major Alias Promotion.",
     "docs/ops/release.md must include `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`.",
+    "docs/ops/release.md must include pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>.",
     "docs/ops/release.md must include `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`.",
     "docs/ops/release.md must include `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`.",
     "docs/ops/release.md must include pnpm run publish-action-release -- --version <v0.x.y> --sha <candidate-sha>.",
@@ -397,6 +402,10 @@ test("release readiness rejects README validation drift", () => {
       "",
     )
     .replace(
+      "- `pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>`",
+      "",
+    )
+    .replace(
       "- `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
       "",
     )
@@ -426,6 +435,7 @@ test("release readiness rejects README validation drift", () => {
     "README.md must include - `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`.",
     "README.md must include - `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>`.",
     "README.md must include - `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`.",
+    "README.md must include - `pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>`.",
     "README.md must include - `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`.",
     "README.md must include Release-only credentialed checks are:.",
     "README.md must include `format` runs the repository-wide Oxfmt baseline accepted by ADR 0036.",
@@ -465,7 +475,8 @@ test("release readiness rejects docs validation script drift", () => {
       '"scripts/evidence-orchestrator.mjs"',
     )
     .replace('"scripts/release-candidate-evidence-issue.mjs"', '"scripts/evidence-issue.mjs"')
-    .replace('"scripts/verify-action-major-tag.mjs"', '"scripts/major-tag-check.mjs"');
+    .replace('"scripts/verify-action-major-tag.mjs"', '"scripts/major-tag-check.mjs"')
+    .replace('"scripts/promote-action-major-alias.mjs"', '"scripts/major-tag-promoter.mjs"');
 
   assert.deepEqual(validateDocsValidationScriptContract(text), [
     'scripts/validate-docs.mjs must include "action.yml".',
@@ -485,6 +496,7 @@ test("release readiness rejects docs validation script drift", () => {
     'scripts/validate-docs.mjs must include "scripts/release-candidate-evidence-orchestrator.mjs".',
     'scripts/validate-docs.mjs must include "scripts/release-candidate-evidence-issue.mjs".',
     'scripts/validate-docs.mjs must include "scripts/verify-action-major-tag.mjs".',
+    'scripts/validate-docs.mjs must include "scripts/promote-action-major-alias.mjs".',
   ]);
 });
 
@@ -2052,6 +2064,7 @@ function createReleasePolicyText() {
     "release type `versioned-action-tag`",
     "## Major Alias Promotion",
     "`pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
+    "pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>",
     "publish a corrective patch tag such as `v0.1.1`",
     "`pnpm run hosted-ci-validation`",
     "`pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
@@ -2126,6 +2139,7 @@ function createReadmeValidationText() {
     "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
     "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>`",
     "- `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
+    "- `pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>`",
     "- `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
     "",
     "Release-only credentialed checks are:",
@@ -2190,6 +2204,7 @@ function createDocsValidationScriptText() {
     '  "scripts/release-candidate-evidence-issue.mjs",',
     '  "scripts/release-readiness.mjs",',
     '  "scripts/verify-action-major-tag.mjs",',
+    '  "scripts/promote-action-major-alias.mjs",',
     "];",
     "",
   ].join("\n");

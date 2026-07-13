@@ -28,7 +28,7 @@ const defaults = {
 
 const usageText = [
   "Usage:",
-  "  pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --external-run <run-id> --external-write-run <run-id> --provider-model <model> [--evidence-id <32-hex>] [--external-ref <immutable-tag-or-sha>] [--external-repo <owner/name>] [--release-type <source-only|versioned-action-tag>] [--release-version <v0.x.y>] [--provider-endpoint <chat-completions-url>] [--provider-thinking <mode>] [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch-name>] [--title <issue-title>] [--print]",
+  "  pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --external-run <run-id> --external-write-run <run-id> --provider-model <model> [--evidence-id <32-hex>] [--external-ref <immutable-tag-or-sha|v0>] [--live-ref <branch-or-tag>] [--external-repo <owner/name>] [--release-type <source-only|versioned-action-tag|major-alias>] [--release-version <v0.x.y>] [--provider-endpoint <chat-completions-url>] [--provider-thinking <mode>] [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch-name>] [--title <issue-title>] [--print]",
   "",
   "Examples:",
   "  pnpm run release-candidate-evidence-issue -- --ci-run 12345 --live-run 67890 --external-run 24680 --external-write-run 13579 --provider-model gpt-4.1-mini",
@@ -100,18 +100,24 @@ async function run(argv, runtime) {
   }
 
   const releaseType = args.releaseType ?? defaults.releaseType;
-  if (!["source-only", "versioned-action-tag"].includes(releaseType)) {
-    return usageFailure(runtime, "--release-type supports source-only or versioned-action-tag.");
+  if (!["source-only", "versioned-action-tag", "major-alias"].includes(releaseType)) {
+    return usageFailure(
+      runtime,
+      "--release-type supports source-only, versioned-action-tag, or major-alias.",
+    );
   }
 
-  if (releaseType === "versioned-action-tag" && !isVersionTag(args.releaseVersion)) {
+  if (
+    ["versioned-action-tag", "major-alias"].includes(releaseType) &&
+    !isVersionTag(args.releaseVersion)
+  ) {
     return usageFailure(runtime, "--release-version requires a v0.x.y tag authorized by ADR 0044.");
   }
 
   if (releaseType === "source-only" && args.releaseVersion !== undefined) {
     return usageFailure(
       runtime,
-      "--release-version is valid only with --release-type versioned-action-tag.",
+      "--release-version is valid only with --release-type versioned-action-tag or major-alias.",
     );
   }
 
@@ -137,10 +143,10 @@ async function run(argv, runtime) {
 
   const externalRef =
     args.externalRef ?? (releaseType === "versioned-action-tag" ? args.releaseVersion : sha);
-  if (!isImmutableClarissimiRef(externalRef)) {
+  if (!isImmutableClarissimiRef(externalRef) && externalRef !== "v0") {
     return usageFailure(
       runtime,
-      "--external-ref must be a semantic version tag or 40-character commit SHA.",
+      "--external-ref must be a semantic version tag, 40-character commit SHA, or v0.",
     );
   }
   if (releaseType === "source-only" && externalRef !== sha) {
@@ -155,6 +161,13 @@ async function run(argv, runtime) {
       runtime,
       "versioned Action evidence requires --external-ref to equal --release-version or --sha.",
     );
+  }
+  if (releaseType === "major-alias" && externalRef !== "v0") {
+    return usageFailure(runtime, "major alias evidence requires --external-ref v0.");
+  }
+  const liveRef = args.liveRef ?? branch;
+  if (liveRef.trim() === "") {
+    return usageFailure(runtime, "--live-ref requires a non-empty branch or tag.");
   }
 
   await requireGh(runtime);
@@ -173,7 +186,7 @@ async function run(argv, runtime) {
     label: "hosted live provider smoke",
     runId: args.liveRun,
     sha,
-    branch,
+    branch: liveRef,
     workflowName: defaults.liveWorkflowName,
     displayTitle:
       args.evidenceId === undefined
@@ -199,7 +212,9 @@ async function run(argv, runtime) {
     args.title ??
     (releaseType === "versioned-action-tag"
       ? `Release candidate evidence for ${args.releaseVersion} at ${sha.slice(0, 7)}`
-      : `Release candidate evidence for ${sha.slice(0, 7)}`);
+      : releaseType === "major-alias"
+        ? `Major alias evidence for v0 to ${args.releaseVersion} at ${sha.slice(0, 7)}`
+        : `Release candidate evidence for ${sha.slice(0, 7)}`);
   const body = renderIssueBody({
     repo,
     branch,
@@ -211,6 +226,7 @@ async function run(argv, runtime) {
     externalWriteRun,
     evidenceId: args.evidenceId,
     liveRun,
+    liveRef,
     releaseType,
     releaseVersion: args.releaseVersion,
     providerModel: args.providerModel,
@@ -276,6 +292,7 @@ function parseArgs(argv, runtime) {
         "external-run",
         "external-write-run",
         "live-run",
+        "live-ref",
         "provider-model",
         "provider-endpoint",
         "provider-thinking",
@@ -569,7 +586,7 @@ function renderIssueBody(options) {
   const liveProviderCommand = [
     "pnpm run hosted-live-provider-smoke --",
     `--model ${options.providerModel}`,
-    `--ref ${options.branch}`,
+    `--ref ${options.liveRef}`,
     options.providerEndpoint === undefined ? undefined : `--endpoint ${options.providerEndpoint}`,
     options.providerThinking === undefined ? undefined : `--thinking ${options.providerThinking}`,
     options.evidenceId === undefined ? undefined : `--evidence-id ${options.evidenceId}`,
@@ -579,6 +596,7 @@ function renderIssueBody(options) {
   const externalConsumerCommand = [
     "pnpm run hosted-external-consumer-smoke --",
     `--clarissimi-ref ${options.externalRef}`,
+    options.externalRef === "v0" ? `--expected-sha ${options.sha}` : undefined,
     options.evidenceId === undefined ? undefined : `--evidence-id ${options.evidenceId}`,
     options.externalRepo === defaults.externalRepo ? undefined : `--repo ${options.externalRepo}`,
   ]
@@ -588,6 +606,7 @@ function renderIssueBody(options) {
     `gh workflow run clarissimi-full-write-smoke.yml --repo ${options.externalRepo}`,
     `--ref ${defaults.externalBranch}`,
     `-f clarissimi-ref=${options.externalRef}`,
+    options.externalRef === "v0" ? `-f expected-sha=${options.sha}` : undefined,
     options.evidenceId === undefined ? undefined : `-f evidence-id=${options.evidenceId}`,
   ]
     .filter(Boolean)
@@ -595,15 +614,21 @@ function renderIssueBody(options) {
   const releaseType =
     options.releaseType === "versioned-action-tag"
       ? `versioned Action tag \`${options.releaseVersion}\` under ${versionedReleaseDecision}`
-      : "source-only merge evidence";
+      : options.releaseType === "major-alias"
+        ? `moving Action alias \`v0\` to \`${options.releaseVersion}\` under ADR 0034`
+        : "source-only merge evidence";
   const releaseDecision =
     options.releaseType === "versioned-action-tag"
       ? versionedReleaseDecision
-      : "`docs/ops/release.md` source-only merge policy";
+      : options.releaseType === "major-alias"
+        ? "ADR 0034"
+        : "`docs/ops/release.md` source-only merge policy";
   const releasePolicyConclusion =
     options.releaseType === "versioned-action-tag"
       ? `This evidence supports publishing immutable tag \`${options.releaseVersion}\` at \`${options.sha}\` and creating its GitHub pre-release. Moving alias \`v0\` remains a separate ADR 0034 step after post-tag verification.`
-      : "This evidence supports a source-only merge. A versioned Action tag requires the release type and version to be recorded explicitly.";
+      : options.releaseType === "major-alias"
+        ? `This evidence supports keeping moving alias \`v0\` at immutable release \`${options.releaseVersion}\` commit \`${options.sha}\`. Consumers that require reproducibility should pin the immutable tag or commit SHA.`
+        : "This evidence supports a source-only merge. A versioned Action tag requires the release type and version to be recorded explicitly.";
 
   return [
     `Release candidate evidence for \`${options.sha}\` on \`${options.branch}\`.`,

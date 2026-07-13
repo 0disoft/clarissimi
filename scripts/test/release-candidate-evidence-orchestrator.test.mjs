@@ -95,6 +95,69 @@ test("versioned evidence defaults external consumers to the pre-tag candidate SH
   );
 });
 
+test("major alias evidence pins v0 to the expected SHA on both external workflows", async () => {
+  const runtime = fakeRuntime({ externalRef: "v0" });
+  assert.equal(
+    await runReleaseCandidateEvidenceOrchestrator(
+      [
+        "--provider-model",
+        "gpt-4.1-mini",
+        "--sha",
+        sha,
+        "--release-type",
+        "major-alias",
+        "--release-version",
+        "v0.2.0",
+        "--external-ref",
+        "v0",
+      ],
+      runtime,
+    ),
+    0,
+  );
+
+  const dispatches = runtime.calls.filter(
+    (call) => call.command === "gh" && call.args[0] === "workflow" && call.args[1] === "run",
+  );
+  const externalDispatches = dispatches.filter(
+    (call) =>
+      call.args.includes("clarissimi.yml") || call.args.includes("clarissimi-full-write-smoke.yml"),
+  );
+  assert.equal(
+    externalDispatches.every(
+      (call) =>
+        call.args.includes("clarissimi-ref=v0") && call.args.includes(`expected-sha=${sha}`),
+    ),
+    true,
+  );
+  const evidence = runtime.calls.find((call) => call.command === "pnpm");
+  assert.equal(evidence.args.includes("major-alias"), true);
+  const liveDispatch = dispatches.find((call) =>
+    call.args.includes("clarissimi-live-provider-smoke.yml"),
+  );
+  assert.deepEqual(
+    liveDispatch.args.slice(
+      liveDispatch.args.indexOf("--ref"),
+      liveDispatch.args.indexOf("--ref") + 2,
+    ),
+    ["--ref", "v0.2.0"],
+  );
+  assert.deepEqual(
+    evidence.args.slice(
+      evidence.args.indexOf("--live-ref"),
+      evidence.args.indexOf("--live-ref") + 2,
+    ),
+    ["--live-ref", "v0.2.0"],
+  );
+  assert.deepEqual(
+    evidence.args.slice(
+      evidence.args.indexOf("--external-ref"),
+      evidence.args.indexOf("--external-ref") + 2,
+    ),
+    ["--external-ref", "v0"],
+  );
+});
+
 test("runs orphan audit after a full-write failure", async () => {
   const runtime = fakeRuntime({ failWatchId: 104 });
   assert.equal(
@@ -214,13 +277,14 @@ function fakeRuntime(options = {}) {
         const isCi = args.includes("CI");
         const id = isCi ? 101 : nextRun++;
         const workflow = args[args.indexOf("--workflow") + 1];
+        const externalRef = options.externalRef ?? sha;
         const displayTitle =
           workflow === "clarissimi-live-provider-smoke.yml"
             ? `Clarissimi live provider smoke · ${evidenceId}`
             : workflow === "clarissimi.yml"
-              ? `Clarissimi external consumer · ${sha} · ${evidenceId}`
+              ? `Clarissimi external consumer · ${externalRef} · ${evidenceId}`
               : workflow === "clarissimi-full-write-smoke.yml"
-                ? `Clarissimi full write smoke · ${sha} · ${evidenceId} · ${id}`
+                ? `Clarissimi full write smoke · ${externalRef} · ${evidenceId} · ${id}`
                 : workflow === "clarissimi-orphan-audit.yml"
                   ? `Clarissimi smoke orphan audit · ${evidenceId}`
                   : "CI";

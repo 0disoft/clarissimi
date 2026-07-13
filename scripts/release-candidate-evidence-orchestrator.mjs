@@ -11,7 +11,7 @@ const defaults = {
 
 const usageText = [
   "Usage:",
-  "  pnpm run release-candidate-evidence-orchestrator -- --provider-model <model> [--sha <commit-sha>] [--external-ref <tag-or-sha>] [--release-type <source-only|versioned-action-tag>] [--release-version <v0.x.y>] [--create-issue]",
+  "  pnpm run release-candidate-evidence-orchestrator -- --provider-model <model> [--sha <commit-sha>] [--external-ref <tag-or-sha|v0>] [--release-type <source-only|versioned-action-tag|major-alias>] [--release-version <v0.x.y>] [--create-issue]",
   "",
   "The default is an issue preview. Hosted workflows still run, including the full-write smoke and orphan audit.",
   "Use --create-issue only after reviewing the generated evidence body.",
@@ -42,6 +42,7 @@ async function run(argv, runtime) {
   const sha =
     args.sha ?? (await commandText(runtime, "git", ["rev-parse", "HEAD"], "resolve current HEAD"));
   const externalRef = args.externalRef ?? sha;
+  const liveRef = releaseType === "major-alias" ? args.releaseVersion : branch;
   const evidenceId = runtime.randomEvidenceId();
 
   if (!isRepo(repo) || !isRepo(externalRepo))
@@ -54,7 +55,7 @@ async function run(argv, runtime) {
     throw new Error("Runtime generated an invalid evidence correlation id.");
 
   await command(runtime, "gh", ["--version"], "find GitHub CLI");
-  await preflight(runtime, { repo, branch, externalRepo, externalRef, sha });
+  await preflight(runtime, { repo, branch, liveRef, externalRepo, externalRef, sha });
   await requireSecret(runtime, repo, "CLARISSIMI_PROVIDER_TOKEN");
 
   const ciRun = await findRun(runtime, {
@@ -68,7 +69,7 @@ async function run(argv, runtime) {
   const liveRun = await dispatchAndWatch(runtime, {
     repo,
     workflow: "clarissimi-live-provider-smoke.yml",
-    ref: branch,
+    ref: liveRef,
     fields: [
       "provider-model",
       args.providerModel,
@@ -160,6 +161,7 @@ async function run(argv, runtime) {
   appendOption(evidenceArgs, "--evidence-id", evidenceId);
   appendOption(evidenceArgs, "--release-version", args.releaseVersion);
   appendOption(evidenceArgs, "--external-ref", externalRef);
+  appendOption(evidenceArgs, "--live-ref", liveRef);
   appendOption(evidenceArgs, "--provider-endpoint", args.providerEndpoint);
   appendOption(evidenceArgs, "--provider-thinking", args.providerThinking);
   if (!args.createIssue) evidenceArgs.push("--print");
@@ -216,7 +218,7 @@ async function preflight(runtime, options) {
     { repo: options.repo, ref: options.branch, workflow: "CI" },
     {
       repo: options.repo,
-      ref: options.branch,
+      ref: options.liveRef,
       workflow: "clarissimi-live-provider-smoke.yml",
     },
     { repo: options.externalRepo, ref: "main", workflow: "clarissimi.yml" },
@@ -296,10 +298,13 @@ function validateArgs(args, runtime) {
   if (args.providerModel === undefined || args.providerModel.trim() === "")
     return usageFailure(runtime, "--provider-model is required.");
   const releaseType = args.releaseType ?? defaults.releaseType;
-  if (!["source-only", "versioned-action-tag"].includes(releaseType))
-    return usageFailure(runtime, "--release-type must be source-only or versioned-action-tag.");
+  if (!["source-only", "versioned-action-tag", "major-alias"].includes(releaseType))
+    return usageFailure(
+      runtime,
+      "--release-type must be source-only, versioned-action-tag, or major-alias.",
+    );
   if (
-    releaseType === "versioned-action-tag" &&
+    ["versioned-action-tag", "major-alias"].includes(releaseType) &&
     !/^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(args.releaseVersion ?? "")
   ) {
     return usageFailure(
@@ -307,6 +312,8 @@ function validateArgs(args, runtime) {
       "versioned-action-tag evidence requires --release-version <v0.x.y>.",
     );
   }
+  if (releaseType === "major-alias" && args.externalRef !== "v0")
+    return usageFailure(runtime, "major-alias evidence requires --external-ref v0.");
   if (args.providerEndpoint !== undefined && !isHttps(args.providerEndpoint))
     return usageFailure(runtime, "--provider-endpoint must be an https URL.");
   if (args.providerThinking !== undefined && args.providerThinking !== "disabled")

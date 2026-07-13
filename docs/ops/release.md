@@ -110,6 +110,12 @@ same immutable tag target and continues the missing release step.
 Promote `v0` only after the selected immutable version tag and non-draft GitHub Release exist and
 all versioned-release evidence is complete:
 
+```powershell
+pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>
+```
+
+The repository-owned promoter performs the following steps as one fail-closed operation:
+
 1. Record the current remote `v0` SHA, or record that the alias does not exist.
 2. Select the target immutable `v0.x.y` tag and resolve its peeled commit SHA. Do not infer the
    target from the newest available tag.
@@ -123,6 +129,8 @@ all versioned-release evidence is complete:
 If any post-promotion check fails, restore `v0` to the recorded old SHA with a lease. If this was
 the first alias creation, delete only `v0`. Never move or delete the immutable patch tag as an alias
 rollback. Consumers that need reproducible dependency review should pin the patch tag or commit SHA.
+The promoter is idempotent: when `v0` already identifies the selected commit, it skips the ref write
+but repeats every verification and hosted evidence gate.
 
 ## Hosted Live Provider Smoke
 

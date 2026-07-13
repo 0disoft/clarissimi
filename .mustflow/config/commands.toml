@@ -522,6 +522,7 @@ argv = [
   "scripts/test/release-candidate-evidence-issue.test.mjs",
   "scripts/test/release-candidate-evidence-orchestrator.test.mjs",
   "scripts/test/publish-action-release.test.mjs",
+  "scripts/test/promote-action-major-alias.test.mjs",
 ]
 cwd = "."
 timeout_seconds = 300
@@ -532,6 +533,29 @@ effects = []
 network = false
 destructive = false
 required_after = ["release_evidence_change", "release_publication_change"]
+
+[intents.test_major_alias_promotion]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Run focused CAS promotion, alias verification, and hosted evidence contract regressions."
+argv = [
+  "node",
+  "--test",
+  "scripts/test/promote-action-major-alias.test.mjs",
+  "scripts/test/verify-action-major-tag.test.mjs",
+  "scripts/test/release-candidate-evidence-orchestrator.test.mjs",
+  "scripts/test/release-candidate-evidence-issue.test.mjs",
+]
+cwd = "."
+timeout_seconds = 300
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+required_after = ["major_alias_promotion_change", "major_alias_evidence_change"]
 
 [intents.release_v0_2_0_evidence]
 status = "configured"
@@ -613,6 +637,106 @@ env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
 required_after = ["release_v0_2_0_publish"]
+
+[intents.promote_v0_to_v0_2_0]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Promote moving alias v0 to immutable v0.2.0 with CAS rollback and hosted post-promotion evidence."
+argv = [
+  "pnpm",
+  "run",
+  "promote-action-major-alias",
+  "--",
+  "--release-version",
+  "v0.2.0",
+  "--sha",
+  "56f959d7ca74c8237d9fa0dbb8bef72cf49d877e",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = true
+required_after = [
+  "release_v0_2_0_post_tag_evidence",
+  "hosted_ci_success",
+  "user_authorized_release",
+]
+
+[intents.git_stage_major_alias_promotion]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Stage the reviewed v0 CAS promoter, evidence mode, docs, tests, package script, and command contract."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  "package.json",
+  "README.md",
+  "docs/ops/release.md",
+  "scripts/promote-action-major-alias.mjs",
+  "scripts/release-candidate-evidence-orchestrator.mjs",
+  "scripts/release-candidate-evidence-issue.mjs",
+  "scripts/release-readiness.mjs",
+  "scripts/validate-docs.mjs",
+  "scripts/test/promote-action-major-alias.test.mjs",
+  "scripts/test/release-candidate-evidence-orchestrator.test.mjs",
+  "scripts/test/release-candidate-evidence-issue.test.mjs",
+  "scripts/test/release-readiness.test.mjs",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["major_alias_promotion_validation_complete"]
+
+[intents.git_commit_major_alias_promotion]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Commit the reviewed moving v0 alias promotion workflow."
+argv = ["git", "commit", "-m", "feat(release): automate v0 alias promotion"]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_major_alias_promotion"]
+
+[intents.git_push_main_major_alias_promotion]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Push the validated major alias promotion workflow on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_major_alias_promotion", "user_authorized_push"]
 
 [intents.git_stage_release_v0_2_0]
 status = "configured"

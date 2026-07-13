@@ -11,8 +11,9 @@ import { renderPrettyJson, toPublicContributionRecords } from "./ledger.js";
 
 export function deriveContributorProfiles(
   values: readonly unknown[],
+  options: ContributorDisplayOptions = {},
 ): readonly ContributorRecognitionProfile[] {
-  const records = toPublicContributionRecords(values);
+  const records = filterDisplayedRecords(toPublicContributionRecords(values), options);
   const grouped = new Map<string, PublicContributionRecord[]>();
 
   records.forEach((record) => {
@@ -31,15 +32,38 @@ export function deriveContributorProfiles(
 
 export function buildContributorsJsonDocument(
   values: readonly unknown[],
+  options: ContributorDisplayOptions = {},
 ): ContributorsJsonDocument {
   return {
     schemaVersion: CONTRIBUTORS_JSON_SCHEMA_VERSION,
-    contributors: deriveContributorProfiles(values),
+    contributors: deriveContributorProfiles(values, options),
   };
 }
 
-export function renderContributorsJson(values: readonly unknown[]): string {
-  return renderPrettyJson(buildContributorsJsonDocument(values));
+export function renderContributorsJson(
+  values: readonly unknown[],
+  options: ContributorDisplayOptions = {},
+): string {
+  return renderPrettyJson(buildContributorsJsonDocument(values, options));
+}
+
+export interface ContributorDisplayOptions {
+  readonly includeAutomationContributors?: boolean;
+}
+
+export function filterDisplayedRecords(
+  records: readonly PublicContributionRecord[],
+  options: ContributorDisplayOptions = {},
+): readonly PublicContributionRecord[] {
+  if (options.includeAutomationContributors !== false) {
+    return records;
+  }
+
+  return records.filter((record) => !isAutomationContributor(record.contributor.kind));
+}
+
+function isAutomationContributor(kind: PublicContributionRecord["contributor"]["kind"]): boolean {
+  return kind === "bot" || kind === "ai_agent";
 }
 
 function toContributorProfile(

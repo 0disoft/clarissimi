@@ -33,6 +33,9 @@ export function resolveGitHubEventPayload(value: unknown): GitHubActionEventReso
   }
 
   const pullRequest = value.pull_request;
+  const contributorKind = isRecord(pullRequest.user)
+    ? parseActorKind(pullRequest.user.type)
+    : undefined;
   const mergedAt = typeof pullRequest.merged_at === "string" ? pullRequest.merged_at : undefined;
   if (mergedAt === undefined) {
     return {
@@ -59,6 +62,7 @@ export function resolveGitHubEventPayload(value: unknown): GitHubActionEventReso
       user: {
         id: pullRequest.user.id as number | string,
         login: pullRequest.user.login as string,
+        ...(contributorKind === undefined ? {} : { kind: contributorKind }),
       },
       labels: parseLabels(pullRequest.labels),
     },
@@ -77,6 +81,18 @@ export function resolveGitHubEventPayload(value: unknown): GitHubActionEventReso
     kind: "merged_pull_request",
     fixture,
   };
+}
+
+function parseActorKind(value: unknown): "human" | "bot" | undefined {
+  if (value === "Bot") {
+    return "bot";
+  }
+
+  if (value === "User" || value === "Organization") {
+    return "human";
+  }
+
+  return undefined;
 }
 
 function parseLabels(

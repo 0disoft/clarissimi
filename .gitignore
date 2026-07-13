@@ -22,6 +22,10 @@ tmp/
 *.tsbuildinfo
 # <<< ssealed ignore patterns <<<
 
+# Local mustflow execution state is non-versioned and safe to regenerate.
+.mustflow/cache/
+.mustflow/state/
+
 # Reviewed GitHub Action release artifact generated from source.
 !action-dist/
 !action-dist/index.js

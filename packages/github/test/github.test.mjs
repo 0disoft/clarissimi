@@ -109,6 +109,23 @@ test("preserves explicit contributor profile URL", () => {
   assert.equal(collected.contributor.profileUrl, "https://github.com/maintainer");
 });
 
+test("preserves an authoritative bot contributor kind", () => {
+  const collected = collectMergedPullRequestEvidence({
+    ...fixture,
+    pullRequest: {
+      ...fixture.pullRequest,
+      user: {
+        id: "bot-123",
+        login: "dependabot[bot]",
+        htmlUrl: "https://github.com/apps/dependabot",
+        kind: "bot",
+      },
+    },
+  });
+
+  assert.equal(collected.contributor.kind, "bot");
+});
+
 test("deduplicates repeated labels and files while preserving order", () => {
   const collected = collectMergedPullRequestEvidence({
     ...fixture,

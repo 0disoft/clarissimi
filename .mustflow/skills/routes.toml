@@ -1,0 +1,37 @@
+schema_version = "1"
+
+[routes.monorepo]
+category = "general_code"
+route_type = "primary"
+priority = 80
+applies_to_reasons = ["code_change", "public_api_change"]
+
+[routes.cli-tool]
+category = "general_code"
+route_type = "primary"
+priority = 85
+applies_to_reasons = ["code_change", "behavior_change", "public_api_change"]
+
+[routes.github-action]
+category = "general_code"
+route_type = "primary"
+priority = 85
+applies_to_reasons = ["code_change", "behavior_change", "public_api_change"]
+
+[routes.test-hardening]
+category = "tests"
+route_type = "adjunct"
+priority = 80
+applies_to_reasons = ["test_change", "behavior_change"]
+
+[routes.contract-sync-check]
+category = "workflow_contracts"
+route_type = "adjunct"
+priority = 90
+applies_to_reasons = ["public_contract_change", "schema_change", "docs_change"]
+
+[routes.command-contract-authoring]
+category = "workflow_contracts"
+route_type = "authoring"
+priority = 95
+applies_to_reasons = ["mustflow_config_change"]

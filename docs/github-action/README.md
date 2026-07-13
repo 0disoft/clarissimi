@@ -77,6 +77,13 @@ Set `markdown-summary: table` to add a compact contributor totals table above th
 explicit input also applies to `promote-draft`, which does not load provider config. Immutable tag
 `v0.1.1` includes this input.
 
+Set `markdown-summary: gallery` to show linked 64-pixel GitHub avatars above the same detailed
+sections. Avatar URLs use stable contributor ids, and the gallery does not replace evidence links.
+
+Approved bot and AI-agent contributors are included by default. Set
+`include-automation-contributors: false` to hide them from derived contributor displays while
+keeping their approved ledger records.
+
 When a later workflow step needs a durable machine-readable summary, set `summary-path`. The path
 must be relative to `GITHUB_WORKSPACE`, and the written JSON follows the same raw-evidence and
 secret-exclusion rules as stdout, GitHub outputs, and the step summary.

@@ -1,0 +1,65 @@
+version = 1
+profile = "clarissimi-local"
+
+read_order = [
+  "AGENTS.md",
+  ".mustflow/config/mustflow.toml",
+  ".mustflow/config/commands.toml",
+  ".mustflow/skills/router.toml",
+  ".mustflow/skills/INDEX.md",
+  ".agents/context-map.md",
+]
+optional_read_order = [".mustflow/skills/routes.toml", "REPO_MAP.md"]
+
+[authority]
+primary_instruction = "AGENTS.md"
+repository_map = "REPO_MAP.md"
+skill_index = ".mustflow/skills/INDEX.md"
+skill_router = ".mustflow/skills/router.toml"
+skill_routes = ".mustflow/skills/routes.toml"
+command_contract = ".mustflow/config/commands.toml"
+
+[workspace]
+enabled = false
+roots = []
+max_depth = 4
+max_repositories = 50
+follow_symlinks = false
+stop_at_repository_root = true
+
+[capabilities]
+workflow = true
+command_contract = true
+skills = true
+repo_map = "generated_optional"
+preferences = "optional"
+technology_preferences = "optional"
+context = "disabled"
+local_index = "generated_optional"
+work_items = "disabled"
+services = "disabled"
+adapters = []
+
+[approval]
+required_for = ["git_push"]
+on_required = "stop_and_request_approval"
+
+[refresh]
+enabled = true
+mode = "checkpoint"
+default_method = "hash_check"
+reread_when_hash_changed = true
+reuse_cached_prefix_when_unchanged = true
+required_at = [
+  "task_start",
+  "before_first_edit",
+  "before_command_run",
+  "after_instruction_file_change",
+  "root_change",
+  "after_compaction",
+  "before_final_report",
+]
+turn_threshold = 8
+tool_call_threshold = 16
+output_bytes_threshold = 100000
+state_store = "cache"

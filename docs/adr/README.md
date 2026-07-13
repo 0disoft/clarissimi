@@ -68,6 +68,10 @@ engine.
   size while exposing structured retryability without automatic retries
 - `0041-restrict-provider-endpoint-trust.md`: require public HTTPS provider endpoints by default
   and make trusted private-network access an explicit opt-in
+- `0042-add-opt-in-contributor-gallery.md`: add a stable-id avatar gallery as an opt-in
+  `CONTRIBUTORS.md` summary without replacing evidence-linked details
+- `0043-include-automation-contributors-by-default.md`: include approved bot and AI-agent
+  contributors by default with a display-only opt-out
 
 ## Review Blockers
 

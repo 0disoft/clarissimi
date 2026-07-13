@@ -24,8 +24,9 @@ test("GitHub API client fetches merged pull request evidence surfaces", async ()
           merge_commit_sha: "abc123def4567890",
           user: {
             id: 123456,
-            login: "octocat",
-            html_url: "https://github.com/octocat",
+            login: "dependabot[bot]",
+            html_url: "https://github.com/apps/dependabot",
+            type: "Bot",
           },
           labels: [
             {
@@ -72,7 +73,8 @@ test("GitHub API client fetches merged pull request evidence surfaces", async ()
   const files = await client.listPullRequestFiles(lookup);
   const comments = await client.listPullRequestReviewComments(lookup);
 
-  assert.equal(pullRequest.user.login, "octocat");
+  assert.equal(pullRequest.user.login, "dependabot[bot]");
+  assert.equal(pullRequest.user.kind, "bot");
   assert.equal(files[0].filename, "tests/parser.spec.ts");
   assert.equal(comments[0].path, "tests/parser.spec.ts");
   assert.deepEqual(

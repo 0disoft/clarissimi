@@ -1,0 +1,459 @@
+schema_version = "1"
+
+[defaults]
+missing_behavior = "do_not_guess"
+allow_inferred_commands = false
+require_lifecycle = true
+require_timeout_for_oneshot = true
+deny_unmanaged_long_running = true
+default_cwd = "."
+default_timeout_seconds = 600
+stdin = "closed"
+max_output_bytes = 1048576
+on_timeout = "terminate_process_tree"
+kill_after_seconds = 5
+env_policy = "minimal"
+env_allowlist = []
+
+[resources.build_outputs]
+type = "path"
+paths = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+concurrency = "exclusive_writer"
+description = "Ignored TypeScript workspace build outputs and incremental metadata."
+
+[resources.action_bundle]
+type = "path"
+paths = ["action-dist/index.js"]
+concurrency = "exclusive_writer"
+description = "Tracked GitHub Action runtime bundle generated from the maintained Action source."
+
+[resources.git_state]
+type = "path"
+paths = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+concurrency = "exclusive_writer"
+description = "Clarissimi local Git index, commit objects, refs, and reflogs."
+
+[intents.changes_status]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Show concise Clarissimi worktree state without modifying Git state."
+argv = ["git", "status", "--short", "--branch"]
+cwd = "."
+timeout_seconds = 30
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+required_after = ["before_edit", "before_final_report"]
+
+[intents.changes_diff_summary]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Summarize unstaged Clarissimi changes without modifying Git state."
+argv = ["git", "diff", "--stat"]
+cwd = "."
+timeout_seconds = 30
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+required_after = ["code_change", "documentation_change", "before_final_report"]
+
+[intents.build]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Compile all Clarissimi TypeScript workspace packages."
+argv = ["pnpm", "run", "build"]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+effects = [
+  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["typescript_change", "public_api_change"]
+
+[intents.test_related]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Build the workspace and run the complete Clarissimi test suite used for related feature changes."
+argv = ["pnpm", "run", "test"]
+cwd = "."
+timeout_seconds = 1200
+stdin = "closed"
+success_exit_codes = [0]
+writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+effects = [
+  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["behavior_change", "test_change", "schema_change"]
+
+[intents.test_automation_contributors]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Build and run schema, GitHub, renderer, CLI, and Action tests covering automation contributor behavior."
+argv = [
+  "pnpm",
+  "exec",
+  "node",
+  "--test",
+  "packages/schemas/test/*.test.mjs",
+  "packages/github/test/*.test.mjs",
+  "packages/renderers/test/*.test.mjs",
+  "packages/cli/test/*.test.mjs",
+  "packages/action/test/*.test.mjs",
+]
+cwd = "."
+timeout_seconds = 1200
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+preconditions = [
+  { kind = "artifact_freshness", artifact = "packages/renderers/dist/index.js", sources = [
+    "packages/*/src/**",
+    "packages/*/tsconfig.json",
+    "tsconfig.json",
+  ], satisfy_intent = "build" },
+]
+required_after = ["automation_contributor_change", "automation_contributor_test_change"]
+
+[intents.test_cli_lock_concurrency]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Run the focused concurrent ledger import regression with worker failure diagnostics."
+argv = [
+  "node",
+  "--test",
+  "--test-name-pattern=import-draft serializes concurrent ledger updates",
+  "packages/cli/test/cli.test.mjs",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+preconditions = [
+  { kind = "artifact_freshness", artifact = "packages/cli/dist/index.js", sources = [
+    "packages/cli/src/**",
+    "packages/cli/tsconfig.json",
+    "tsconfig.json",
+  ], satisfy_intent = "build" },
+]
+required_after = ["cli_lock_change", "cli_lock_test_change"]
+
+[intents.lint]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Run Oxlint with warnings denied over maintained source files."
+argv = ["pnpm", "run", "lint"]
+cwd = "."
+timeout_seconds = 300
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+required_after = ["typescript_change", "javascript_change"]
+
+[intents.format]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Check maintained files with Oxfmt without rewriting them."
+argv = ["pnpm", "run", "format"]
+cwd = "."
+timeout_seconds = 300
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+required_after = ["source_change", "documentation_change", "structured_config_change"]
+
+[intents.format_write]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Rewrite maintained Clarissimi source, configuration, and documentation with Oxfmt."
+argv = ["pnpm", "exec", "oxfmt", "--write"]
+cwd = "."
+timeout_seconds = 300
+stdin = "closed"
+success_exit_codes = [0]
+writes = ["**/*.ts", "**/*.js", "**/*.mjs", "**/*.json", "**/*.md", "**/*.yml", "**/*.yaml"]
+effects = [
+  { type = "write", mode = "replace", path = "**/*.ts", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "**/*.mjs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "**/*.json", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "**/*.md", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "**/*.yml", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["before_format_check_when_maintained_files_changed"]
+
+[intents.docs_validate_fast]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Validate required Clarissimi documentation, links, examples, and workflow documents."
+argv = ["pnpm", "run", "docs"]
+cwd = "."
+timeout_seconds = 300
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+required_after = ["documentation_change", "public_contract_change"]
+
+[intents.release_readiness]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Run non-credentialed Clarissimi release contract and drift checks."
+argv = ["pnpm", "run", "release-readiness"]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+required_after = ["release_contract_change", "public_contract_change", "before_final_report"]
+
+[intents.migration_check]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Build schemas and verify persisted assessment compatibility and deterministic migrations."
+argv = ["pnpm", "run", "migration-check"]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+effects = [
+  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["schema_change", "migration_change"]
+
+[intents.smoke]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Build and run local CLI, Action, package, and workflow smoke checks."
+argv = ["pnpm", "run", "smoke"]
+cwd = "."
+timeout_seconds = 1200
+stdin = "closed"
+success_exit_codes = [0]
+writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+effects = [
+  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["cli_change", "action_change", "packaging_change"]
+
+[intents.check]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Run the Clarissimi typecheck and complete package test suite."
+argv = ["pnpm", "run", "check"]
+cwd = "."
+timeout_seconds = 1200
+stdin = "closed"
+success_exit_codes = [0]
+writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+effects = [
+  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["code_change", "test_change", "before_final_report"]
+
+[intents.contract]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Run the Clarissimi typecheck and test contract gate."
+argv = ["pnpm", "run", "contract"]
+cwd = "."
+timeout_seconds = 1200
+stdin = "closed"
+success_exit_codes = [0]
+writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+effects = [
+  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["public_contract_change", "schema_change", "before_final_report"]
+
+[intents.bundle_action]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Build Clarissimi and regenerate the tracked GitHub Action runtime bundle."
+argv = ["pnpm", "run", "bundle:action"]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo", "action-dist/index.js"]
+effects = [
+  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "action-dist/index.js", lock = "action_bundle", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["action_source_change", "action_dependency_change"]
+
+[intents.bundle_action_check]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Build Clarissimi and verify the tracked Action bundle is fresh without rewriting it."
+argv = ["pnpm", "run", "bundle:action:check"]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+effects = [
+  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["action_bundle_generation", "before_final_report"]
+
+[intents.test_release]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Run the local non-credentialed release-readiness gate."
+argv = ["pnpm", "run", "release-readiness"]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+required_after = ["release_sensitive_change", "before_final_report"]
+
+[intents.mustflow_check]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Validate the Clarissimi mustflow command contract and repository workflow installation."
+argv = ["mf", "doctor", "--json"]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+required_after = ["mustflow_config_change", "before_final_report"]
+
+[intents.git_stage_contributor_features]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Stage the reviewed Clarissimi gallery, automation-contributor, documentation, test, bundle, and local command-contract changes."
+argv = ["git", "add", "--", "."]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [{ type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" }]
+network = false
+destructive = false
+required_after = ["contributor_feature_validation_complete"]
+
+[intents.git_commit_contributor_features]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Commit the reviewed contributor gallery and automation recognition feature set."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "feat(contributors): recognize automation by default",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [{ type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" }]
+network = false
+destructive = false
+required_after = ["git_stage_contributor_features"]
+
+[intents.git_amend_contributor_features]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Amend the contributor feature commit with the reviewed local push-approval contract."
+argv = ["git", "commit", "--amend", "--no-edit"]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [{ type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" }]
+network = false
+destructive = false
+required_after = ["git_stage_contributor_features", "push_approval_contract_change"]
+
+[intents.git_push_main]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Push the validated Clarissimi main branch to origin without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_contributor_features", "user_authorized_push"]

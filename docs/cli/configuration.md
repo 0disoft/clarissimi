@@ -40,8 +40,10 @@ The current config object supports:
   credential-free HTTPS with a public-form hostname or address
 - `providerThinking`: optional OpenAI-compatible thinking mode; currently only `disabled`
 - `mode`: `dry-run`, `propose`, or `commit` as schema-recognized output mode values
-- `markdownSummary`: `none` or `table`; `table` adds a compact contributor summary before the
-  existing detailed `CONTRIBUTORS.md` sections
+- `markdownSummary`: `none`, `table`, or `gallery`; `table` adds compact counts and `gallery` adds
+  stable-id GitHub avatars before the existing detailed `CONTRIBUTORS.md` sections
+- `includeAutomationContributors`: optional boolean; defaults to `true` and controls whether
+  approved `bot` and `ai_agent` identities appear in derived contributor displays
 
 TypeScript config files must be named `clarissimi.config.ts` and must export a default config
 object. They are loaded through the Node.js 24 runtime rather than a third-party loader dependency.
@@ -51,8 +53,10 @@ object. They are loaded through the Node.js 24 runtime rather than a third-party
 implemented write paths are owned by the GitHub Action `propose` and `stage-draft` modes. Direct
 `commit` writes remain reserved for a future explicit write-mode decision.
 
-`recognize`, `import-draft`, and `rebuild` accept `--markdown-summary none|table` as an explicit
+`recognize`, `import-draft`, and `rebuild` accept `--markdown-summary none|table|gallery` as an explicit
 override. The default `none` value preserves the detailed-only Markdown layout.
+They also accept `--exclude-automation-contributors` as a display-only opt-out. The flag never
+removes approved records from `.clarissimi/contributions.jsonl`.
 
 ## Expected Configuration Areas
 

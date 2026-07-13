@@ -508,6 +508,7 @@ function resolveGitHubEventPayload(value) {
     };
   }
   const pullRequest = value.pull_request;
+  const contributorKind = isRecord(pullRequest.user) ? parseActorKind(pullRequest.user.type) : void 0;
   const mergedAt = typeof pullRequest.merged_at === "string" ? pullRequest.merged_at : void 0;
   if (mergedAt === void 0) {
     return {
@@ -531,7 +532,8 @@ function resolveGitHubEventPayload(value) {
       mergedAt,
       user: {
         id: pullRequest.user.id,
-        login: pullRequest.user.login
+        login: pullRequest.user.login,
+        ...contributorKind === void 0 ? {} : { kind: contributorKind }
       },
       labels: parseLabels(pullRequest.labels)
     }
@@ -544,6 +546,15 @@ function resolveGitHubEventPayload(value) {
     kind: "merged_pull_request",
     fixture
   };
+}
+function parseActorKind(value) {
+  if (value === "Bot") {
+    return "bot";
+  }
+  if (value === "User" || value === "Organization") {
+    return "human";
+  }
+  return void 0;
 }
 function parseLabels(value) {
   if (!Array.isArray(value)) {
@@ -1079,7 +1090,8 @@ var CONFIG_PROVIDERS = ["fake", "openai-compatible"];
 var CONFIG_PROVIDER_THINKING_VALUES = ["disabled"];
 var CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES = ["public", "private-network"];
 var CONFIG_MODES = ["dry-run", "propose", "commit"];
-var CONFIG_MARKDOWN_SUMMARIES = ["none", "table"];
+var CONFIG_MARKDOWN_SUMMARIES = ["none", "table", "gallery"];
+var CONTRIBUTOR_KINDS = ["human", "bot", "ai_agent"];
 var CONTRIBUTION_TYPES = [
   "bug_fix",
   "bug_report",
@@ -1199,6 +1211,9 @@ function isConfigMode(value) {
 function isConfigMarkdownSummary(value) {
   return CONFIG_MARKDOWN_SUMMARIES.includes(value);
 }
+function isContributorKind(value) {
+  return CONTRIBUTOR_KINDS.includes(value);
+}
 function isImpactLevel(value) {
   return IMPACT_LEVELS.includes(value);
 }
@@ -1262,6 +1277,7 @@ function validateClarissimiConfig(value) {
   const providerThinking = expectOptionalEnum(value.providerThinking, isConfigProviderThinking, "$.providerThinking", issues);
   const mode = expectOptionalEnum(value.mode, isConfigMode, "$.mode", issues);
   const markdownSummary = expectOptionalEnum(value.markdownSummary, isConfigMarkdownSummary, "$.markdownSummary", issues);
+  const includeAutomationContributors = expectOptionalBoolean(value.includeAutomationContributors, "$.includeAutomationContributors", issues);
   if (issues.length > 0) {
     return invalid(issues);
   }
@@ -1287,6 +1303,9 @@ function validateClarissimiConfig(value) {
   if (markdownSummary !== void 0) {
     config.markdownSummary = markdownSummary;
   }
+  if (includeAutomationContributors !== void 0) {
+    config.includeAutomationContributors = includeAutomationContributors;
+  }
   return {
     ok: true,
     value: config,
@@ -1302,6 +1321,9 @@ function validateContributor(value, path, issues) {
   expectNonEmptyString(value.id, `${path}.id`, issues);
   expectNonEmptyString(value.login, `${path}.login`, issues);
   expectUrl(value.profileUrl, `${path}.profileUrl`, issues);
+  if (value.kind !== void 0) {
+    expectEnum(value.kind, isContributorKind, `${path}.kind`, issues);
+  }
 }
 function validateEvidenceRefs(value, path, issues) {
   if (!Array.isArray(value)) {
@@ -1431,6 +1453,16 @@ function expectOptionalEnum(value, guard, path, issues) {
   }
   if (typeof value !== "string" || !guard(value)) {
     pushIssue(issues, path, "invalid_enum", "Value is not in the allowed set.");
+    return void 0;
+  }
+  return value;
+}
+function expectOptionalBoolean(value, path, issues) {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (typeof value !== "boolean") {
+    pushIssue(issues, path, "expected_boolean", "Value must be a boolean.");
     return void 0;
   }
   return value;
@@ -1587,7 +1619,8 @@ function sanitizePublicContributionRecord(assessment) {
       platform: assessment.contributor.platform,
       id: assessment.contributor.id,
       login: assessment.contributor.login,
-      profileUrl: assessment.contributor.profileUrl
+      profileUrl: assessment.contributor.profileUrl,
+      ...assessment.contributor.kind === void 0 ? {} : { kind: assessment.contributor.kind }
     },
     contributionType: assessment.contributionType,
     affectedArea: assessment.affectedArea,
@@ -1735,8 +1768,8 @@ function sanitizePathPart(value) {
 }
 
 // packages/renderers/dist/contributors.js
-function deriveContributorProfiles(values) {
-  const records = toPublicContributionRecords(values);
+function deriveContributorProfiles(values, options = {}) {
+  const records = filterDisplayedRecords(toPublicContributionRecords(values), options);
   const grouped = /* @__PURE__ */ new Map();
   records.forEach((record) => {
     const key = contributorKey(record);
@@ -1749,14 +1782,23 @@ function deriveContributorProfiles(values) {
   });
   return Array.from(grouped.values()).map(toContributorProfile).sort(compareContributorProfiles);
 }
-function buildContributorsJsonDocument(values) {
+function buildContributorsJsonDocument(values, options = {}) {
   return {
     schemaVersion: CONTRIBUTORS_JSON_SCHEMA_VERSION,
-    contributors: deriveContributorProfiles(values)
+    contributors: deriveContributorProfiles(values, options)
   };
 }
-function renderContributorsJson(values) {
-  return renderPrettyJson(buildContributorsJsonDocument(values));
+function renderContributorsJson(values, options = {}) {
+  return renderPrettyJson(buildContributorsJsonDocument(values, options));
+}
+function filterDisplayedRecords(records, options = {}) {
+  if (options.includeAutomationContributors !== false) {
+    return records;
+  }
+  return records.filter((record) => !isAutomationContributor(record.contributor.kind));
+}
+function isAutomationContributor(kind) {
+  return kind === "bot" || kind === "ai_agent";
 }
 function toContributorProfile(records) {
   const latest = records.at(-1);
@@ -1797,9 +1839,11 @@ function uniqueSorted(values) {
 }
 
 // packages/renderers/dist/markdown.js
+var GALLERY_AVATAR_SIZE = 64;
+var GALLERY_ROW_SIZE = 12;
 function renderContributorsMarkdown(values, options = {}) {
   const title = normalizeTitle(options.title);
-  const profiles = deriveContributorProfiles(values);
+  const profiles = deriveContributorProfiles(values, options);
   const lines = [
     `# ${title}`,
     "",
@@ -1813,10 +1857,27 @@ function renderContributorsMarkdown(values, options = {}) {
   if (options.summary === "table") {
     appendContributorSummaryTable(lines, profiles);
   }
+  if (options.summary === "gallery") {
+    appendContributorGallery(lines, profiles);
+  }
   profiles.forEach((profile) => {
     appendContributorProfile(lines, profile);
   });
   return lines.join("\n");
+}
+function appendContributorGallery(lines, profiles) {
+  lines.push("## Contributor gallery", "");
+  for (let offset = 0; offset < profiles.length; offset += GALLERY_ROW_SIZE) {
+    lines.push(profiles.slice(offset, offset + GALLERY_ROW_SIZE).map(renderGalleryAvatar).join(" "));
+  }
+  lines.push("");
+}
+function renderGalleryAvatar(profile) {
+  const contributor = profile.contributor;
+  const profileUrl = escapeHtmlAttribute(contributor.profileUrl);
+  const avatarUrl = `https://avatars.githubusercontent.com/u/${encodeURIComponent(contributor.id)}?s=${GALLERY_AVATAR_SIZE}&v=4`;
+  const alt = escapeHtmlAttribute(`@${contributor.login} on GitHub`);
+  return `<a href="${profileUrl}"><img src="${avatarUrl}" width="${GALLERY_AVATAR_SIZE}" height="${GALLERY_AVATAR_SIZE}" alt="${alt}"></a>`;
 }
 function appendContributorSummaryTable(lines, profiles) {
   lines.push("| Contributor | Total | Types |", "| --- | ---: | --- |");
@@ -1827,11 +1888,21 @@ function appendContributorSummaryTable(lines, profiles) {
   lines.push("");
 }
 function appendContributorProfile(lines, profile) {
-  lines.push(`## ${escapeMarkdown(profile.contributor.login)}`, "", renderContributionSummary(profile), "");
+  const kindLabel = renderContributorKindLabel(profile.contributor.kind);
+  lines.push(`## ${escapeMarkdown(profile.contributor.login)}${kindLabel}`, "", renderContributionSummary(profile), "");
   profile.recognitions.forEach((recognition) => {
     lines.push(`- ${renderRecognitionLine(recognition)}`);
   });
   lines.push("");
+}
+function renderContributorKindLabel(kind) {
+  if (kind === "bot") {
+    return " \xB7 Bot";
+  }
+  if (kind === "ai_agent") {
+    return " \xB7 AI agent";
+  }
+  return "";
 }
 function renderContributionSummary(profile) {
   const contributionLabel = profile.contributionCount === 1 ? "1 recognized contribution" : `${profile.contributionCount} recognized contributions`;
@@ -1869,18 +1940,21 @@ function normalizeTitle(value) {
 function escapeMarkdown(value) {
   return value.replace(/([\\`*_{}[\]()#+.!|-])/g, "\\$1");
 }
+function escapeHtmlAttribute(value) {
+  return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("'", "&#39;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
 
 // packages/renderers/dist/static-data.js
-function buildStaticContributionsDocument(values) {
-  const records = toPublicContributionRecords(values);
+function buildStaticContributionsDocument(values, options = {}) {
+  const records = filterDisplayedRecords(toPublicContributionRecords(values), options);
   return {
     schemaVersion: STATIC_DATA_SCHEMA_VERSION,
     contributions: records.map(toStaticContributionRecord),
     contributors: deriveContributorProfiles(records)
   };
 }
-function renderStaticContributionsJson(values) {
-  return renderPrettyJson(buildStaticContributionsDocument(values));
+function renderStaticContributionsJson(values, options = {}) {
+  return renderPrettyJson(buildStaticContributionsDocument(values, options));
 }
 function toStaticContributionRecord(record) {
   return {
@@ -1907,9 +1981,9 @@ var RENDERED_OUTPUT_PATHS = {
 function renderRecognitionOutputs(values, markdownOptions = {}) {
   return {
     contributionsJsonl: renderContributionsJsonl(values),
-    contributorsJson: renderContributorsJson(values),
+    contributorsJson: renderContributorsJson(values, markdownOptions),
     contributorsMarkdown: renderContributorsMarkdown(values, markdownOptions),
-    staticDataJson: renderStaticContributionsJson(values)
+    staticDataJson: renderStaticContributionsJson(values, markdownOptions)
   };
 }
 
@@ -1926,7 +2000,10 @@ async function stageProposalRecognitionOutputs(input) {
   const assessments = toPublishableAssessments(input.assessments);
   const source = requireSingleSource(assessments);
   const records = assessments.reduce((currentRecords, assessment) => appendPublicContributionRecord(currentRecords, assessment), input.existingRecords ?? []);
-  const outputs = renderRecognitionOutputs(records, input.markdownSummary === void 0 ? {} : { summary: input.markdownSummary });
+  const outputs = renderRecognitionOutputs(records, {
+    ...input.markdownSummary === void 0 ? {} : { summary: input.markdownSummary },
+    ...input.includeAutomationContributors === void 0 ? {} : { includeAutomationContributors: input.includeAutomationContributors }
+  });
   const files = await writeRenderedOutputs(input.outputDir, outputs);
   return {
     outputDir: input.outputDir,
@@ -2165,6 +2242,7 @@ function parsePullRequest2(value) {
     login: expectString2(value.user.login, "user.login")
   };
   assignOptional4(user, "htmlUrl", expectOptionalNullableString(value.user.html_url, "user.html_url"));
+  assignOptional4(user, "kind", parseGitHubActorKind(value.user.type, "user.type"));
   const pullRequest = {
     number: expectNumber2(value.number, "number"),
     title: expectString2(value.title, "title"),
@@ -2203,9 +2281,22 @@ function parseReviewComment(value) {
       login: expectString2(value.user.login, "user.login")
     };
     assignOptional4(user, "htmlUrl", expectOptionalNullableString(value.user.html_url, "user.html_url"));
+    assignOptional4(user, "kind", parseGitHubActorKind(value.user.type, "user.type"));
     assignOptional4(comment, "user", user);
   }
   return comment;
+}
+function parseGitHubActorKind(value, path) {
+  if (value === void 0 || value === null) {
+    return void 0;
+  }
+  if (value === "Bot") {
+    return "bot";
+  }
+  if (value === "User" || value === "Organization") {
+    return "human";
+  }
+  throw new GitHubApiClientError("unexpected_response", `${path} must be Bot, User, or Organization.`);
 }
 function parseLabels2(value) {
   if (value === void 0) {
@@ -2402,6 +2493,7 @@ function parseGitHubMergedPullRequestFixture(value) {
   assignOptional5(fixture.pullRequest, "htmlUrl", expectOptionalString(pullRequest.htmlUrl, "$.pullRequest.htmlUrl"));
   assignOptional5(fixture.pullRequest, "mergedAt", expectOptionalString(pullRequest.mergedAt, "$.pullRequest.mergedAt"));
   assignOptional5(fixture.pullRequest.user, "htmlUrl", expectOptionalString(pullRequest.user.htmlUrl, "$.pullRequest.user.htmlUrl"));
+  assignOptional5(fixture.pullRequest.user, "kind", expectOptionalContributorKind(pullRequest.user.kind, "$.pullRequest.user.kind"));
   assignOptional5(fixture.pullRequest, "labels", parseOptionalLabels(pullRequest.labels, "$.pullRequest.labels"));
   assignOptional5(fixture.pullRequest, "changedFiles", parseOptionalChangedFiles(pullRequest.changedFiles, "$.pullRequest.changedFiles"));
   assignOptional5(fixture.pullRequest, "mergeCommitSha", expectOptionalString(pullRequest.mergeCommitSha, "$.pullRequest.mergeCommitSha"));
@@ -2442,12 +2534,23 @@ function collectContributor(user) {
   const id = normalizeRequiredString(String(user.id), "pullRequest.user.id");
   const login = normalizeRequiredString(user.login, "pullRequest.user.login");
   const profileUrl = normalizeOptionalHttpsUrl(user.htmlUrl, "pullRequest.user.htmlUrl") ?? `https://github.com/${encodeURIComponent(login)}`;
-  return {
+  const contributor = {
     platform: "github",
     id,
     login,
     profileUrl
   };
+  assignOptional5(contributor, "kind", user.kind);
+  return contributor;
+}
+function expectOptionalContributorKind(value, path) {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (value !== "human" && value !== "bot" && value !== "ai_agent") {
+    throw new GitHubEvidenceCollectionError(path, `${path} must be human, bot, or ai_agent.`);
+  }
+  return value;
 }
 function buildPullRequestItem(pullRequestNumber, title, body, url) {
   const item = {
@@ -2745,6 +2848,7 @@ function toMergedPullRequestFixture(repository, pullRequest, files) {
   };
   assignOptional6(fixture.pullRequest, "body", normalizeOptionalString2(pullRequest.body));
   assignOptional6(fixture.pullRequest.user, "htmlUrl", normalizeOptionalString2(pullRequest.user.htmlUrl));
+  assignOptional6(fixture.pullRequest.user, "kind", pullRequest.user.kind);
   assignOptional6(fixture.pullRequest, "mergeCommitSha", normalizeOptionalString2(pullRequest.mergeCommitSha));
   return fixture;
 }
@@ -3441,7 +3545,8 @@ async function runActionPropose(input) {
     assessments: [prepared.assessment],
     existingRecords: await readExistingRecognitionRecords(input.repositoryDir),
     redactionMatchCount: prepared.redactionMatchCount,
-    ...input.markdownSummary === void 0 ? {} : { markdownSummary: input.markdownSummary }
+    ...input.markdownSummary === void 0 ? {} : { markdownSummary: input.markdownSummary },
+    ...input.includeAutomationContributors === void 0 ? {} : { includeAutomationContributors: input.includeAutomationContributors }
   });
   const branch = await writeProposalBranch({
     repositoryDir: input.repositoryDir,
@@ -3491,7 +3596,8 @@ async function runActionCommit(input) {
     assessments: [prepared.assessment],
     existingRecords: await readExistingRecognitionRecords(input.repositoryDir),
     redactionMatchCount: prepared.redactionMatchCount,
-    ...input.markdownSummary === void 0 ? {} : { markdownSummary: input.markdownSummary }
+    ...input.markdownSummary === void 0 ? {} : { markdownSummary: input.markdownSummary },
+    ...input.includeAutomationContributors === void 0 ? {} : { includeAutomationContributors: input.includeAutomationContributors }
   });
   const commitInput = {
     repositoryDir: input.repositoryDir,
@@ -3582,7 +3688,8 @@ async function runActionPromoteDraft(input) {
     assessments: [assessment],
     existingRecords: await readExistingRecognitionRecords(input.repositoryDir),
     redactionMatchCount: 0,
-    ...input.markdownSummary === void 0 ? {} : { markdownSummary: input.markdownSummary }
+    ...input.markdownSummary === void 0 ? {} : { markdownSummary: input.markdownSummary },
+    ...input.includeAutomationContributors === void 0 ? {} : { includeAutomationContributors: input.includeAutomationContributors }
   });
   const branch = await writeProposalBranch({
     repositoryDir: input.repositoryDir,
@@ -3649,7 +3756,8 @@ async function runActionFromEnvironment(env, io, runtime = {}) {
     const mode = explicitMode ?? normalizeActionMode(config.mode ?? "propose");
     const input = {
       mode,
-      markdownSummary: resolveActionMarkdownSummary(env, config)
+      markdownSummary: resolveActionMarkdownSummary(env, config),
+      includeAutomationContributors: resolveActionIncludeAutomationContributors(env, config)
     };
     if (mode === "promote-draft") {
       if (explicitEventPath !== void 0 || githubFixturePath !== void 0) {
@@ -3792,6 +3900,7 @@ function buildActionWriteInput(input, env, runtime, mode) {
     assignOptional7(promoteDraftInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
     assignOptional7(promoteDraftInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
     assignOptional7(promoteDraftInput, "markdownSummary", input.markdownSummary);
+    assignOptional7(promoteDraftInput, "includeAutomationContributors", input.includeAutomationContributors);
     return promoteDraftInput;
   }
   const liveGitHubClientOptions = buildLiveGitHubClientOptions(clientOptions, runtime);
@@ -4056,9 +4165,22 @@ function parseProviderEndpointTrust(value) {
 function resolveActionMarkdownSummary(env, config) {
   const value = readEnvInput(env.INPUT_MARKDOWN_SUMMARY) ?? config.markdownSummary ?? "none";
   if (!isConfigMarkdownSummary(value)) {
-    throw new ActionUsageError("INPUT_MARKDOWN_SUMMARY supports only none or table.");
+    throw new ActionUsageError("INPUT_MARKDOWN_SUMMARY supports only none, table, or gallery.");
   }
   return value;
+}
+function resolveActionIncludeAutomationContributors(env, config) {
+  const value = readEnvInput(env.INPUT_INCLUDE_AUTOMATION_CONTRIBUTORS);
+  if (value === void 0) {
+    return config.includeAutomationContributors ?? true;
+  }
+  if (value === "true") {
+    return true;
+  }
+  if (value === "false") {
+    return false;
+  }
+  throw new ActionUsageError("INPUT_INCLUDE_AUTOMATION_CONTRIBUTORS supports only true or false.");
 }
 async function writeGitHubOutputs(outputPath, summary, summaryJsonPath) {
   if (outputPath === void 0 || outputPath.trim().length === 0) {

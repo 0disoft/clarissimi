@@ -24,8 +24,8 @@ export function renderRecognitionOutputs(
 ): RenderedRecognitionOutputs {
   return {
     contributionsJsonl: renderContributionsJsonl(values),
-    contributorsJson: renderContributorsJson(values),
+    contributorsJson: renderContributorsJson(values, markdownOptions),
     contributorsMarkdown: renderContributorsMarkdown(values, markdownOptions),
-    staticDataJson: renderStaticContributionsJson(values),
+    staticDataJson: renderStaticContributionsJson(values, markdownOptions),
   };
 }

@@ -121,6 +121,13 @@ Set `markdownSummary: "table"` in `clarissimi.config.ts` or `.clarissimi/config.
 `--markdown-summary table`, to add a compact contributor, total, and contribution-type table above
 the existing detailed `CONTRIBUTORS.md` sections. The default `none` layout keeps existing output
 unchanged.
+Use `markdownSummary: "gallery"` or `--markdown-summary gallery` instead to add linked 64-pixel
+GitHub avatars from stable contributor ids above the same evidence-linked details.
+
+Approved bot and AI-agent contribution records are included by default and labeled in the detailed
+output. Set `includeAutomationContributors: false` in config, pass
+`--exclude-automation-contributors`, or set Action input `include-automation-contributors: false` to
+hide them from derived contributor displays without deleting them from the ledger.
 
 See `docs/cli/agent-assisted-drafts.md` for a complete assessment template, PR source fields, and
 the rule that impact levels and confidence are not public contributor scores.
@@ -204,9 +211,10 @@ reasoning in message content can opt into `provider-thinking: disabled` or `--pr
 disabled`. The Action can also load a JSON config file or `clarissimi.config.ts` when `config-path`
 is explicitly provided; it does not automatically discover config files. Set `summary-path` when a
 workflow should keep the sanitized JSON run summary as an uploadable artifact. Set
-`markdown-summary: table` to add the compact table to proposed `CONTRIBUTORS.md` output; this input
-also works in `promote-draft`, which otherwise skips config and provider loading. This input is
-available in immutable tag `v0.1.1`.
+`markdown-summary: table` to add the compact table or `markdown-summary: gallery` to add stable-id
+GitHub avatars to proposed `CONTRIBUTORS.md` output; this input also works in `promote-draft`, which
+otherwise skips config and provider loading. The `table` input is available in immutable tag
+`v0.1.1`; `gallery` requires a later release.
 
 Release maintainers who want automated provider mode can run `pnpm run live-provider-smoke` with
 `CLARISSIMI_PROVIDER_TOKEN` and `CLARISSIMI_PROVIDER_MODEL` to perform an explicit credentialed

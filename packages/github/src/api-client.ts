@@ -190,6 +190,7 @@ function parsePullRequest(value: unknown): LiveGitHubPullRequest {
     "htmlUrl",
     expectOptionalNullableString(value.user.html_url, "user.html_url"),
   );
+  assignOptional(user, "kind", parseGitHubActorKind(value.user.type, "user.type"));
 
   const pullRequest: LiveGitHubPullRequest = {
     number: expectNumber(value.number, "number"),
@@ -249,10 +250,30 @@ function parseReviewComment(value: unknown): LiveGitHubReviewComment {
       "htmlUrl",
       expectOptionalNullableString(value.user.html_url, "user.html_url"),
     );
+    assignOptional(user, "kind", parseGitHubActorKind(value.user.type, "user.type"));
     assignOptional(comment, "user", user);
   }
 
   return comment;
+}
+
+function parseGitHubActorKind(value: unknown, path: string): LiveGitHubActor["kind"] {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (value === "Bot") {
+    return "bot";
+  }
+
+  if (value === "User" || value === "Organization") {
+    return "human";
+  }
+
+  throw new GitHubApiClientError(
+    "unexpected_response",
+    `${path} must be Bot, User, or Organization.`,
+  );
 }
 
 function parseLabels(value: unknown): readonly { readonly name: string }[] {

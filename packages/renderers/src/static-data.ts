@@ -4,12 +4,14 @@ import {
   type StaticContributionsDocument,
 } from "./types.js";
 import { deriveContributorProfiles } from "./contributors.js";
+import { filterDisplayedRecords, type ContributorDisplayOptions } from "./contributors.js";
 import { renderPrettyJson, toPublicContributionRecords } from "./ledger.js";
 
 export function buildStaticContributionsDocument(
   values: readonly unknown[],
+  options: ContributorDisplayOptions = {},
 ): StaticContributionsDocument {
-  const records = toPublicContributionRecords(values);
+  const records = filterDisplayedRecords(toPublicContributionRecords(values), options);
 
   return {
     schemaVersion: STATIC_DATA_SCHEMA_VERSION,
@@ -18,8 +20,11 @@ export function buildStaticContributionsDocument(
   };
 }
 
-export function renderStaticContributionsJson(values: readonly unknown[]): string {
-  return renderPrettyJson(buildStaticContributionsDocument(values));
+export function renderStaticContributionsJson(
+  values: readonly unknown[],
+  options: ContributorDisplayOptions = {},
+): string {
+  return renderPrettyJson(buildStaticContributionsDocument(values, options));
 }
 
 function toStaticContributionRecord(

@@ -124,6 +124,26 @@ test("stages the optional contributor summary table", async () => {
   });
 });
 
+test("stages the optional contributor avatar gallery", async () => {
+  await withTempDir(async (dir) => {
+    const result = await stageProposalRecognitionOutputs({
+      outputDir: dir,
+      assessments: [assessment()],
+      redactionMatchCount: 0,
+      markdownSummary: "gallery",
+    });
+    const markdown = await readFile(join(dir, RENDERED_OUTPUT_PATHS.contributorsMarkdown), "utf8");
+
+    assert.equal(result.manifest.mode, "propose");
+    assert.equal(markdown.includes("## Contributor gallery"), true);
+    assert.equal(
+      markdown.includes("https://avatars.githubusercontent.com/u/123456?s=64&v=4"),
+      true,
+    );
+    assert.equal(markdown.includes("## octocat"), true);
+  });
+});
+
 test("rejects draft assessments before staging public files", async () => {
   await withTempDir(async (dir) => {
     await assert.rejects(

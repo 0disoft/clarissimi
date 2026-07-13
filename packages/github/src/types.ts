@@ -1,5 +1,5 @@
 import type { EvidenceBundleInput } from "@clarissimi/core";
-import type { ContributorIdentity } from "@clarissimi/schemas";
+import type { ContributorIdentity, ContributorKind } from "@clarissimi/schemas";
 
 export interface GitHubRepositoryFixture {
   readonly fullName: string;
@@ -9,6 +9,7 @@ export interface GitHubActorFixture {
   readonly id: number | string;
   readonly login: string;
   readonly htmlUrl?: string;
+  readonly kind?: ContributorKind;
 }
 
 export interface GitHubLabelFixture {

@@ -49,8 +49,10 @@ The root `action.yml` exposes the same surface as a composite action:
 - `event-path`: optional event payload path override
 - `github-fixture`: optional GitHub merged pull request fixture path
 - `config-path`: optional explicit path to a JSON Clarissimi config file or `clarissimi.config.ts`
-- `markdown-summary`: optional `none` or `table` layout for generated `CONTRIBUTORS.md`; defaults to
-  `none`
+- `markdown-summary`: optional `none`, `table`, or `gallery` layout for generated
+  `CONTRIBUTORS.md`; defaults to `none`
+- `include-automation-contributors`: optional `true` or `false`; defaults through config to `true`
+  and controls derived contributor displays without changing the ledger
 - `base-branch`: defaults to `main`
 - `remote-name`: defaults to `origin`
 - `staging-dir`: optional temporary staging directory
@@ -93,10 +95,13 @@ and validated through `packages/schemas`. Action inputs and workflow environment
 precedence over config values. Omitted provider inputs fall back to config values, then the runner's
 fake provider default. Unsupported `INPUT_MODE` values fail before config-file loading.
 
-`markdown-summary` controls presentation only. `table` adds a deterministic contributor, total, and
-type-count summary before the existing evidence-linked detailed sections. An explicit Action input
-overrides config `markdownSummary`; omitted values fall back to config, then `none`. Promote-draft
-does not load config, but it accepts the explicit presentation input.
+`markdown-summary` controls presentation only. `table` adds deterministic counts and `gallery` adds
+stable-id GitHub avatar links before the existing evidence-linked detailed sections. An explicit
+Action input overrides config `markdownSummary`; omitted values fall back to config, then `none`.
+`include-automation-contributors` overrides config `includeAutomationContributors`; omitted values
+fall back to config, then `true`. `false` preserves approved ledger records while excluding bot and
+AI-agent identities from contributor Markdown, contributor JSON, and static display JSON.
+Promote-draft does not load config, but it accepts the explicit presentation input.
 
 `summary-path` is explicit and optional. When set, it must be a relative path that stays inside
 `GITHUB_WORKSPACE`. The Action writes the same sanitized JSON summary that it prints to stdout and

@@ -7,6 +7,7 @@ import {
   CONFIG_MODES,
   CONFIG_MARKDOWN_SUMMARIES,
   CONFIG_PROVIDERS,
+  CONTRIBUTOR_KINDS,
   hasPublicRankingLanguage,
   validateClarissimiConfig,
   validateContributionAssessment,
@@ -320,12 +321,14 @@ test("accepts supported Clarissimi config values", () => {
     providerThinking: "disabled",
     mode: "dry-run",
     markdownSummary: "table",
+    includeAutomationContributors: false,
   });
 
   assert.equal(result.ok, true);
   assert.equal(result.value.provider, "openai-compatible");
   assert.equal(result.value.providerEndpointTrust, "private-network");
   assert.equal(result.value.markdownSummary, "table");
+  assert.equal(result.value.includeAutomationContributors, false);
 });
 
 test("rejects unsupported provider endpoint config values", () => {
@@ -353,6 +356,7 @@ test("rejects unsupported Clarissimi config values", () => {
     provider: "leaderboard-provider",
     providerEndpointTrust: "unrestricted",
     markdownSummary: "leaderboard",
+    includeAutomationContributors: "sometimes",
   });
 
   assert.equal(result.ok, false);
@@ -368,11 +372,47 @@ test("rejects unsupported Clarissimi config values", () => {
     result.issues.some((issue) => issue.path === "$.markdownSummary"),
     true,
   );
+  assert.equal(
+    result.issues.some((issue) => issue.path === "$.includeAutomationContributors"),
+    true,
+  );
 });
 
 test("exports Clarissimi config vocabulary", () => {
   assert.equal(CONFIG_PROVIDERS.includes("openai-compatible"), true);
   assert.equal(CONFIG_PROVIDERS.includes("ranking-model"), false);
   assert.equal(CONFIG_MODES.includes("propose"), true);
-  assert.deepEqual(CONFIG_MARKDOWN_SUMMARIES, ["none", "table"]);
+  assert.deepEqual(CONFIG_MARKDOWN_SUMMARIES, ["none", "table", "gallery"]);
+  assert.deepEqual(CONTRIBUTOR_KINDS, ["human", "bot", "ai_agent"]);
+});
+
+test("accepts explicit human, bot, and AI-agent contributor kinds", () => {
+  for (const kind of CONTRIBUTOR_KINDS) {
+    const result = validateContributionAssessment({
+      ...validAssessment,
+      contributor: {
+        ...validAssessment.contributor,
+        kind,
+      },
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.value.contributor.kind, kind);
+  }
+});
+
+test("rejects unsupported contributor kinds", () => {
+  const result = validateContributionAssessment({
+    ...validAssessment,
+    contributor: {
+      ...validAssessment.contributor,
+      kind: "service-account",
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(
+    result.issues.some((issue) => issue.path === "$.contributor.kind"),
+    true,
+  );
 });

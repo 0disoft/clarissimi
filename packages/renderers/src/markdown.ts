@@ -2,8 +2,12 @@ import type { ConfigMarkdownSummary } from "@clarissimi/schemas";
 
 import type { ContributorRecognitionProfile, PublicRecognitionSummary } from "./types.js";
 import { deriveContributorProfiles } from "./contributors.js";
+import type { ContributorDisplayOptions } from "./contributors.js";
 
-export interface ContributorsMarkdownOptions {
+const GALLERY_AVATAR_SIZE = 64;
+const GALLERY_ROW_SIZE = 12;
+
+export interface ContributorsMarkdownOptions extends ContributorDisplayOptions {
   readonly title?: string;
   readonly summary?: ConfigMarkdownSummary;
 }
@@ -13,7 +17,7 @@ export function renderContributorsMarkdown(
   options: ContributorsMarkdownOptions = {},
 ): string {
   const title = normalizeTitle(options.title);
-  const profiles = deriveContributorProfiles(values);
+  const profiles = deriveContributorProfiles(values, options);
   const lines: string[] = [
     `# ${title}`,
     "",
@@ -30,11 +34,41 @@ export function renderContributorsMarkdown(
     appendContributorSummaryTable(lines, profiles);
   }
 
+  if (options.summary === "gallery") {
+    appendContributorGallery(lines, profiles);
+  }
+
   profiles.forEach((profile) => {
     appendContributorProfile(lines, profile);
   });
 
   return lines.join("\n");
+}
+
+function appendContributorGallery(
+  lines: string[],
+  profiles: readonly ContributorRecognitionProfile[],
+): void {
+  lines.push("## Contributor gallery", "");
+
+  for (let offset = 0; offset < profiles.length; offset += GALLERY_ROW_SIZE) {
+    lines.push(
+      profiles
+        .slice(offset, offset + GALLERY_ROW_SIZE)
+        .map(renderGalleryAvatar)
+        .join(" "),
+    );
+  }
+
+  lines.push("");
+}
+
+function renderGalleryAvatar(profile: ContributorRecognitionProfile): string {
+  const contributor = profile.contributor;
+  const profileUrl = escapeHtmlAttribute(contributor.profileUrl);
+  const avatarUrl = `https://avatars.githubusercontent.com/u/${encodeURIComponent(contributor.id)}?s=${GALLERY_AVATAR_SIZE}&v=4`;
+  const alt = escapeHtmlAttribute(`@${contributor.login} on GitHub`);
+  return `<a href="${profileUrl}"><img src="${avatarUrl}" width="${GALLERY_AVATAR_SIZE}" height="${GALLERY_AVATAR_SIZE}" alt="${alt}"></a>`;
 }
 
 function appendContributorSummaryTable(
@@ -54,8 +88,9 @@ function appendContributorSummaryTable(
 }
 
 function appendContributorProfile(lines: string[], profile: ContributorRecognitionProfile): void {
+  const kindLabel = renderContributorKindLabel(profile.contributor.kind);
   lines.push(
-    `## ${escapeMarkdown(profile.contributor.login)}`,
+    `## ${escapeMarkdown(profile.contributor.login)}${kindLabel}`,
     "",
     renderContributionSummary(profile),
     "",
@@ -66,6 +101,20 @@ function appendContributorProfile(lines: string[], profile: ContributorRecogniti
   });
 
   lines.push("");
+}
+
+function renderContributorKindLabel(
+  kind: ContributorRecognitionProfile["contributor"]["kind"],
+): string {
+  if (kind === "bot") {
+    return " · Bot";
+  }
+
+  if (kind === "ai_agent") {
+    return " · AI agent";
+  }
+
+  return "";
 }
 
 function renderContributionSummary(profile: ContributorRecognitionProfile): string {
@@ -122,4 +171,13 @@ function normalizeTitle(value: string | undefined): string {
 
 function escapeMarkdown(value: string): string {
   return value.replace(/([\\`*_{}[\]()#+.!|-])/g, "\\$1");
+}
+
+function escapeHtmlAttribute(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }

@@ -25,6 +25,7 @@ export interface ProposalOutputStagingInput {
   readonly existingRecords?: readonly unknown[];
   readonly redactionMatchCount: number;
   readonly markdownSummary?: ConfigMarkdownSummary;
+  readonly includeAutomationContributors?: boolean;
 }
 
 export interface ProposalOutputStagingResult {
@@ -71,10 +72,12 @@ export async function stageProposalRecognitionOutputs(
     (currentRecords, assessment) => appendPublicContributionRecord(currentRecords, assessment),
     input.existingRecords ?? [],
   );
-  const outputs = renderRecognitionOutputs(
-    records,
-    input.markdownSummary === undefined ? {} : { summary: input.markdownSummary },
-  );
+  const outputs = renderRecognitionOutputs(records, {
+    ...(input.markdownSummary === undefined ? {} : { summary: input.markdownSummary }),
+    ...(input.includeAutomationContributors === undefined
+      ? {}
+      : { includeAutomationContributors: input.includeAutomationContributors }),
+  });
   const files = await writeRenderedOutputs(input.outputDir, outputs);
 
   return {

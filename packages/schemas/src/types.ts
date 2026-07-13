@@ -16,9 +16,13 @@ export const CONFIG_MODES = ["dry-run", "propose", "commit"] as const;
 
 export type ConfigMode = (typeof CONFIG_MODES)[number];
 
-export const CONFIG_MARKDOWN_SUMMARIES = ["none", "table"] as const;
+export const CONFIG_MARKDOWN_SUMMARIES = ["none", "table", "gallery"] as const;
 
 export type ConfigMarkdownSummary = (typeof CONFIG_MARKDOWN_SUMMARIES)[number];
+
+export const CONTRIBUTOR_KINDS = ["human", "bot", "ai_agent"] as const;
+
+export type ContributorKind = (typeof CONTRIBUTOR_KINDS)[number];
 
 export const CONTRIBUTION_TYPES = [
   "bug_fix",
@@ -76,6 +80,7 @@ export interface ClarissimiConfig {
   readonly providerThinking?: ConfigProviderThinking;
   readonly mode?: ConfigMode;
   readonly markdownSummary?: ConfigMarkdownSummary;
+  readonly includeAutomationContributors?: boolean;
 }
 
 export interface ContributorIdentity {
@@ -83,6 +88,7 @@ export interface ContributorIdentity {
   readonly id: string;
   readonly login: string;
   readonly profileUrl: string;
+  readonly kind?: ContributorKind;
 }
 
 export interface EvidenceRef {

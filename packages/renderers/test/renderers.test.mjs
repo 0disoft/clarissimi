@@ -449,6 +449,110 @@ test("keeps the contributor summary table disabled by default", () => {
   assert.equal(markdown.includes("| Contributor | Total | Types |"), false);
 });
 
+test("renders an optional contributor avatar gallery before evidence-linked details", () => {
+  const markdown = renderContributorsMarkdown(
+    [
+      assessment(),
+      assessment({
+        contributor: {
+          platform: "github",
+          id: "456",
+          login: "maintainer-helper",
+          profileUrl: "https://github.com/maintainer-helper?tab=contributions&view=all",
+        },
+        contributionType: "security",
+        source: {
+          ...source,
+          pullRequestNumber: 44,
+        },
+      }),
+    ],
+    { summary: "gallery" },
+  );
+
+  assert.equal(markdown.includes("## Contributor gallery"), true);
+  assert.equal(
+    markdown.includes(
+      '<a href="https://github.com/maintainer-helper?tab=contributions&amp;view=all"><img src="https://avatars.githubusercontent.com/u/456?s=64&v=4" width="64" height="64" alt="@maintainer-helper on GitHub"></a>',
+    ),
+    true,
+  );
+  assert.equal(
+    markdown.includes(
+      '<a href="https://github.com/octocat"><img src="https://avatars.githubusercontent.com/u/123456?s=64&v=4" width="64" height="64" alt="@octocat on GitHub"></a>',
+    ),
+    true,
+  );
+  assert.equal(markdown.indexOf("## Contributor gallery") < markdown.indexOf("## octocat"), true);
+  assert.equal(markdown.includes("Added regression coverage"), true);
+  assert.equal(markdown.includes("| Contributor | Total | Types |"), false);
+  assert.equal(markdown.includes("score"), false);
+  assert.equal(markdown.includes("rank"), false);
+});
+
+test("keeps the contributor avatar gallery disabled by default", () => {
+  const markdown = renderContributorsMarkdown([assessment()]);
+
+  assert.equal(markdown.includes("## Contributor gallery"), false);
+  assert.equal(markdown.includes("avatars.githubusercontent.com"), false);
+});
+
+test("includes approved bot and AI-agent contributors by default", () => {
+  const records = [
+    assessment(),
+    assessment({
+      contributor: {
+        platform: "github",
+        id: "200",
+        login: "dependabot[bot]",
+        profileUrl: "https://github.com/apps/dependabot",
+        kind: "bot",
+      },
+      source: { ...source, pullRequestNumber: 43 },
+    }),
+    assessment({
+      contributor: {
+        platform: "github",
+        id: "300",
+        login: "review-agent",
+        profileUrl: "https://github.com/review-agent",
+        kind: "ai_agent",
+      },
+      source: { ...source, pullRequestNumber: 44 },
+    }),
+  ];
+
+  const outputs = renderRecognitionOutputs(records, { summary: "gallery" });
+
+  assert.equal(outputs.contributorsMarkdown.includes("## dependabot\\[bot\\] · Bot"), true);
+  assert.equal(outputs.contributorsMarkdown.includes("## review\\-agent · AI agent"), true);
+  assert.equal(outputs.contributorsJson.includes('"kind": "bot"'), true);
+  assert.equal(outputs.staticDataJson.includes('"kind": "ai_agent"'), true);
+});
+
+test("opt-out hides automation contributors from derived displays but preserves the ledger", () => {
+  const bot = assessment({
+    contributor: {
+      platform: "github",
+      id: "200",
+      login: "dependabot[bot]",
+      profileUrl: "https://github.com/apps/dependabot",
+      kind: "bot",
+    },
+    source: { ...source, pullRequestNumber: 43 },
+  });
+  const outputs = renderRecognitionOutputs([assessment(), bot], {
+    summary: "gallery",
+    includeAutomationContributors: false,
+  });
+
+  assert.equal(outputs.contributionsJsonl.includes("dependabot[bot]"), true);
+  assert.equal(outputs.contributorsMarkdown.includes("dependabot"), false);
+  assert.equal(outputs.contributorsJson.includes("dependabot"), false);
+  assert.equal(outputs.staticDataJson.includes("dependabot"), false);
+  assert.equal(outputs.contributorsMarkdown.includes("octocat"), true);
+});
+
 test("builds static data from the same public records", () => {
   const document = buildStaticContributionsDocument([assessment()]);
 

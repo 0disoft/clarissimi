@@ -927,6 +927,13 @@ test("import-draft serializes concurrent ledger updates without losing successfu
     assert.equal(
       results.every((result) => result.exitCode === 0),
       true,
+      JSON.stringify(
+        results.map((result, index) => ({
+          index,
+          exitCode: result.exitCode,
+          stderr: result.stderr,
+        })),
+      ),
     );
     assert.equal(records.length, 8);
     assert.deepEqual(
@@ -1575,5 +1582,77 @@ test("rebuild renders the configured Markdown summary table and lets the flag ov
     assert.equal(detailsResult.exitCode, 0);
     assert.equal(detailsMarkdown.includes("| Contributor | Total | Types |"), false);
     assert.equal(detailsMarkdown.includes("## octocat"), true);
+  });
+});
+
+test("rebuild renders the configured contributor avatar gallery", async () => {
+  await withTempDir(async (dir) => {
+    const ledgerDir = join(dir, ".clarissimi");
+    const ledger = join(ledgerDir, "contributions.jsonl");
+    const configPath = join(ledgerDir, "config.json");
+    const outDir = join(dir, "gallery-out");
+    await mkdir(ledgerDir, { recursive: true });
+    await writeFile(ledger, `${JSON.stringify(assessment())}\n`, "utf8");
+    await writeFile(configPath, `${JSON.stringify({ markdownSummary: "gallery" })}\n`, "utf8");
+
+    const result = await run(
+      ["rebuild", "--ledger", ledger, "--out-dir", outDir, "--config", configPath, "--json"],
+      dir,
+    );
+    const markdown = await readFile(join(outDir, "CONTRIBUTORS.md"), "utf8");
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(markdown.includes("## Contributor gallery"), true);
+    assert.equal(
+      markdown.includes("https://avatars.githubusercontent.com/u/123456?s=64&v=4"),
+      true,
+    );
+    assert.equal(markdown.includes("## octocat"), true);
+  });
+});
+
+test("rebuild includes automation by default and supports a ledger-preserving opt-out", async () => {
+  await withTempDir(async (dir) => {
+    const ledgerDir = join(dir, ".clarissimi");
+    const ledger = join(ledgerDir, "contributions.jsonl");
+    const includedOutDir = join(dir, "included-out");
+    const excludedOutDir = join(dir, "excluded-out");
+    const bot = assessment({
+      contributor: {
+        platform: "github",
+        id: "200",
+        login: "dependabot[bot]",
+        profileUrl: "https://github.com/apps/dependabot",
+        kind: "bot",
+      },
+    });
+    await mkdir(ledgerDir, { recursive: true });
+    await writeFile(ledger, `${JSON.stringify(bot)}\n`, "utf8");
+
+    const included = await run(
+      ["rebuild", "--ledger", ledger, "--out-dir", includedOutDir, "--json"],
+      dir,
+    );
+    const excluded = await run(
+      [
+        "rebuild",
+        "--ledger",
+        ledger,
+        "--out-dir",
+        excludedOutDir,
+        "--exclude-automation-contributors",
+        "--json",
+      ],
+      dir,
+    );
+    const includedMarkdown = await readFile(join(includedOutDir, "CONTRIBUTORS.md"), "utf8");
+    const excludedMarkdown = await readFile(join(excludedOutDir, "CONTRIBUTORS.md"), "utf8");
+    const ledgerText = await readFile(ledger, "utf8");
+
+    assert.equal(included.exitCode, 0);
+    assert.equal(excluded.exitCode, 0);
+    assert.equal(includedMarkdown.includes("dependabot"), true);
+    assert.equal(excludedMarkdown.includes("dependabot"), false);
+    assert.equal(ledgerText.includes("dependabot[bot]"), true);
   });
 });

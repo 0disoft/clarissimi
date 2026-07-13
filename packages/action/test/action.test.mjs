@@ -886,7 +886,29 @@ test("environment runner rejects unsupported Markdown summary inputs", async () 
 
   assert.equal(exitCode, 1);
   assert.equal(stdout, "");
-  assert.equal(stderr, "INPUT_MARKDOWN_SUMMARY supports only none or table.\n");
+  assert.equal(stderr, "INPUT_MARKDOWN_SUMMARY supports only none, table, or gallery.\n");
+});
+
+test("environment runner rejects invalid automation contributor input", async () => {
+  let stderr = "";
+  const exitCode = await runActionFromEnvironment(
+    {
+      INPUT_INCLUDE_AUTOMATION_CONTRIBUTORS: "sometimes",
+      INPUT_MODE: "dry-run",
+    },
+    {
+      stdout: () => {},
+      stderr: (value) => {
+        stderr += value;
+      },
+    },
+  );
+
+  assert.equal(exitCode, 1);
+  assert.equal(
+    stderr.includes("INPUT_INCLUDE_AUTOMATION_CONTRIBUTORS supports only true or false."),
+    true,
+  );
 });
 
 test("environment runner validates unsupported mode before resolving provider credentials", async () => {

@@ -877,6 +877,60 @@ Validation:
 - `pnpm run check`
 - `pnpm run contract`
 
+### 22. Opt-In Contributor Gallery
+
+Source: `docs/adr/0042-add-opt-in-contributor-gallery.md`, `docs/product/02-spec.md`
+
+Status: Completed.
+
+Goal: add a visual contributor acknowledgement without replacing evidence-linked recognition or
+introducing ranking semantics.
+
+Completed deliverables:
+
+- `gallery` is part of the shared `markdownSummary` vocabulary
+- generated avatar URLs use stable GitHub contributor ids rather than mutable logins
+- gallery links use escaped validated profile URLs and accessible alt labels
+- the gallery appears before existing contributor details and remains disabled by default
+- CLI, config, and Action presentation surfaces accept the same vocabulary
+- README mutation, external gallery services, custom CSS, and committed avatar files remain outside
+  the renderer boundary
+
+Validation completed:
+
+- renderer, schema, CLI, and Action tests
+- `format`, `lint`, `docs`, `release-readiness`, `migration-check`, `smoke`, `check`, and `contract`
+- Action bundle freshness
+
+### 23. Automation Contributors by Default
+
+Source: `docs/adr/0043-include-automation-contributors-by-default.md`, `docs/product/02-spec.md`
+
+Status: Completed.
+
+Goal: include approved bot and AI-agent recognition in public contributor displays by default while
+retaining a display-only maintainer opt-out and preserving the canonical ledger.
+
+Completed deliverables:
+
+- shared `human`, `bot`, and `ai_agent` contributor-kind vocabulary with legacy omission support
+- GitHub actor-type mapping for bot-authored merged pull requests without login-name guessing
+- default inclusion in contributor Markdown, contributor JSON, gallery, and static display data
+- `includeAutomationContributors: false`, CLI `--exclude-automation-contributors`, and Action
+  `include-automation-contributors: false` opt-out surfaces
+- explicit Markdown labels for bot and AI-agent identities
+- ledger-preserving filtering and focused schema, renderer, GitHub, CLI, and Action coverage
+
+Still separate:
+
+- automatic multi-actor assessments for review and comment authors; those actors require a separate
+  approved assessment in the current milestone
+
+Validation completed:
+
+- Action bundle regeneration and freshness validation
+- `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, and `contract`
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

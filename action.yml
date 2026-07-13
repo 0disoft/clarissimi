@@ -17,7 +17,10 @@ inputs:
     description: Optional Clarissimi config file path. Supports explicit JSON config files or clarissimi.config.ts.
     required: false
   markdown-summary:
-    description: Optional CONTRIBUTORS.md summary layout. Use table to add a contributor totals table before the detailed sections.
+    description: Optional CONTRIBUTORS.md summary layout. Use table for totals or gallery for stable-id GitHub avatars before the detailed sections.
+    required: false
+  include-automation-contributors:
+    description: Include approved bot and AI-agent contribution records in public contributor outputs. Omit or use true to include them; use false to hide them.
     required: false
   draft-path:
     description: Approved .clarissimi/drafts/*.json path required by promote-draft mode.
@@ -124,6 +127,7 @@ runs:
         INPUT_GITHUB_FIXTURE: ${{ inputs.github-fixture }}
         INPUT_CONFIG_PATH: ${{ inputs.config-path }}
         INPUT_MARKDOWN_SUMMARY: ${{ inputs.markdown-summary }}
+        INPUT_INCLUDE_AUTOMATION_CONTRIBUTORS: ${{ inputs.include-automation-contributors }}
         INPUT_DRAFT_PATH: ${{ inputs.draft-path }}
         INPUT_BASE_BRANCH: ${{ inputs.base-branch }}
         INPUT_REMOTE_NAME: ${{ inputs.remote-name }}

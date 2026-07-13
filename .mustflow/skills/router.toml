@@ -1,0 +1,33 @@
+schema_version = "1"
+purpose = "Route Clarissimi work to the repository-local .agents procedures and the shared workspace skill registry."
+full_routes = ".mustflow/skills/routes.toml"
+expanded_index = ".mustflow/skills/INDEX.md"
+skill_root = ".agents/skills"
+selection_limit = 5
+main_limit = 1
+adjunct_limit = 2
+fallback_policy = "read_expanded_index_when_uncertain"
+
+[algorithm]
+steps = [
+  "Read .agents/context-map.md for the repository shape and local procedure paths.",
+  "Use the closest matching local .agents skill for implementation work.",
+  "Use the shared workspace skill registry for contract, command, and workflow procedures.",
+  "Read every selected procedure before editing its scope.",
+]
+
+[categories.general_code]
+label = "General Code"
+signals = ["code_change", "behavior_change", "public_api_change"]
+
+[categories.tests]
+label = "Tests"
+signals = ["test_change", "fixture", "regression_guard"]
+
+[categories.docs_release]
+label = "Documentation and Release"
+signals = ["docs_change", "readme", "release_risk"]
+
+[categories.workflow_contracts]
+label = "Workflow and Contracts"
+signals = ["mustflow_config_change", "public_contract_change", "schema_change"]

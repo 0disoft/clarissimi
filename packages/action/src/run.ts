@@ -117,6 +117,9 @@ export async function runActionPropose(input: ActionProposeInput): Promise<Actio
     existingRecords: await readExistingRecognitionRecords(input.repositoryDir),
     redactionMatchCount: prepared.redactionMatchCount,
     ...(input.markdownSummary === undefined ? {} : { markdownSummary: input.markdownSummary }),
+    ...(input.includeAutomationContributors === undefined
+      ? {}
+      : { includeAutomationContributors: input.includeAutomationContributors }),
   });
   const branch = await writeProposalBranch({
     repositoryDir: input.repositoryDir,
@@ -170,6 +173,9 @@ export async function runActionCommit(input: ActionCommitInput): Promise<ActionC
     existingRecords: await readExistingRecognitionRecords(input.repositoryDir),
     redactionMatchCount: prepared.redactionMatchCount,
     ...(input.markdownSummary === undefined ? {} : { markdownSummary: input.markdownSummary }),
+    ...(input.includeAutomationContributors === undefined
+      ? {}
+      : { includeAutomationContributors: input.includeAutomationContributors }),
   });
   const commitInput: Parameters<typeof createDirectCommit>[0] = {
     repositoryDir: input.repositoryDir,
@@ -271,6 +277,9 @@ export async function runActionPromoteDraft(
     existingRecords: await readExistingRecognitionRecords(input.repositoryDir),
     redactionMatchCount: 0,
     ...(input.markdownSummary === undefined ? {} : { markdownSummary: input.markdownSummary }),
+    ...(input.includeAutomationContributors === undefined
+      ? {}
+      : { includeAutomationContributors: input.includeAutomationContributors }),
   });
   const branch = await writeProposalBranch({
     repositoryDir: input.repositoryDir,
@@ -361,6 +370,7 @@ export async function runActionFromEnvironment(
     const input: ActionDryRunInput = {
       mode,
       markdownSummary: resolveActionMarkdownSummary(env, config),
+      includeAutomationContributors: resolveActionIncludeAutomationContributors(env, config),
     };
     if (mode === "promote-draft") {
       if (explicitEventPath !== undefined || githubFixturePath !== undefined) {
@@ -570,6 +580,11 @@ function buildActionWriteInput(
     assignOptional(promoteDraftInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
     assignOptional(promoteDraftInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
     assignOptional(promoteDraftInput, "markdownSummary", input.markdownSummary);
+    assignOptional(
+      promoteDraftInput,
+      "includeAutomationContributors",
+      input.includeAutomationContributors,
+    );
 
     return promoteDraftInput;
   }
@@ -979,10 +994,30 @@ function resolveActionMarkdownSummary(
 ): NonNullable<ClarissimiConfig["markdownSummary"]> {
   const value = readEnvInput(env.INPUT_MARKDOWN_SUMMARY) ?? config.markdownSummary ?? "none";
   if (!isConfigMarkdownSummary(value)) {
-    throw new ActionUsageError("INPUT_MARKDOWN_SUMMARY supports only none or table.");
+    throw new ActionUsageError("INPUT_MARKDOWN_SUMMARY supports only none, table, or gallery.");
   }
 
   return value;
+}
+
+function resolveActionIncludeAutomationContributors(
+  env: NodeJS.ProcessEnv,
+  config: ClarissimiConfig,
+): boolean {
+  const value = readEnvInput(env.INPUT_INCLUDE_AUTOMATION_CONTRIBUTORS);
+  if (value === undefined) {
+    return config.includeAutomationContributors ?? true;
+  }
+
+  if (value === "true") {
+    return true;
+  }
+
+  if (value === "false") {
+    return false;
+  }
+
+  throw new ActionUsageError("INPUT_INCLUDE_AUTOMATION_CONTRIBUTORS supports only true or false.");
 }
 
 async function writeGitHubOutputs(

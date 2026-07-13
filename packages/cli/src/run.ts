@@ -70,6 +70,7 @@ const COMMAND_FLAGS: Readonly<Record<string, ReadonlySet<string>>> = {
     "mode",
     "config",
     "markdown-summary",
+    "exclude-automation-contributors",
     "provider",
     "provider-model",
     "provider-endpoint",
@@ -86,10 +87,19 @@ const COMMAND_FLAGS: Readonly<Record<string, ReadonlySet<string>>> = {
     "out-dir",
     "config",
     "markdown-summary",
+    "exclude-automation-contributors",
     "json",
     "help",
   ]),
-  rebuild: new Set(["ledger", "out-dir", "config", "markdown-summary", "json", "help"]),
+  rebuild: new Set([
+    "ledger",
+    "out-dir",
+    "config",
+    "markdown-summary",
+    "exclude-automation-contributors",
+    "json",
+    "help",
+  ]),
   analytics: new Set(["ledger", "window-days", "as-of", "json", "help"]),
 };
 
@@ -258,11 +268,16 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
     const outputs = canRenderPublicOutputs
       ? {
           contributionsJsonl: renderContributionsJsonl([result.assessment]),
-          contributorsJson: renderContributorsJson([result.assessment]),
+          contributorsJson: renderContributorsJson([result.assessment], {
+            includeAutomationContributors: resolveIncludeAutomationContributors(args, config),
+          }),
           contributorsMarkdown: renderContributorsMarkdown([result.assessment], {
             summary: resolveMarkdownSummary(args, config),
+            includeAutomationContributors: resolveIncludeAutomationContributors(args, config),
           }),
-          staticDataJson: renderStaticContributionsJson([result.assessment]),
+          staticDataJson: renderStaticContributionsJson([result.assessment], {
+            includeAutomationContributors: resolveIncludeAutomationContributors(args, config),
+          }),
         }
       : null;
 
@@ -437,6 +452,7 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
       const nextRecords = appendPublicContributionRecord(existingRecords, validation.value);
       const outputs = renderRecognitionOutputs(nextRecords, {
         summary: resolveMarkdownSummary(args, config),
+        includeAutomationContributors: resolveIncludeAutomationContributors(args, config),
       });
       const files = new Map<string, string>();
       if (outputDirectory !== undefined) {
@@ -544,6 +560,14 @@ function resolveMarkdownSummary(args: ParsedArgs, config: CliConfig): ConfigMark
   return value;
 }
 
+function resolveIncludeAutomationContributors(args: ParsedArgs, config: CliConfig): boolean {
+  if (getBooleanFlag(args, "exclude-automation-contributors")) {
+    return false;
+  }
+
+  return config.includeAutomationContributors ?? true;
+}
+
 async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const positionalError = rejectUnexpectedPositionals(args, "rebuild");
   if (positionalError !== undefined) {
@@ -563,6 +587,7 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
     assertUniqueContributionRecords(records);
     const outputs = renderRecognitionOutputs(records, {
       summary: resolveMarkdownSummary(args, config),
+      includeAutomationContributors: resolveIncludeAutomationContributors(args, config),
     });
 
     if (outDir !== undefined) {
@@ -706,11 +731,11 @@ function renderHelp(): string {
     "  clarissimi --help",
     "  clarissimi validate-config [--config <path>] [--json]",
     "  clarissimi validate-ledger [--ledger <path>] [--json]",
-    "  clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run [--config <path>] [--markdown-summary none|table] [--provider <id>] [--provider-model <model>] [--provider-endpoint <url>] [--provider-endpoint-trust public|private-network] [--provider-thinking disabled] [--json]",
+    "  clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run [--config <path>] [--markdown-summary none|table|gallery] [--exclude-automation-contributors] [--provider <id>] [--provider-model <model>] [--provider-endpoint <url>] [--provider-endpoint-trust public|private-network] [--provider-thinking disabled] [--json]",
     "  clarissimi stage-draft --draft <path> [--drafts-dir <path>] [--json]",
     "  clarissimi approve-draft --draft <path> [--json]",
-    "  clarissimi import-draft --draft <path> [--ledger <path>] [--out-dir <path>] [--config <path>] [--markdown-summary none|table] [--json]",
-    "  clarissimi rebuild [--ledger <path>] [--out-dir <path>] [--config <path>] [--markdown-summary none|table] [--json]",
+    "  clarissimi import-draft --draft <path> [--ledger <path>] [--out-dir <path>] [--config <path>] [--markdown-summary none|table|gallery] [--exclude-automation-contributors] [--json]",
+    "  clarissimi rebuild [--ledger <path>] [--out-dir <path>] [--config <path>] [--markdown-summary none|table|gallery] [--exclude-automation-contributors] [--json]",
     "  clarissimi analytics recent-share [--ledger <path>] [--window-days <days>] [--as-of <iso-date>] [--json]",
     "",
   ].join("\n");

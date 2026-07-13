@@ -26,6 +26,7 @@ export interface ActionDryRunInput {
   readonly liveGitHubClient?: LiveGitHubClient;
   readonly provider?: ContributionDraftProvider;
   readonly markdownSummary?: ConfigMarkdownSummary;
+  readonly includeAutomationContributors?: boolean;
 }
 
 export interface ActionProposeInput extends ActionDryRunInput {

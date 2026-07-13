@@ -3,6 +3,7 @@ import {
   ASSESSMENT_SCHEMA_VERSION,
   CONFIG_MODES,
   CONFIG_MARKDOWN_SUMMARIES,
+  CONTRIBUTOR_KINDS,
   CONFIG_PROVIDERS,
   CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES,
   CONFIG_PROVIDER_THINKING_VALUES,
@@ -14,6 +15,7 @@ import {
   type ContributionAssessment,
   type ConfigMode,
   type ConfigMarkdownSummary,
+  type ContributorKind,
   type ConfigProvider,
   type ConfigProviderEndpointTrust,
   type ConfigProviderThinking,
@@ -111,6 +113,10 @@ export function isConfigMode(value: string): value is ConfigMode {
 
 export function isConfigMarkdownSummary(value: string): value is ConfigMarkdownSummary {
   return (CONFIG_MARKDOWN_SUMMARIES as readonly string[]).includes(value);
+}
+
+export function isContributorKind(value: string): value is ContributorKind {
+  return (CONTRIBUTOR_KINDS as readonly string[]).includes(value);
 }
 
 export function isImpactLevel(value: string): value is ContributionAssessment["impactLevel"] {
@@ -217,6 +223,11 @@ export function validateClarissimiConfig(value: unknown): ValidationResult<Clari
     "$.markdownSummary",
     issues,
   );
+  const includeAutomationContributors = expectOptionalBoolean(
+    value.includeAutomationContributors,
+    "$.includeAutomationContributors",
+    issues,
+  );
 
   if (issues.length > 0) {
     return invalid(issues);
@@ -230,6 +241,7 @@ export function validateClarissimiConfig(value: unknown): ValidationResult<Clari
     providerThinking?: ConfigProviderThinking;
     mode?: ConfigMode;
     markdownSummary?: ConfigMarkdownSummary;
+    includeAutomationContributors?: boolean;
   } = {};
 
   if (provider !== undefined) {
@@ -260,6 +272,10 @@ export function validateClarissimiConfig(value: unknown): ValidationResult<Clari
     config.markdownSummary = markdownSummary;
   }
 
+  if (includeAutomationContributors !== undefined) {
+    config.includeAutomationContributors = includeAutomationContributors;
+  }
+
   return {
     ok: true,
     value: config,
@@ -277,6 +293,9 @@ function validateContributor(value: unknown, path: string, issues: ValidationIss
   expectNonEmptyString(value.id, `${path}.id`, issues);
   expectNonEmptyString(value.login, `${path}.login`, issues);
   expectUrl(value.profileUrl, `${path}.profileUrl`, issues);
+  if (value.kind !== undefined) {
+    expectEnum(value.kind, isContributorKind, `${path}.kind`, issues);
+  }
 }
 
 function validateEvidenceRefs(value: unknown, path: string, issues: ValidationIssue[]): void {
@@ -474,6 +493,23 @@ function expectOptionalEnum<T extends string>(
 
   if (typeof value !== "string" || !guard(value)) {
     pushIssue(issues, path, "invalid_enum", "Value is not in the allowed set.");
+    return undefined;
+  }
+
+  return value;
+}
+
+function expectOptionalBoolean(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[],
+): boolean | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== "boolean") {
+    pushIssue(issues, path, "expected_boolean", "Value must be a boolean.");
     return undefined;
   }
 

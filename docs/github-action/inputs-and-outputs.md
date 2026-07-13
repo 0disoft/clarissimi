@@ -16,7 +16,10 @@
 - `event-path`: explicit event payload path for local runs, tests, and write-mode live collection
 - `github-fixture`: explicit GitHub merged pull request fixture path for fixture-first runs
 - `config-path`: optional explicit path to a JSON Clarissimi config file or `clarissimi.config.ts`
-- `markdown-summary`: `none` or `table`; `table` adds a compact summary before contributor details
+- `markdown-summary`: `none`, `table`, or `gallery`; table adds counts and gallery adds stable-id
+  GitHub avatars before contributor details
+- `include-automation-contributors`: optional `true` or `false`; omitted values fall back to config
+  and then `true`; `false` hides approved bot and AI-agent identities from derived displays only
 - `mode`: `dry-run`, `propose`, `commit`, `stage-draft`, or `promote-draft`, default `propose`
 - `draft-path`: approved `.clarissimi/drafts/*.json` path required by `promote-draft`
 - `base-branch`: base branch for proposal pull requests
@@ -55,6 +58,7 @@ Action inputs and workflow environment values take precedence over config values
 inputs fall back to config values, then `fake`.
 `markdown-summary` falls back to config `markdownSummary`, then `none`. An explicit Action input
 overrides config.
+`include-automation-contributors` falls back to config `includeAutomationContributors`, then `true`.
 `summary-path` is explicit-only, must be relative, and must stay inside `GITHUB_WORKSPACE`. The
 summary artifact contains the same sanitized JSON summary as stdout.
 An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`

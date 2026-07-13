@@ -156,6 +156,17 @@ one contributor into multiple profiles.
 An opt-in compact summary table may repeat contributor identity, total event count, and deterministic
 per-type counts before the detailed sections. It must preserve the evidence-linked contributor
 details and must not add score, percentage, rank, ordering-by-count, or tier semantics.
+An opt-in contributor gallery may instead display one stable-id GitHub avatar per contributor before
+the same detailed sections. Gallery items link to the contributor profile, use deterministic
+non-ranking order, include accessible text, and must not replace evidence-linked recognition detail.
+Clarissimi does not generate or rewrite the repository README as part of this output contract.
+
+Approved contributors may be human, bot, or AI-agent identities. Bot and AI-agent assessments are
+included in contributor Markdown, contributor JSON, galleries, and static display data by default.
+Maintainers may disable automated identities in derived display outputs with
+`includeAutomationContributors: false`; the canonical ledger remains unchanged. GitHub `Bot` actor
+metadata may establish `bot`, but Clarissimi must not infer `ai_agent` from a login name. Reviews,
+comments, and checks require their own approved assessment before becoming contributor recognition.
 
 The MVP keeps `contributions.jsonl` as a single file. If ledger size or merge conflicts become a
 real operational problem, Clarissimi should migrate through an explicit schema-versioned yearly

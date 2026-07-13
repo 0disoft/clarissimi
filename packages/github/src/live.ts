@@ -50,6 +50,7 @@ export interface LiveGitHubActor {
   readonly id: number | string;
   readonly login: string;
   readonly htmlUrl?: string | null;
+  readonly kind?: "human" | "bot";
 }
 
 export interface LiveGitHubLabel {
@@ -160,6 +161,7 @@ function toMergedPullRequestFixture(
     "htmlUrl",
     normalizeOptionalString(pullRequest.user.htmlUrl),
   );
+  assignOptional(fixture.pullRequest.user, "kind", pullRequest.user.kind);
   assignOptional(
     fixture.pullRequest,
     "mergeCommitSha",

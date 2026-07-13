@@ -126,13 +126,19 @@ not be weighted or converted into public average scores, total scores, percentag
 When `markdownSummary` is `table`, the same raw event counts are repeated in a compact summary table
 above the detailed recognition sections. The table does not replace evidence-linked detail and does
 not introduce score, percentage, rank, or tier fields.
+When `markdownSummary` is `gallery`, one stable-id GitHub avatar link per contributor appears above
+the same details. The gallery uses deterministic non-ranking order and does not add counts, scores,
+percentages, ranks, or tiers.
 
 Maintainer-only analytics may calculate recent recognition share from the same ledger, but those
 results are stdout-only analysis and are not public derived ledger outputs.
 
 ## No Draft Provenance
 
-Public ledger records are assessment-only. They must not store AI agent, delegated model, prompt,
+Public ledger records are assessment-only. `contributor.kind` may be `human`, `bot`, or `ai_agent`;
+it is optional for compatibility with existing `clarissimi.assessment/v1` records. Display opt-out
+never removes these records from the ledger, and missing legacy kinds are not guessed from logins.
+They must not store AI agent, delegated model, prompt,
 token, provider, or draft-envelope provenance. Delegated workflow metadata may exist in local draft
 envelopes before review, but CLI draft commands sanitize public records so provenance does not
 become repository recognition truth.

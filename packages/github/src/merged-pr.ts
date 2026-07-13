@@ -68,6 +68,11 @@ export function parseGitHubMergedPullRequestFixture(
     expectOptionalString(pullRequest.user.htmlUrl, "$.pullRequest.user.htmlUrl"),
   );
   assignOptional(
+    fixture.pullRequest.user,
+    "kind",
+    expectOptionalContributorKind(pullRequest.user.kind, "$.pullRequest.user.kind"),
+  );
+  assignOptional(
     fixture.pullRequest,
     "labels",
     parseOptionalLabels(pullRequest.labels, "$.pullRequest.labels"),
@@ -133,12 +138,26 @@ function collectContributor(user: GitHubActorFixture): ContributorIdentity {
     normalizeOptionalHttpsUrl(user.htmlUrl, "pullRequest.user.htmlUrl") ??
     `https://github.com/${encodeURIComponent(login)}`;
 
-  return {
+  const contributor: ContributorIdentity = {
     platform: "github",
     id,
     login,
     profileUrl,
   };
+  assignOptional(contributor, "kind", user.kind);
+  return contributor;
+}
+
+function expectOptionalContributorKind(value: unknown, path: string): GitHubActorFixture["kind"] {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value !== "human" && value !== "bot" && value !== "ai_agent") {
+    throw new GitHubEvidenceCollectionError(path, `${path} must be human, bot, or ai_agent.`);
+  }
+
+  return value;
 }
 
 function buildPullRequestItem(

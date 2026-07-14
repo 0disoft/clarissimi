@@ -267,6 +267,9 @@ test("major alias evidence records v0 with the exact expected SHA", async () => 
   assert.match(body, new RegExp(`--clarissimi-ref v0 --expected-sha ${exampleSha}`));
   assert.match(body, new RegExp(`-f clarissimi-ref=v0 -f expected-sha=${exampleSha}`));
   assert.match(body, /supports keeping moving alias `v0`/);
+  assert.match(body, /Marketplace status: not changed by alias promotion/);
+  assert.match(body, /public listing must be verified independently/);
+  assert.doesNotMatch(body, /Marketplace publication remains blocked/);
 });
 
 test("release candidate evidence issue resolves HEAD and creates an issue with body on stdin", async () => {

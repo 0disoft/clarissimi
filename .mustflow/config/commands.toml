@@ -1151,3 +1151,69 @@ effects = []
 network = true
 destructive = false
 required_after = ["git_commit_marketplace_completion", "user_authorized_push"]
+
+[intents.git_stage_marketplace_evidence_status]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Stage the reviewed Marketplace evidence-status correction, regression test, and bounded Git command contract."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  "scripts/release-candidate-evidence-issue.mjs",
+  "scripts/test/release-candidate-evidence-issue.test.mjs",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["marketplace_evidence_status_validation_complete"]
+
+[intents.git_commit_marketplace_evidence_status]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Commit the reviewed correction that keeps major-alias evidence neutral about Marketplace publication state."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "fix(release): align Marketplace evidence status",
+  "-m",
+  "Validation: focused release tests, lint, format, release-readiness, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_marketplace_evidence_status"]
+
+[intents.git_push_main_marketplace_evidence_status]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Push the validated Marketplace evidence-status correction on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_marketplace_evidence_status", "user_authorized_push"]

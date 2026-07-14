@@ -657,7 +657,9 @@ function renderIssueBody(options) {
     "- Package status: root and workspace packages remain private at `0.0.0`; public package publication remains blocked.",
     options.releaseType === "marketplace-action-tag"
       ? "- Marketplace status: authorized by ADR 0045 for this validated root Action release; interactive publication and public listing verification remain pending."
-      : "- Marketplace status: GitHub Marketplace publication remains blocked.",
+      : options.releaseType === "major-alias"
+        ? "- Marketplace status: not changed by alias promotion; ADR 0045 authorizes root Action Marketplace publication separately, and the public listing must be verified independently."
+        : "- Marketplace status: not established by this evidence; ADR 0045 governs root Action Marketplace publication separately.",
     "",
     "## Hosted CI Evidence",
     "",

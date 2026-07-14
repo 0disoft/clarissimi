@@ -1795,3 +1795,189 @@ effects = []
 network = true
 destructive = false
 required_after = ["release_v0_3_2_stable_publish", "marketplace_interactive_update"]
+
+[intents.promote_v0_to_v0_3_2]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Promote moving alias v0 to immutable Marketplace release v0.3.2 with compare-and-swap rollback and hosted post-promotion validation."
+argv = [
+  "pnpm",
+  "run",
+  "promote-action-major-alias",
+  "--",
+  "--release-version",
+  "v0.3.2",
+  "--sha",
+  "8cd4aa040b36ea4473722d1f1139f65c86e36b6d",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = true
+required_after = [
+  "release_v0_3_2_post_tag_evidence",
+  "verify_marketplace_v0_3_2",
+  "hosted_ci_success",
+  "user_authorized_release",
+]
+
+[intents.git_stage_v0_3_2_promotion_contract]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Stage only the exact-SHA v0.3.2 promotion and release-completion command contract."
+argv = ["git", "add", "--", ".mustflow/config/commands.toml"]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["v0_3_2_promotion_contract_validation_complete"]
+
+[intents.git_commit_v0_3_2_promotion_contract]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Commit the exact-SHA v0.3.2 promotion and release-completion command contract."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "chore(release): authorize v0.3.2 promotion",
+  "-m",
+  "Validation: docs, mustflow, release-readiness, lint, format, migration-check, smoke, check, contract",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_v0_3_2_promotion_contract"]
+
+[intents.git_push_main_v0_3_2_promotion_contract]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Push the validated exact-SHA v0.3.2 promotion contract on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_v0_3_2_promotion_contract", "user_authorized_push"]
+
+[intents.hosted_ci_v0_3_2_promotion_contract]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Confirm hosted CI passed for the pushed exact-SHA v0.3.2 promotion contract."
+argv = ["pnpm", "run", "hosted-ci-validation"]
+cwd = "."
+timeout_seconds = 900
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["git_push_main_v0_3_2_promotion_contract"]
+
+[intents.git_stage_v0_3_2_release_completion]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Stage the reviewed v0.3.2 publication, post-tag validation, transient failure, and v0 promotion records."
+argv = ["git", "add", "--", "docs/ops/release.md", "docs/product/04-implementation-tracker.md"]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["v0_3_2_release_completion_validation_complete"]
+
+[intents.git_commit_v0_3_2_release_completion]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Commit the completed v0.3.2 Marketplace publication and v0 promotion records."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "docs(release): record v0.3.2 publication",
+  "-m",
+  "Validation: docs, release-readiness, format, check, contract",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_v0_3_2_release_completion"]
+
+[intents.git_push_main_v0_3_2_release_completion]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Push the completed v0.3.2 Marketplace publication and v0 promotion record on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_v0_3_2_release_completion", "user_authorized_push"]
+
+[intents.hosted_ci_v0_3_2_release_completion]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Confirm hosted CI passed for the pushed v0.3.2 release completion record."
+argv = ["pnpm", "run", "hosted-ci-validation"]
+cwd = "."
+timeout_seconds = 900
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["git_push_main_v0_3_2_release_completion"]

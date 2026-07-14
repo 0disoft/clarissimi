@@ -281,6 +281,13 @@ export const productPositioningContract = {
 export const readmeValidationContract = {
   path: "README.md",
   requiredSnippets: [
+    "## Start in 30 Seconds",
+    "- uses: 0disoft/clarissimi@v0.3.1",
+    "mode: dry-run",
+    "## Choose How Results Are Written",
+    "`propose` is the recommended default for shared repositories.",
+    "include-automation-contributors: false",
+    "## What Clarissimi Creates",
     "Not implemented yet:",
     "- comment updates",
     "Commit mode is an explicit automation-first path",
@@ -314,6 +321,13 @@ export const readmeValidationContract = {
     'Use `markdownSummary: "gallery"` or `--markdown-summary gallery`',
     "Approved bot and AI-agent contribution records are included by default",
     "`--exclude-automation-contributors`",
+  ],
+  orderedSnippets: [
+    "# Clarissimi",
+    "## Start in 30 Seconds",
+    "## Choose How Results Are Written",
+    "## What Clarissimi Creates",
+    "## Product Promise",
   ],
 };
 
@@ -1684,6 +1698,17 @@ export function validateReadmeValidationContract(text, contract = readmeValidati
   for (const snippet of contract.requiredSnippets) {
     if (!text.includes(snippet)) {
       issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  const orderedSnippets = contract.orderedSnippets ?? [];
+  for (let index = 1; index < orderedSnippets.length; index += 1) {
+    const previous = orderedSnippets[index - 1];
+    const current = orderedSnippets[index];
+    const previousOffset = text.indexOf(previous);
+    const currentOffset = text.indexOf(current);
+    if (previousOffset !== -1 && currentOffset !== -1 && previousOffset > currentOffset) {
+      issues.push(`${contract.path} must keep ${previous} before ${current}.`);
     }
   }
 

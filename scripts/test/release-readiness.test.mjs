@@ -399,6 +399,35 @@ test("release readiness accepts the README validation contract", () => {
   assert.deepEqual(validateReadmeValidationContract(createReadmeValidationText()), []);
 });
 
+test("release readiness rejects missing or buried README onboarding", () => {
+  const missing = createReadmeValidationText()
+    .replace("## Start in 30 Seconds", "## Setup")
+    .replace("- uses: 0disoft/clarissimi@v0.3.1", "")
+    .replace("mode: dry-run", "")
+    .replace("## Choose How Results Are Written", "## Modes")
+    .replace("`propose` is the recommended default for shared repositories.", "")
+    .replace("include-automation-contributors: false", "")
+    .replace("## What Clarissimi Creates", "## Files");
+
+  assert.deepEqual(validateReadmeValidationContract(missing), [
+    "README.md must include ## Start in 30 Seconds.",
+    "README.md must include - uses: 0disoft/clarissimi@v0.3.1.",
+    "README.md must include mode: dry-run.",
+    "README.md must include ## Choose How Results Are Written.",
+    "README.md must include `propose` is the recommended default for shared repositories..",
+    "README.md must include include-automation-contributors: false.",
+    "README.md must include ## What Clarissimi Creates.",
+  ]);
+
+  const buried = createReadmeValidationText()
+    .replace("## Start in 30 Seconds", "## Setup")
+    .replace("## Product Promise", "## Product Promise\n## Start in 30 Seconds");
+
+  assert.deepEqual(validateReadmeValidationContract(buried), [
+    "README.md must keep ## Start in 30 Seconds before ## Choose How Results Are Written.",
+  ]);
+});
+
 test("release readiness rejects README validation drift", () => {
   const text = createReadmeValidationText()
     .replace("Not implemented yet:", "Implemented now:")
@@ -2156,6 +2185,23 @@ function createProductPositioningTexts() {
 
 function createReadmeValidationText() {
   return [
+    "# Clarissimi",
+    "",
+    "## Start in 30 Seconds",
+    "",
+    "- uses: 0disoft/clarissimi@v0.3.1",
+    "  with:",
+    "    mode: dry-run",
+    "",
+    "## Choose How Results Are Written",
+    "",
+    "`propose` is the recommended default for shared repositories.",
+    "include-automation-contributors: false",
+    "",
+    "## What Clarissimi Creates",
+    "",
+    "## Product Promise",
+    "",
     "Not implemented yet:",
     "",
     "- comment updates",

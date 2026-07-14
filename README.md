@@ -2,11 +2,6 @@
 
 [![Clarissimi dry run](https://github.com/0disoft/clarissimi/actions/workflows/clarissimi-dry-run.yml/badge.svg?branch=main)](https://github.com/0disoft/clarissimi/actions/workflows/clarissimi-dry-run.yml)
 
-- Status: Fixture-first MVP with live GitHub collector and proposal boundaries
-- Scope: public open-source repositories
-- Repository Type: monorepo
-- Addons: cli-tool, github-action
-
 Clarissimi is a maintainer-approved contribution recognition engine for open-source repositories.
 It records meaningful merged contributions as project history instead of letting them disappear into
 merge logs.
@@ -14,6 +9,82 @@ merge logs.
 Clarissimi is not a contributor scoring leaderboard, an HR scorecard, or an AI code review tool.
 AI is used as a drafter that reads repository evidence and prepares a structured recognition draft.
 Maintainers remain the approval authority.
+
+## Start in 30 Seconds
+
+Add `.github/workflows/clarissimi.yml` to a public repository:
+
+```yaml
+name: Clarissimi
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  recognize:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: 0disoft/clarissimi@v0.3.1
+        with:
+          mode: dry-run
+```
+
+This first workflow is read-only. It validates the post-merge event path and writes a bounded run
+summary without changing repository files, branches, comments, or pull requests. The immutable
+`v0.3.1` pin is reproducible; use `0disoft/clarissimi@v0` instead when you deliberately want the
+maintainer-approved moving `0.x` channel.
+
+Without provider configuration, Clarissimi uses its deterministic fake provider. That is useful for
+checking workflow wiring, not for publishing meaningful recognition. For real drafts, configure an
+OpenAI-compatible provider or use the agent-assisted draft flow without giving Clarissimi an API
+key. See the [Action guide](docs/github-action/README.md) and
+[agent-assisted draft guide](docs/cli/agent-assisted-drafts.md).
+
+## Choose How Results Are Written
+
+| Mode            | Repository effect                                       | Maintainer gate                   |
+| --------------- | ------------------------------------------------------- | --------------------------------- |
+| `dry-run`       | Writes no repository files                              | Inspect the workflow summary      |
+| `propose`       | Opens or updates a recognition pull request             | Review and merge the pull request |
+| `commit`        | Pushes one normal commit to the selected branch         | Explicit opt-in and branch rules  |
+| `stage-draft`   | Opens a draft-review pull request                       | Edit and approve the draft        |
+| `promote-draft` | Opens a recognition pull request from an approved draft | Approval must already be recorded |
+
+`propose` is the recommended default for shared repositories. `commit` is the convenience path for
+automation-first repositories; it never force-pushes and still loses to branch protection or a
+concurrent update. Copy the complete least-privilege workflows from the
+[Action guide](docs/github-action/README.md).
+
+Choose one optional `CONTRIBUTORS.md` summary without replacing the detailed recognition history:
+
+```yaml
+- uses: 0disoft/clarissimi@v0.3.1
+  with:
+    mode: propose
+    markdown-summary: gallery # use table for compact contribution counts
+```
+
+Approved bot and AI-agent contributors are included by default and labeled in detailed output. Set
+`include-automation-contributors: false` only when a maintainer wants derived displays to hide them;
+the append-only ledger remains unchanged.
+
+## What Clarissimi Creates
+
+- `.clarissimi/contributions.jsonl`: append-only approved recognition records
+- `.clarissimi/contributors.json`: derived contributor profiles and counts
+- `CONTRIBUTORS.md`: maintainer-approved contribution history with optional table or gallery
+- `.clarissimi/static/contributors.json`: static data for repository-owned presentation
+
+See [`0disoft/clarissimi-example`](https://github.com/0disoft/clarissimi-example) for a public
+consumer workflow and merged output. Clarissimi records contribution stories and event counts; it
+does not publish contributor scores, ranks, percentages, or tiers.
 
 ## Product Promise
 

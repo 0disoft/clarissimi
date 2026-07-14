@@ -1516,3 +1516,89 @@ env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
 required_after = ["git_push_main_marketplace_verifier"]
+
+[intents.git_stage_readme_onboarding]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Stage the reviewed README onboarding, current Action examples, regression contract, tests, and bounded Git command contract."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  "README.md",
+  "docs/github-action/README.md",
+  "scripts/release-readiness.mjs",
+  "scripts/test/release-readiness.test.mjs",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["readme_onboarding_validation_complete"]
+
+[intents.git_commit_readme_onboarding]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Commit the reviewed Action quick start and synchronized current release examples."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "docs(readme): surface Action quick start",
+  "-m",
+  "Validation: docs, release-readiness, format, check, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_readme_onboarding"]
+
+[intents.git_push_main_readme_onboarding]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Push the validated README onboarding commit on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_readme_onboarding", "user_authorized_push"]
+
+[intents.hosted_ci_readme_onboarding]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Confirm hosted CI passed for the pushed README onboarding commit at the current local HEAD."
+argv = ["pnpm", "run", "hosted-ci-validation"]
+cwd = "."
+timeout_seconds = 900
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["git_push_main_readme_onboarding"]

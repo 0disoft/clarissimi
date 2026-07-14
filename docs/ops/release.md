@@ -102,7 +102,8 @@ the following requirements:
    rendered README still names an older Action reference. A version mismatch prints the exact
    GitHub release edit URL for the required interactive handoff.
 
-7. Run post-tag evidence for `v0.3.0`, then promote `v0` separately through ADR 0034.
+7. Run post-tag validation for the selected immutable release, then promote `v0` separately
+   through ADR 0034.
 
 Marketplace publication is intentionally interactive because GitHub owns the agreement, category,
 and release checkbox state.
@@ -110,16 +111,26 @@ and release checkbox state.
 Current publication record:
 
 - public listing: <https://github.com/marketplace/actions/clarissimi>
-- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.3.0>
-- exact candidate SHA: `55c4e54eee5a8a9fff69430d6341402e13ca3a1a`
-- release evidence issue: <https://github.com/0disoft/clarissimi/issues/11>
-- the listing identifies `v0.3.0` as latest and exposes categories `Code review` and `Utilities`
+- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.3.1>
+- exact release SHA: `daa633b6802ea782783e02849c0a6345832f497f`
+- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/12>
+- the listing identifies `v0.3.1` as `Latest`, renders `0disoft/clarissimi@v0.3.1`, and exposes
+  categories `Code review` and `Utilities`
+- `v0` resolves to the same exact release SHA after compare-and-swap promotion
 
 Corrective Marketplace release `v0.3.1` republishes the current README because immutable release
 `v0.3.0` still identifies `v0.2.0` as the current Action inside the Marketplace-rendered content.
 The corrective release changes no Action runtime, inputs, outputs, permissions, or package
-publication boundary. It must repeat exact-SHA candidate validation, stable release publication,
-Marketplace listing verification, post-tag external validation, and separate `v0` promotion.
+publication boundary. Its exact-SHA candidate validation, stable release publication, public
+Marketplace verification, post-tag external validation, and separate `v0` promotion passed.
+
+Current promotion validation record:
+
+- hosted CI for the verifier commit: <https://github.com/0disoft/clarissimi/actions/runs/29309603934>
+- live provider through `v0.3.1`: <https://github.com/0disoft/clarissimi/actions/runs/29309671726>
+- external `v0` dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29309698285>
+- external `v0` full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29309733848>
+- external orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29309789235>
 
 In maintainer-facing summaries, use **result** for a pass/fail outcome and **validation record** for
 the SHA, run IDs, timestamps, and URLs that support it. Keep **evidence** only where it is already a

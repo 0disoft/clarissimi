@@ -1090,7 +1090,7 @@ required_after = [
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
-description = "Stage the reviewed Marketplace publication evidence, v0.3.0 public docs, exact v0 promotion intent, and completion tracker."
+description = "Stage the reviewed current Marketplace publication record, public docs, exact v0 promotion contract, and completion tracker."
 argv = [
   "git",
   "add",
@@ -1116,7 +1116,7 @@ required_after = ["marketplace_completion_validation_complete"]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
-description = "Commit the verified Marketplace publication record and exact v0.3.0 alias promotion contract."
+description = "Commit the verified current Marketplace publication record and exact alias promotion result."
 argv = [
   "git",
   "commit",

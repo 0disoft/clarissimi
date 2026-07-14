@@ -935,7 +935,8 @@ Validation completed:
 
 Source: `docs/adr/0045-publish-action-to-github-marketplace.md`, `docs/ops/release.md`
 
-Status: Completed for `v0.3.0` Marketplace publication and post-tag evidence.
+Status: Completed through corrective `v0.3.1` Marketplace publication, public verification, and
+`v0` promotion.
 
 Goal: make the validated root Action discoverable in GitHub Marketplace without publishing npm
 packages or weakening the immutable tag and maintainer-approval boundaries.
@@ -943,26 +944,32 @@ packages or weakening the immutable tag and maintainer-approval boundaries.
 Completed deliverables:
 
 - root `action.yml` Marketplace branding with one root Action metadata file
-- non-prerelease `v0.3.0` GitHub Release backed by exact candidate evidence
+- first non-prerelease `v0.3.0` GitHub Marketplace Release and corrective immutable `v0.3.1`
 - Marketplace categories `Code review` and `Utilities`
 - interactive developer-agreement, publication toggle, and public listing verification
 - post-tag external consumer evidence and separate compare-and-swap `v0` promotion
 - npm and workspace-package publication remain blocked
 
-Publication evidence:
+Current publication record:
 
 - public Marketplace listing: <https://github.com/marketplace/actions/clarissimi>
-- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.3.0>
-- exact candidate SHA: `55c4e54eee5a8a9fff69430d6341402e13ca3a1a`
-- release evidence issue: <https://github.com/0disoft/clarissimi/issues/11>
+- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.3.1>
+- exact release and `v0` SHA: `daa633b6802ea782783e02849c0a6345832f497f`
+- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/12>
+- Marketplace verifier hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29309603934>
+- `v0` external dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29309698285>
+- `v0` full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29309733848>
+- `v0` orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29309789235>
 
-Corrective follow-up:
+Corrective follow-up completed:
 
 - `v0.3.1` republishes the current README so the immutable Marketplace release no longer identifies
   `v0.2.0` as current
 - the correction changes no Action runtime, input, output, permission, or npm package boundary
-- the correction repeats exact-SHA release evidence, public listing verification, post-tag external
-  evidence, and compare-and-swap `v0` promotion
+- the correction repeated exact-SHA release validation, public listing verification, post-tag
+  external validation, and compare-and-swap `v0` promotion
+- a repository-owned public verifier now fails closed on a stale `Latest` version or stale rendered
+  Action reference before future alias promotion
 
 Validation required:
 

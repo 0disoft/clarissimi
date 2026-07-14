@@ -935,7 +935,7 @@ Validation completed:
 
 Source: `docs/adr/0045-publish-action-to-github-marketplace.md`, `docs/ops/release.md`
 
-Status: Completed through corrective `v0.3.1` Marketplace publication, public verification, and
+Status: Completed through onboarding-focused `v0.3.2` Marketplace publication, public verification, and
 `v0` promotion.
 
 Goal: make the validated root Action discoverable in GitHub Marketplace without publishing npm
@@ -944,7 +944,8 @@ packages or weakening the immutable tag and maintainer-approval boundaries.
 Completed deliverables:
 
 - root `action.yml` Marketplace branding with one root Action metadata file
-- first non-prerelease `v0.3.0` GitHub Marketplace Release and corrective immutable `v0.3.1`
+- first non-prerelease `v0.3.0` GitHub Marketplace Release, corrective immutable `v0.3.1`, and
+  onboarding-focused immutable `v0.3.2`
 - Marketplace categories `Code review` and `Utilities`
 - interactive developer-agreement, publication toggle, and public listing verification
 - post-tag external consumer evidence and separate compare-and-swap `v0` promotion
@@ -953,13 +954,15 @@ Completed deliverables:
 Current publication record:
 
 - public Marketplace listing: <https://github.com/marketplace/actions/clarissimi>
-- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.3.1>
-- exact release and `v0` SHA: `daa633b6802ea782783e02849c0a6345832f497f`
-- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/12>
-- Marketplace verifier hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29309603934>
-- `v0` external dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29309698285>
-- `v0` full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29309733848>
-- `v0` orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29309789235>
+- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.3.2>
+- exact release and `v0` SHA: `8cd4aa040b36ea4473722d1f1139f65c86e36b6d`
+- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/13>
+- candidate hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29324570278>
+- successful post-tag full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29325236611>
+- promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29326579956>
+- `v0` external dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29326693294>
+- `v0` full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29326722999>
+- `v0` orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29326789037>
 
 Corrective follow-up completed:
 
@@ -970,6 +973,17 @@ Corrective follow-up completed:
   external validation, and compare-and-swap `v0` promotion
 - a repository-owned public verifier now fails closed on a stale `Latest` version or stale rendered
   Action reference before future alias promotion
+
+Onboarding release follow-up completed:
+
+- `v0.3.2` brings the main README's 30-second workflow, mode comparison, generated outputs, and
+  automation-contributor defaults to the Marketplace-rendered release page
+- Action runtime, bundle, inputs, outputs, permissions, and npm publication boundaries are unchanged
+- the first post-tag Ubuntu full-write attempt received GitHub's timeout HTML while creating a draft
+  pull request; cleanup and orphan audit passed, and a complete new-correlation retry passed all
+  Ubuntu, macOS, and Windows jobs before `v0` promotion
+- exact-tag and moving-alias validation both covered live provider, dry-run, full-write, cleanup, and
+  orphan-audit paths
 
 Validation required:
 

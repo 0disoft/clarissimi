@@ -111,26 +111,37 @@ and release checkbox state.
 Current publication record:
 
 - public listing: <https://github.com/marketplace/actions/clarissimi>
-- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.3.1>
-- exact release SHA: `daa633b6802ea782783e02849c0a6345832f497f`
-- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/12>
-- the listing identifies `v0.3.1` as `Latest`, renders `0disoft/clarissimi@v0.3.1`, and exposes
+- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.3.2>
+- exact release SHA: `8cd4aa040b36ea4473722d1f1139f65c86e36b6d`
+- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/13>
+- the listing identifies `v0.3.2` as `Latest`, renders `0disoft/clarissimi@v0.3.2`, and exposes
   categories `Code review` and `Utilities`
 - `v0` resolves to the same exact release SHA after compare-and-swap promotion
 
-Corrective Marketplace release `v0.3.1` republishes the current README because immutable release
-`v0.3.0` still identifies `v0.2.0` as the current Action inside the Marketplace-rendered content.
-The corrective release changes no Action runtime, inputs, outputs, permissions, or package
+Marketplace release `v0.3.2` republishes the onboarding-first README with a copyable read-only
+workflow, result-writing mode comparison, generated-output overview, and automation-contributor
+defaults. The release changes no Action runtime, inputs, outputs, permissions, bundle, or package
 publication boundary. Its exact-SHA candidate validation, stable release publication, public
 Marketplace verification, post-tag external validation, and separate `v0` promotion passed.
 
+The first post-tag full-write run `29324962538` had one Ubuntu job fail while GitHub returned its
+`Unicorn!` timeout HTML during draft PR creation. macOS and Windows passed, cleanup ran, and orphan
+audit run `29325038208` found no residue. A complete new-correlation post-tag validation then passed
+on all three runners; the failed attempt is retained as a transient GitHub API reliability signal,
+not erased or counted as the final release result.
+
 Current promotion validation record:
 
-- hosted CI for the verifier commit: <https://github.com/0disoft/clarissimi/actions/runs/29309603934>
-- live provider through `v0.3.1`: <https://github.com/0disoft/clarissimi/actions/runs/29309671726>
-- external `v0` dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29309698285>
-- external `v0` full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29309733848>
-- external orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29309789235>
+- candidate hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29324570278>
+- exact-tag post-tag live provider: <https://github.com/0disoft/clarissimi/actions/runs/29325165643>
+- exact-tag post-tag dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29325196554>
+- exact-tag post-tag full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29325236611>
+- exact-tag post-tag orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29325297943>
+- promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29326579956>
+- live provider through `v0.3.2`: <https://github.com/0disoft/clarissimi/actions/runs/29326662100>
+- external `v0` dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29326693294>
+- external `v0` full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29326722999>
+- external `v0` orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29326789037>
 
 In maintainer-facing summaries, use **result** for a pass/fail outcome and **validation record** for
 the SHA, run IDs, timestamps, and URLs that support it. Keep **evidence** only where it is already a

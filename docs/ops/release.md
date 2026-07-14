@@ -106,6 +106,12 @@ Current publication evidence:
 - release evidence issue: <https://github.com/0disoft/clarissimi/issues/11>
 - the listing identifies `v0.3.0` as latest and exposes categories `Code review` and `Utilities`
 
+Corrective Marketplace release `v0.3.1` republishes the current README because immutable release
+`v0.3.0` still identifies `v0.2.0` as the current Action inside the Marketplace-rendered content.
+The corrective release changes no Action runtime, inputs, outputs, permissions, or package
+publication boundary. It must repeat exact-SHA candidate evidence, stable release publication,
+Marketplace listing verification, post-tag external evidence, and separate `v0` promotion.
+
 - Marketplace rollback: clear the Marketplace setting without deleting or moving the immutable tag.
 - Code rollback: publish a corrective immutable release and move `v0` only after verification.
 

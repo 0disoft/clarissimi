@@ -148,7 +148,7 @@ node packages/cli/dist/bin/clarissimi.js import-draft --draft .clarissimi/drafts
 
 ## GitHub Action
 
-The current public Action release is `0disoft/clarissimi@v0.3.0`. Consumers may pin that immutable
+The current public Action release is `0disoft/clarissimi@v0.3.1`. Consumers may pin that immutable
 tag or use `0disoft/clarissimi@v0` to follow maintainer-approved `0.x` Action releases. Earlier
 releases remain immutable, and `main` is never a consumer release channel. Clarissimi is also
 available in the [GitHub Marketplace](https://github.com/marketplace/actions/clarissimi) under the

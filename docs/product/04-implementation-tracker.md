@@ -956,6 +956,14 @@ Publication evidence:
 - exact candidate SHA: `55c4e54eee5a8a9fff69430d6341402e13ca3a1a`
 - release evidence issue: <https://github.com/0disoft/clarissimi/issues/11>
 
+Corrective follow-up:
+
+- `v0.3.1` republishes the current README so the immutable Marketplace release no longer identifies
+  `v0.2.0` as current
+- the correction changes no Action runtime, input, output, permission, or npm package boundary
+- the correction repeats exact-SHA release evidence, public listing verification, post-tag external
+  evidence, and compare-and-swap `v0` promotion
+
 Validation required:
 
 - release publisher and evidence regression tests

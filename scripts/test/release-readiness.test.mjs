@@ -317,6 +317,7 @@ test("release readiness rejects release policy document drift", () => {
       "",
     )
     .replace("primary category `Code review` and secondary category `Utilities`", "")
+    .replace("pnpm run verify-marketplace-release -- --version <v0.x.y>", "")
     .replace(
       "Marketplace rollback: clear the Marketplace setting without deleting or moving the immutable tag.",
       "",
@@ -351,6 +352,7 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include release type `marketplace-action-tag`.",
     "docs/ops/release.md must include pnpm run publish-action-release -- --version v0.3.0 --sha <candidate-sha> --release-kind stable.",
     "docs/ops/release.md must include primary category `Code review` and secondary category `Utilities`.",
+    "docs/ops/release.md must include pnpm run verify-marketplace-release -- --version <v0.x.y>.",
     "docs/ops/release.md must include Marketplace rollback: clear the Marketplace setting without deleting or moving the immutable tag..",
     "docs/ops/release.md must include ## Major Alias Promotion.",
     "docs/ops/release.md must include `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`.",
@@ -419,6 +421,7 @@ test("release readiness rejects README validation drift", () => {
       "- `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
       "",
     )
+    .replace("- `pnpm run verify-marketplace-release -- --version <v0.x.y>`", "")
     .replace(
       "- `pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>`",
       "",
@@ -453,6 +456,7 @@ test("release readiness rejects README validation drift", () => {
     "README.md must include - `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`.",
     "README.md must include - `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>`.",
     "README.md must include - `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`.",
+    "README.md must include - `pnpm run verify-marketplace-release -- --version <v0.x.y>`.",
     "README.md must include - `pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>`.",
     "README.md must include - `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`.",
     "README.md must include Release-only credentialed checks are:.",
@@ -2094,6 +2098,7 @@ function createReleasePolicyText() {
     "release type `marketplace-action-tag`",
     "pnpm run publish-action-release -- --version v0.3.0 --sha <candidate-sha> --release-kind stable",
     "primary category `Code review` and secondary category `Utilities`",
+    "pnpm run verify-marketplace-release -- --version <v0.x.y>",
     "Marketplace rollback: clear the Marketplace setting without deleting or moving the immutable tag.",
     "## First Action Release Procedure",
     "release type `versioned-action-tag`",
@@ -2175,6 +2180,7 @@ function createReadmeValidationText() {
     "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
     "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>`",
     "- `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
+    "- `pnpm run verify-marketplace-release -- --version <v0.x.y>`",
     "- `pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>`",
     "- `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
     "",
@@ -2240,6 +2246,7 @@ function createDocsValidationScriptText() {
     '  "scripts/release-candidate-evidence-issue.mjs",',
     '  "scripts/release-readiness.mjs",',
     '  "scripts/verify-action-major-tag.mjs",',
+    '  "scripts/verify-marketplace-release.mjs",',
     '  "scripts/promote-action-major-alias.mjs",',
     "];",
     "",

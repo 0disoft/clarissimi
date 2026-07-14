@@ -91,14 +91,23 @@ the following requirements:
 5. In GitHub's release UI, enable `Publish this Action to the GitHub Marketplace`, choose the
    primary category `Code review` and secondary category `Utilities`, and complete the GitHub-owned
    developer-agreement and two-factor-authentication gates when requested.
-6. Verify the public Marketplace listing resolves to `0disoft/clarissimi`, identifies release
-   `v0.3.0`, and shows the configured branding.
+6. Verify the public Marketplace listing resolves to `0disoft/clarissimi`, identifies the expected
+   release as `Latest`, and renders the matching Action reference before alias promotion:
+
+   ```powershell
+   pnpm run verify-marketplace-release -- --version <v0.x.y>
+   ```
+
+   The verifier fails closed when the listing is unavailable, the `Latest` version differs, or the
+   rendered README still names an older Action reference. A version mismatch prints the exact
+   GitHub release edit URL for the required interactive handoff.
+
 7. Run post-tag evidence for `v0.3.0`, then promote `v0` separately through ADR 0034.
 
 Marketplace publication is intentionally interactive because GitHub owns the agreement, category,
 and release checkbox state.
 
-Current publication evidence:
+Current publication record:
 
 - public listing: <https://github.com/marketplace/actions/clarissimi>
 - immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.3.0>
@@ -109,8 +118,13 @@ Current publication evidence:
 Corrective Marketplace release `v0.3.1` republishes the current README because immutable release
 `v0.3.0` still identifies `v0.2.0` as the current Action inside the Marketplace-rendered content.
 The corrective release changes no Action runtime, inputs, outputs, permissions, or package
-publication boundary. It must repeat exact-SHA candidate evidence, stable release publication,
-Marketplace listing verification, post-tag external evidence, and separate `v0` promotion.
+publication boundary. It must repeat exact-SHA candidate validation, stable release publication,
+Marketplace listing verification, post-tag external validation, and separate `v0` promotion.
+
+In maintainer-facing summaries, use **result** for a pass/fail outcome and **validation record** for
+the SHA, run IDs, timestamps, and URLs that support it. Keep **evidence** only where it is already a
+domain or compatibility term, such as repository evidence, `evidence-id`, release evidence issue
+titles, and existing script names.
 
 - Marketplace rollback: clear the Marketplace setting without deleting or moving the immutable tag.
 - Code rollback: publish a corrective immutable release and move `v0` only after verification.

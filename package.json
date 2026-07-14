@@ -19,6 +19,7 @@
     "hosted-external-consumer-smoke": "node scripts/hosted-external-consumer-smoke.mjs",
     "hosted-live-provider-smoke": "node scripts/hosted-live-provider-smoke.mjs",
     "verify-action-major-tag": "node scripts/verify-action-major-tag.mjs",
+    "verify-marketplace-release": "node scripts/verify-marketplace-release.mjs",
     "release-candidate-evidence-orchestrator": "node scripts/release-candidate-evidence-orchestrator.mjs",
     "publish-action-release": "node scripts/publish-action-release.mjs",
     "promote-action-major-alias": "node scripts/promote-action-major-alias.mjs",

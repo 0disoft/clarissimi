@@ -48,6 +48,7 @@ export const requiredDocumentationPaths = [
   "scripts/release-candidate-evidence-issue.mjs",
   "scripts/release-readiness.mjs",
   "scripts/verify-action-major-tag.mjs",
+  "scripts/verify-marketplace-release.mjs",
   "scripts/promote-action-major-alias.mjs",
 ];
 

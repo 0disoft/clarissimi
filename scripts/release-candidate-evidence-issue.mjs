@@ -34,7 +34,7 @@ const usageText = [
   "  pnpm run release-candidate-evidence-issue -- --ci-run 12345 --live-run 67890 --external-run 24680 --external-write-run 13579 --provider-model gpt-4.1-mini",
   "  pnpm run release-candidate-evidence-issue -- --release-type versioned-action-tag --release-version v0.1.0 --sha 0123456789abcdef0123456789abcdef01234567 --ci-run 12345 --live-run 67890 --external-run 24680 --external-write-run 13579 --provider-model minimax-m3 --provider-endpoint https://example.com/v1/chat/completions --provider-thinking disabled --print",
   "",
-  "The script validates hosted CI, hosted live-provider, external consumer, and full-write run metadata before creating the release evidence issue.",
+  "The script validates hosted CI, hosted live-provider, external consumer, and full-write run metadata before creating the compatibility-named release evidence issue.",
   "It records secret names only and never reads or prints provider token values.",
 ].join("\n");
 
@@ -260,7 +260,7 @@ async function run(argv, runtime) {
     );
   }
 
-  runtime.log(`release candidate evidence issue created: ${result.stdout.trim()}`);
+  runtime.log(`release candidate validation record created: ${result.stdout.trim()}`);
   return 0;
 }
 
@@ -636,22 +636,22 @@ function renderIssueBody(options) {
           : "`docs/ops/release.md` source-only merge policy";
   const releasePolicyConclusion =
     options.releaseType === "marketplace-action-tag"
-      ? `This evidence supports publishing immutable tag \`${options.releaseVersion}\` at \`${options.sha}\` as a non-prerelease GitHub Release, then enabling its GitHub Marketplace listing under ADR 0045. Moving alias \`v0\` remains a separate ADR 0034 step after post-tag and Marketplace verification.`
+      ? `These validation results support publishing immutable tag \`${options.releaseVersion}\` at \`${options.sha}\` as a non-prerelease GitHub Release, then enabling its GitHub Marketplace listing under ADR 0045. Moving alias \`v0\` remains a separate ADR 0034 step after post-tag and Marketplace verification.`
       : options.releaseType === "versioned-action-tag"
-        ? `This evidence supports publishing immutable tag \`${options.releaseVersion}\` at \`${options.sha}\` and creating its GitHub pre-release. Moving alias \`v0\` remains a separate ADR 0034 step after post-tag verification.`
+        ? `These validation results support publishing immutable tag \`${options.releaseVersion}\` at \`${options.sha}\` and creating its GitHub pre-release. Moving alias \`v0\` remains a separate ADR 0034 step after post-tag verification.`
         : options.releaseType === "major-alias"
-          ? `This evidence supports keeping moving alias \`v0\` at immutable release \`${options.releaseVersion}\` commit \`${options.sha}\`. Consumers that require reproducibility should pin the immutable tag or commit SHA.`
-          : "This evidence supports a source-only merge. A versioned Action tag requires the release type and version to be recorded explicitly.";
+          ? `These validation results support keeping moving alias \`v0\` at immutable release \`${options.releaseVersion}\` commit \`${options.sha}\`. Consumers that require reproducibility should pin the immutable tag or commit SHA.`
+          : "These validation results support a source-only merge. A versioned Action tag requires the release type and version to be recorded explicitly.";
 
   return [
-    `Release candidate evidence for \`${options.sha}\` on \`${options.branch}\`.`,
+    `Release candidate validation record for \`${options.sha}\` on \`${options.branch}\`.`,
     "",
     "## Candidate",
     "",
     `- Repository: \`${options.repo}\``,
     `- Branch: \`${options.branch}\``,
     `- Candidate SHA: \`${options.sha}\``,
-    `- Evidence correlation id: ${options.evidenceId === undefined ? "not used" : `\`${options.evidenceId}\``}`,
+    `- Validation correlation id: ${options.evidenceId === undefined ? "not used" : `\`${options.evidenceId}\``}`,
     `- Release type: ${releaseType}`,
     `- Release decision: ${releaseDecision}`,
     "- Package status: root and workspace packages remain private at `0.0.0`; public package publication remains blocked.",
@@ -659,9 +659,9 @@ function renderIssueBody(options) {
       ? "- Marketplace status: authorized by ADR 0045 for this validated root Action release; interactive publication and public listing verification remain pending."
       : options.releaseType === "major-alias"
         ? "- Marketplace status: not changed by alias promotion; ADR 0045 authorizes root Action Marketplace publication separately, and the public listing must be verified independently."
-        : "- Marketplace status: not established by this evidence; ADR 0045 governs root Action Marketplace publication separately.",
+        : "- Marketplace status: not established by these results; ADR 0045 governs root Action Marketplace publication separately.",
     "",
-    "## Hosted CI Evidence",
+    "## Hosted CI Result",
     "",
     `- Command: \`pnpm run hosted-ci-validation -- --sha ${options.sha}\``,
     "- Result: passed",
@@ -671,7 +671,7 @@ function renderIssueBody(options) {
     `- Created at: \`${options.ciRun.createdAt}\``,
     `- Validated SHA: \`${options.ciRun.headSha}\``,
     "",
-    "## Hosted Live Provider Evidence",
+    "## Hosted Live Provider Result",
     "",
     `- Command: \`${liveProviderCommand}\``,
     "- Result: passed",
@@ -685,7 +685,7 @@ function renderIssueBody(options) {
     `- Provider endpoint override: ${options.providerEndpoint === undefined ? "not used" : `\`${options.providerEndpoint}\``}`,
     `- Provider thinking mode: ${options.providerThinking === undefined ? "not used" : `\`${options.providerThinking}\``}`,
     "",
-    "## External Consumer Evidence",
+    "## External Consumer Result",
     "",
     `- Command: \`${externalConsumerCommand}\``,
     "- Result: passed",
@@ -697,7 +697,7 @@ function renderIssueBody(options) {
     `- Clarissimi ref: \`${options.externalRef}\``,
     `- Consumer workflow SHA: \`${options.externalRun.headSha}\``,
     "",
-    "## External Full-Write Evidence",
+    "## External Full-Write Result",
     "",
     `- Command: \`${externalWriteCommand}\``,
     "- Result: passed",

@@ -873,6 +873,7 @@ argv = [
   "scripts/test/release-candidate-evidence-orchestrator.test.mjs",
   "scripts/test/publish-action-release.test.mjs",
   "scripts/test/release-readiness.test.mjs",
+  "scripts/test/verify-marketplace-release.test.mjs",
 ]
 cwd = "."
 timeout_seconds = 600
@@ -1375,3 +1376,143 @@ effects = []
 network = true
 destructive = false
 required_after = ["git_commit_release_v0_3_1", "user_authorized_push"]
+
+[intents.verify_marketplace_v0_3_1]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Verify that the public Marketplace listing marks v0.3.1 as Latest and renders the matching Action reference."
+argv = ["pnpm", "run", "verify-marketplace-release", "--", "--version", "v0.3.1"]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["release_v0_3_1_stable_publish", "marketplace_interactive_update"]
+
+[intents.promote_v0_to_v0_3_1]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Promote moving alias v0 to immutable Marketplace release v0.3.1 with CAS rollback and hosted post-promotion validation."
+argv = [
+  "pnpm",
+  "run",
+  "promote-action-major-alias",
+  "--",
+  "--release-version",
+  "v0.3.1",
+  "--sha",
+  "daa633b6802ea782783e02849c0a6345832f497f",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = true
+required_after = [
+  "release_v0_3_1_post_tag_evidence",
+  "verify_marketplace_v0_3_1",
+  "hosted_ci_success",
+  "user_authorized_release",
+]
+
+[intents.git_stage_marketplace_verifier]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Stage the reviewed Marketplace public verifier, maintainer-facing result terminology, tests, docs, and exact v0.3.1 promotion contract."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  "README.md",
+  "docs/ops/release.md",
+  "package.json",
+  "scripts/release-candidate-evidence-issue.mjs",
+  "scripts/release-readiness.mjs",
+  "scripts/validate-docs.mjs",
+  "scripts/verify-marketplace-release.mjs",
+  "scripts/test/release-candidate-evidence-issue.test.mjs",
+  "scripts/test/release-readiness.test.mjs",
+  "scripts/test/verify-marketplace-release.test.mjs",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["marketplace_verifier_validation_complete"]
+
+[intents.git_commit_marketplace_verifier]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Commit the reviewed Marketplace publication verifier and maintainer-facing validation result terminology."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "fix(release): verify Marketplace publication",
+  "-m",
+  "Validation: focused Marketplace tests, docs, release-readiness, lint, format, check, contract, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_marketplace_verifier"]
+
+[intents.git_push_main_marketplace_verifier]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Push the validated Marketplace publication verifier on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_marketplace_verifier", "user_authorized_push"]
+
+[intents.hosted_ci_marketplace_verifier]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Confirm hosted CI passed for the pushed Marketplace verifier commit at the current local HEAD."
+argv = ["pnpm", "run", "hosted-ci-validation"]
+cwd = "."
+timeout_seconds = 900
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["git_push_main_marketplace_verifier"]

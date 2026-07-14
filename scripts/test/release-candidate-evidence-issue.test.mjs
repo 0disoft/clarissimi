@@ -72,7 +72,9 @@ test("release candidate evidence issue prints a validated evidence body", async 
   assert.equal(
     harness.logs
       .join("\n")
-      .includes("Release candidate evidence for `0123456789abcdef0123456789abcdef01234567`"),
+      .includes(
+        "Release candidate validation record for `0123456789abcdef0123456789abcdef01234567`",
+      ),
     true,
   );
   assert.equal(
@@ -214,7 +216,9 @@ test("Marketplace evidence records ADR 0045 and the interactive publication boun
   assert.equal(exitCode, 0);
   assert.match(output, /GitHub Marketplace Action tag `v0\.3\.0` under ADR 0045/);
   assert.match(output, /Marketplace status: authorized by ADR 0045/);
-  assert.match(output, /non-prerelease GitHub Release/);
+  assert.match(output, /These validation results support publishing immutable tag/);
+  assert.match(output, /## Hosted CI Result/);
+  assert.match(output, /## External Full-Write Result/);
   assert.match(output, /interactive publication and public listing verification remain pending/);
 });
 
@@ -266,7 +270,7 @@ test("major alias evidence records v0 with the exact expected SHA", async () => 
   assert.match(body, /moving Action alias `v0` to `v0\.2\.0` under ADR 0034/);
   assert.match(body, new RegExp(`--clarissimi-ref v0 --expected-sha ${exampleSha}`));
   assert.match(body, new RegExp(`-f clarissimi-ref=v0 -f expected-sha=${exampleSha}`));
-  assert.match(body, /supports keeping moving alias `v0`/);
+  assert.match(body, /validation results support keeping moving alias `v0`/);
   assert.match(body, /Marketplace status: not changed by alias promotion/);
   assert.match(body, /public listing must be verified independently/);
   assert.doesNotMatch(body, /Marketplace publication remains blocked/);
@@ -344,7 +348,7 @@ test("release candidate evidence issue resolves HEAD and creates an issue with b
   assert.equal(issueCreate.options.input.includes("Run id: `13579`"), true);
   assert.equal(
     harness.logs.includes(
-      "release candidate evidence issue created: https://github.com/0disoft/clarissimi/issues/12",
+      "release candidate validation record created: https://github.com/0disoft/clarissimi/issues/12",
     ),
     true,
   );
@@ -393,7 +397,7 @@ test("release candidate evidence issue validates correlated workflow titles", as
 
   assert.equal(exitCode, 0);
   assert.equal(
-    harness.logs.join("\n").includes(`Evidence correlation id: \`${evidenceId}\``),
+    harness.logs.join("\n").includes(`Validation correlation id: \`${evidenceId}\``),
     true,
   );
   assert.match(harness.logs.join("\n"), new RegExp(`evidence-id=${evidenceId}`));

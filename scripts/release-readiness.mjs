@@ -68,6 +68,10 @@ export const requiredPackageScripts = [
     includes: ["scripts/verify-action-major-tag.mjs"],
   },
   {
+    name: "verify-marketplace-release",
+    includes: ["scripts/verify-marketplace-release.mjs"],
+  },
+  {
     name: "release-candidate-evidence-orchestrator",
     includes: ["scripts/release-candidate-evidence-orchestrator.mjs"],
   },
@@ -205,6 +209,7 @@ export const releasePolicyDocumentContract = {
     "release type `marketplace-action-tag`",
     "pnpm run publish-action-release -- --version v0.3.0 --sha <candidate-sha> --release-kind stable",
     "primary category `Code review` and secondary category `Utilities`",
+    "pnpm run verify-marketplace-release -- --version <v0.x.y>",
     "Marketplace rollback: clear the Marketplace setting without deleting or moving the immutable tag.",
     "## First Action Release Procedure",
     "release type `versioned-action-tag`",
@@ -296,6 +301,7 @@ export const readmeValidationContract = {
     "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
     "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>`",
     "- `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
+    "- `pnpm run verify-marketplace-release -- --version <v0.x.y>`",
     "- `pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>`",
     "- `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
     "Release-only credentialed checks are:",
@@ -356,6 +362,7 @@ export const docsValidationScriptContract = {
     '"scripts/release-candidate-evidence-issue.mjs"',
     '"scripts/release-readiness.mjs"',
     '"scripts/verify-action-major-tag.mjs"',
+    '"scripts/verify-marketplace-release.mjs"',
     '"scripts/promote-action-major-alias.mjs"',
   ],
 };

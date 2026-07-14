@@ -1052,3 +1052,102 @@ env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
 required_after = ["release_v0_3_0_stable_publish"]
+
+[intents.promote_v0_to_v0_3_0]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Promote moving alias v0 to immutable Marketplace release v0.3.0 with CAS rollback and hosted post-promotion evidence."
+argv = [
+  "pnpm",
+  "run",
+  "promote-action-major-alias",
+  "--",
+  "--release-version",
+  "v0.3.0",
+  "--sha",
+  "55c4e54eee5a8a9fff69430d6341402e13ca3a1a",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = true
+required_after = [
+  "release_v0_3_0_post_tag_evidence",
+  "marketplace_public_verified",
+  "hosted_ci_success",
+  "user_authorized_release",
+]
+
+[intents.git_stage_marketplace_completion]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Stage the reviewed Marketplace publication evidence, v0.3.0 public docs, exact v0 promotion intent, and completion tracker."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  "README.md",
+  "docs/ops/release.md",
+  "docs/product/04-implementation-tracker.md",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["marketplace_completion_validation_complete"]
+
+[intents.git_commit_marketplace_completion]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Commit the verified Marketplace publication record and exact v0.3.0 alias promotion contract."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "docs(release): record Marketplace publication",
+  "-m",
+  "Validation: docs, release-readiness, format, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_marketplace_completion"]
+
+[intents.git_push_main_marketplace_completion]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Push the validated Marketplace completion record on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_marketplace_completion", "user_authorized_push"]

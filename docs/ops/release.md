@@ -98,6 +98,14 @@ the following requirements:
 Marketplace publication is intentionally interactive because GitHub owns the agreement, category,
 and release checkbox state.
 
+Current publication evidence:
+
+- public listing: <https://github.com/marketplace/actions/clarissimi>
+- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.3.0>
+- exact candidate SHA: `55c4e54eee5a8a9fff69430d6341402e13ca3a1a`
+- release evidence issue: <https://github.com/0disoft/clarissimi/issues/11>
+- the listing identifies `v0.3.0` as latest and exposes categories `Code review` and `Utilities`
+
 - Marketplace rollback: clear the Marketplace setting without deleting or moving the immutable tag.
 - Code rollback: publish a corrective immutable release and move `v0` only after verification.
 

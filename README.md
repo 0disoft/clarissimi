@@ -148,10 +148,11 @@ node packages/cli/dist/bin/clarissimi.js import-draft --draft .clarissimi/drafts
 
 ## GitHub Action
 
-The current public Action release is `0disoft/clarissimi@v0.2.0`. Consumers may pin that immutable
+The current public Action release is `0disoft/clarissimi@v0.3.0`. Consumers may pin that immutable
 tag or use `0disoft/clarissimi@v0` to follow maintainer-approved `0.x` Action releases. Earlier
-releases remain immutable, and `main` is never a consumer release channel. ADR 0045 authorizes the
-first GitHub Marketplace release at `v0.3.0`; npm packages remain intentionally unavailable.
+releases remain immutable, and `main` is never a consumer release channel. Clarissimi is also
+available in the [GitHub Marketplace](https://github.com/marketplace/actions/clarissimi) under the
+`Code review` and `Utilities` categories. npm packages remain intentionally unavailable.
 
 See [`0disoft/clarissimi-example`](https://github.com/0disoft/clarissimi-example) for a public,
 synthetic consumer repository with a read-only `v0` workflow, a manual recognition proposal, and

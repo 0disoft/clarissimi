@@ -424,8 +424,8 @@ Completed deliverables:
 - release-readiness verifies that root and workspace package manifests remain private at `0.0.0`
   while public package publication is blocked
 - release-readiness verifies that `docs/ops/release.md` keeps immutable Action tags fixed under ADR
-  0031 and permits moving major alias `v0` under ADR 0034 while package publication, package
-  version changes, and GitHub Marketplace publication remain blocked
+  0031, permits moving major alias `v0` under ADR 0034, and permits root Action Marketplace
+  publication under ADR 0045 while package publication and package version changes remain blocked
 - release-readiness verifies that `docs/ops/release.md` names public product-positioning guardrails
   and intentionally fail-closed validation placeholders in its release gate coverage
 - release-readiness verifies that workspace package manifests keep their `dist` entrypoints,
@@ -520,8 +520,8 @@ Release follow-up:
 - public repository `0disoft/clarissimi-example` consumes `0disoft/clarissimi@v0` without secrets,
   passed its read-only workflow, and merged synthetic recognition proposal PR `#1` through the
   normal pull-request boundary with the compact contributor summary table
-- Public package publication and GitHub Marketplace publication remain blocked until a separate
-  accepted release decision changes `docs/ops/release.md`.
+- Public package publication remains blocked. ADR 0045 separately authorized root Action
+  Marketplace publication without changing package versions or npm availability.
 
 ### 10. Agent-Assisted Draft Import
 
@@ -935,12 +935,12 @@ Validation completed:
 
 Source: `docs/adr/0045-publish-action-to-github-marketplace.md`, `docs/ops/release.md`
 
-Status: In progress for `v0.3.0`.
+Status: Completed for `v0.3.0` Marketplace publication and post-tag evidence.
 
 Goal: make the validated root Action discoverable in GitHub Marketplace without publishing npm
 packages or weakening the immutable tag and maintainer-approval boundaries.
 
-Accepted deliverables:
+Completed deliverables:
 
 - root `action.yml` Marketplace branding with one root Action metadata file
 - non-prerelease `v0.3.0` GitHub Release backed by exact candidate evidence
@@ -948,6 +948,13 @@ Accepted deliverables:
 - interactive developer-agreement, publication toggle, and public listing verification
 - post-tag external consumer evidence and separate compare-and-swap `v0` promotion
 - npm and workspace-package publication remain blocked
+
+Publication evidence:
+
+- public Marketplace listing: <https://github.com/marketplace/actions/clarissimi>
+- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.3.0>
+- exact candidate SHA: `55c4e54eee5a8a9fff69430d6341402e13ca3a1a`
+- release evidence issue: <https://github.com/0disoft/clarissimi/issues/11>
 
 Validation required:
 

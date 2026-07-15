@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "clarissimi.provider-result-quality-dirty-corpus/v1",
+  "dataset": {
+    "kind": "dirty",
+    "releaseGate": false,
+    "caseSource": "scrubbed-observed-failure",
+    "defaultStatus": "candidate",
+    "rawContent": "forbidden"
+  },
+  "contributor": {
+    "platform": "github",
+    "id": "dirty-corpus-contributor",
+    "login": "dirty-corpus",
+    "profileUrl": "https://github.com/dirty-corpus"
+  },
+  "baseCandidate": {
+    "contributionType": "maintenance",
+    "affectedArea": "scrubbed regression surface",
+    "impactLevel": "low",
+    "evidenceSummary": "Describes a scrubbed provider-result regression without raw incident content.",
+    "suggestedBadge": "Regression Steward",
+    "publicRecognitionText": "Improved a scrubbed provider-result regression path.",
+    "confidence": 0.7
+  },
+  "cases": []
+}

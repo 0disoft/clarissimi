@@ -3420,3 +3420,119 @@ env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
 required_after = ["git_push_main_action_provider_failure_summary"]
+
+[intents.test_provider_result_dirty_corpus]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Build providers and run the focused scrubbed dirty-corpus contract, privacy, and promoted-case regressions."
+argv = ["node", "--test", "packages/providers/test/result-quality-dirty-corpus.test.mjs"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+preconditions = [
+  { kind = "artifact_freshness", artifact = "packages/providers/dist/index.js", sources = [
+    "packages/providers/src/**",
+    "packages/schemas/src/**",
+    "packages/providers/tsconfig.json",
+    "tsconfig.json",
+  ], satisfy_intent = "build" },
+]
+required_after = ["provider_result_dirty_corpus_change"]
+
+[intents.git_stage_provider_result_dirty_corpus]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Stage the reviewed provider dirty-corpus intake, privacy contract, tests, docs, command contract, and lock baseline."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  ".mustflow/config/manifest.lock.toml",
+  "packages/providers/test/fixtures/result-quality-dirty-corpus.json",
+  "packages/providers/test/fixtures/provider-result-dirty-corpus.md",
+  "packages/providers/test/result-quality-dirty-corpus.test.mjs",
+  "docs/adr/0049-add-scrubbed-provider-failure-dirty-corpus.md",
+  "docs/adr/README.md",
+  "docs/product/04-implementation-tracker.md",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["provider_result_dirty_corpus_validation_complete"]
+
+[intents.git_commit_provider_result_dirty_corpus]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Commit the scrubbed observed provider-failure dirty-corpus intake contract."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "test(providers): add scrubbed failure corpus",
+  "-m",
+  "Validation: focused dirty corpus, docs, release-readiness, lint, format, check, contract, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_provider_result_dirty_corpus"]
+
+[intents.git_push_main_provider_result_dirty_corpus]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_push"]
+description = "Push the validated provider dirty-corpus intake on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_provider_result_dirty_corpus", "user_authorized_push"]
+
+[intents.hosted_ci_provider_result_dirty_corpus]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Confirm hosted CI passed for the pushed provider dirty-corpus intake contract."
+argv = ["pnpm", "run", "hosted-ci-validation"]
+cwd = "."
+timeout_seconds = 900
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["git_push_main_provider_result_dirty_corpus"]

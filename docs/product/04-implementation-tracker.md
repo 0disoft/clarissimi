@@ -1063,6 +1063,30 @@ Validation required:
 - Action bundle regeneration and freshness validation
 - `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, and `contract`
 
+### 27. Scrubbed Provider Failure Dirty Corpus
+
+Source: `docs/adr/0049-add-scrubbed-provider-failure-dirty-corpus.md`,
+`docs/adr/0047-add-provider-result-quality-regression-corpus.md`
+
+Status: Completed for the intake and privacy contract; no observed case has been accepted yet.
+
+Goal: turn future observed provider-result failures into reviewed deterministic regressions without
+copying raw incident content or mixing noisy cases into the golden corpus.
+
+Completed deliverables:
+
+- separate versioned dirty-corpus fixture with explicit non-release-gate metadata
+- candidate, promoted, and quarantined lifecycle with promoted-only blocking tests
+- hashed incident reference and synthetic-value provenance contract
+- recursive forbidden-field and secret-like-content checks
+- explicit empty baseline rather than a fabricated production incident
+
+Validation required:
+
+- focused dirty-corpus contract and privacy regression
+- provider result-quality regressions
+- `docs`, `release-readiness`, `lint`, `format`, `check`, and `contract`
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

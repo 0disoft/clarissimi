@@ -2609,3 +2609,196 @@ env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
 required_after = ["git_push_main_provider_result_quality"]
+
+[intents.git_stage_release_v0_3_4]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Stage the reviewed v0.3.4 provider-result quality release notes, current public examples, regression contract, tests, and bounded release commands."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  "README.md",
+  "docs/github-action/README.md",
+  "scripts/release-notes/v0.3.4.md",
+  "scripts/release-readiness.mjs",
+  "scripts/test/release-readiness.test.mjs",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["release_v0_3_4_local_validation_complete"]
+
+[intents.git_commit_release_v0_3_4]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Commit the reviewed v0.3.4 provider-result quality release preparation."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "chore(release): prepare v0.3.4 provider quality",
+  "-m",
+  "Validation: docs, release-readiness, lint, format, migration-check, smoke, check, contract, bundle-action-check, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_release_v0_3_4"]
+
+[intents.git_push_main_release_v0_3_4]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Push the validated v0.3.4 provider-result quality release preparation on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_release_v0_3_4", "user_authorized_push"]
+
+[intents.hosted_ci_release_v0_3_4]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Confirm hosted CI passed for the pushed v0.3.4 release candidate at the current local HEAD."
+argv = ["pnpm", "run", "hosted-ci-validation"]
+cwd = "."
+timeout_seconds = 900
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["git_push_main_release_v0_3_4"]
+
+[intents.release_v0_3_4_marketplace_evidence]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Collect exact-HEAD v0.3.4 Marketplace candidate validation records and create the external release issue."
+argv = [
+  "pnpm",
+  "run",
+  "release-candidate-evidence-orchestrator",
+  "--",
+  "--provider-model",
+  "gpt-4.1-mini",
+  "--release-type",
+  "marketplace-action-tag",
+  "--release-version",
+  "v0.3.4",
+  "--create-issue",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["hosted_ci_release_v0_3_4", "user_authorized_release"]
+
+[intents.release_v0_3_4_stable_publish]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Publish immutable v0.3.4 as a non-prerelease GitHub Marketplace Release from exact candidate validation records."
+argv = [
+  "pnpm",
+  "run",
+  "publish-action-release",
+  "--",
+  "--version",
+  "v0.3.4",
+  "--release-kind",
+  "stable",
+]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/refs/tags/v0.3.4", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["release_v0_3_4_marketplace_evidence", "user_authorized_release"]
+
+[intents.release_v0_3_4_post_tag_evidence]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Revalidate published v0.3.4 with hosted live-provider, external dry-run, full-write, and orphan-audit workflows."
+argv = [
+  "pnpm",
+  "run",
+  "release-candidate-evidence-orchestrator",
+  "--",
+  "--provider-model",
+  "gpt-4.1-mini",
+  "--release-type",
+  "marketplace-action-tag",
+  "--release-version",
+  "v0.3.4",
+  "--external-ref",
+  "v0.3.4",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["release_v0_3_4_stable_publish"]
+
+[intents.verify_marketplace_v0_3_4]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Verify that the public Marketplace listing marks v0.3.4 as Latest and renders the matching Action reference."
+argv = ["pnpm", "run", "verify-marketplace-release", "--", "--version", "v0.3.4"]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["release_v0_3_4_stable_publish", "marketplace_publication"]

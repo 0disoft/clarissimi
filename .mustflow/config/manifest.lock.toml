@@ -1,0 +1,38 @@
+schema_version = "1"
+generated_by = "mustflow"
+
+[template]
+id = "default"
+version = "2.115.16"
+profile = "minimal"
+locale = "en"
+
+[files."AGENTS.md"]
+source = "template_common"
+last_action = "customized"
+content_hash = "sha256:c00d03f66f7a799ccbdbeb7512b04162d2433a5bc36019e0f51adbf1d2b936bc"
+
+[files.".mustflow/config/commands.toml"]
+source = "template_common"
+last_action = "customized"
+content_hash = "sha256:dee8b7021aee1e41b189509c4a3a81d943cd0b586a544c43df1ca9103063d87f"
+
+[files.".mustflow/config/mustflow.toml"]
+source = "template_common"
+last_action = "customized"
+content_hash = "sha256:431347094cb7a64363bc829946e691830e334daed4430f850771859b85a64994"
+
+[files.".mustflow/skills/INDEX.md"]
+source = "template_common"
+last_action = "customized"
+content_hash = "sha256:423bea303dfb6f50c9328e0c0118ab6d1bc6cef381ec2b09d56f98612af6d2ce"
+
+[files.".mustflow/skills/router.toml"]
+source = "template_common"
+last_action = "customized"
+content_hash = "sha256:238d9a95ea7c46c6daee2b16cac2e4317495d30e5aeadefbe1949419d72cb7ff"
+
+[files.".mustflow/skills/routes.toml"]
+source = "template_common"
+last_action = "customized"
+content_hash = "sha256:822ee444f7b77a0aa2945cdb9390d0a6493dc7f8ae8f93a1f49781d4b09d147d"

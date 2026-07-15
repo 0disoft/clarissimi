@@ -108,6 +108,11 @@ test("creates a draft assessment from an OpenAI-compatible response", async () =
   assert.equal(requests[0].body.thinking, undefined);
   assert.equal(requests[0].body.messages[0].content.includes("score shares"), true);
   assert.equal(
+    requests[0].body.messages[0].content.includes("explicit security-label evidence"),
+    true,
+  );
+  assert.equal(requests[0].body.messages[0].content.includes("at least four evidence items"), true);
+  assert.equal(
     requests[0].body.messages[0].content.includes("recent time-window contribution percentages"),
     true,
   );
@@ -399,6 +404,43 @@ test("rejects model drafts that include public contribution share language", asy
       error instanceof OpenAiCompatibleProviderError &&
       error.code === "invalid_assessment" &&
       error.issues.some((issue) => issue.code === "public_ranking_language"),
+  );
+});
+
+test("rejects unsupported security claims after schema validation", async () => {
+  const provider = createOpenAiCompatibleContributionDraftProvider({
+    model: "clarissimi-test-model",
+    token: "unit-token",
+    fetch: async () =>
+      jsonResponse({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                contributionType: "security",
+                affectedArea: "documentation cleanup",
+                impactLevel: "low",
+                evidenceSummary: "Updated one documentation file.",
+                suggestedBadge: "Security Care",
+                publicRecognitionText: "Fixed a security vulnerability.",
+                confidence: 0.9,
+              }),
+            },
+          },
+        ],
+      }),
+  });
+  const evidence = prepareEvidenceForProvider({
+    source,
+    items: [{ kind: "file", id: "docs/setup.md", title: "documentation cleanup" }],
+  });
+
+  await assert.rejects(
+    () => provider.createAssessment({ contributor, preparedEvidence: evidence }),
+    (error) =>
+      error instanceof OpenAiCompatibleProviderError &&
+      error.code === "invalid_assessment" &&
+      error.issues.some((issue) => issue.code === "provider_result_security_support_missing"),
   );
 });
 

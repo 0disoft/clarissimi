@@ -1,0 +1,258 @@
+{
+  "schemaVersion": "clarissimi.provider-result-quality-corpus/v1",
+  "contributor": {
+    "platform": "github",
+    "id": "quality-corpus-contributor",
+    "login": "quality-corpus",
+    "profileUrl": "https://github.com/quality-corpus"
+  },
+  "baseCandidate": {
+    "contributionType": "maintenance",
+    "affectedArea": "repository maintenance",
+    "impactLevel": "low",
+    "evidenceSummary": "Reduced repeated maintenance work described by the merged pull request.",
+    "suggestedBadge": "Maintenance Steward",
+    "publicRecognitionText": "Reduced repeated repository maintenance work.",
+    "confidence": 0.72
+  },
+  "cases": [
+    {
+      "id": "parser-regression-test",
+      "items": [
+        { "kind": "test", "id": "tests/parser.test.ts", "title": "parser regression coverage" }
+      ],
+      "candidate": {
+        "contributionType": "test",
+        "affectedArea": "parser regression coverage",
+        "impactLevel": "medium",
+        "suggestedBadge": "Regression Shield",
+        "publicRecognitionText": "Added regression coverage for nested parser input."
+      },
+      "expectedIssueCodes": []
+    },
+    {
+      "id": "advisory-backed-security-fix",
+      "items": [
+        { "kind": "advisory", "id": "GHSA-example", "title": "validated advisory remediation" }
+      ],
+      "candidate": {
+        "contributionType": "security",
+        "affectedArea": "advisory remediation",
+        "impactLevel": "high",
+        "evidenceSummary": "Addressed the behavior documented by the advisory.",
+        "suggestedBadge": "Security Care",
+        "publicRecognitionText": "Helped maintainers address an advisory-backed security issue."
+      },
+      "expectedIssueCodes": []
+    },
+    {
+      "id": "issue-backed-bug-report",
+      "items": [
+        { "kind": "issue", "id": "issue-81", "title": "reproducible cache invalidation report" }
+      ],
+      "candidate": {
+        "contributionType": "bug_report",
+        "affectedArea": "cache invalidation",
+        "suggestedBadge": "Problem Mapper",
+        "publicRecognitionText": "Helped narrow a reproducible cache invalidation problem."
+      },
+      "expectedIssueCodes": []
+    },
+    {
+      "id": "maintenance-cleanup",
+      "items": [{ "kind": "file", "id": "src/cache.ts", "title": "cache cleanup" }],
+      "candidate": {},
+      "expectedIssueCodes": []
+    },
+    {
+      "id": "documentation-clarification",
+      "items": [{ "kind": "file", "id": "docs/setup.md", "title": "setup documentation" }],
+      "candidate": {
+        "contributionType": "documentation",
+        "affectedArea": "setup documentation",
+        "suggestedBadge": "Documentation Guide",
+        "publicRecognitionText": "Clarified setup steps for first-time contributors."
+      },
+      "expectedIssueCodes": []
+    },
+    {
+      "id": "performance-regression-coverage",
+      "items": [
+        { "kind": "file", "id": "src/index.ts", "title": "batching path" },
+        { "kind": "test", "id": "tests/batching.test.ts", "title": "batching regression" }
+      ],
+      "candidate": {
+        "contributionType": "performance",
+        "affectedArea": "batching path",
+        "impactLevel": "medium",
+        "suggestedBadge": "Performance Care",
+        "publicRecognitionText": "Reduced repeated work in the batching path and added regression coverage."
+      },
+      "expectedIssueCodes": []
+    },
+    {
+      "id": "accessibility-labels",
+      "items": [{ "kind": "file", "id": "src/dialog.tsx", "title": "dialog labels" }],
+      "candidate": {
+        "contributionType": "accessibility",
+        "affectedArea": "dialog labels",
+        "suggestedBadge": "Accessibility Care",
+        "publicRecognitionText": "Improved dialog labels for assistive technology users."
+      },
+      "expectedIssueCodes": []
+    },
+    {
+      "id": "api-design-compatibility",
+      "items": [
+        { "kind": "pull_request", "id": "PR-108", "title": "API compatibility" },
+        { "kind": "file", "id": "src/public-api.ts", "title": "public API" }
+      ],
+      "candidate": {
+        "contributionType": "api_design",
+        "affectedArea": "public API compatibility",
+        "impactLevel": "medium",
+        "suggestedBadge": "API Steward",
+        "publicRecognitionText": "Improved compatibility of the public API contract."
+      },
+      "expectedIssueCodes": []
+    },
+    {
+      "id": "translation-update",
+      "items": [{ "kind": "file", "id": "locales/ko.json", "title": "Korean messages" }],
+      "candidate": {
+        "contributionType": "translation",
+        "affectedArea": "Korean messages",
+        "suggestedBadge": "Translation Guide",
+        "publicRecognitionText": "Improved Korean messages for contributors."
+      },
+      "expectedIssueCodes": []
+    },
+    {
+      "id": "release-validation-test",
+      "items": [{ "kind": "test", "id": "tests/release.test.ts", "title": "release validation" }],
+      "candidate": {
+        "contributionType": "release_validation",
+        "affectedArea": "release validation",
+        "impactLevel": "medium",
+        "suggestedBadge": "Release Verifier",
+        "publicRecognitionText": "Added repeatable checks for the release path."
+      },
+      "expectedIssueCodes": []
+    },
+    {
+      "id": "example-project",
+      "items": [
+        { "kind": "file", "id": "examples/basic.ts", "title": "basic integration example" }
+      ],
+      "candidate": {
+        "contributionType": "example",
+        "affectedArea": "basic integration example",
+        "suggestedBadge": "Example Builder",
+        "publicRecognitionText": "Added a basic integration example for new users."
+      },
+      "expectedIssueCodes": []
+    },
+    {
+      "id": "multi-surface-high-impact",
+      "items": [
+        { "kind": "file", "id": "src/a.ts" },
+        { "kind": "file", "id": "src/b.ts" },
+        { "kind": "test", "id": "tests/a.test.ts" },
+        { "kind": "pull_request", "id": "PR-112" }
+      ],
+      "candidate": {
+        "affectedArea": "multi-surface maintenance",
+        "impactLevel": "high",
+        "publicRecognitionText": "Reduced maintenance work across several validated project surfaces."
+      },
+      "expectedIssueCodes": []
+    },
+    {
+      "id": "reject-ranking-language",
+      "items": [{ "kind": "file", "id": "src/rank.ts" }],
+      "candidate": { "publicRecognitionText": "Became the top 3 contributor on the leaderboard." },
+      "expectedIssueCodes": ["public_ranking_language"]
+    },
+    {
+      "id": "reject-recent-share-language",
+      "items": [{ "kind": "file", "id": "src/share.ts" }],
+      "candidate": {
+        "evidenceSummary": "This person contributed 37% of the last 90 days contribution score."
+      },
+      "expectedIssueCodes": ["public_ranking_language"]
+    },
+    {
+      "id": "reject-public-score-field",
+      "items": [{ "kind": "file", "id": "src/score.ts" }],
+      "candidate": { "score": 92 },
+      "expectedIssueCodes": ["public_score_field"]
+    },
+    {
+      "id": "reject-unsupported-security-type",
+      "items": [{ "kind": "file", "id": "src/config.ts", "title": "configuration cleanup" }],
+      "candidate": {
+        "contributionType": "security",
+        "affectedArea": "configuration handling",
+        "suggestedBadge": "Security Care",
+        "publicRecognitionText": "Fixed a security vulnerability in configuration handling."
+      },
+      "expectedIssueCodes": ["provider_result_security_support_missing"]
+    },
+    {
+      "id": "reject-unsupported-security-narrative",
+      "items": [{ "kind": "file", "id": "src/readme.ts", "title": "readme cleanup" }],
+      "candidate": { "publicRecognitionText": "Removed an exploitable security vulnerability." },
+      "expectedIssueCodes": ["provider_result_security_support_missing"]
+    },
+    {
+      "id": "reject-unsupported-high-impact",
+      "items": [{ "kind": "file", "id": "src/one-line.ts", "title": "one-line cleanup" }],
+      "candidate": { "impactLevel": "high" },
+      "expectedIssueCodes": ["provider_result_high_impact_support_missing"]
+    },
+    {
+      "id": "reject-missing-evidence-reference",
+      "items": [
+        { "kind": "file", "id": "src/a.ts" },
+        { "kind": "test", "id": "tests/a.test.ts" }
+      ],
+      "candidate": { "impactLevel": "medium" },
+      "trustedOverrides": { "evidenceRefs": "drop-last" },
+      "expectedIssueCodes": ["provider_result_evidence_mismatch"]
+    },
+    {
+      "id": "reject-extra-evidence-reference",
+      "items": [{ "kind": "file", "id": "src/a.ts" }],
+      "candidate": {},
+      "trustedOverrides": { "evidenceRefs": "append-extra" },
+      "expectedIssueCodes": ["provider_result_evidence_mismatch"]
+    },
+    {
+      "id": "reject-source-drift",
+      "items": [{ "kind": "file", "id": "src/source.ts" }],
+      "candidate": {},
+      "trustedOverrides": { "pullRequestNumber": 9999 },
+      "expectedIssueCodes": ["provider_result_source_mismatch"]
+    },
+    {
+      "id": "reject-contributor-drift",
+      "items": [{ "kind": "file", "id": "src/identity.ts" }],
+      "candidate": {},
+      "trustedOverrides": { "contributorLogin": "someone-else" },
+      "expectedIssueCodes": ["provider_result_identity_mismatch"]
+    },
+    {
+      "id": "reject-provider-approval",
+      "items": [{ "kind": "file", "id": "src/approval.ts" }],
+      "candidate": {},
+      "trustedOverrides": { "approvalStatus": "approved" },
+      "expectedIssueCodes": ["provider_result_approval_mismatch"]
+    },
+    {
+      "id": "reject-unbounded-confidence",
+      "items": [{ "kind": "file", "id": "src/confidence.ts" }],
+      "candidate": { "confidence": 1.5 },
+      "expectedIssueCodes": ["out_of_range"]
+    }
+  ]
+}

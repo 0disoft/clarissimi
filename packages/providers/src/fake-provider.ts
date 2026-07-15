@@ -2,7 +2,6 @@ import type { PreparedProviderEvidence } from "@clarissimi/core";
 import {
   ASSESSMENT_SCHEMA_VERSION,
   hasPublicRankingLanguage,
-  validateContributionAssessment,
   type ContributionAssessment,
   type ContributionType,
   type EvidenceKind,
@@ -15,6 +14,7 @@ import type {
   ProviderAssessmentHints,
   ProviderAssessmentInput,
 } from "./types.js";
+import { validateProviderAssessmentResult } from "./result-quality.js";
 
 const DEFAULT_PROVIDER_ID = "fake-deterministic";
 const DEFAULT_AFFECTED_AREA = "repository maintenance";
@@ -90,7 +90,7 @@ export function createFakeAssessment(
     source: input.preparedEvidence.source,
   } satisfies ContributionAssessment;
 
-  const result = validateContributionAssessment(assessment);
+  const result = validateProviderAssessmentResult(input, assessment);
   if (!result.ok) {
     throw new FakeProviderAssessmentError(result.issues);
   }

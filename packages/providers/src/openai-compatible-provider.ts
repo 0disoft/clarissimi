@@ -2,12 +2,12 @@ import {
   ASSESSMENT_SCHEMA_VERSION,
   CONTRIBUTION_TYPES,
   IMPACT_LEVELS,
-  validateContributionAssessment,
   type ContributionAssessment,
   type ValidationIssue,
 } from "@clarissimi/schemas";
 
 import type { ContributionDraftProvider, ProviderAssessmentInput } from "./types.js";
+import { validateProviderAssessmentResult } from "./result-quality.js";
 
 const DEFAULT_PROVIDER_ID = "openai-compatible";
 const DEFAULT_ENDPOINT = "https://api.openai.com/v1/chat/completions";
@@ -293,6 +293,8 @@ function buildSystemPrompt(): string {
     `impactLevel must be one of: ${IMPACT_LEVELS.join(", ")}.`,
     "confidence must be a number between 0 and 1.",
     "Base every claim on the provided redacted evidence. Do not invent evidence.",
+    "Use security recognition or security language only when advisory, test, or explicit security-label evidence supports it.",
+    "Use high impact only when an explicit hint, advisory, supported security evidence, or at least four evidence items support it.",
     "Do not include raw provider output, raw diffs, secrets, leaderboard language, rankings, numeric contributor scores, score shares, point shares, impact-weight shares, contribution-weight shares, or recent time-window contribution percentages.",
     "Do not wrap the JSON object in Markdown code fences.",
   ].join("\n");
@@ -356,7 +358,7 @@ function parseAssessmentDraft(
     source: input.preparedEvidence.source,
   };
 
-  const result = validateContributionAssessment(assessment);
+  const result = validateProviderAssessmentResult(input, assessment);
   if (!result.ok) {
     throw new OpenAiCompatibleProviderError(
       "invalid_assessment",

@@ -2481,3 +2481,131 @@ env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
 required_after = ["git_push_main_v0_3_3_release_completion"]
+
+[intents.test_provider_result_quality]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Run the focused deterministic provider result quality corpus and provider adapter regressions."
+argv = [
+  "node",
+  "--test",
+  "packages/providers/test/result-quality-corpus.test.mjs",
+  "packages/providers/test/fake-provider.test.mjs",
+  "packages/providers/test/openai-compatible-provider.test.mjs",
+]
+cwd = "."
+timeout_seconds = 300
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+preconditions = [
+  { kind = "artifact_freshness", artifact = "packages/providers/dist/index.js", sources = [
+    "packages/providers/src/**",
+    "packages/providers/tsconfig.json",
+    "tsconfig.json",
+  ], satisfy_intent = "build" },
+]
+required_after = [
+  "provider_result_quality_change",
+  "provider_prompt_change",
+  "provider_quality_corpus_change",
+]
+
+[intents.git_stage_provider_result_quality]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Stage the reviewed provider result quality validator, 24-case corpus, prompt contract, Action bundle, ADR, ownership, tracker, documentation, and bounded command contract."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  "action-dist/index.js",
+  "docs/adr/README.md",
+  "docs/adr/0047-add-provider-result-quality-regression-corpus.md",
+  "docs/monorepo/package-ownership.md",
+  "docs/product/04-implementation-tracker.md",
+  "packages/providers/README.md",
+  "packages/providers/src/fake-provider.ts",
+  "packages/providers/src/index.ts",
+  "packages/providers/src/openai-compatible-provider.ts",
+  "packages/providers/src/result-quality.ts",
+  "packages/providers/test/fixtures/result-quality-corpus.json",
+  "packages/providers/test/openai-compatible-provider.test.mjs",
+  "packages/providers/test/result-quality-corpus.test.mjs",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["provider_result_quality_validation_complete"]
+
+[intents.git_commit_provider_result_quality]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Commit the deterministic provider result quality boundary and balanced regression corpus."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "feat(providers): enforce result quality invariants",
+  "-m",
+  "Validation: provider-result-quality, docs, release-readiness, lint, format, migration-check, smoke, check, contract, bundle-action-check, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_provider_result_quality"]
+
+[intents.git_push_main_provider_result_quality]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Push the validated provider result quality commit on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_provider_result_quality", "user_authorized_push"]
+
+[intents.hosted_ci_provider_result_quality]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Confirm hosted CI passed for the pushed provider result quality commit."
+argv = ["pnpm", "run", "hosted-ci-validation"]
+cwd = "."
+timeout_seconds = 900
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["git_push_main_provider_result_quality"]

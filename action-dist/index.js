@@ -3191,6 +3191,115 @@ function assignOptional6(target, key, value) {
   }
 }
 
+// packages/providers/dist/result-quality.js
+var SECURITY_CLAIM_PATTERN = /\b(?:security|vulnerabilit(?:y|ies)|exploit|advisory|cve-\d{4}-\d{4,})\b/i;
+function validateProviderAssessmentResult(input, value) {
+  const schemaResult = validateContributionAssessment(value);
+  if (!schemaResult.ok) {
+    return schemaResult;
+  }
+  const assessment = schemaResult.value;
+  const issues = [];
+  if (!sameContributor(assessment.contributor, input.contributor)) {
+    issues.push({
+      path: "$.contributor",
+      code: "provider_result_identity_mismatch",
+      message: "Provider results must preserve the trusted contributor identity."
+    });
+  }
+  if (!sameSource2(assessment.source, input.preparedEvidence.source)) {
+    issues.push({
+      path: "$.source",
+      code: "provider_result_source_mismatch",
+      message: "Provider results must preserve the trusted recognition source."
+    });
+  }
+  if (!sameEvidenceRefs(assessment.evidenceRefs, input.preparedEvidence.evidenceRefs)) {
+    issues.push({
+      path: "$.evidenceRefs",
+      code: "provider_result_evidence_mismatch",
+      message: "Provider results must preserve the complete prepared evidence reference set."
+    });
+  }
+  if (assessment.maintainerApprovalStatus !== "draft") {
+    issues.push({
+      path: "$.maintainerApprovalStatus",
+      code: "provider_result_approval_mismatch",
+      message: "Provider results must remain drafts until maintainer policy approves them."
+    });
+  }
+  const securityClaim = hasSecurityClaim(assessment);
+  const securitySupport = hasSecuritySupport(input);
+  if (securityClaim && !securitySupport) {
+    issues.push({
+      path: "$.contributionType",
+      code: "provider_result_security_support_missing",
+      message: "Security recognition requires advisory, test, or explicit security-label evidence."
+    });
+  }
+  if (assessment.impactLevel === "high" && !hasHighImpactSupport(input, securityClaim)) {
+    issues.push({
+      path: "$.impactLevel",
+      code: "provider_result_high_impact_support_missing",
+      message: "High impact requires explicit maintainer guidance or sufficiently strong evidence."
+    });
+  }
+  if (issues.length > 0) {
+    return { ok: false, issues };
+  }
+  return { ok: true, value: assessment, issues: [] };
+}
+function sameContributor(left, right) {
+  return left.platform === right.platform && left.id === right.id && left.login === right.login && left.profileUrl === right.profileUrl && left.kind === right.kind;
+}
+function sameSource2(left, right) {
+  return left.repository === right.repository && left.event === right.event && left.pullRequestNumber === right.pullRequestNumber && left.mergedAt === right.mergedAt;
+}
+function sameEvidenceRefs(left, right) {
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((candidate, index) => {
+    const expected = right[index];
+    return expected !== void 0 && candidate.kind === expected.kind && candidate.id === expected.id && candidate.url === expected.url && candidate.title === expected.title && candidate.excerpt === expected.excerpt;
+  });
+}
+function hasSecurityClaim(assessment) {
+  return assessment.contributionType === "security" || [
+    assessment.affectedArea,
+    assessment.evidenceSummary,
+    assessment.suggestedBadge,
+    assessment.publicRecognitionText
+  ].some((value) => SECURITY_CLAIM_PATTERN.test(value));
+}
+function hasSecuritySupport(input) {
+  return input.preparedEvidence.items.some((item) => item.kind === "advisory" || item.kind === "test" || containsSecurityMarker(item.metadata));
+}
+function containsSecurityMarker(value) {
+  if (typeof value === "string") {
+    return SECURITY_CLAIM_PATTERN.test(value);
+  }
+  if (Array.isArray(value)) {
+    return value.some(containsSecurityMarker);
+  }
+  if (value !== null && typeof value === "object") {
+    return Object.values(value).some(containsSecurityMarker);
+  }
+  return false;
+}
+function hasHighImpactSupport(input, securityClaim) {
+  if (input.hints?.impactLevel === "high") {
+    return true;
+  }
+  if (input.preparedEvidence.items.length >= 4) {
+    return true;
+  }
+  if (input.preparedEvidence.items.some((item) => item.kind === "advisory")) {
+    return true;
+  }
+  return securityClaim && hasSecuritySupport(input);
+}
+
 // packages/providers/dist/fake-provider.js
 var DEFAULT_PROVIDER_ID = "fake-deterministic";
 var DEFAULT_AFFECTED_AREA = "repository maintenance";
@@ -3233,7 +3342,7 @@ function createFakeAssessment(input, defaults = {}) {
     maintainerApprovalStatus: "draft",
     source: input.preparedEvidence.source
   };
-  const result = validateContributionAssessment(assessment);
+  const result = validateProviderAssessmentResult(input, assessment);
   if (!result.ok) {
     throw new FakeProviderAssessmentError(result.issues);
   }
@@ -3517,6 +3626,8 @@ function buildSystemPrompt() {
     `impactLevel must be one of: ${IMPACT_LEVELS.join(", ")}.`,
     "confidence must be a number between 0 and 1.",
     "Base every claim on the provided redacted evidence. Do not invent evidence.",
+    "Use security recognition or security language only when advisory, test, or explicit security-label evidence supports it.",
+    "Use high impact only when an explicit hint, advisory, supported security evidence, or at least four evidence items support it.",
     "Do not include raw provider output, raw diffs, secrets, leaderboard language, rankings, numeric contributor scores, score shares, point shares, impact-weight shares, contribution-weight shares, or recent time-window contribution percentages.",
     "Do not wrap the JSON object in Markdown code fences."
   ].join("\n");
@@ -3566,7 +3677,7 @@ function parseAssessmentDraft(content, input) {
     maintainerApprovalStatus: "draft",
     source: input.preparedEvidence.source
   };
-  const result = validateContributionAssessment(assessment);
+  const result = validateProviderAssessmentResult(input, assessment);
   if (!result.ok) {
     throw new OpenAiCompatibleProviderError("invalid_assessment", "OpenAI-compatible provider produced an invalid contribution assessment.", result.issues);
   }

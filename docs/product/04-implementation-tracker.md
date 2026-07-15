@@ -1004,6 +1004,33 @@ Validation required:
 - `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, and `contract`
 - hosted CI, live-provider, external dry-run, full-write, and orphan-audit evidence
 
+### 25. Provider Result Quality Regression Corpus
+
+Source: `docs/adr/0047-add-provider-result-quality-regression-corpus.md`,
+`docs/product/02-spec.md`, `docs/monorepo/package-ownership.md`
+
+Status: Completed.
+
+Goal: catch schema-valid but semantically unsafe provider drafts without turning live-model wording
+or exact prose snapshots into a correctness gate.
+
+Completed deliverables:
+
+- shared provider-result validator for trusted contributor, source, evidence-reference, and draft
+  approval invariants
+- evidence requirements for security language and unsupported `high` impact claims
+- 24 synthetic merged pull requests split evenly between accepted and rejected cases
+- deterministic issue-code oracle with no network, credentials, model judge, or exact prose matching
+- fake and OpenAI-compatible adapters use the same validation boundary
+- provider prompt states the same security and high-impact support rules
+
+Validation required:
+
+- focused provider result quality corpus
+- provider adapter regressions
+- Action bundle regeneration and freshness validation
+- `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, and `contract`
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

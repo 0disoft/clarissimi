@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import test from "node:test";
 
 import { runCli } from "../dist/index.js";
+import { retryTransientFileOperation } from "../dist/io.js";
 
 function assessment(overrides = {}) {
   return {
@@ -890,57 +891,145 @@ test("import-draft appends an approved agent draft and writes derived outputs", 
   });
 });
 
+test("file operations retry bounded transient Windows access failures", async () => {
+  for (const code of ["EACCES", "EBUSY", "EPERM"]) {
+    let attempts = 0;
+    const waits = [];
+    const result = await retryTransientFileOperation(
+      async () => {
+        attempts += 1;
+        if (attempts < 3) {
+          const error = new Error(`synthetic ${code}`);
+          error.code = code;
+          throw error;
+        }
+        return code;
+      },
+      {
+        platform: "win32",
+        retryDelaysMs: [1, 2, 3],
+        wait: async (milliseconds) => {
+          waits.push(milliseconds);
+        },
+      },
+    );
+
+    assert.equal(result, code);
+    assert.equal(attempts, 3);
+    assert.deepEqual(waits, [1, 2]);
+  }
+});
+
+test("file operations preserve permanent and non-Windows failures", async () => {
+  for (const scenario of [
+    { platform: "win32", code: "ENOENT" },
+    { platform: "linux", code: "EPERM" },
+  ]) {
+    let attempts = 0;
+    const expected = new Error(`synthetic ${scenario.code}`);
+    expected.code = scenario.code;
+
+    await assert.rejects(
+      retryTransientFileOperation(
+        async () => {
+          attempts += 1;
+          throw expected;
+        },
+        {
+          platform: scenario.platform,
+          retryDelaysMs: [0, 0],
+          wait: async () => {},
+        },
+      ),
+      (error) => error === expected,
+    );
+    assert.equal(attempts, 1);
+  }
+});
+
+test("file operations stop after the configured Windows retry budget", async () => {
+  let attempts = 0;
+  const waits = [];
+  const expected = new Error("synthetic EPERM");
+  expected.code = "EPERM";
+
+  await assert.rejects(
+    retryTransientFileOperation(
+      async () => {
+        attempts += 1;
+        throw expected;
+      },
+      {
+        platform: "win32",
+        retryDelaysMs: [1, 2],
+        wait: async (milliseconds) => {
+          waits.push(milliseconds);
+        },
+      },
+    ),
+    (error) => error === expected,
+  );
+  assert.equal(attempts, 3);
+  assert.deepEqual(waits, [1, 2]);
+});
+
 test("import-draft serializes concurrent ledger updates without losing successful imports", async () => {
   await withTempDir(async (dir) => {
-    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
-    const draftPaths = await Promise.all(
-      Array.from({ length: 8 }, async (_, index) => {
-        const draftPath = join(dir, `draft-${index}.json`);
-        await writeFile(
-          draftPath,
-          JSON.stringify(
-            assessment({
-              source: {
-                repository: "example/project",
-                event: "merged_pull_request",
-                pullRequestNumber: 100 + index,
-                mergedAt: "2026-07-08T00:00:00.000Z",
-              },
-            }),
-          ),
-          "utf8",
-        );
-        return draftPath;
-      }),
-    );
+    for (let round = 0; round < 4; round += 1) {
+      const ledger = join(dir, ".clarissimi", `contributions-${round}.jsonl`);
+      const draftPaths = await Promise.all(
+        Array.from({ length: 8 }, async (_, index) => {
+          const draftPath = join(dir, `draft-${round}-${index}.json`);
+          await writeFile(
+            draftPath,
+            JSON.stringify(
+              assessment({
+                source: {
+                  repository: "example/project",
+                  event: "merged_pull_request",
+                  pullRequestNumber: 100 + round * 100 + index,
+                  mergedAt: "2026-07-08T00:00:00.000Z",
+                },
+              }),
+            ),
+            "utf8",
+          );
+          return draftPath;
+        }),
+      );
 
-    const results = await Promise.all(
-      draftPaths.map((draftPath) =>
-        run(["import-draft", "--draft", draftPath, "--ledger", ledger, "--json"], dir),
-      ),
-    );
-    const records = (await readFile(ledger, "utf8"))
-      .trim()
-      .split("\n")
-      .map((line) => JSON.parse(line));
+      const results = await Promise.all(
+        draftPaths.map((draftPath) =>
+          run(["import-draft", "--draft", draftPath, "--ledger", ledger, "--json"], dir),
+        ),
+      );
+      const records = (await readFile(ledger, "utf8"))
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line));
 
-    assert.equal(
-      results.every((result) => result.exitCode === 0),
-      true,
-      JSON.stringify(
-        results.map((result, index) => ({
-          index,
-          exitCode: result.exitCode,
-          stderr: result.stderr,
-        })),
-      ),
-    );
-    assert.equal(records.length, 8);
-    assert.deepEqual(
-      records.map((record) => record.source.pullRequestNumber).sort((left, right) => left - right),
-      [100, 101, 102, 103, 104, 105, 106, 107],
-    );
-    await assert.rejects(() => readFile(`${ledger}.lock`, "utf8"));
+      assert.equal(
+        results.every((result) => result.exitCode === 0),
+        true,
+        JSON.stringify(
+          results.map((result, index) => ({
+            round,
+            index,
+            exitCode: result.exitCode,
+            stdout: result.stdout,
+            stderr: result.stderr,
+          })),
+        ),
+      );
+      assert.equal(records.length, 8);
+      assert.deepEqual(
+        records
+          .map((record) => record.source.pullRequestNumber)
+          .sort((left, right) => left - right),
+        Array.from({ length: 8 }, (_, index) => 100 + round * 100 + index),
+      );
+      await assert.rejects(() => readFile(`${ledger}.lock`, "utf8"));
+    }
   });
 });
 

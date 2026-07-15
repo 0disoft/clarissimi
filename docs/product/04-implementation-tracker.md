@@ -1123,6 +1123,29 @@ Validation required:
 - credential-free example matrix check
 - `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, and `contract`
 
+### 29. Windows CLI Write Coordination Hardening
+
+Source: `docs/cli/ledger-format.md`, `docs/product/02-spec.md`
+
+Status: Completed.
+
+Goal: keep concurrent `import-draft` ledger updates deterministic when Windows filesystem filters
+briefly deny rename or owned-lock cleanup operations.
+
+Completed deliverables:
+
+- Windows-only bounded retries for transient `EACCES`, `EBUSY`, and `EPERM` file operations
+- unchanged fail-closed behavior for permanent errors, non-Windows errors, and exhausted retries
+- four-round concurrent import stress regression covering 32 ledger updates
+- worker diagnostics include JSON stdout as well as stderr when one concurrent import fails
+- deterministic injected-error tests for retry limits and platform boundaries
+
+Validation required:
+
+- focused concurrent CLI lock regression
+- complete CLI and repository test suites
+- `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, and `contract`
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

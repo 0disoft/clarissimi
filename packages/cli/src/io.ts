@@ -4,6 +4,14 @@ import { dirname, isAbsolute, join } from "node:path";
 
 const LOCK_RETRY_DELAY_MS = 50;
 const LOCK_WAIT_TIMEOUT_MS = 30_000;
+const WINDOWS_FILE_OPERATION_RETRY_DELAYS_MS = [10, 25, 50, 100, 200, 400] as const;
+const TRANSIENT_WINDOWS_FILE_OPERATION_CODES = new Set(["EACCES", "EBUSY", "EPERM"]);
+
+interface FileOperationRetryOptions {
+  readonly platform?: NodeJS.Platform;
+  readonly retryDelaysMs?: readonly number[];
+  readonly wait?: (milliseconds: number) => Promise<void>;
+}
 
 export interface CliIo {
   readonly cwd: string;
@@ -54,7 +62,7 @@ export async function withFileLock<T>(path: string, task: () => Promise<T>): Pro
     return await task();
   } finally {
     await handle.close();
-    await rm(path, { force: true });
+    await retryTransientFileOperation(() => rm(path, { force: true }));
   }
 }
 
@@ -94,10 +102,42 @@ export async function writeTextFilesAtomically(
       .filter((entry) => entry.destination !== commitPointPath)
       .concat(staged.filter((entry) => entry.destination === commitPointPath));
     for (const entry of ordered) {
-      await rename(entry.temporaryPath, entry.destination);
+      await retryTransientFileOperation(() => rename(entry.temporaryPath, entry.destination));
     }
   } finally {
-    await Promise.all(staged.map((entry) => rm(entry.temporaryPath, { force: true })));
+    await Promise.all(
+      staged.map((entry) =>
+        retryTransientFileOperation(() => rm(entry.temporaryPath, { force: true })),
+      ),
+    );
+  }
+}
+
+export async function retryTransientFileOperation<T>(
+  operation: () => Promise<T>,
+  options: FileOperationRetryOptions = {},
+): Promise<T> {
+  const platform = options.platform ?? process.platform;
+  const retryDelaysMs = options.retryDelaysMs ?? WINDOWS_FILE_OPERATION_RETRY_DELAYS_MS;
+  const wait = options.wait ?? delay;
+  let retryIndex = 0;
+
+  while (true) {
+    try {
+      return await operation();
+    } catch (error) {
+      const retryDelayMs = retryDelaysMs[retryIndex];
+      if (
+        platform !== "win32" ||
+        retryDelayMs === undefined ||
+        !isTransientWindowsFileOperationError(error)
+      ) {
+        throw error;
+      }
+
+      retryIndex += 1;
+      await wait(retryDelayMs);
+    }
   }
 }
 
@@ -124,4 +164,8 @@ function delay(milliseconds: number): Promise<void> {
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && "code" in error;
+}
+
+function isTransientWindowsFileOperationError(error: unknown): boolean {
+  return isNodeError(error) && TRANSIENT_WINDOWS_FILE_OPERATION_CODES.has(error.code ?? "");
 }

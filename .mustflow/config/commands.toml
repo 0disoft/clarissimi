@@ -138,11 +138,11 @@ required_after = ["automation_contributor_change", "automation_contributor_test_
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
-description = "Run the focused concurrent ledger import regression with worker failure diagnostics."
+description = "Run bounded Windows file-operation retry checks and the concurrent ledger import stress regression with worker failure diagnostics."
 argv = [
   "node",
   "--test",
-  "--test-name-pattern=import-draft serializes concurrent ledger updates",
+  "--test-name-pattern=(file operations|import-draft serializes concurrent ledger updates)",
   "packages/cli/test/cli.test.mjs",
 ]
 cwd = "."
@@ -161,6 +161,96 @@ preconditions = [
   ], satisfy_intent = "build" },
 ]
 required_after = ["cli_lock_change", "cli_lock_test_change"]
+
+[intents.git_stage_cli_write_coordination]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Stage the reviewed Windows CLI write-coordination hardening, regression tests, docs, tracker, and bounded command contract."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  ".mustflow/config/manifest.lock.toml",
+  "docs/cli/ledger-format.md",
+  "docs/product/04-implementation-tracker.md",
+  "packages/cli/src/io.ts",
+  "packages/cli/test/cli.test.mjs",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["cli_write_coordination_validation_complete"]
+
+[intents.git_commit_cli_write_coordination]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Commit the validated Windows CLI write-coordination hardening."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "fix(cli): harden Windows write coordination",
+  "-m",
+  "Validation: focused lock regression, docs, release-readiness, lint, format, migration-check, smoke, check, contract, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_cli_write_coordination"]
+
+[intents.git_push_main_cli_write_coordination]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_push"]
+description = "Push the validated Windows CLI write-coordination hardening on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_cli_write_coordination", "user_authorized_push"]
+
+[intents.hosted_ci_cli_write_coordination]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Confirm hosted CI passed for the pushed Windows CLI write-coordination hardening."
+argv = ["pnpm", "run", "hosted-ci-validation"]
+cwd = "."
+timeout_seconds = 900
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["git_push_main_cli_write_coordination"]
 
 [intents.lint]
 status = "configured"

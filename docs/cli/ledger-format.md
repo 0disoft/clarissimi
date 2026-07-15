@@ -177,3 +177,9 @@ recovery source and `rebuild` restores derived outputs.
 
 The lock is local coordination, not a distributed lock. Clarissimi does not automatically delete a
 stale lock because it cannot safely prove that another writer is dead.
+
+On Windows, antivirus scanners and filesystem filters can briefly return `EACCES`, `EBUSY`, or
+`EPERM` while Clarissimi replaces a staged file or removes the lock it owns. Those operations use a
+short bounded retry schedule before returning write-failure exit code `7`. Other error codes,
+non-Windows failures, exhausted retries, and pre-existing stale locks still fail closed; the retry
+does not weaken ledger validation or delete a lock that Clarissimi did not acquire.

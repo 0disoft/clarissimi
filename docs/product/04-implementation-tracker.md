@@ -940,7 +940,7 @@ Validation completed:
 
 Source: `docs/adr/0045-publish-action-to-github-marketplace.md`, `docs/ops/release.md`
 
-Status: Completed through provider-quality `v0.3.4` Marketplace publication, public verification,
+Status: Completed through Action-diagnostics `v0.3.5` Marketplace publication, public verification,
 and `v0` promotion.
 
 Goal: make the validated root Action discoverable in GitHub Marketplace without publishing npm
@@ -951,7 +951,7 @@ Completed deliverables:
 - root `action.yml` Marketplace branding with one root Action metadata file
 - first non-prerelease `v0.3.0` GitHub Marketplace Release, corrective immutable `v0.3.1`,
   onboarding-focused immutable `v0.3.2`, runtime-hardening immutable `v0.3.3`, and
-  provider-quality immutable `v0.3.4`
+  provider-quality immutable `v0.3.4`, and Action-diagnostics immutable `v0.3.5`
 - Marketplace categories `Code review` and `Utilities`
 - interactive developer-agreement, publication toggle, and public listing verification
 - post-tag external consumer evidence and separate compare-and-swap `v0` promotion
@@ -960,15 +960,15 @@ Completed deliverables:
 Current publication record:
 
 - public Marketplace listing: <https://github.com/marketplace/actions/clarissimi>
-- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.3.4>
-- exact release and `v0` SHA: `50f1251b07f510b65f11b0b77d9f54ed5ebe920b`
-- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/15>
-- candidate hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29394141653>
-- successful post-tag full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29394659569>
-- promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29394993390>
-- `v0` external dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29395105243>
-- `v0` full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29395138003>
-- `v0` orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29395183889>
+- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.3.5>
+- exact release and `v0` SHA: `b1654c4f88c231b8f6beeee399c990b63d935ecc`
+- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/16>
+- candidate hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29405337035>
+- successful post-tag full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29405764991>
+- promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29406398072>
+- `v0` external dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29406540337>
+- `v0` full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29406574270>
+- `v0` orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29406634824>
 
 Corrective follow-up completed:
 
@@ -1002,6 +1002,17 @@ Runtime-hardening release follow-up completed:
 Provider-quality release follow-up completed:
 
 - `v0.3.4` publishes ADR 0047's deterministic provider-result validator and balanced 24-case corpus
+- exact-tag and moving-alias validation both passed live provider, dry-run, full-write, cleanup, and
+  orphan-audit paths on Ubuntu, macOS, and Windows
+- Action inputs, outputs, permissions, triggers, approval semantics, ledger contracts, and npm
+  publication boundaries remain unchanged
+
+Action-diagnostics release follow-up completed:
+
+- `v0.3.5` publishes bounded provider-quality failure tables without raw provider output and adds
+  the scrubbed observed-failure corpus intake contract
+- credential-free multi-model checks are repository validation; live multi-model evaluation remains
+  manual-only because it uses maintainer credentials, network access, and provider cost
 - exact-tag and moving-alias validation both passed live provider, dry-run, full-write, cleanup, and
   orphan-audit paths on Ubuntu, macOS, and Windows
 - Action inputs, outputs, permissions, triggers, approval semantics, ledger contracts, and npm

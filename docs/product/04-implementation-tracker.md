@@ -1040,6 +1040,29 @@ Validation required:
 - Action bundle regeneration and freshness validation
 - `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, and `contract`
 
+### 26. Action Provider Quality Failure Summary
+
+Source: `docs/adr/0048-report-provider-quality-failures-in-action-summary.md`,
+`docs/product/02-spec.md`, `docs/github-action/action-contract.md`
+
+Status: Completed.
+
+Goal: make hosted provider-result failures actionable without adding a raw model-output leak path.
+
+Completed deliverables:
+
+- failed Action Step Summary section for structured OpenAI-compatible `invalid_assessment` issues
+- bounded rule-code and JSON-path table with eight-row and 120-character limits
+- raw provider output, issue messages, prompts, evidence, patches, and secrets excluded
+- original unexpected-failure exit classification preserved when summary writing succeeds or fails
+- focused Action regression and regenerated tracked Action bundle
+
+Validation required:
+
+- focused Action provider-quality failure summary regression
+- Action bundle regeneration and freshness validation
+- `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, and `contract`
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

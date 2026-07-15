@@ -18,6 +18,7 @@
 - Explicit Action config path: `docs/adr/0029-add-explicit-action-config-path.md`
 - Action summary artifact: `docs/adr/0030-add-action-summary-artifact.md`
 - Explicit direct commit mode: `docs/adr/0038-add-explicit-direct-commit-mode.md`
+- Provider quality failure summary: `docs/adr/0048-report-provider-quality-failures-in-action-summary.md`
 
 ## Inputs
 
@@ -166,6 +167,11 @@ The Action emits a bounded JSON summary with:
 - input source
 - approval status when a draft exists
 - redaction match count
+
+An OpenAI-compatible `invalid_assessment` failure with structured issues appends a separate bounded
+section to `GITHUB_STEP_SUMMARY`. The section contains at most eight validator rule codes and JSON
+paths. It excludes issue messages and every raw provider, prompt, evidence, pull request, patch, and
+secret value. Failure-summary write errors do not replace the original provider failure.
 
 The root `action.yml` maps these fields to GitHub Action outputs using the same names:
 `draft-count`, `proposed-entry-count`, `skipped-entry-count`, `mode`, `input-source`,

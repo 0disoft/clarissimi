@@ -106,6 +106,11 @@ The current package also writes the same bounded count, status, and proposal fie
 `GITHUB_STEP_SUMMARY` when the runner provides that path. Step summary content follows the same
 raw-evidence exclusion rules as action outputs.
 
+If the OpenAI-compatible provider returns a structured result-quality failure, the failed step
+summary includes at most eight validator rule codes and JSON paths. It omits provider response
+content and validation messages, normalizes each field to one line, and bounds each field to 120
+characters. This diagnostic does not add an Action output or change the failure exit code.
+
 ## Review Blockers
 
 - An input encourages hard-coded secrets.

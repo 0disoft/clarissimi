@@ -244,6 +244,10 @@ Default write mode:
 
 - `propose`
 
+When provider-result validation rejects a draft, the Action may render bounded structured issue
+codes and JSON paths in `GITHUB_STEP_SUMMARY`. It must not render raw provider output, validation
+messages, prompts, evidence bodies, patch excerpts, or secrets in that failure summary.
+
 An explicit `commit` mode may write approved or auto-approved recognition directly to the
 configured target branch. It preserves the same validation, append-only ledger, duplicate
 rejection, complete derived-output rebuild, and owned-path checks as `propose`. It additionally

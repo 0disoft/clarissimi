@@ -14,6 +14,7 @@ import {
 import {
   createFakeContributionDraftProvider,
   createOpenAiCompatibleContributionDraftProvider,
+  OpenAiCompatibleProviderError,
   type ContributionDraftProvider,
 } from "@clarissimi/providers";
 import {
@@ -396,6 +397,13 @@ export async function runActionFromEnvironment(
     io.stdout(`${JSON.stringify(summary, null, 2)}\n`);
     return 0;
   } catch (error) {
+    if (error instanceof OpenAiCompatibleProviderError) {
+      try {
+        await writeGitHubProviderFailureStepSummary(env.GITHUB_STEP_SUMMARY, error);
+      } catch {
+        io.stderr("Clarissimi could not write the provider failure step summary.\n");
+      }
+    }
     const message = error instanceof Error ? error.message : String(error);
     io.stderr(`${message}\n`);
     return error instanceof ActionUsageError ? 1 : 4;
@@ -1137,6 +1145,52 @@ async function writeGitHubStepSummary(
   ].join("\n");
 
   await appendFile(summaryPath, markdown, "utf8");
+}
+
+const MAX_PROVIDER_FAILURE_ISSUES = 8;
+const MAX_PROVIDER_FAILURE_FIELD_LENGTH = 120;
+
+async function writeGitHubProviderFailureStepSummary(
+  summaryPath: string | undefined,
+  error: OpenAiCompatibleProviderError,
+): Promise<void> {
+  if (
+    summaryPath === undefined ||
+    summaryPath.trim().length === 0 ||
+    error.code !== "invalid_assessment" ||
+    error.issues === undefined ||
+    error.issues.length === 0
+  ) {
+    return;
+  }
+
+  const issues = error.issues.slice(0, MAX_PROVIDER_FAILURE_ISSUES);
+  const markdown = [
+    "## Clarissimi provider result rejected",
+    "",
+    "The provider output failed Clarissimi's result-quality contract. Raw provider content is intentionally omitted.",
+    "",
+    "| Rule | Path |",
+    "| --- | --- |",
+    ...issues.map(
+      (issue) =>
+        `| ${escapeMarkdownTableCell(boundedProviderFailureField(issue.code))} | ${escapeMarkdownTableCell(boundedProviderFailureField(issue.path))} |`,
+    ),
+    ...(error.issues.length > issues.length
+      ? [`| additional_issues_omitted | ${error.issues.length - issues.length} |`]
+      : []),
+    "",
+  ].join("\n");
+
+  await appendFile(summaryPath, markdown, "utf8");
+}
+
+function boundedProviderFailureField(value: string): string {
+  const normalized = value.replaceAll("\r", " ").replaceAll("\n", " ").trim();
+  if (normalized.length <= MAX_PROVIDER_FAILURE_FIELD_LENGTH) {
+    return normalized;
+  }
+  return `${normalized.slice(0, MAX_PROVIDER_FAILURE_FIELD_LENGTH - 1)}…`;
 }
 
 function escapeMarkdownTableCell(value: string): string {

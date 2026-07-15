@@ -80,6 +80,8 @@ engine.
   proposal failures without blindly duplicating ambiguous pull request creation
 - `0047-add-provider-result-quality-regression-corpus.md`: enforce deterministic provider-result
   invariants with a balanced synthetic pull-request corpus instead of exact prose snapshots
+- `0048-report-provider-quality-failures-in-action-summary.md`: render bounded provider validation
+  codes and paths in failed Action step summaries without exposing raw provider content
 
 ## Review Blockers
 

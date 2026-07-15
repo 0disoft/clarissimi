@@ -88,6 +88,10 @@ When a later workflow step needs a durable machine-readable summary, set `summar
 must be relative to `GITHUB_WORKSPACE`, and the written JSON follows the same raw-evidence and
 secret-exclusion rules as stdout, GitHub outputs, and the step summary.
 
+When provider-result quality validation fails, the GitHub Step Summary shows a bounded table of the
+rejected validator rule codes and JSON paths. Raw model output, issue messages, evidence text, and
+secrets stay excluded.
+
 Detailed outputs and failure behavior are defined in `docs/github-action/action-contract.md`. The
 implemented propose-mode sequencing is recorded in
 `docs/github-action/propose-implementation-plan.md`.

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { OpenAiCompatibleProviderError } from "../../providers/dist/index.js";
 import { ActionUsageError, runActionDryRun, runActionFromEnvironment } from "../dist/index.js";
 
 function githubFixture(overrides = {}) {
@@ -784,6 +785,62 @@ test("environment runner writes a bounded GitHub step summary", async () => {
     assert.equal(summaryText.includes("| Input source | github_fixture |"), true);
     assert.equal(summaryText.includes("Adds a failing parser case"), false);
     assert.equal(summaryText.includes("parses nested input"), false);
+  });
+});
+
+test("environment runner writes structured provider quality failures without raw output", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "github-fixture.json");
+    const summaryPath = join(dir, "step-summary.md");
+    await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        GITHUB_STEP_SUMMARY: summaryPath,
+        INPUT_GITHUB_FIXTURE: fixturePath,
+        INPUT_MODE: "dry-run",
+      },
+      {
+        stdout: () => {},
+        stderr: (value) => {
+          stderr += value;
+        },
+      },
+      {
+        provider: {
+          id: "quality-failure-fixture",
+          async createAssessment() {
+            throw new OpenAiCompatibleProviderError(
+              "invalid_assessment",
+              "OpenAI-compatible provider produced an invalid contribution assessment.",
+              [
+                {
+                  path: "$.publicRecognitionText",
+                  code: "public_ranking_language",
+                  message: "RAW_PROVIDER_OUTPUT_SENTINEL",
+                },
+                {
+                  path: "$.impactLevel",
+                  code: "provider_result_high_impact_support_missing",
+                  message: "RAW_PROVIDER_SECRET_SENTINEL",
+                },
+              ],
+            );
+          },
+        },
+      },
+    );
+    const summaryText = await readFile(summaryPath, "utf8");
+
+    assert.equal(exitCode, 4);
+    assert.match(stderr, /invalid contribution assessment/);
+    assert.equal(summaryText.includes("## Clarissimi provider result rejected"), true);
+    assert.equal(summaryText.includes("public_ranking_language"), true);
+    assert.equal(summaryText.includes("$.publicRecognitionText"), true);
+    assert.equal(summaryText.includes("provider_result_high_impact_support_missing"), true);
+    assert.equal(summaryText.includes("RAW_PROVIDER_OUTPUT_SENTINEL"), false);
+    assert.equal(summaryText.includes("RAW_PROVIDER_SECRET_SENTINEL"), false);
   });
 });
 

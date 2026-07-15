@@ -15,7 +15,7 @@ content_hash = "sha256:c00d03f66f7a799ccbdbeb7512b04162d2433a5bc36019e0f51adbf1d
 [files.".mustflow/config/commands.toml"]
 source = "template_common"
 last_action = "customized"
-content_hash = "sha256:a04118d926a6c41381e809c6c53b12d333a6931a9446e3ae36c63f2eec8d4ff4"
+content_hash = "sha256:520eb5564b980703e1401cb146f65137e78a6add8d1633f9ab9ce4b64240de24"
 
 [files.".mustflow/config/mustflow.toml"]
 source = "template_common"

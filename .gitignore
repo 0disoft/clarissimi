@@ -26,6 +26,9 @@ tmp/
 .mustflow/cache/
 .mustflow/state/
 
+# Maintainer-local provider eval matrices name token environment variables but stay untracked.
+.clarissimi/provider-model-eval.local.json
+
 # Reviewed GitHub Action release artifact generated from source.
 !action-dist/
 !action-dist/index.js

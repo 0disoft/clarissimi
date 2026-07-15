@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "clarissimi.provider-model-eval-matrix/v1",
+  "limits": {
+    "timeoutMs": 120000,
+    "maxTokens": 1200,
+    "maxResponseBytes": 2097152
+  },
+  "caseIds": ["parser-regression-test", "documentation-clarification"],
+  "models": [
+    {
+      "id": "provider-model-a",
+      "model": "replace-with-pinned-model-a",
+      "endpoint": "https://api.example.invalid/v1/chat/completions",
+      "tokenEnv": "CLARISSIMI_EVAL_PROVIDER_A_TOKEN",
+      "thinking": "disabled"
+    },
+    {
+      "id": "provider-model-b",
+      "model": "replace-with-pinned-model-b",
+      "endpoint": "https://api.example.invalid/v1/chat/completions",
+      "tokenEnv": "CLARISSIMI_EVAL_PROVIDER_B_TOKEN",
+      "thinking": "disabled"
+    }
+  ]
+}

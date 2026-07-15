@@ -1087,6 +1087,31 @@ Validation required:
 - provider result-quality regressions
 - `docs`, `release-readiness`, `lint`, `format`, `check`, and `contract`
 
+### 28. Manual Multi-Model Provider Eval
+
+Source: `docs/adr/0050-add-manual-multi-model-provider-eval.md`,
+`docs/ops/provider-model-eval.md`
+
+Status: Completed for local check and manual live execution.
+
+Goal: compare several explicit provider model snapshots over the same accepted golden inputs without
+turning credential, network, and cost-bearing calls into an automatic CI or agent action.
+
+Completed deliverables:
+
+- bounded two-to-eight model matrix and one-to-twelve accepted-case selection
+- credential-free, no-network `--check` mode
+- all-token preflight before the first provider call
+- sequential no-retry live execution with explicit request limits
+- sanitized JSON results containing codes and counts but no raw provider content
+- manual-only live Mustflow intent plus agent-runnable matrix check
+
+Validation required:
+
+- focused provider model eval harness regressions
+- credential-free example matrix check
+- `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, and `contract`
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

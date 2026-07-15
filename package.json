@@ -15,6 +15,7 @@
     "migration-check": "pnpm run build && node scripts/migration-check.mjs",
     "smoke": "pnpm run build && node scripts/smoke.mjs",
     "live-provider-smoke": "pnpm run build && node scripts/live-provider-smoke.mjs",
+    "provider-model-eval": "pnpm run build && node scripts/provider-model-eval.mjs",
     "hosted-ci-validation": "node scripts/hosted-ci-validation.mjs",
     "hosted-external-consumer-smoke": "node scripts/hosted-external-consumer-smoke.mjs",
     "hosted-live-provider-smoke": "node scripts/hosted-live-provider-smoke.mjs",

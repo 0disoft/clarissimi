@@ -3536,3 +3536,185 @@ env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
 required_after = ["git_push_main_provider_result_dirty_corpus"]
+
+[intents.provider_model_eval_check]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Validate the versioned multi-model provider eval matrix example and accepted golden-case selection without credentials or network calls."
+argv = [
+  "node",
+  "scripts/provider-model-eval.mjs",
+  "--check",
+  "--matrix",
+  "fixtures/provider-model-eval.example.json",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+preconditions = [
+  { kind = "artifact_freshness", artifact = "packages/providers/dist/index.js", sources = [
+    "packages/core/src/**",
+    "packages/providers/src/**",
+    "packages/schemas/src/**",
+    "packages/core/tsconfig.json",
+    "packages/providers/tsconfig.json",
+    "tsconfig.json",
+  ], satisfy_intent = "build" },
+]
+required_after = ["provider_model_eval_matrix_change", "provider_model_eval_script_change"]
+
+[intents.provider_model_eval_live]
+status = "manual_only"
+lifecycle = "oneshot"
+run_policy = "manual_only"
+description = "Run the credentialed, networked, cost-bearing provider model matrix sequentially from the ignored maintainer-local config."
+argv = [
+  "pnpm",
+  "run",
+  "provider-model-eval",
+  "--",
+  "--matrix",
+  ".clarissimi/provider-model-eval.local.json",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+effects = [
+  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+]
+env_policy = "inherit"
+network = true
+destructive = false
+reason = "Live model evaluation consumes maintainer credentials, external network, time, and provider budget."
+agent_action = "do_not_run_report_manual_only"
+
+[intents.test_provider_model_eval]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Build and run the credential-free provider model eval check, preflight, and sanitized-report regressions."
+argv = ["node", "--test", "scripts/test/provider-model-eval.test.mjs"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+preconditions = [
+  { kind = "artifact_freshness", artifact = "packages/providers/dist/index.js", sources = [
+    "packages/core/src/**",
+    "packages/providers/src/**",
+    "packages/schemas/src/**",
+    "packages/core/tsconfig.json",
+    "packages/providers/tsconfig.json",
+    "tsconfig.json",
+  ], satisfy_intent = "build" },
+]
+required_after = ["provider_model_eval_script_change", "provider_model_eval_test_change"]
+
+[intents.git_stage_provider_model_eval]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Stage the reviewed manual multi-model eval script, example, docs, tests, package command, hygiene rule, command contract, and lock baseline."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  ".mustflow/config/manifest.lock.toml",
+  ".gitignore",
+  "package.json",
+  "scripts/provider-model-eval.mjs",
+  "scripts/test/provider-model-eval.test.mjs",
+  "fixtures/provider-model-eval.example.json",
+  "docs/adr/0050-add-manual-multi-model-provider-eval.md",
+  "docs/adr/README.md",
+  "docs/README.md",
+  "docs/ops/provider-model-eval.md",
+  "docs/ops/config-and-env.md",
+  "docs/product/04-implementation-tracker.md",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["provider_model_eval_validation_complete"]
+
+[intents.git_commit_provider_model_eval]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Commit the bounded manual multi-model provider eval command and contract."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "feat(eval): add manual provider model matrix",
+  "-m",
+  "Validation: provider model eval check and tests, docs, release-readiness, lint, format, smoke, check, contract, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_provider_model_eval"]
+
+[intents.git_push_main_provider_model_eval]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_push"]
+description = "Push the validated manual provider model eval on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_provider_model_eval", "user_authorized_push"]
+
+[intents.hosted_ci_provider_model_eval]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Confirm hosted CI passed for the pushed manual provider model eval contract."
+argv = ["pnpm", "run", "hosted-ci-validation"]
+cwd = "."
+timeout_seconds = 900
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["git_push_main_provider_model_eval"]

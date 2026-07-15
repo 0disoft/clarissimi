@@ -18,6 +18,7 @@
 - CLI output and exit-code source: docs/cli/output-and-exit-codes.md
 - CLI config source: docs/cli/configuration.md
 - GitHub Action source: docs/github-action/README.md
+- Manual provider model eval: docs/ops/provider-model-eval.md
 - License source: LICENSE
 - Notice source: NOTICE
 - Security source: SECURITY.md

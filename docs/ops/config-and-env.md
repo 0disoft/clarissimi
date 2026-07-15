@@ -20,6 +20,9 @@ Current implementation status:
 - `pnpm run live-provider-smoke` uses `CLARISSIMI_PROVIDER_TOKEN`,
   `CLARISSIMI_PROVIDER_MODEL`, optional `CLARISSIMI_PROVIDER_ENDPOINT`, and optional
   `CLARISSIMI_PROVIDER_THINKING`.
+- `pnpm run provider-model-eval` reads only the token environment variable names declared by an
+  explicit local matrix. Its `--check` mode reads no token values and performs no network calls;
+  live mode is manual-only and documented in `docs/ops/provider-model-eval.md`.
 - Local credentialed live-provider smoke passed on `2026-07-09` with
   `CLARISSIMI_PROVIDER_MODEL=gpt-4.1-mini` and a maintainer-owned provider token supplied only
   through the process environment.

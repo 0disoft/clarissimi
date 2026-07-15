@@ -84,6 +84,8 @@ engine.
   codes and paths in failed Action step summaries without exposing raw provider content
 - `0049-add-scrubbed-provider-failure-dirty-corpus.md`: add a privacy-safe candidate, promoted, and
   quarantined intake path for real provider-result failures without weakening the golden corpus
+- `0050-add-manual-multi-model-provider-eval.md`: add a credential-safe matrix check and manual-only
+  sequential live eval across explicit provider model snapshots
 
 ## Review Blockers
 

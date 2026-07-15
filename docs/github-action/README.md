@@ -37,7 +37,7 @@ code.
 ## Action Usage
 
 Use `0disoft/clarissimi@v0` for maintainer-approved `0.x` updates, or pin
-`0disoft/clarissimi@v0.3.4` when exact patch reproducibility matters. The moving `main` ref is
+`0disoft/clarissimi@v0.3.5` when exact patch reproducibility matters. The moving `main` ref is
 reserved for this repository's development and dogfood workflows. Immutable version tags never
 move.
 
@@ -46,7 +46,7 @@ copyable read-only workflow, the manual least-privilege proposal workflow, and a
 recognition result with the contributor summary table.
 
 The current `action.yml` defaults to `propose` mode and also supports explicit read-only `dry-run`
-plus write modes `commit` and `stage-draft`. The current `v0.3.4` release executes the committed
+plus write modes `commit` and `stage-draft`. The current `v0.3.5` release executes the committed
 `action-dist/index.js` bundle without consumer-time package installation or TypeScript compilation. `v0.1.0` remains
 immutable and retains its published source-build behavior. Dry-run mode emits a bounded summary and does not read provider credentials, use
 GitHub write tokens, create branches, open pull requests, or update repository files. Propose mode
@@ -59,7 +59,7 @@ or updates a draft review pull request. When `propose` or `stage-draft` receives
 `GITHUB_TOKEN`; fixture inputs remain the deterministic local and test path.
 
 The composite launcher uses Bash. Ubuntu, macOS, and Windows have passed external dry-run and
-full-write consumer smoke for immutable tag `v0.3.4` and moving alias `v0`.
+full-write consumer smoke for immutable tag `v0.3.5` and moving alias `v0`.
 
 The Action defaults to the fake provider when no provider input or config value is set. To use an
 OpenAI-compatible provider, pass `provider: openai-compatible` and `provider-model`, or provide
@@ -75,7 +75,7 @@ values.
 Set `markdown-summary: table` to add a compact contributor totals table above the detailed
 `CONTRIBUTORS.md` recognition sections. The default `none` layout preserves existing output. The
 explicit input also applies to `promote-draft`, which does not load provider config. Immutable tag
-`v0.3.4` includes both table and gallery layouts.
+`v0.3.5` includes both table and gallery layouts.
 
 Set `markdown-summary: gallery` to show linked 64-pixel GitHub avatars above the same detailed
 sections. Avatar URLs use stable contributor ids, and the gallery does not replace evidence links.
@@ -116,7 +116,7 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - uses: 0disoft/clarissimi@v0.3.4
+      - uses: 0disoft/clarissimi@v0.3.5
         with:
           mode: dry-run
 ```
@@ -125,7 +125,7 @@ Example explicit OpenAI-compatible provider dry run:
 
 ```yaml
 steps:
-  - uses: 0disoft/clarissimi@v0.3.4
+  - uses: 0disoft/clarissimi@v0.3.5
     env:
       CLARISSIMI_PROVIDER_TOKEN: ${{ secrets.CLARISSIMI_PROVIDER_TOKEN }}
     with:
@@ -137,7 +137,7 @@ steps:
 For local fixture checks, pass `github-fixture`:
 
 ```yaml
-- uses: 0disoft/clarissimi@v0.3.4
+- uses: 0disoft/clarissimi@v0.3.5
   with:
     mode: dry-run
     github-fixture: fixtures/github-merged-pr-basic.json
@@ -146,7 +146,7 @@ For local fixture checks, pass `github-fixture`:
 For local or CI checks against a GitHub event payload file, pass `event-path`:
 
 ```yaml
-- uses: 0disoft/clarissimi@v0.3.4
+- uses: 0disoft/clarissimi@v0.3.5
   with:
     mode: dry-run
     event-path: fixtures/github-pull-request-merged-event.json
@@ -160,7 +160,7 @@ token in the workflow secret boundary:
 
 ```yaml
 steps:
-  - uses: 0disoft/clarissimi@v0.3.4
+  - uses: 0disoft/clarissimi@v0.3.5
     env:
       CLARISSIMI_PROVIDER_TOKEN: ${{ secrets.CLARISSIMI_PROVIDER_TOKEN }}
     with:
@@ -173,7 +173,7 @@ To upload the sanitized JSON summary as a workflow artifact:
 ```yaml
 steps:
   - id: clarissimi
-    uses: 0disoft/clarissimi@v0.3.4
+    uses: 0disoft/clarissimi@v0.3.5
     with:
       mode: dry-run
       summary-path: .clarissimi/run-summary.json
@@ -207,7 +207,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: 0disoft/clarissimi@v0.3.4
+      - uses: 0disoft/clarissimi@v0.3.5
         with:
           mode: propose
           base-branch: main
@@ -226,7 +226,7 @@ steps:
   - uses: actions/checkout@v7
     with:
       fetch-depth: 0
-  - uses: 0disoft/clarissimi@v0.3.4
+  - uses: 0disoft/clarissimi@v0.3.5
     with:
       mode: propose
       github-fixture: fixtures/github-merged-pr-approved.json
@@ -247,7 +247,7 @@ steps:
   - uses: actions/checkout@v7
     with:
       fetch-depth: 0
-  - uses: 0disoft/clarissimi@v0.3.4
+  - uses: 0disoft/clarissimi@v0.3.5
     with:
       mode: commit
       base-branch: main
@@ -270,7 +270,7 @@ steps:
   - uses: actions/checkout@v7
     with:
       fetch-depth: 0
-  - uses: 0disoft/clarissimi@v0.3.4
+  - uses: 0disoft/clarissimi@v0.3.5
     with:
       mode: stage-draft
       base-branch: main
@@ -304,14 +304,14 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: 0disoft/clarissimi@v0.3.4
+      - uses: 0disoft/clarissimi@v0.3.5
         with:
           mode: promote-draft
           draft-path: ${{ inputs.draft-path }}
           base-branch: main
 ```
 
-`promote-draft` is available in immutable tag `v0.3.4`, which passed external consumer smoke. Do not
+`promote-draft` is available in immutable tag `v0.3.5`, which passed external consumer smoke. Do not
 point production consumer workflows at `main` to get unreleased changes early.
 
 This repository keeps write-mode dogfood manual-only in

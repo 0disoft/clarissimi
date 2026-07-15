@@ -31,14 +31,14 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - uses: 0disoft/clarissimi@v0.3.4
+      - uses: 0disoft/clarissimi@v0.3.5
         with:
           mode: dry-run
 ```
 
 This first workflow is read-only. It validates the post-merge event path and writes a bounded run
 summary without changing repository files, branches, comments, or pull requests. The immutable
-`v0.3.4` pin is reproducible; use `0disoft/clarissimi@v0` instead when you deliberately want the
+`v0.3.5` pin is reproducible; use `0disoft/clarissimi@v0` instead when you deliberately want the
 maintainer-approved moving `0.x` channel.
 
 Without provider configuration, Clarissimi uses its deterministic fake provider. That is useful for
@@ -65,7 +65,7 @@ concurrent update. Copy the complete least-privilege workflows from the
 Choose one optional `CONTRIBUTORS.md` summary without replacing the detailed recognition history:
 
 ```yaml
-- uses: 0disoft/clarissimi@v0.3.4
+- uses: 0disoft/clarissimi@v0.3.5
   with:
     mode: propose
     markdown-summary: gallery # use table for compact contribution counts
@@ -219,7 +219,7 @@ node packages/cli/dist/bin/clarissimi.js import-draft --draft .clarissimi/drafts
 
 ## GitHub Action
 
-The current public Action release is `0disoft/clarissimi@v0.3.4`. Consumers may pin that immutable
+The current public Action release is `0disoft/clarissimi@v0.3.5`. Consumers may pin that immutable
 tag or use `0disoft/clarissimi@v0` to follow maintainer-approved `0.x` Action releases. Earlier
 releases remain immutable, and `main` is never a consumer release channel. Clarissimi is also
 available in the [GitHub Marketplace](https://github.com/marketplace/actions/clarissimi) under the

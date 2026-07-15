@@ -282,7 +282,7 @@ export const readmeValidationContract = {
   path: "README.md",
   requiredSnippets: [
     "## Start in 30 Seconds",
-    "- uses: 0disoft/clarissimi@v0.3.4",
+    "- uses: 0disoft/clarissimi@v0.3.5",
     "mode: dry-run",
     "## Choose How Results Are Written",
     "`propose` is the recommended default for shared repositories.",

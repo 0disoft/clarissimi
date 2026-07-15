@@ -111,18 +111,19 @@ and release checkbox state.
 Current publication record:
 
 - public listing: <https://github.com/marketplace/actions/clarissimi>
-- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.3.2>
-- exact release SHA: `8cd4aa040b36ea4473722d1f1139f65c86e36b6d`
-- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/13>
-- the listing identifies `v0.3.2` as `Latest`, renders `0disoft/clarissimi@v0.3.2`, and exposes
+- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.3.3>
+- exact release SHA: `140cb6d06893a3a6d8de5ab9cfa1eaebf2ad1e51`
+- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/14>
+- the listing identifies `v0.3.3` as `Latest`, renders `0disoft/clarissimi@v0.3.3`, and exposes
   categories `Code review` and `Utilities`
 - `v0` resolves to the same exact release SHA after compare-and-swap promotion
 
-Marketplace release `v0.3.2` republishes the onboarding-first README with a copyable read-only
-workflow, result-writing mode comparison, generated-output overview, and automation-contributor
-defaults. The release changes no Action runtime, inputs, outputs, permissions, bundle, or package
-publication boundary. Its exact-SHA candidate validation, stable release publication, public
-Marketplace verification, post-tag external validation, and separate `v0` promotion passed.
+Marketplace release `v0.3.3` publishes bounded GitHub pull-request transport recovery: request
+timeouts and response-size limits, safe transient retries, ambiguous-create reconciliation,
+sanitized HTML diagnostics, and racing `422` reconciliation. The release changes no Action input,
+output, permission, trigger, approval, ledger, or package-publication boundary. Its exact-SHA
+candidate validation, stable release publication, public Marketplace verification, post-tag
+external validation, and separate `v0` promotion passed.
 
 The first post-tag full-write run `29324962538` had one Ubuntu job fail while GitHub returned its
 `Unicorn!` timeout HTML during draft PR creation. macOS and Windows passed, cleanup ran, and orphan
@@ -132,16 +133,16 @@ not erased or counted as the final release result.
 
 Current promotion validation record:
 
-- candidate hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29324570278>
-- exact-tag post-tag live provider: <https://github.com/0disoft/clarissimi/actions/runs/29325165643>
-- exact-tag post-tag dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29325196554>
-- exact-tag post-tag full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29325236611>
-- exact-tag post-tag orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29325297943>
-- promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29326579956>
-- live provider through `v0.3.2`: <https://github.com/0disoft/clarissimi/actions/runs/29326662100>
-- external `v0` dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29326693294>
-- external `v0` full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29326722999>
-- external `v0` orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29326789037>
+- candidate hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29388372650>
+- exact-tag post-tag live provider: <https://github.com/0disoft/clarissimi/actions/runs/29388838289>
+- exact-tag post-tag dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29388857798>
+- exact-tag post-tag full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29388879630>
+- exact-tag post-tag orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29388952095>
+- promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29389500041>
+- live provider through `v0.3.3`: <https://github.com/0disoft/clarissimi/actions/runs/29389562016>
+- external `v0` dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29389580128>
+- external `v0` full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29389621287>
+- external `v0` orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29389666544>
 
 In maintainer-facing summaries, use **result** for a pass/fail outcome and **validation record** for
 the SHA, run IDs, timestamps, and URLs that support it. Keep **evidence** only where it is already a

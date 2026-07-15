@@ -2988,3 +2988,119 @@ env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
 required_after = ["git_push_main_v0_3_4_release_completion"]
+
+[intents.mustflow_update_dry_run]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Preview the installed Mustflow workflow update plan with bounded diffs and machine-readable blocking state."
+argv = ["mf", "update", "--dry-run", "--diff", "--json"]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+required_after = ["mustflow_install_state_review"]
+
+[intents.mustflow_update_apply]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Apply a previously clean Mustflow workflow update plan, including managed templates, backups, and manifest-lock state."
+argv = ["mf", "update", "--apply"]
+cwd = "."
+timeout_seconds = 300
+stdin = "closed"
+success_exit_codes = [0]
+writes = ["AGENTS.md", ".mustflow/**"]
+effects = [
+  { type = "write", mode = "replace", path = "AGENTS.md", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = ".mustflow/**", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = [
+  "mustflow_update_dry_run",
+  "mustflow_update_plan_has_no_blockers",
+  "user_authorized_workflow_repair",
+]
+
+[intents.git_stage_mustflow_update_contract]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Stage only the reviewed Mustflow update and manifest-lock recovery command contract."
+argv = ["git", "add", "--", ".mustflow/config/commands.toml"]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["mustflow_update_contract_validation_complete"]
+
+[intents.git_commit_mustflow_update_contract]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Commit the bounded Mustflow update and manifest-lock recovery command contract."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "chore(mustflow): add trusted update recovery",
+  "-m",
+  "Validation: mustflow, format, release-readiness",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_mustflow_update_contract"]
+
+[intents.git_push_main_mustflow_update_contract]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Push the validated Mustflow update recovery contract on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_mustflow_update_contract", "user_authorized_push"]
+
+[intents.hosted_ci_mustflow_update_contract]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Confirm hosted CI passed for the pushed Mustflow update recovery contract."
+argv = ["pnpm", "run", "hosted-ci-validation"]
+cwd = "."
+timeout_seconds = 900
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["git_push_main_mustflow_update_contract"]

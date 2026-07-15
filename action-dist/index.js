@@ -591,10 +591,20 @@ var MAX_BODY_FILES = 25;
 var MAX_BODY_LINE_LENGTH = 180;
 var ProposalPullRequestClientError = class extends Error {
   code;
-  constructor(code, message) {
+  retryable;
+  status;
+  retryAfterMs;
+  constructor(code, message, options = {}) {
     super(message);
     this.name = "ProposalPullRequestClientError";
     this.code = code;
+    this.retryable = options.retryable ?? false;
+    if (options.status !== void 0) {
+      this.status = options.status;
+    }
+    if (options.retryAfterMs !== void 0) {
+      this.retryAfterMs = options.retryAfterMs;
+    }
   }
 };
 var ProposalPullRequestCreatorError = class extends Error {
@@ -766,6 +776,11 @@ function truncateLine(value, maxLength) {
 
 // packages/action/dist/github-client.js
 var DEFAULT_GITHUB_API_URL = "https://api.github.com";
+var DEFAULT_REQUEST_TIMEOUT_MS = 3e4;
+var DEFAULT_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+var MAX_ATTEMPTS = 3;
+var RETRY_BASE_DELAY_MS = 500;
+var MAX_RETRY_DELAY_MS = 6e4;
 function createGitHubPullRequestClient(options) {
   const token = options.token.trim();
   if (token.length === 0) {
@@ -773,25 +788,28 @@ function createGitHubPullRequestClient(options) {
   }
   const apiUrl = normalizeApiUrl(options.apiUrl);
   const fetchImpl = options.fetch ?? fetch;
+  const timeoutMs = positiveIntegerOption(options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS, "timeoutMs");
+  const maxResponseBytes = positiveIntegerOption(options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES, "maxResponseBytes");
+  const sleep = options.sleep ?? defaultSleep;
+  const random = randomOption(options.random ?? Math.random);
+  const findOpenPullRequest = async (input) => {
+    const [owner] = splitRepository(input.repository);
+    const url = new URL(`${apiUrl}/repos/${input.repository}/pulls`);
+    url.searchParams.set("state", "open");
+    url.searchParams.set("head", `${owner}:${input.headBranch}`);
+    url.searchParams.set("base", input.baseBranch);
+    const response = await requestJsonWithRetry(fetchImpl, token, url, { method: "GET" }, { timeoutMs, maxResponseBytes, sleep, random });
+    if (!Array.isArray(response)) {
+      throw new ProposalPullRequestClientError("unexpected", "GitHub pull request lookup returned an unexpected response.");
+    }
+    const first = response[0];
+    return first === void 0 ? null : parsePullRequest(first);
+  };
   return {
-    async findOpenPullRequest(input) {
-      const [owner] = splitRepository(input.repository);
-      const url = new URL(`${apiUrl}/repos/${input.repository}/pulls`);
-      url.searchParams.set("state", "open");
-      url.searchParams.set("head", `${owner}:${input.headBranch}`);
-      url.searchParams.set("base", input.baseBranch);
-      const response = await requestJson(fetchImpl, token, url, {
-        method: "GET"
-      });
-      if (!Array.isArray(response)) {
-        throw new ProposalPullRequestClientError("unexpected", "GitHub pull request lookup returned an unexpected response.");
-      }
-      const first = response[0];
-      return first === void 0 ? null : parsePullRequest(first);
-    },
+    findOpenPullRequest,
     async createPullRequest(input) {
       const url = new URL(`${apiUrl}/repos/${input.repository}/pulls`);
-      const response = await requestJson(fetchImpl, token, url, {
+      const init = {
         method: "POST",
         body: JSON.stringify({
           title: input.title,
@@ -799,51 +817,220 @@ function createGitHubPullRequestClient(options) {
           head: input.headBranch,
           base: input.baseBranch
         })
-      });
-      return parsePullRequest(response);
+      };
+      let lastError;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+        try {
+          const response = await requestJsonOnce(fetchImpl, token, url, init, timeoutMs, maxResponseBytes);
+          try {
+            return parsePullRequest(response);
+          } catch (error) {
+            const reconciled = await findOpenPullRequest(input);
+            if (reconciled !== null) {
+              return reconciled;
+            }
+            throw error;
+          }
+        } catch (error) {
+          if (!(error instanceof ProposalPullRequestClientError)) {
+            throw error;
+          }
+          lastError = error;
+          const shouldReconcile = error.retryable || error.status === 422;
+          if (!shouldReconcile) {
+            throw error;
+          }
+          let retryDelayUnavailable = false;
+          if (error.retryable) {
+            const delay = retryDelay(error, attempt, random);
+            if (delay !== void 0) {
+              await sleep(delay);
+            } else {
+              retryDelayUnavailable = true;
+            }
+          }
+          const reconciled = await findOpenPullRequest(input);
+          if (reconciled !== null) {
+            return reconciled;
+          }
+          if (error.status === 422 || retryDelayUnavailable || attempt === MAX_ATTEMPTS) {
+            throw error;
+          }
+        }
+      }
+      throw lastError ?? new ProposalPullRequestClientError("unexpected", "GitHub pull request creation failed without a result.");
     },
     async updatePullRequest(input) {
       const url = new URL(`${apiUrl}/repos/${input.repository}/pulls/${input.number}`);
-      const response = await requestJson(fetchImpl, token, url, {
+      const response = await requestJsonWithRetry(fetchImpl, token, url, {
         method: "PATCH",
         body: JSON.stringify({
           title: input.title,
           body: input.body
         })
-      });
+      }, { timeoutMs, maxResponseBytes, sleep, random });
       return parsePullRequest(response);
     }
   };
 }
-async function requestJson(fetchImpl, token, url, init) {
-  const response = await fetchImpl(url, {
-    ...init,
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "X-GitHub-Api-Version": "2022-11-28"
+async function requestJsonWithRetry(fetchImpl, token, url, init, runtime) {
+  let lastError;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    try {
+      return await requestJsonOnce(fetchImpl, token, url, init, runtime.timeoutMs, runtime.maxResponseBytes);
+    } catch (error) {
+      if (!(error instanceof ProposalPullRequestClientError) || !error.retryable) {
+        throw error;
+      }
+      lastError = error;
+      if (attempt === MAX_ATTEMPTS) {
+        throw error;
+      }
+      const delay = retryDelay(error, attempt, runtime.random);
+      if (delay === void 0) {
+        throw error;
+      }
+      await runtime.sleep(delay);
     }
-  });
-  const text = await response.text();
-  const body = parseOptionalJson(text);
-  if (response.ok) {
-    return body;
   }
-  throw mapGitHubError(response.status, body);
+  throw lastError ?? new ProposalPullRequestClientError("unexpected", "GitHub pull request request failed without a result.");
 }
-function mapGitHubError(status, body) {
+async function requestJsonOnce(fetchImpl, token, url, init, timeoutMs, maxResponseBytes) {
+  try {
+    return await withTimeout(timeoutMs, async (signal) => {
+      const response = await fetchImpl(url, {
+        ...init,
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "X-GitHub-Api-Version": "2022-11-28"
+        },
+        signal
+      });
+      const text = await readBoundedResponseText(response, maxResponseBytes);
+      const body = parseOptionalJson(text);
+      if (response.ok) {
+        return body;
+      }
+      throw mapGitHubError(response, body);
+    });
+  } catch (error) {
+    if (error instanceof ProposalPullRequestClientError) {
+      throw error;
+    }
+    if (error instanceof RequestTimeoutError) {
+      throw new ProposalPullRequestClientError("timeout", "GitHub pull request request timed out.", { retryable: true });
+    }
+    throw new ProposalPullRequestClientError("network_error", "GitHub pull request request failed before a response.", { retryable: true });
+  }
+}
+function mapGitHubError(response, body) {
+  const status = response.status;
   const message = githubMessage(body);
+  const retryAfterMs = parseRetryAfterMs(response);
+  const rateLimited = status === 429 || status === 403 && (retryAfterMs !== void 0 || response.headers?.get?.("x-ratelimit-remaining") === "0");
+  if (rateLimited) {
+    return new ProposalPullRequestClientError("rate_limited", message, {
+      retryable: true,
+      status,
+      ...retryAfterMs === void 0 ? {} : { retryAfterMs }
+    });
+  }
   if (status === 401 || status === 403) {
     if (/workflow|actions.*pull request|pull request.*disabled|repository setting/i.test(message)) {
-      return new ProposalPullRequestClientError("repository_setting_blocked", message);
+      return new ProposalPullRequestClientError("repository_setting_blocked", message, { status });
     }
-    return new ProposalPullRequestClientError("permission_denied", message);
+    return new ProposalPullRequestClientError("permission_denied", message, { status });
   }
   if (status === 404) {
-    return new ProposalPullRequestClientError("not_found", message);
+    return new ProposalPullRequestClientError("not_found", message, { status });
   }
-  return new ProposalPullRequestClientError("unexpected", message);
+  if (status >= 500) {
+    return new ProposalPullRequestClientError("server_error", message, {
+      retryable: true,
+      status,
+      ...retryAfterMs === void 0 ? {} : { retryAfterMs }
+    });
+  }
+  return new ProposalPullRequestClientError("request_failed", message, { status });
+}
+async function readBoundedResponseText(response, maxBytes) {
+  const contentLength = response.headers?.get?.("content-length");
+  if (contentLength !== null && contentLength !== void 0) {
+    const declaredBytes = Number(contentLength);
+    if (Number.isFinite(declaredBytes) && declaredBytes > maxBytes) {
+      throw responseTooLargeError(maxBytes);
+    }
+  }
+  if (response.body === null || response.body === void 0) {
+    const text2 = await response.text();
+    if (new TextEncoder().encode(text2).byteLength > maxBytes) {
+      throw responseTooLargeError(maxBytes);
+    }
+    return text2;
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let bytes = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        return text + decoder.decode();
+      }
+      bytes += value.byteLength;
+      if (bytes > maxBytes) {
+        await reader.cancel();
+        throw responseTooLargeError(maxBytes);
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+async function withTimeout(timeoutMs, task) {
+  const controller = new AbortController();
+  let timer;
+  const timeout = new Promise((_resolve, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new RequestTimeoutError());
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([task(controller.signal), timeout]);
+  } finally {
+    if (timer !== void 0) {
+      clearTimeout(timer);
+    }
+  }
+}
+var RequestTimeoutError = class extends Error {
+};
+function responseTooLargeError(maxBytes) {
+  return new ProposalPullRequestClientError("response_too_large", `GitHub pull request response exceeded ${maxBytes} bytes.`);
+}
+function retryDelay(error, failedAttempt, random) {
+  if (error.retryAfterMs !== void 0) {
+    return error.retryAfterMs <= MAX_RETRY_DELAY_MS ? error.retryAfterMs : void 0;
+  }
+  const exponential = RETRY_BASE_DELAY_MS * 2 ** Math.max(0, failedAttempt - 1);
+  const jittered = Math.floor(exponential * (0.75 + random() * 0.5));
+  return Math.min(jittered, MAX_RETRY_DELAY_MS);
+}
+function parseRetryAfterMs(response) {
+  const value = response.headers?.get?.("retry-after")?.trim();
+  if (value === void 0 || value.length === 0) {
+    return void 0;
+  }
+  if (/^[0-9]+$/.test(value)) {
+    return Number(value) * 1e3;
+  }
+  const date = Date.parse(value);
+  return Number.isFinite(date) ? Math.max(0, date - Date.now()) : void 0;
 }
 function parsePullRequest(value) {
   if (!isRecord2(value)) {
@@ -880,16 +1067,35 @@ function parseOptionalJson(text) {
   try {
     return JSON.parse(text);
   } catch {
-    return {
-      message: text
-    };
+    return {};
   }
 }
 function githubMessage(value) {
   if (isRecord2(value) && typeof value.message === "string") {
-    return value.message;
+    const normalized = value.message.replace(/\s+/g, " ").trim();
+    if (normalized.length > 0) {
+      return normalized.length <= 500 ? normalized : `${normalized.slice(0, 497)}...`;
+    }
   }
   return "GitHub pull request request failed.";
+}
+function positiveIntegerOption(value, name) {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new ProposalPullRequestClientError("invalid_options", `GitHub pull request client ${name} must be a positive integer.`);
+  }
+  return value;
+}
+function randomOption(value) {
+  return () => {
+    const sample = value();
+    if (!Number.isFinite(sample) || sample < 0 || sample >= 1) {
+      throw new ProposalPullRequestClientError("invalid_options", "GitHub pull request client random must return a number from 0 inclusive to 1 exclusive.");
+    }
+    return sample;
+  };
+}
+function defaultSleep(milliseconds) {
+  return new Promise((resolve2) => setTimeout(resolve2, milliseconds));
 }
 function expectString(value, field) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -2155,8 +2361,8 @@ import { pathToFileURL } from "node:url";
 var DEFAULT_GITHUB_API_URL2 = "https://api.github.com";
 var DEFAULT_PAGE_SIZE = 100;
 var MAX_LIST_PAGES = 10;
-var DEFAULT_REQUEST_TIMEOUT_MS = 3e4;
-var DEFAULT_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+var DEFAULT_REQUEST_TIMEOUT_MS2 = 3e4;
+var DEFAULT_MAX_RESPONSE_BYTES2 = 2 * 1024 * 1024;
 var GitHubApiClientError = class extends Error {
   code;
   retryable;
@@ -2170,11 +2376,11 @@ var GitHubApiClientError = class extends Error {
 function createGitHubApiClient(options = {}) {
   const apiUrl = normalizeApiUrl2(options.apiUrl);
   const fetchImpl = options.fetch ?? fetch;
-  const timeoutMs = positiveIntegerOption(options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS, "timeoutMs");
-  const maxResponseBytes = positiveIntegerOption(options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES, "maxResponseBytes");
+  const timeoutMs = positiveIntegerOption2(options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS2, "timeoutMs");
+  const maxResponseBytes = positiveIntegerOption2(options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES2, "maxResponseBytes");
   return {
     async getPullRequest(input) {
-      const response = await requestJson2(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}`, timeoutMs, maxResponseBytes);
+      const response = await requestJson(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}`, timeoutMs, maxResponseBytes);
       return parsePullRequest2(response);
     },
     async listPullRequestFiles(input) {
@@ -2190,7 +2396,7 @@ function createGitHubApiClient(options = {}) {
 async function requestPaginatedArray(fetchImpl, token, baseUrl, invalidResponseMessage, timeoutMs, maxResponseBytes) {
   const entries = [];
   for (let page = 1; page <= MAX_LIST_PAGES; page += 1) {
-    const response = await requestJson2(fetchImpl, token, `${baseUrl}?per_page=${DEFAULT_PAGE_SIZE}&page=${page}`, timeoutMs, maxResponseBytes);
+    const response = await requestJson(fetchImpl, token, `${baseUrl}?per_page=${DEFAULT_PAGE_SIZE}&page=${page}`, timeoutMs, maxResponseBytes);
     if (!Array.isArray(response)) {
       throw new GitHubApiClientError("unexpected_response", invalidResponseMessage);
     }
@@ -2201,7 +2407,7 @@ async function requestPaginatedArray(fetchImpl, token, baseUrl, invalidResponseM
   }
   throw new GitHubApiClientError("response_too_large", `GitHub list response exceeded ${MAX_LIST_PAGES * DEFAULT_PAGE_SIZE} items.`);
 }
-async function requestJson2(fetchImpl, token, url, timeoutMs, maxResponseBytes) {
+async function requestJson(fetchImpl, token, url, timeoutMs, maxResponseBytes) {
   const headers = {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28"
@@ -2211,13 +2417,13 @@ async function requestJson2(fetchImpl, token, url, timeoutMs, maxResponseBytes) 
     headers.Authorization = `Bearer ${normalizedToken}`;
   }
   try {
-    return await withTimeout(timeoutMs, async (signal) => {
+    return await withTimeout2(timeoutMs, async (signal) => {
       const response = await fetchImpl(url, {
         method: "GET",
         headers,
         signal
       });
-      const text = await readBoundedResponseText(response, maxResponseBytes);
+      const text = await readBoundedResponseText2(response, maxResponseBytes);
       const body = parseOptionalJson2(text);
       if (response.ok) {
         return body;
@@ -2228,7 +2434,7 @@ async function requestJson2(fetchImpl, token, url, timeoutMs, maxResponseBytes) 
     if (error instanceof GitHubApiClientError) {
       throw error;
     }
-    if (error instanceof RequestTimeoutError) {
+    if (error instanceof RequestTimeoutError2) {
       throw new GitHubApiClientError("timeout", "GitHub API request timed out.");
     }
     throw new GitHubApiClientError("network_error", "GitHub API request failed before a response.");
@@ -2328,7 +2534,7 @@ function mapGitHubApiError(status, body) {
   }
   return new GitHubApiClientError("request_failed", message);
 }
-async function readBoundedResponseText(response, maxBytes) {
+async function readBoundedResponseText2(response, maxBytes) {
   const contentLength = response.headers?.get?.("content-length");
   if (contentLength !== null && contentLength !== void 0) {
     const declaredBytes = Number(contentLength);
@@ -2364,13 +2570,13 @@ async function readBoundedResponseText(response, maxBytes) {
     reader.releaseLock();
   }
 }
-async function withTimeout(timeoutMs, task) {
+async function withTimeout2(timeoutMs, task) {
   const controller = new AbortController();
   let timer;
   const timeout = new Promise((_resolve, reject) => {
     timer = setTimeout(() => {
       controller.abort();
-      reject(new RequestTimeoutError());
+      reject(new RequestTimeoutError2());
     }, timeoutMs);
   });
   try {
@@ -2381,9 +2587,9 @@ async function withTimeout(timeoutMs, task) {
     }
   }
 }
-var RequestTimeoutError = class extends Error {
+var RequestTimeoutError2 = class extends Error {
 };
-function positiveIntegerOption(value, name) {
+function positiveIntegerOption2(value, name) {
   if (!Number.isInteger(value) || value <= 0) {
     throw new GitHubApiClientError("invalid_options", `GitHub API client ${name} must be a positive integer.`);
   }
@@ -3132,8 +3338,8 @@ var DEFAULT_PROVIDER_ID2 = "openai-compatible";
 var DEFAULT_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 var DEFAULT_TEMPERATURE = 0.2;
 var DEFAULT_MAX_TOKENS = 1200;
-var DEFAULT_REQUEST_TIMEOUT_MS2 = 12e4;
-var DEFAULT_MAX_RESPONSE_BYTES2 = 2 * 1024 * 1024;
+var DEFAULT_REQUEST_TIMEOUT_MS3 = 12e4;
+var DEFAULT_MAX_RESPONSE_BYTES3 = 2 * 1024 * 1024;
 var THINKING_TYPES = ["disabled"];
 var OpenAiCompatibleProviderError = class extends Error {
   code;
@@ -3156,9 +3362,9 @@ function createOpenAiCompatibleContributionDraftProvider(options) {
   const token = nonEmptyOption(options.token, "token");
   const fetchImpl = options.fetch ?? fetch;
   const temperature = finiteNumberOption(options.temperature ?? DEFAULT_TEMPERATURE, "temperature");
-  const maxTokens = positiveIntegerOption2(options.maxTokens ?? DEFAULT_MAX_TOKENS, "maxTokens");
-  const timeoutMs = positiveIntegerOption2(options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS2, "timeoutMs");
-  const maxResponseBytes = positiveIntegerOption2(options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES2, "maxResponseBytes");
+  const maxTokens = positiveIntegerOption3(options.maxTokens ?? DEFAULT_MAX_TOKENS, "maxTokens");
+  const timeoutMs = positiveIntegerOption3(options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS3, "timeoutMs");
+  const maxResponseBytes = positiveIntegerOption3(options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES3, "maxResponseBytes");
   const thinking = optionalEnumOption(options.thinking, THINKING_TYPES, "thinking");
   return {
     id: options.id ?? DEFAULT_PROVIDER_ID2,
@@ -3207,7 +3413,7 @@ async function requestAssessmentDraft(options) {
   let response;
   let text;
   try {
-    ({ response, text } = await withTimeout2(options.timeoutMs, async (signal) => {
+    ({ response, text } = await withTimeout3(options.timeoutMs, async (signal) => {
       const result = await options.fetchImpl(options.endpoint, {
         method: "POST",
         headers: {
@@ -3220,14 +3426,14 @@ async function requestAssessmentDraft(options) {
       });
       return {
         response: result,
-        text: await readBoundedResponseText2(result, options.maxResponseBytes)
+        text: await readBoundedResponseText3(result, options.maxResponseBytes)
       };
     }));
   } catch (error) {
     if (error instanceof OpenAiCompatibleProviderError) {
       throw error;
     }
-    if (error instanceof RequestTimeoutError2) {
+    if (error instanceof RequestTimeoutError3) {
       throw providerTransportError("timeout", "OpenAI-compatible provider request timed out.", true);
     }
     throw providerTransportError("network_error", "OpenAI-compatible provider request failed before a response.", true);
@@ -3243,7 +3449,7 @@ async function requestAssessmentDraft(options) {
   }
   return extractMessageContent(responseBody);
 }
-async function readBoundedResponseText2(response, maxBytes) {
+async function readBoundedResponseText3(response, maxBytes) {
   const contentLength = response.headers?.get?.("content-length");
   if (contentLength !== null && contentLength !== void 0) {
     const declaredBytes = Number(contentLength);
@@ -3279,13 +3485,13 @@ async function readBoundedResponseText2(response, maxBytes) {
     reader.releaseLock();
   }
 }
-async function withTimeout2(timeoutMs, task) {
+async function withTimeout3(timeoutMs, task) {
   const controller = new AbortController();
   let timer;
   const timeout = new Promise((_resolve, reject) => {
     timer = setTimeout(() => {
       controller.abort();
-      reject(new RequestTimeoutError2());
+      reject(new RequestTimeoutError3());
     }, timeoutMs);
   });
   try {
@@ -3296,7 +3502,7 @@ async function withTimeout2(timeoutMs, task) {
     }
   }
 }
-var RequestTimeoutError2 = class extends Error {
+var RequestTimeoutError3 = class extends Error {
 };
 function providerTransportError(code, message, retryable) {
   return new OpenAiCompatibleProviderError(code, message, void 0, retryable);
@@ -3474,7 +3680,7 @@ function finiteNumberOption(value, name) {
   }
   return value;
 }
-function positiveIntegerOption2(value, name) {
+function positiveIntegerOption3(value, name) {
   if (!Number.isInteger(value) || value <= 0) {
     throw new OpenAiCompatibleProviderError("invalid_options", `OpenAI-compatible provider ${name} must be a positive integer.`);
   }

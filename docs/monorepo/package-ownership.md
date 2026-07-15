@@ -35,7 +35,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
   docs/adr/0040-bound-external-http-requests.md,
   docs/adr/0041-restrict-provider-endpoint-trust.md,
   docs/adr/0042-add-opt-in-contributor-gallery.md,
-  docs/adr/0043-include-automation-contributors-by-default.md
+  docs/adr/0043-include-automation-contributors-by-default.md,
+  docs/adr/0046-recover-transient-proposal-pull-request-failures.md
 
 ## Required Decisions
 

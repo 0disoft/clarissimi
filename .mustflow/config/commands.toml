@@ -1981,3 +1981,93 @@ env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
 required_after = ["git_push_main_v0_3_2_release_completion"]
+
+[intents.git_stage_transient_pr_recovery]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Stage only the reviewed transient GitHub pull request recovery implementation, ADR, tests, Action bundle, tracker, and bounded command contract."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  "action-dist/index.js",
+  "docs/adr/README.md",
+  "docs/adr/0046-recover-transient-proposal-pull-request-failures.md",
+  "docs/monorepo/package-ownership.md",
+  "docs/product/04-implementation-tracker.md",
+  "packages/action/src/github-client.ts",
+  "packages/action/src/pull-request.ts",
+  "packages/action/test/github-client.test.mjs",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["transient_pr_recovery_validation_complete"]
+
+[intents.git_commit_transient_pr_recovery]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Commit the reviewed bounded retry and ambiguous pull request reconciliation behavior."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "fix(action): recover transient pull request failures",
+  "-m",
+  "Validation: docs, release-readiness, lint, format, migration-check, smoke, check, contract, bundle-action-check, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_transient_pr_recovery"]
+
+[intents.git_push_main_transient_pr_recovery]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Push the validated transient pull request recovery commit on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_transient_pr_recovery", "user_authorized_push"]
+
+[intents.hosted_ci_transient_pr_recovery]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Confirm hosted CI passed for the pushed transient pull request recovery commit at the current local HEAD."
+argv = ["pnpm", "run", "hosted-ci-validation"]
+cwd = "."
+timeout_seconds = 900
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["git_push_main_transient_pr_recovery"]

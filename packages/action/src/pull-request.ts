@@ -55,18 +55,45 @@ export interface ProposalPullRequestCreatorResult {
 }
 
 export type ProposalPullRequestClientErrorCode =
+  | "invalid_options"
   | "permission_denied"
   | "repository_setting_blocked"
   | "not_found"
+  | "rate_limited"
+  | "server_error"
+  | "request_failed"
+  | "network_error"
+  | "timeout"
+  | "response_too_large"
   | "unexpected";
+
+export interface ProposalPullRequestClientErrorOptions {
+  readonly retryable?: boolean;
+  readonly status?: number;
+  readonly retryAfterMs?: number;
+}
 
 export class ProposalPullRequestClientError extends Error {
   readonly code: ProposalPullRequestClientErrorCode;
+  readonly retryable: boolean;
+  readonly status?: number;
+  readonly retryAfterMs?: number;
 
-  constructor(code: ProposalPullRequestClientErrorCode, message: string) {
+  constructor(
+    code: ProposalPullRequestClientErrorCode,
+    message: string,
+    options: ProposalPullRequestClientErrorOptions = {},
+  ) {
     super(message);
     this.name = "ProposalPullRequestClientError";
     this.code = code;
+    this.retryable = options.retryable ?? false;
+    if (options.status !== undefined) {
+      this.status = options.status;
+    }
+    if (options.retryAfterMs !== undefined) {
+      this.retryAfterMs = options.retryAfterMs;
+    }
   }
 }
 

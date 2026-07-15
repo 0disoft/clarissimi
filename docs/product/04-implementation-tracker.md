@@ -202,6 +202,11 @@ Completed deliverables:
   closed before mutation
 - proposal pull requests target the current GitHub Actions repository while preserving collected
   source repository context in the recognition body
+- proposal pull request HTTP calls use bounded time and response budgets, retry only transient safe
+  requests, and reconcile an ambiguous create against the deterministic head/base lookup before
+  another POST under ADR 0046
+- non-JSON GitHub failure pages are excluded from Action diagnostics, and long `Retry-After`
+  windows fail instead of keeping a runner asleep or retrying early
 - existing canonical ledger records are parsed, duplicate-checked, preserved, and combined with the
   new assessment before every public output is rebuilt
 - malformed, internally duplicated, or already-recorded contributor/source identities fail before

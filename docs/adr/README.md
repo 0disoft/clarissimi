@@ -76,6 +76,8 @@ engine.
   including pre-tag candidate-SHA evidence, while package and Marketplace publication stay blocked
 - `0045-publish-action-to-github-marketplace.md`: authorize the root Action for free GitHub
   Marketplace distribution beginning with non-prerelease release `v0.3.0`, while npm stays blocked
+- `0046-recover-transient-proposal-pull-request-failures.md`: recover bounded transient GitHub
+  proposal failures without blindly duplicating ambiguous pull request creation
 
 ## Review Blockers
 

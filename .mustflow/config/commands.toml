@@ -3104,3 +3104,119 @@ env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
 required_after = ["git_push_main_mustflow_update_contract"]
+
+[intents.mustflow_init_recovery_dry_run]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Preview a non-interactive Mustflow installation-state recovery when the manifest lock is missing."
+argv = ["mf", "init", "--dry-run", "--yes"]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+required_after = ["mustflow_update_failed_only_for_missing_manifest_lock"]
+
+[intents.mustflow_init_recovery_apply]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Apply a reviewed non-interactive Mustflow installation-state recovery without force or interactive prompts."
+argv = ["mf", "init", "--yes"]
+cwd = "."
+timeout_seconds = 300
+stdin = "closed"
+success_exit_codes = [0]
+writes = ["AGENTS.md", ".mustflow/**"]
+effects = [
+  { type = "write", mode = "replace", path = "AGENTS.md", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = ".mustflow/**", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = [
+  "mustflow_init_recovery_dry_run",
+  "mustflow_init_plan_has_no_conflicts",
+  "user_authorized_workflow_repair",
+]
+
+[intents.git_stage_mustflow_init_recovery]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Stage only the reviewed Mustflow missing-lock initialization recovery command contract."
+argv = ["git", "add", "--", ".mustflow/config/commands.toml"]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["mustflow_init_recovery_contract_validation_complete"]
+
+[intents.git_commit_mustflow_init_recovery]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Commit the bounded Mustflow missing-lock initialization recovery contract."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "chore(mustflow): add missing-lock recovery",
+  "-m",
+  "Validation: mustflow, format, release-readiness",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_mustflow_init_recovery"]
+
+[intents.git_push_main_mustflow_init_recovery]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Push the validated Mustflow missing-lock recovery contract on main without force."
+argv = ["git", "push", "origin", "main"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["git_commit_mustflow_init_recovery", "user_authorized_push"]
+
+[intents.hosted_ci_mustflow_init_recovery]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Confirm hosted CI passed for the pushed Mustflow missing-lock recovery contract."
+argv = ["pnpm", "run", "hosted-ci-validation"]
+cwd = "."
+timeout_seconds = 900
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["git_push_main_mustflow_init_recovery"]

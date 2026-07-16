@@ -11,6 +11,7 @@ const COMPLETED_VERSION_TOKENS = [
   "v0_3_3",
   "v0_3_4",
   "v0_3_5",
+  "v0_4_0",
 ];
 
 const COMPLETED_MILESTONES = [
@@ -31,6 +32,7 @@ const COMPLETED_MILESTONES = [
   "action_provider_failure_summary",
   "provider_result_dirty_corpus",
   "provider_model_eval",
+  "remaining_hardening",
 ];
 
 const COMPLETED_LIFECYCLE_PREFIXES = [

@@ -940,7 +940,7 @@ Validation completed:
 
 Source: `docs/adr/0045-publish-action-to-github-marketplace.md`, `docs/ops/release.md`
 
-Status: Completed through Action-diagnostics `v0.3.5` Marketplace publication, public verification,
+Status: Completed through shell-completion and trust-hardening `v0.4.0` Marketplace publication, public verification,
 and `v0` promotion.
 
 Goal: make the validated root Action discoverable in GitHub Marketplace without publishing npm
@@ -951,7 +951,8 @@ Completed deliverables:
 - root `action.yml` Marketplace branding with one root Action metadata file
 - first non-prerelease `v0.3.0` GitHub Marketplace Release, corrective immutable `v0.3.1`,
   onboarding-focused immutable `v0.3.2`, runtime-hardening immutable `v0.3.3`, and
-  provider-quality immutable `v0.3.4`, and Action-diagnostics immutable `v0.3.5`
+  provider-quality immutable `v0.3.4`, Action-diagnostics immutable `v0.3.5`, and shell-completion
+  and trust-hardening immutable `v0.4.0`
 - Marketplace categories `Code review` and `Utilities`
 - interactive developer-agreement, publication toggle, and public listing verification
 - post-tag external consumer evidence and separate compare-and-swap `v0` promotion
@@ -960,15 +961,15 @@ Completed deliverables:
 Current publication record:
 
 - public Marketplace listing: <https://github.com/marketplace/actions/clarissimi>
-- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.3.5>
-- exact release and `v0` SHA: `b1654c4f88c231b8f6beeee399c990b63d935ecc`
-- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/16>
-- candidate hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29405337035>
-- successful post-tag full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29405764991>
-- promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29406398072>
-- `v0` external dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29406540337>
-- `v0` full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29406574270>
-- `v0` orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29406634824>
+- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.4.0>
+- exact release and `v0` SHA: `5eaedc4dc5ed4462a36001eb7c6422c6b2cd17de`
+- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/17>
+- candidate hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29470945759>
+- successful post-tag full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29471254832>
+- promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29471814699>
+- `v0` external dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29471908883>
+- `v0` full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29471939207>
+- `v0` orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29471977337>
 
 Corrective follow-up completed:
 
@@ -1013,6 +1014,19 @@ Action-diagnostics release follow-up completed:
   the scrubbed observed-failure corpus intake contract
 - credential-free multi-model checks are repository validation; live multi-model evaluation remains
   manual-only because it uses maintainer credentials, network access, and provider cost
+- exact-tag and moving-alias validation both passed live provider, dry-run, full-write, cleanup, and
+  orphan-audit paths on Ubuntu, macOS, and Windows
+- Action inputs, outputs, permissions, triggers, approval semantics, ledger contracts, and npm
+  publication boundaries remain unchanged
+
+Shell-completion and trust-hardening release follow-up completed:
+
+- `v0.4.0` publishes deterministic static completion for Bash, Zsh, fish, and PowerShell from the
+  maintained CLI command descriptor
+- provider preparation and transport fail closed on excessive changed files, evidence items,
+  serialized evidence, or request-body size, and unsafe structural fields are rejected
+- generated Markdown destinations and transient Windows file contention use bounded fail-closed
+  handling without exposing repository, credential, or provider content
 - exact-tag and moving-alias validation both passed live provider, dry-run, full-write, cleanup, and
   orphan-audit paths on Ubuntu, macOS, and Windows
 - Action inputs, outputs, permissions, triggers, approval semantics, ledger contracts, and npm

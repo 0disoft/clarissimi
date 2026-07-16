@@ -111,10 +111,10 @@ and release checkbox state.
 Current publication record:
 
 - public listing: <https://github.com/marketplace/actions/clarissimi>
-- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.3.5>
-- exact release SHA: `b1654c4f88c231b8f6beeee399c990b63d935ecc`
-- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/16>
-- the listing identifies `v0.3.5` as `Latest`, renders `0disoft/clarissimi@v0.3.5`, and exposes
+- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.4.0>
+- exact release SHA: `5eaedc4dc5ed4462a36001eb7c6422c6b2cd17de`
+- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/17>
+- the listing identifies `v0.4.0` as `Latest`, renders `0disoft/clarissimi@v0.4.0`, and exposes
   categories `Code review` and `Utilities`
 - `v0` resolves to the same exact release SHA after compare-and-swap promotion
 
@@ -126,10 +126,11 @@ the parameterized release scripts; release history must not remain as runnable a
 the bounded `retire_historical_command_intents` intent to apply this policy and synchronize the
 mustflow manifest lock.
 
-Marketplace release `v0.3.5` publishes bounded provider-quality failure summaries, a scrubbed
-observed-failure corpus intake contract, and maintainer-owned multi-model evaluation. Raw provider
-output, messages, prompts, and credentials remain excluded from summaries and committed failure
-fixtures. The release changes no Action input, output, permission, trigger, approval, ledger, or
+Marketplace release `v0.4.0` publishes deterministic Bash, Zsh, fish, and PowerShell completion,
+bounded provider input and request bodies, stronger structural evidence redaction, safer generated
+Markdown destinations, and bounded Windows file-contention recovery. Completion remains static and
+does not scan repositories, load config, read credentials, install files, or use the network. The
+release changes no Action input, output, permission, trigger, approval, ledger, or
 package-publication boundary. Its exact-SHA candidate validation, stable release publication,
 public Marketplace verification, post-tag external validation, and separate `v0` promotion passed.
 
@@ -141,20 +142,20 @@ not erased or counted as the final release result.
 
 Current promotion validation record:
 
-- candidate hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29405337035>
-- candidate live provider: <https://github.com/0disoft/clarissimi/actions/runs/29405421863>
-- candidate dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29405452594>
-- candidate full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29405505998>
-- candidate orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29405562488>
-- exact-tag post-tag live provider: <https://github.com/0disoft/clarissimi/actions/runs/29405698127>
-- exact-tag post-tag dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29405728749>
-- exact-tag post-tag full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29405764991>
-- exact-tag post-tag orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29405822411>
-- promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29406398072>
-- live provider through `v0.3.5`: <https://github.com/0disoft/clarissimi/actions/runs/29406507120>
-- external `v0` dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29406540337>
-- external `v0` full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29406574270>
-- external `v0` orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29406634824>
+- candidate hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29470945759>
+- candidate live provider: <https://github.com/0disoft/clarissimi/actions/runs/29471023007>
+- candidate dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29471043635>
+- candidate full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29471063747>
+- candidate orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29471107960>
+- exact-tag post-tag live provider: <https://github.com/0disoft/clarissimi/actions/runs/29471208632>
+- exact-tag post-tag dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29471231693>
+- exact-tag post-tag full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29471254832>
+- exact-tag post-tag orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29471295960>
+- promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29471814699>
+- live provider through `v0.4.0`: <https://github.com/0disoft/clarissimi/actions/runs/29471890374>
+- external `v0` dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29471908883>
+- external `v0` full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29471939207>
+- external `v0` orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29471977337>
 
 In maintainer-facing summaries, use **result** for a pass/fail outcome and **validation record** for
 the SHA, run IDs, timestamps, and URLs that support it. Keep **evidence** only where it is already a

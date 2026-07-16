@@ -423,6 +423,7 @@ test("release readiness rejects missing or buried README onboarding", () => {
     .replace("## Choose How Results Are Written", "## Modes")
     .replace("`propose` is the recommended default for shared repositories.", "")
     .replace("include-automation-contributors: false", "")
+    .replace("comment-mode: upsert", "")
     .replace("## What Clarissimi Creates", "## Files");
 
   assert.deepEqual(validateReadmeValidationContract(missing), [
@@ -432,6 +433,7 @@ test("release readiness rejects missing or buried README onboarding", () => {
     "README.md must include ## Choose How Results Are Written.",
     "README.md must include `propose` is the recommended default for shared repositories..",
     "README.md must include include-automation-contributors: false.",
+    "README.md must include comment-mode: upsert.",
     "README.md must include ## What Clarissimi Creates.",
   ]);
 
@@ -446,8 +448,7 @@ test("release readiness rejects missing or buried README onboarding", () => {
 
 test("release readiness rejects README validation drift", () => {
   const text = createReadmeValidationText()
-    .replace("Not implemented yet:", "Implemented now:")
-    .replace("- comment updates", "- no pending updates")
+    .replace("updates that comment on reruns instead of posting duplicates", "posts duplicates")
     .replace("Commit mode is an explicit automation-first path", "Commit mode is unavailable")
     .replace(
       "Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
@@ -490,8 +491,7 @@ test("release readiness rejects README validation drift", () => {
     );
 
   assert.deepEqual(validateReadmeValidationContract(text), [
-    "README.md must include Not implemented yet:.",
-    "README.md must include - comment updates.",
+    "README.md must include updates that comment on reruns instead of posting duplicates.",
     "README.md must include Commit mode is an explicit automation-first path.",
     "README.md must include Source-only merges require `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,.",
     "README.md must include - `pnpm run release-readiness`.",
@@ -2232,14 +2232,13 @@ function createReadmeValidationText() {
     "",
     "`propose` is the recommended default for shared repositories.",
     "include-automation-contributors: false",
+    "comment-mode: upsert",
     "",
     "## What Clarissimi Creates",
     "",
     "## Product Promise",
     "",
-    "Not implemented yet:",
-    "",
-    "- comment updates",
+    "updates that comment on reruns instead of posting duplicates",
     "",
     "Commit mode is an explicit automation-first path for approved recognition.",
     "",
@@ -2722,6 +2721,7 @@ function createActionInputsOutputsDocumentText() {
     "- `provider-thinking`: optional OpenAI-compatible thinking mode; currently only `disabled`",
     "- `markdown-summary`: `none`, `table`, or `gallery`",
     "- `include-automation-contributors`: optional `true` or `false`",
+    "- `comment-mode`: `none` or `upsert`, default `none`",
     "",
     "Provider API keys and GitHub tokens are not plain inputs. They must come from secrets or the",
     "workflow environment. The current Action reads `GITHUB_TOKEN` in `propose`, `commit`, `stage-draft`,",
@@ -2731,6 +2731,7 @@ function createActionInputsOutputsDocumentText() {
     "`INPUT_CONFIG_PATH`, `INPUT_DRAFT_PATH`, `INPUT_MODE`, `INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`,",
     "`INPUT_SUMMARY_PATH`, `INPUT_PROVIDER`, `INPUT_PROVIDER_MODEL`, `INPUT_PROVIDER_ENDPOINT`, and",
     "`INPUT_PROVIDER_ENDPOINT_TRUST`, `INPUT_PROVIDER_THINKING`.",
+    "`INPUT_COMMENT_MODE`",
     "`INPUT_MARKDOWN_SUMMARY` for derived Markdown layout.",
     "`include-automation-contributors` falls back to config `includeAutomationContributors`, then `true`.",
     "",
@@ -2738,6 +2739,7 @@ function createActionInputsOutputsDocumentText() {
     "`remote-name`, `staging-dir`, `summary-path`, `config-path`, `provider`, `provider-model`,",
     "`provider-endpoint`, `provider-endpoint-trust`, and `provider-thinking`.",
     "`markdown-summary` is also exposed.",
+    "`comment-mode` is explicit-only",
     "",
     "`config-path` is explicit-only; the Action does not automatically discover repository config files.",
     "`summary-path` is explicit-only, must be relative, and must stay inside `GITHUB_WORKSPACE`.",
@@ -2749,6 +2751,8 @@ function createActionInputsOutputsDocumentText() {
     "inapplicable; the approved draft file is the only assessment input.",
     "",
     "- `summary-json-path` when `summary-path` is set",
+    "- `source-comment-action` when `comment-mode` is `upsert`",
+    "- `source-comment-url` when `comment-mode` is `upsert`",
     "- `direct-commit-base-sha`",
     "- `direct-commit-sha`",
     "",
@@ -2769,6 +2773,7 @@ function createActionContractDocumentText() {
     "- `INPUT_SUMMARY_PATH`: optional workspace-relative path for a sanitized JSON summary artifact",
     "- `markdown-summary`: optional `none`, `table`, or `gallery` layout for generated",
     "- `include-automation-contributors`: optional `true` or `false`",
+    "- `INPUT_COMMENT_MODE`: `none` or `upsert`, default `none`",
     "- `INPUT_PROVIDER`: `fake` or `openai-compatible`, default `fake`",
     "- `INPUT_PROVIDER_ENDPOINT_TRUST`: `public` or `private-network`, default `public`",
     "- `CLARISSIMI_PROVIDER_TOKEN`: provider token required only for `openai-compatible`",
@@ -2782,6 +2787,7 @@ function createActionContractDocumentText() {
     "files.",
     "`markdown-summary` controls presentation only.",
     "`include-automation-contributors` overrides config `includeAutomationContributors`.",
+    "`comment-mode` is explicit and does not load from repository config.",
     "Invalid summary paths fail before provider calls or write-mode mutation.",
     "",
     "Fixture-first `propose` succeeds only when the fixture explicitly carries an approved or",
@@ -3112,6 +3118,9 @@ function createActionManifestText() {
     "  markdown-summary:",
     "  include-automation-contributors:",
     "    required: false",
+    "  comment-mode:",
+    "    required: false",
+    "    default: none",
     "  draft-path:",
     "    required: false",
     "  base-branch:",
@@ -3161,6 +3170,10 @@ function createActionManifestText() {
     "    value: ${{ steps.clarissimi.outputs.proposal-pull-request-url }}",
     "  proposal-pull-request-action:",
     "    value: ${{ steps.clarissimi.outputs.proposal-pull-request-action }}",
+    "  source-comment-action:",
+    "    value: ${{ steps.clarissimi.outputs.source-comment-action }}",
+    "  source-comment-url:",
+    "    value: ${{ steps.clarissimi.outputs.source-comment-url }}",
     "  summary-json-path:",
     "    value: ${{ steps.clarissimi.outputs.summary-json-path }}",
     "  direct-commit-branch:",
@@ -3185,6 +3198,7 @@ function createActionManifestText() {
     "        INPUT_CONFIG_PATH: ${{ inputs.config-path }}",
     "        INPUT_MARKDOWN_SUMMARY: ${{ inputs.markdown-summary }}",
     "        INPUT_INCLUDE_AUTOMATION_CONTRIBUTORS: ${{ inputs.include-automation-contributors }}",
+    "        INPUT_COMMENT_MODE: ${{ inputs.comment-mode }}",
     "        INPUT_DRAFT_PATH: ${{ inputs.draft-path }}",
     "        INPUT_BASE_BRANCH: ${{ inputs.base-branch }}",
     "        INPUT_REMOTE_NAME: ${{ inputs.remote-name }}",

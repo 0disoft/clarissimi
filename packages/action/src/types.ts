@@ -2,6 +2,7 @@ import type { ConfigMarkdownSummary, ContributionAssessment } from "@clarissimi/
 import type { LiveGitHubClient } from "@clarissimi/github";
 import type { ContributionDraftProvider } from "@clarissimi/providers";
 import type { ProposalPullRequestClient } from "./pull-request.js";
+import type { SourceCommentMode, SourcePullRequestCommentClient } from "./source-comment.js";
 
 export const ACTION_MODES = [
   "dry-run",
@@ -37,6 +38,8 @@ export interface ActionProposeInput extends ActionDryRunInput {
   readonly remoteName?: string;
   readonly targetRepository?: string;
   readonly pullRequestClient: ProposalPullRequestClient;
+  readonly commentMode?: SourceCommentMode;
+  readonly sourceCommentClient?: SourcePullRequestCommentClient;
 }
 
 export interface ActionCommitInput extends ActionDryRunInput {
@@ -92,6 +95,8 @@ export interface ActionProposeSummary {
   readonly proposalPullRequestNumber: number;
   readonly proposalPullRequestUrl: string;
   readonly proposalPullRequestAction: "created" | "updated";
+  readonly sourceCommentAction?: "created" | "updated" | "unchanged";
+  readonly sourceCommentUrl?: string;
 }
 
 export interface ActionCommitSummary {

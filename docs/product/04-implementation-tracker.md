@@ -1184,6 +1184,33 @@ Validation required:
 - focused CLI shell-completion regression
 - `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, and `contract`
 
+### 31. Opt-In Source Pull Request Comment Updates
+
+Source: `docs/adr/0053-add-opt-in-source-pr-comment-updates.md`,
+`docs/github-action/action-contract.md`
+
+Status: Completed.
+
+Goal: let proposal modes leave one durable source-PR pointer without duplicate bot notification
+noise or overwriting comments Clarissimi does not own.
+
+Completed deliverables:
+
+- explicit `comment-mode: none|upsert` Action input with silent default
+- proposal-only create, update, and unchanged behavior after successful proposal publication
+- versioned marker plus GitHub Actions bot and app ownership checks
+- ten-page, 1,000-comment scan bound with incomplete and duplicate fail-closed behavior
+- bounded proposal pointer content with no evidence, assessment prose, provider output, patches, or
+  secrets
+- `source-comment-action` and `source-comment-url` Action outputs
+- unchanged permission matrix using existing `pull-requests: write`
+
+Validation required:
+
+- focused source comment and GitHub client regressions
+- proposal runner integration and Action bundle freshness
+- `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, and `contract`
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

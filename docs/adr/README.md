@@ -90,6 +90,8 @@ engine.
   completion from the CLI command descriptor without repository inspection
 - `0052-bound-provider-input-evidence.md`: bound live changed files, prepared evidence, and provider
   request bodies while failing closed on secret-bearing structural evidence
+- `0053-add-opt-in-source-pr-comment-updates.md`: add one opt-in, ownership-checked source pull
+  request status comment without duplicate notification noise
 
 ## Review Blockers
 

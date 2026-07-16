@@ -515,6 +515,79 @@ network = false
 destructive = false
 required_after = ["git_stage_historical_command_retirement"]
 
+[intents.git_stage_source_pr_comment]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Stage only the reviewed source pull request status comment feature, its synchronized contracts, generated Action bundle, and command authority."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  ".mustflow/config/manifest.lock.toml",
+  ".mustflow/review/docs.toml",
+  "README.md",
+  "action-dist/index.js",
+  "action.yml",
+  "docs/adr/0053-add-opt-in-source-pr-comment-updates.md",
+  "docs/adr/README.md",
+  "docs/github-action/README.md",
+  "docs/github-action/action-contract.md",
+  "docs/github-action/inputs-and-outputs.md",
+  "docs/github-action/permissions.md",
+  "docs/product/02-spec.md",
+  "docs/product/04-implementation-tracker.md",
+  "packages/action/src/github-client.ts",
+  "packages/action/src/index.ts",
+  "packages/action/src/run.ts",
+  "packages/action/src/source-comment.ts",
+  "packages/action/src/types.ts",
+  "packages/action/test/github-client.test.mjs",
+  "packages/action/test/propose-runner.test.mjs",
+  "packages/action/test/source-comment.test.mjs",
+  "scripts/release-readiness.mjs",
+  "scripts/test/release-readiness.test.mjs",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["source_pr_comment_validation_complete", "user_authorized_commit"]
+
+[intents.git_commit_source_pr_comment]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Commit the reviewed opt-in source pull request status comment feature."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "feat(action): upsert source PR status comments",
+  "-m",
+  "Validation: check, contract, lint, format, docs, smoke, release-readiness, migration-check, bundle-action-check, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_source_pr_comment"]
+
 [intents.git_push_main]
 status = "configured"
 lifecycle = "oneshot"

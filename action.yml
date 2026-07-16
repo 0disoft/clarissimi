@@ -26,6 +26,10 @@ inputs:
   include-automation-contributors:
     description: Include approved bot and AI-agent contribution records in public contributor outputs. Omit or use true to include them; use false to hide them.
     required: false
+  comment-mode:
+    description: Optional source pull request status comment behavior. Use upsert to create or update one Clarissimi-managed comment after a proposal succeeds.
+    required: false
+    default: none
   draft-path:
     description: Approved .clarissimi/drafts/*.json path required by promote-draft mode.
     required: false
@@ -99,6 +103,12 @@ outputs:
   proposal-pull-request-action:
     description: Whether propose or stage-draft mode created or updated the pull request.
     value: ${{ steps.clarissimi.outputs.proposal-pull-request-action }}
+  source-comment-action:
+    description: Whether the opt-in source pull request status comment was created, updated, or unchanged.
+    value: ${{ steps.clarissimi.outputs.source-comment-action }}
+  source-comment-url:
+    description: URL of the opt-in Clarissimi-managed source pull request status comment.
+    value: ${{ steps.clarissimi.outputs.source-comment-url }}
   summary-json-path:
     description: Absolute path to the sanitized JSON summary artifact when summary-path is set.
     value: ${{ steps.clarissimi.outputs.summary-json-path }}
@@ -132,6 +142,7 @@ runs:
         INPUT_CONFIG_PATH: ${{ inputs.config-path }}
         INPUT_MARKDOWN_SUMMARY: ${{ inputs.markdown-summary }}
         INPUT_INCLUDE_AUTOMATION_CONTRIBUTORS: ${{ inputs.include-automation-contributors }}
+        INPUT_COMMENT_MODE: ${{ inputs.comment-mode }}
         INPUT_DRAFT_PATH: ${{ inputs.draft-path }}
         INPUT_BASE_BRANCH: ${{ inputs.base-branch }}
         INPUT_REMOTE_NAME: ${{ inputs.remote-name }}

@@ -75,6 +75,18 @@ Approved bot and AI-agent contributors are included by default and labeled in de
 `include-automation-contributors: false` only when a maintainer wants derived displays to hide them;
 the append-only ledger remains unchanged.
 
+Proposal modes can also leave one durable pointer on the merged source pull request:
+
+```yaml
+with:
+  mode: propose
+  comment-mode: upsert
+```
+
+The default is `none`. With `upsert`, Clarissimi creates one GitHub Actions-owned status comment
+after the proposal succeeds and updates that comment on reruns instead of posting duplicates. It
+never overwrites a user comment or includes raw evidence, provider output, patches, or secrets.
+
 ## What Clarissimi Creates
 
 - `.clarissimi/contributions.jsonl`: append-only approved recognition records
@@ -156,10 +168,6 @@ Implemented MVP slices:
   branch/pull-request flows, draft review proposals, explicit config-path loading, optional
   sanitized JSON summary artifacts, explicit direct commits, and event-path live GitHub collection
   in write modes
-
-Not implemented yet:
-
-- comment updates
 
 ## Fixture-First CLI
 

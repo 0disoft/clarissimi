@@ -302,6 +302,129 @@ test("GitHub pull request client rejects invalid transport budgets", () => {
   );
 });
 
+test("GitHub pull request client lists, creates, and updates source comments", async () => {
+  const requests = [];
+  const client = createGitHubPullRequestClient({
+    token: "test-token",
+    fetch: async (url, init) => {
+      requests.push({ url: String(url), method: init.method, body: init.body });
+      if (init.method === "GET") {
+        return jsonResponse([sourceCommentResponse(11, "old")]);
+      }
+      const body = JSON.parse(init.body);
+      return jsonResponse(sourceCommentResponse(init.method === "POST" ? 12 : 11, body.body));
+    },
+  });
+
+  const listed = await client.listPullRequestComments({
+    repository: "sample/project",
+    pullRequestNumber: 42,
+  });
+  const created = await client.createPullRequestComment({
+    repository: "sample/project",
+    pullRequestNumber: 42,
+    body: "created body",
+  });
+  const updated = await client.updatePullRequestComment({
+    repository: "sample/project",
+    commentId: 11,
+    body: "updated body",
+  });
+
+  assert.equal(listed.complete, true);
+  assert.equal(listed.comments[0].appSlug, "github-actions");
+  assert.equal(created.body, "created body");
+  assert.equal(updated.body, "updated body");
+  assert.deepEqual(
+    requests.map(({ url, method }) => ({ url, method })),
+    [
+      {
+        url: "https://api.github.com/repos/sample/project/issues/42/comments?per_page=100&page=1",
+        method: "GET",
+      },
+      {
+        url: "https://api.github.com/repos/sample/project/issues/42/comments",
+        method: "POST",
+      },
+      {
+        url: "https://api.github.com/repos/sample/project/issues/comments/11",
+        method: "PATCH",
+      },
+    ],
+  );
+});
+
+test("GitHub pull request client reports an incomplete bounded comment scan", async () => {
+  let requests = 0;
+  const client = createGitHubPullRequestClient({
+    token: "test-token",
+    fetch: async () => {
+      requests += 1;
+      return jsonResponse(
+        Array.from({ length: 100 }, (_, index) => sourceCommentResponse(index + 1, "body")),
+      );
+    },
+  });
+
+  const listed = await client.listPullRequestComments({
+    repository: "sample/project",
+    pullRequestNumber: 42,
+  });
+
+  assert.equal(requests, 10);
+  assert.equal(listed.comments.length, 1_000);
+  assert.equal(listed.complete, false);
+});
+
+test("GitHub pull request client reconciles ambiguous comment creation without replaying POST", async () => {
+  const methods = [];
+  const body = "<!-- clarissimi:source-status:v1 -->\nstatus";
+  const client = createGitHubPullRequestClient({
+    token: "test-token",
+    fetch: async (_url, init) => {
+      methods.push(init.method);
+      if (init.method === "POST") {
+        throw new TypeError("socket disconnected after write");
+      }
+      return jsonResponse([sourceCommentResponse(13, body)]);
+    },
+  });
+
+  const created = await client.createPullRequestComment({
+    repository: "sample/project",
+    pullRequestNumber: 42,
+    body,
+  });
+
+  assert.equal(created.id, 13);
+  assert.deepEqual(methods, ["POST", "GET"]);
+});
+
+test("GitHub pull request client fails ambiguous comment creation without replaying POST", async () => {
+  const methods = [];
+  const client = createGitHubPullRequestClient({
+    token: "test-token",
+    fetch: async (_url, init) => {
+      methods.push(init.method);
+      if (init.method === "POST") {
+        throw new TypeError("socket disconnected after write");
+      }
+      return jsonResponse([]);
+    },
+  });
+
+  await assert.rejects(
+    () =>
+      client.createPullRequestComment({
+        repository: "sample/project",
+        pullRequestNumber: 42,
+        body: "status",
+      }),
+    (error) => error instanceof ProposalPullRequestClientError && error.code === "network_error",
+  );
+  assert.deepEqual(methods, ["POST", "GET"]);
+});
+
 function lookupInput() {
   return {
     repository: "sample/project",
@@ -328,6 +451,21 @@ function pullRequestResponse(number) {
     },
     base: {
       ref: "main",
+    },
+  };
+}
+
+function sourceCommentResponse(id, body) {
+  return {
+    id,
+    html_url: `https://github.com/sample/project/pull/42#issuecomment-${id}`,
+    body,
+    user: {
+      login: "github-actions[bot]",
+      type: "Bot",
+    },
+    performed_via_github_app: {
+      slug: "github-actions",
     },
   };
 }

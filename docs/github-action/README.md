@@ -211,7 +211,13 @@ jobs:
         with:
           mode: propose
           base-branch: main
+          comment-mode: upsert
 ```
+
+`comment-mode: upsert` is optional and defaults to `none`. It creates one bounded status comment on
+the merged source pull request after the proposal succeeds, then updates only the comment carrying
+Clarissimi's marker and GitHub Actions app ownership. The existing `pull-requests: write`
+permission is sufficient; do not add `issues: write`. Dry-run and direct commit reject this option.
 
 Fixture-first propose mode requires an approved or auto-approved fixture and the same write
 permissions:

@@ -20,6 +20,8 @@
   GitHub avatars before contributor details
 - `include-automation-contributors`: optional `true` or `false`; omitted values fall back to config
   and then `true`; `false` hides approved bot and AI-agent identities from derived displays only
+- `comment-mode`: `none` or `upsert`, default `none`; `upsert` creates or updates one managed status
+  comment on the merged source pull request after a proposal succeeds
 - `mode`: `dry-run`, `propose`, `commit`, `stage-draft`, or `promote-draft`, default `propose`
 - `draft-path`: approved `.clarissimi/drafts/*.json` path required by `promote-draft`
 - `base-branch`: base branch for proposal pull requests
@@ -44,7 +46,7 @@ and `promote-draft` modes for live collection and repository publication. It rea
 `CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.
 
 The current package supports `INPUT_EVENT_PATH`, `GITHUB_EVENT_PATH`, `INPUT_GITHUB_FIXTURE`,
-`INPUT_CONFIG_PATH`, `INPUT_DRAFT_PATH`, `INPUT_MODE`, `INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`, `INPUT_STAGING_DIR`,
+`INPUT_CONFIG_PATH`, `INPUT_DRAFT_PATH`, `INPUT_MODE`, `INPUT_COMMENT_MODE`, `INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`, `INPUT_STAGING_DIR`,
 `INPUT_SUMMARY_PATH`, `INPUT_PROVIDER`, `INPUT_PROVIDER_MODEL`, `INPUT_PROVIDER_ENDPOINT`, and
 `INPUT_PROVIDER_ENDPOINT_TRUST`, `INPUT_PROVIDER_THINKING`. It also supports
 `INPUT_MARKDOWN_SUMMARY` for derived Markdown layout.
@@ -53,6 +55,9 @@ The root `action.yml` currently exposes `event-path`, `github-fixture`, `draft-p
 `base-branch`, `remote-name`, `staging-dir`, `summary-path`, `config-path`, `provider`, `provider-model`,
 `provider-endpoint`, `provider-endpoint-trust`, and `provider-thinking`.
 `markdown-summary` is also exposed.
+`comment-mode` is explicit-only and supports `upsert` only in `propose`, `stage-draft`, and
+`promote-draft`. Dry-run and direct commit reject it before mutation. The default `none` performs no
+comment API calls.
 `config-path` is explicit-only; the Action does not automatically discover repository config files.
 Action inputs and workflow environment values take precedence over config values. Omitted provider
 inputs fall back to config values, then `fake`.
@@ -85,6 +90,8 @@ inapplicable; the approved draft file is the only assessment input. The independ
 - `proposal-pull-request-number`
 - `proposal-pull-request-url`
 - `proposal-pull-request-action`
+- `source-comment-action` when `comment-mode` is `upsert`
+- `source-comment-url` when `comment-mode` is `upsert`
 - `summary-json-path` when `summary-path` is set
 - `direct-commit-branch`
 - `direct-commit-base-sha`
@@ -94,6 +101,9 @@ inapplicable; the approved draft file is the only assessment input. The independ
 
 The proposal fields are populated after successful `propose`, `stage-draft`, and `promote-draft`
 runs. Dry-run leaves proposal fields empty.
+
+The source comment fields are populated only after an opt-in managed comment is created, updated,
+or found unchanged. They contain no assessment or evidence text.
 
 The direct commit fields are populated after successful `commit` runs. Other modes leave them
 empty.

@@ -19,6 +19,7 @@
 - Action summary artifact: `docs/adr/0030-add-action-summary-artifact.md`
 - Explicit direct commit mode: `docs/adr/0038-add-explicit-direct-commit-mode.md`
 - Provider quality failure summary: `docs/adr/0048-report-provider-quality-failures-in-action-summary.md`
+- Source pull request comment updates: `docs/adr/0053-add-opt-in-source-pr-comment-updates.md`
 
 ## Inputs
 
@@ -31,6 +32,7 @@ inbox proposals. It accepts:
 - `INPUT_MODE`: `dry-run`, `propose`, `commit`, `stage-draft`, or `promote-draft`, default `propose`
 - `INPUT_DRAFT_PATH`: approved `.clarissimi/drafts/*.json` path required by `promote-draft`
 - `INPUT_CONFIG_PATH`: optional explicit path to a Clarissimi config file
+- `INPUT_COMMENT_MODE`: `none` or `upsert`, default `none`; supported only by proposal modes
 - `INPUT_BASE_BRANCH`: base branch for proposal pull requests, default `main`
 - `INPUT_REMOTE_NAME`: remote name used to publish proposal branches, default `origin`
 - `INPUT_STAGING_DIR`: optional temporary directory for generated proposal files
@@ -54,6 +56,8 @@ The root `action.yml` exposes the same surface as a composite action:
   `CONTRIBUTORS.md`; defaults to `none`
 - `include-automation-contributors`: optional `true` or `false`; defaults through config to `true`
   and controls derived contributor displays without changing the ledger
+- `comment-mode`: optional `none` or `upsert`, default `none`; `upsert` creates or updates one
+  Clarissimi-managed status comment on the merged source pull request after a proposal succeeds
 - `base-branch`: defaults to `main`
 - `remote-name`: defaults to `origin`
 - `staging-dir`: optional temporary staging directory
@@ -109,6 +113,15 @@ Promote-draft does not load config, but it accepts the explicit presentation inp
 emits the resolved path through `summary-json-path`. Invalid summary paths fail before provider
 calls or write-mode mutation. Existing path components must not be symbolic links, junctions, or
 hard-linked files, and their resolved paths must remain inside the workspace.
+
+`comment-mode` is explicit and does not load from repository config. `upsert` is limited to
+`propose`, `stage-draft`, and `promote-draft`; dry-run and direct commit reject it before repository
+mutation. A managed comment must carry the versioned Clarissimi marker and be owned by
+`github-actions[bot]` through the `github-actions` app. Clarissimi scans at most 1,000 comments,
+fails closed on an incomplete scan or duplicate managed comments, and never overwrites marker text
+owned by a user or another app. Comment content is a bounded proposal pointer, not recognition
+output. The existing `pull-requests: write` permission covers list, create, and update operations;
+`issues: write` is not required.
 
 Dry-run mode reads provider credentials only when `provider` is explicitly set to
 `openai-compatible`. The default provider is `fake`. The default Action mode is `propose`, which
@@ -185,6 +198,8 @@ In `propose`, `stage-draft`, and `promote-draft` modes, the Action also emits:
 - `proposal-pull-request-number`
 - `proposal-pull-request-url`
 - `proposal-pull-request-action`
+- `source-comment-action` when `comment-mode` is `upsert`
+- `source-comment-url` when `comment-mode` is `upsert`
 - `summary-json-path` when `summary-path` is set
 
 In `commit` mode, the Action also emits:

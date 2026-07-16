@@ -163,6 +163,65 @@ test("runs fixture-first propose mode through branch publish and pull request cr
   });
 });
 
+test("propose mode upserts one source pull request status comment after proposal creation", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const remoteDir = join(dir, "remote.git");
+    const stagingDir = join(dir, "staged");
+    const fixturePath = join(dir, "github-fixture.json");
+    const pullRequestClient = new FakePullRequestClient();
+    const sourceCommentClient = new FakeSourceCommentClient();
+    await initRepositoryWithRemote(repositoryDir, remoteDir);
+    await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+
+    const summary = await runActionPropose({
+      mode: "propose",
+      githubFixturePath: fixturePath,
+      repositoryDir,
+      stagingDir,
+      baseBranch: "main",
+      pullRequestClient,
+      commentMode: "upsert",
+      sourceCommentClient,
+    });
+
+    assert.equal(summary.sourceCommentAction, "created");
+    assert.equal(
+      summary.sourceCommentUrl,
+      "https://github.com/sample/project/pull/42#issuecomment-10",
+    );
+    assert.deepEqual(sourceCommentClient.lookups, [
+      { repository: "sample/project", pullRequestNumber: 42 },
+    ]);
+    assert.equal(sourceCommentClient.created[0].body.includes("pull/1"), true);
+    assert.equal(sourceCommentClient.created[0].body.includes("PATCH_EXCERPT_SENTINEL"), false);
+  });
+});
+
+test("environment rejects source comment upsert for dry-run before Action work", async () => {
+  let stdout = "";
+  let stderr = "";
+
+  const exitCode = await runActionFromEnvironment(
+    {
+      INPUT_MODE: "dry-run",
+      INPUT_COMMENT_MODE: "upsert",
+    },
+    {
+      stdout: (value) => {
+        stdout += value;
+      },
+      stderr: (value) => {
+        stderr += value;
+      },
+    },
+  );
+
+  assert.equal(exitCode, 1);
+  assert.equal(stdout, "");
+  assert.match(stderr, /supports only propose, stage-draft, or promote-draft/);
+});
+
 test("propose mode preserves existing ledger records when rendering a new contribution", async () => {
   await withTempDir(async (dir) => {
     const repositoryDir = join(dir, "repo");
@@ -858,6 +917,32 @@ class FakePullRequestClient {
 
   async updatePullRequest() {
     throw new Error("updatePullRequest was not expected in this test.");
+  }
+}
+
+class FakeSourceCommentClient {
+  lookups = [];
+  created = [];
+
+  async listPullRequestComments(input) {
+    this.lookups.push(input);
+    return { comments: [], complete: true };
+  }
+
+  async createPullRequestComment(input) {
+    this.created.push(input);
+    return {
+      id: 10,
+      url: "https://github.com/sample/project/pull/42#issuecomment-10",
+      body: input.body,
+      authorLogin: "github-actions[bot]",
+      authorType: "Bot",
+      appSlug: "github-actions",
+    };
+  }
+
+  async updatePullRequestComment() {
+    throw new Error("updatePullRequestComment was not expected in this test.");
   }
 }
 

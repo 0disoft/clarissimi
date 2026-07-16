@@ -40,9 +40,21 @@ import { resolveGitHubEventPayload } from "./event.js";
 import { createGitHubPullRequestClient } from "./github-client.js";
 import {
   createOrUpdateProposalPullRequest,
+  type ProposalPullRequest,
   type ProposalPullRequestClient,
 } from "./pull-request.js";
-import { stageProposalDraftReviewOutput, stageProposalRecognitionOutputs } from "./staging.js";
+import {
+  isSourceCommentMode,
+  upsertSourcePullRequestComment,
+  type SourceCommentMode,
+  type SourcePullRequestCommentClient,
+  type SourcePullRequestCommentUpsertResult,
+} from "./source-comment.js";
+import {
+  stageProposalDraftReviewOutput,
+  stageProposalRecognitionOutputs,
+  type ProposalOutputStagingManifest,
+} from "./staging.js";
 import { sanitizeAssessmentForActionSummary } from "./summary.js";
 import type {
   ActionMode,
@@ -107,6 +119,7 @@ export async function runActionDryRun(input: ActionDryRunInput): Promise<ActionD
 }
 
 export async function runActionPropose(input: ActionProposeInput): Promise<ActionProposeSummary> {
+  validateSourceCommentInput(input);
   const prepared = await prepareActionAssessment(input);
   if (prepared.kind === "skipped") {
     throw new ActionUsageError("Propose mode requires a merged pull request input.");
@@ -141,6 +154,12 @@ export async function runActionPropose(input: ActionProposeInput): Promise<Actio
   };
   assignOptional(pullRequestInput, "targetRepository", input.targetRepository);
   const pullRequest = await createOrUpdateProposalPullRequest(pullRequestInput);
+  const sourceComment = await maybeUpsertProposalSourceComment(
+    input,
+    staging.manifest,
+    pullRequest.pullRequest,
+    "recognition",
+  );
 
   return {
     ok: true,
@@ -159,6 +178,12 @@ export async function runActionPropose(input: ActionProposeInput): Promise<Actio
     proposalPullRequestNumber: pullRequest.pullRequest.number,
     proposalPullRequestUrl: pullRequest.pullRequest.url,
     proposalPullRequestAction: pullRequest.action,
+    ...(sourceComment === undefined
+      ? {}
+      : {
+          sourceCommentAction: sourceComment.action,
+          sourceCommentUrl: sourceComment.comment.url,
+        }),
   };
 }
 
@@ -216,6 +241,7 @@ export async function runActionCommit(input: ActionCommitInput): Promise<ActionC
 export async function runActionStageDraft(
   input: ActionStageDraftInput,
 ): Promise<ActionProposeSummary> {
+  validateSourceCommentInput(input);
   const prepared = await prepareActionAssessment(input);
   if (prepared.kind === "skipped") {
     throw new ActionUsageError("Stage-draft mode requires a merged pull request input.");
@@ -247,6 +273,12 @@ export async function runActionStageDraft(
   };
   assignOptional(pullRequestInput, "targetRepository", input.targetRepository);
   const pullRequest = await createOrUpdateProposalPullRequest(pullRequestInput);
+  const sourceComment = await maybeUpsertProposalSourceComment(
+    input,
+    staging.manifest,
+    pullRequest.pullRequest,
+    "draft-review",
+  );
 
   return {
     ok: true,
@@ -265,12 +297,19 @@ export async function runActionStageDraft(
     proposalPullRequestNumber: pullRequest.pullRequest.number,
     proposalPullRequestUrl: pullRequest.pullRequest.url,
     proposalPullRequestAction: pullRequest.action,
+    ...(sourceComment === undefined
+      ? {}
+      : {
+          sourceCommentAction: sourceComment.action,
+          sourceCommentUrl: sourceComment.comment.url,
+        }),
   };
 }
 
 export async function runActionPromoteDraft(
   input: ActionPromoteDraftInput,
 ): Promise<ActionProposeSummary> {
+  validateSourceCommentInput(input);
   const assessment = await readApprovedDraft(input.draftPath, input.repositoryDir);
   const staging = await stageProposalRecognitionOutputs({
     outputDir: input.stagingDir,
@@ -303,6 +342,12 @@ export async function runActionPromoteDraft(
   };
   assignOptional(pullRequestInput, "targetRepository", input.targetRepository);
   const pullRequest = await createOrUpdateProposalPullRequest(pullRequestInput);
+  const sourceComment = await maybeUpsertProposalSourceComment(
+    input,
+    staging.manifest,
+    pullRequest.pullRequest,
+    "recognition",
+  );
 
   return {
     ok: true,
@@ -321,7 +366,43 @@ export async function runActionPromoteDraft(
     proposalPullRequestNumber: pullRequest.pullRequest.number,
     proposalPullRequestUrl: pullRequest.pullRequest.url,
     proposalPullRequestAction: pullRequest.action,
+    ...(sourceComment === undefined
+      ? {}
+      : {
+          sourceCommentAction: sourceComment.action,
+          sourceCommentUrl: sourceComment.comment.url,
+        }),
   };
+}
+
+async function maybeUpsertProposalSourceComment(
+  input: Pick<ActionProposeInput, "commentMode" | "sourceCommentClient">,
+  manifest: ProposalOutputStagingManifest,
+  proposalPullRequest: ProposalPullRequest,
+  proposalKind: "recognition" | "draft-review",
+): Promise<SourcePullRequestCommentUpsertResult | undefined> {
+  if (input.commentMode === undefined || input.commentMode === "none") {
+    return undefined;
+  }
+
+  return upsertSourcePullRequestComment({
+    client: input.sourceCommentClient as SourcePullRequestCommentClient,
+    repository: manifest.source.repository,
+    pullRequestNumber: manifest.source.pullRequestNumber,
+    proposalKind,
+    proposalPullRequestNumber: proposalPullRequest.number,
+    proposalPullRequestUrl: proposalPullRequest.url,
+  });
+}
+
+function validateSourceCommentInput(
+  input: Pick<ActionProposeInput, "commentMode" | "sourceCommentClient">,
+): void {
+  if (input.commentMode === "upsert" && input.sourceCommentClient === undefined) {
+    throw new ActionUsageError(
+      "comment-mode upsert requires a source pull request comment client before repository mutation.",
+    );
+  }
 }
 
 async function readExistingRecognitionRecords(repositoryDir: string): Promise<readonly unknown[]> {
@@ -344,6 +425,7 @@ function isNodeError(error: unknown): error is NodeJS.ErrnoException {
 
 export interface ActionEnvironmentRuntime {
   readonly pullRequestClient?: ProposalPullRequestClient;
+  readonly sourceCommentClient?: SourcePullRequestCommentClient;
   readonly liveGitHubClient?: ActionDryRunInput["liveGitHubClient"];
   readonly provider?: ContributionDraftProvider;
   readonly fetch?: typeof fetch;
@@ -368,6 +450,12 @@ export async function runActionFromEnvironment(
     const config =
       explicitMode === "promote-draft" ? {} : await loadActionConfigFromEnvironment(env);
     const mode = explicitMode ?? normalizeActionMode(config.mode ?? "propose");
+    const commentMode = normalizeSourceCommentMode(readEnvInput(env.INPUT_COMMENT_MODE) ?? "none");
+    if (commentMode === "upsert" && (mode === "dry-run" || mode === "commit")) {
+      throw new ActionUsageError(
+        "INPUT_COMMENT_MODE upsert supports only propose, stage-draft, or promote-draft mode.",
+      );
+    }
     const input: ActionDryRunInput = {
       mode,
       markdownSummary: resolveActionMarkdownSummary(env, config),
@@ -525,6 +613,14 @@ function normalizeActionMode(value: string): ActionMode {
   return value;
 }
 
+function normalizeSourceCommentMode(value: string): SourceCommentMode {
+  if (!isSourceCommentMode(value)) {
+    throw new ActionUsageError(`Unsupported source comment mode: ${value}.`);
+  }
+
+  return value;
+}
+
 function buildActionWriteInput(
   input: ActionDryRunInput,
   env: NodeJS.ProcessEnv,
@@ -554,6 +650,10 @@ function buildActionWriteInput(
   };
   assignOptional(clientOptions, "apiUrl", readEnvInput(env.GITHUB_API_URL));
   assignOptional(clientOptions, "fetch", runtime.fetch);
+  const defaultGitHubClient = createGitHubPullRequestClient(clientOptions);
+  const pullRequestClient = runtime.pullRequestClient ?? defaultGitHubClient;
+  const sourceCommentClient = runtime.sourceCommentClient ?? defaultGitHubClient;
+  const commentMode = normalizeSourceCommentMode(readEnvInput(env.INPUT_COMMENT_MODE) ?? "none");
 
   if (mode === "propose") {
     const liveGitHubClientOptions = buildLiveGitHubClientOptions(clientOptions, runtime);
@@ -565,7 +665,9 @@ function buildActionWriteInput(
         readEnvInput(env.INPUT_STAGING_DIR) ??
         join(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-propose"),
       baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
-      pullRequestClient: runtime.pullRequestClient ?? createGitHubPullRequestClient(clientOptions),
+      pullRequestClient,
+      commentMode,
+      sourceCommentClient,
       liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(liveGitHubClientOptions),
     };
     assignOptional(proposeInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
@@ -583,7 +685,9 @@ function buildActionWriteInput(
         readEnvInput(env.INPUT_STAGING_DIR) ??
         join(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-promote-draft"),
       baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
-      pullRequestClient: runtime.pullRequestClient ?? createGitHubPullRequestClient(clientOptions),
+      pullRequestClient,
+      commentMode,
+      sourceCommentClient,
     };
     assignOptional(promoteDraftInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
     assignOptional(promoteDraftInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
@@ -607,7 +711,9 @@ function buildActionWriteInput(
       readEnvInput(env.INPUT_STAGING_DIR) ??
       join(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-stage-draft"),
     baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
-    pullRequestClient: runtime.pullRequestClient ?? createGitHubPullRequestClient(clientOptions),
+    pullRequestClient,
+    commentMode,
+    sourceCommentClient,
     liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(liveGitHubClientOptions),
   };
   assignOptional(stageDraftInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
@@ -1062,6 +1168,8 @@ async function writeGitHubOutputs(
       `proposal-pull-request-number=${summary.proposalPullRequestNumber}`,
       `proposal-pull-request-url=${summary.proposalPullRequestUrl}`,
       `proposal-pull-request-action=${summary.proposalPullRequestAction}`,
+      `source-comment-action=${summary.sourceCommentAction ?? ""}`,
+      `source-comment-url=${summary.sourceCommentUrl ?? ""}`,
     );
   }
 
@@ -1109,13 +1217,23 @@ async function writeGitHubStepSummary(
     ["Redaction matches", String(summary.redactionMatchCount)],
   ];
 
-  if (summary.mode === "propose" || summary.mode === "stage-draft") {
+  if (
+    summary.mode === "propose" ||
+    summary.mode === "stage-draft" ||
+    summary.mode === "promote-draft"
+  ) {
     rows.push(
       ["Staged files", String(summary.stagedFileCount)],
       ["Proposal branch", summary.proposalBranch],
       ["Proposal pull request", summary.proposalPullRequestUrl],
       ["Proposal PR action", summary.proposalPullRequestAction],
     );
+    if (summary.sourceCommentAction !== undefined && summary.sourceCommentUrl !== undefined) {
+      rows.push(
+        ["Source comment action", summary.sourceCommentAction],
+        ["Source comment", summary.sourceCommentUrl],
+      );
+    }
   }
 
   if (summary.mode === "commit") {

@@ -48,6 +48,10 @@ Expected permissions:
 
 Propose mode writes to a branch and opens a pull request for maintainer review.
 
+When `comment-mode: upsert` is enabled, propose mode also creates or updates one managed status
+comment on the merged source pull request. GitHub permits issue-comment list, create, and update
+through `pull-requests: write`, so `issues: write` is not required.
+
 The proposal branch name should be deterministic and scoped under
 `clarissimi/recognition/<source-kind>-<source-id>`. The proposal pull request title should start
 with `Clarissimi recognition:`.
@@ -66,6 +70,9 @@ Expected permissions:
 
 Stage-draft mode writes only a sanitized draft inbox file to a branch and opens a pull request for
 maintainer review. It must not update public recognition outputs.
+
+The optional source pull request status comment uses the same `pull-requests: write` permission and
+does not change the `issues: read` boundary.
 
 The proposal branch name should be deterministic and scoped under
 `clarissimi/drafts/<source-kind>-<source-id>`. The proposal pull request title should start with
@@ -97,6 +104,9 @@ Expected permissions:
 Promotion reads one approved draft under `.clarissimi/drafts/`, writes only Clarissimi recognition
 outputs to a proposal branch, and opens or updates the normal recognition pull request. It does not
 call a provider or write directly to the default branch.
+
+Promotion may update the same opt-in source pull request status comment from draft review to
+recognition proposal state. Direct commit mode intentionally does not support comment updates.
 
 ## Event Safety
 

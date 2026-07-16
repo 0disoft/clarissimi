@@ -250,6 +250,12 @@ Default write mode:
 
 - `propose`
 
+Proposal modes may opt into one source pull request status comment with `comment-mode: upsert`.
+The default is `none`. The comment points to the draft-review or recognition proposal and is updated
+in place only when its versioned marker and GitHub Actions app ownership both match. It must not
+contain raw evidence, assessment prose, provider output, patches, secrets, scores, or rankings.
+Dry-run and direct commit modes do not write source pull request comments.
+
 When provider-result validation rejects a draft, the Action may render bounded structured issue
 codes and JSON paths in `GITHUB_STEP_SUMMARY`. It must not render raw provider output, validation
 messages, prompts, evidence bodies, patch excerpts, or secrets in that failure summary.

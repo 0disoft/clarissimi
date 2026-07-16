@@ -6,6 +6,14 @@ import {
   type ProposalPullRequestLookupInput,
   type ProposalPullRequestUpdateInput,
 } from "./pull-request.js";
+import type {
+  SourcePullRequestComment,
+  SourcePullRequestCommentClient,
+  SourcePullRequestCommentCreateInput,
+  SourcePullRequestCommentListResult,
+  SourcePullRequestCommentLookupInput,
+  SourcePullRequestCommentUpdateInput,
+} from "./source-comment.js";
 
 const DEFAULT_GITHUB_API_URL = "https://api.github.com";
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
@@ -13,6 +21,8 @@ const DEFAULT_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const MAX_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 500;
 const MAX_RETRY_DELAY_MS = 60_000;
+const COMMENTS_PER_PAGE = 100;
+const MAX_COMMENT_PAGES = 10;
 
 export interface GitHubPullRequestClientOptions {
   readonly token: string;
@@ -26,7 +36,7 @@ export interface GitHubPullRequestClientOptions {
 
 export function createGitHubPullRequestClient(
   options: GitHubPullRequestClientOptions,
-): ProposalPullRequestClient {
+): ProposalPullRequestClient & SourcePullRequestCommentClient {
   const token = options.token.trim();
   if (token.length === 0) {
     throw new ProposalPullRequestClientError(
@@ -73,6 +83,39 @@ export function createGitHubPullRequestClient(
 
     const first = response[0];
     return first === undefined ? null : parsePullRequest(first);
+  };
+
+  const listPullRequestComments = async (
+    input: SourcePullRequestCommentLookupInput,
+  ): Promise<SourcePullRequestCommentListResult> => {
+    const comments: SourcePullRequestComment[] = [];
+    for (let page = 1; page <= MAX_COMMENT_PAGES; page += 1) {
+      const url = new URL(
+        `${apiUrl}/repos/${input.repository}/issues/${input.pullRequestNumber}/comments`,
+      );
+      url.searchParams.set("per_page", String(COMMENTS_PER_PAGE));
+      url.searchParams.set("page", String(page));
+      const response = await requestJsonWithRetry(
+        fetchImpl,
+        token,
+        url,
+        { method: "GET" },
+        { timeoutMs, maxResponseBytes, sleep, random },
+      );
+      if (!Array.isArray(response)) {
+        throw new ProposalPullRequestClientError(
+          "unexpected",
+          "GitHub source pull request comment lookup returned an unexpected response.",
+        );
+      }
+
+      comments.push(...response.map(parseSourcePullRequestComment));
+      if (response.length < COMMENTS_PER_PAGE) {
+        return { comments, complete: true };
+      }
+    }
+
+    return { comments, complete: false };
   };
 
   return {
@@ -168,6 +211,75 @@ export function createGitHubPullRequestClient(
       );
 
       return parsePullRequest(response);
+    },
+
+    listPullRequestComments,
+
+    async createPullRequestComment(
+      input: SourcePullRequestCommentCreateInput,
+    ): Promise<SourcePullRequestComment> {
+      const url = new URL(
+        `${apiUrl}/repos/${input.repository}/issues/${input.pullRequestNumber}/comments`,
+      );
+      try {
+        const response = await requestJsonOnce(
+          fetchImpl,
+          token,
+          url,
+          { method: "POST", body: JSON.stringify({ body: input.body }) },
+          timeoutMs,
+          maxResponseBytes,
+        );
+        return parseSourcePullRequestComment(response);
+      } catch (error) {
+        if (!(error instanceof ProposalPullRequestClientError)) {
+          throw error;
+        }
+
+        try {
+          const listed = await listPullRequestComments(input);
+          const reconciled = listed.comments.filter(
+            (comment) =>
+              comment.body === input.body &&
+              comment.authorLogin === "github-actions[bot]" &&
+              comment.authorType === "Bot" &&
+              comment.appSlug === "github-actions",
+          );
+          if (listed.complete && reconciled.length === 1) {
+            return reconciled[0];
+          }
+          if (reconciled.length > 1) {
+            throw new ProposalPullRequestClientError(
+              "unexpected",
+              "GitHub source pull request comment creation reconciliation found duplicates.",
+            );
+          }
+        } catch (reconciliationError) {
+          if (
+            reconciliationError instanceof ProposalPullRequestClientError &&
+            reconciliationError.code === "unexpected" &&
+            /found duplicates/.test(reconciliationError.message)
+          ) {
+            throw reconciliationError;
+          }
+        }
+
+        throw error;
+      }
+    },
+
+    async updatePullRequestComment(
+      input: SourcePullRequestCommentUpdateInput,
+    ): Promise<SourcePullRequestComment> {
+      const url = new URL(`${apiUrl}/repos/${input.repository}/issues/comments/${input.commentId}`);
+      const response = await requestJsonWithRetry(
+        fetchImpl,
+        token,
+        url,
+        { method: "PATCH", body: JSON.stringify({ body: input.body }) },
+        { timeoutMs, maxResponseBytes, sleep, random },
+      );
+      return parseSourcePullRequestComment(response);
     },
   };
 }
@@ -432,6 +544,29 @@ function parsePullRequest(value: unknown): ProposalPullRequest {
     baseBranch: expectString(base.ref, "base.ref"),
     title: expectString(value.title, "title"),
   };
+}
+
+function parseSourcePullRequestComment(value: unknown): SourcePullRequestComment {
+  if (!isRecord(value) || !isRecord(value.user)) {
+    throw new ProposalPullRequestClientError(
+      "unexpected",
+      "GitHub source pull request comment response must include an author.",
+    );
+  }
+
+  const app = value.performed_via_github_app;
+  const comment: SourcePullRequestComment = {
+    id: expectNumber(value.id, "id"),
+    url: expectString(value.html_url, "html_url"),
+    body: typeof value.body === "string" ? value.body : "",
+    authorLogin: expectString(value.user.login, "user.login"),
+    authorType: expectString(value.user.type, "user.type"),
+  };
+  if (isRecord(app) && typeof app.slug === "string" && app.slug.trim().length > 0) {
+    return { ...comment, appSlug: app.slug };
+  }
+
+  return comment;
 }
 
 function normalizeApiUrl(value: string | undefined): string {

@@ -104,12 +104,12 @@ const requiredCurrentStateText = new Map([
   [
     "README.md",
     [
-      "0disoft/clarissimi@v0.3.5",
-      "`gallery` is available in the current immutable `v0.3.5` release and moving `v0` line.",
+      "0disoft/clarissimi@v0.4.0",
+      "`gallery` is available in the current immutable `v0.4.0` release and moving `v0` line.",
       "clarissimi completion <bash|zsh|fish|powershell>",
     ],
   ],
-  ["SECURITY.md", ["`v0.3.5`", "moving `v0` release line"]],
+  ["SECURITY.md", ["`v0.4.0`", "moving `v0` release line"]],
 ]);
 
 export async function validateDocs(options = {}) {

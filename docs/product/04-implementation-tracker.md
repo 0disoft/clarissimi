@@ -1211,6 +1211,30 @@ Validation required:
 - proposal runner integration and Action bundle freshness
 - `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, and `contract`
 
+### 32. Source Pull Request Status Release
+
+Source: `docs/adr/0044-authorize-v0-action-release-line.md`,
+`docs/adr/0053-add-opt-in-source-pr-comment-updates.md`, `docs/ops/release.md`
+
+Status: `v0.5.0` release candidate.
+
+Goal: publish the opt-in source pull request comment contract as an immutable Marketplace Action
+release without changing package-publication or default-write boundaries.
+
+Completed candidate scope:
+
+- immutable `v0.5.0` release notes and current consumer examples
+- exact-SHA external integration-lab validation for create, update, unchanged, and single-comment
+  behavior
+- stable Action input, output, permission, documentation, and bundle contracts
+
+Release gates required:
+
+- final candidate local validation and hosted CI for the exact candidate SHA
+- hosted live-provider, external dry-run, full-write, and orphan-audit validation
+- immutable stable release publication, Marketplace `Latest` verification, and separate `v0`
+  compare-and-swap promotion
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

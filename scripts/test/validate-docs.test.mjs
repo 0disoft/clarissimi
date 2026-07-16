@@ -133,14 +133,14 @@ test("validateDocs rejects stale public Action release documentation", async (t)
   });
   const readmePath = join(repoRoot, "README.md");
   const readme = await readFile(readmePath, "utf8");
-  await writeFile(readmePath, readme.replaceAll("v0.4.0", "v0.3.5"), "utf8");
+  await writeFile(readmePath, readme.replaceAll("v0.5.0", "v0.4.0"), "utf8");
 
   const result = await validateDocs({ repoRoot });
 
   assert.equal(result.ok, false);
   assert.equal(
     result.issues.includes(
-      "README.md is missing current-state contract text: 0disoft/clarissimi@v0.4.0",
+      "README.md is missing current-state contract text: 0disoft/clarissimi@v0.5.0",
     ),
     true,
   );
@@ -156,7 +156,7 @@ test("validateDocs rejects stale gallery and supported-release lines", async (t)
   await writeFile(
     readmePath,
     readme.replace(
-      "`gallery` is available in the current immutable `v0.4.0` release and moving `v0` line.",
+      "`gallery` is available in the current immutable `v0.5.0` release and moving `v0` line.",
       "`gallery` requires a later release.",
     ),
     "utf8",
@@ -172,12 +172,12 @@ test("validateDocs rejects stale gallery and supported-release lines", async (t)
   assert.equal(result.ok, false);
   assert.equal(
     result.issues.includes(
-      "README.md is missing current-state contract text: `gallery` is available in the current immutable `v0.4.0` release and moving `v0` line.",
+      "README.md is missing current-state contract text: `gallery` is available in the current immutable `v0.5.0` release and moving `v0` line.",
     ),
     true,
   );
   assert.equal(
-    result.issues.includes("SECURITY.md is missing current-state contract text: `v0.4.0`"),
+    result.issues.includes("SECURITY.md is missing current-state contract text: `v0.5.0`"),
     true,
   );
   assert.equal(
@@ -365,7 +365,7 @@ function stubContentForPath(path) {
   }
 
   if (path === "SECURITY.md") {
-    return "# Security\n\nSupported immutable release `v0.4.0` and moving `v0` release line.\n";
+    return "# Security\n\nSupported immutable release `v0.5.0` and moving `v0` release line.\n";
   }
 
   if (path.endsWith(".md")) {
@@ -387,8 +387,8 @@ function withReadmeContracts(readme) {
   return [
     readme.trimEnd(),
     "",
-    "Current release: 0disoft/clarissimi@v0.4.0",
-    "`gallery` is available in the current immutable `v0.4.0` release and moving `v0` line.",
+    "Current release: 0disoft/clarissimi@v0.5.0",
+    "`gallery` is available in the current immutable `v0.5.0` release and moving `v0` line.",
     "clarissimi completion <bash|zsh|fish|powershell>",
     "",
   ].join("\n");

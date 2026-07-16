@@ -134,6 +134,13 @@ release changes no Action input, output, permission, trigger, approval, ledger, 
 package-publication boundary. Its exact-SHA candidate validation, stable release publication,
 public Marketplace verification, post-tag external validation, and separate `v0` promotion passed.
 
+Marketplace release candidate `v0.5.0` adds opt-in source pull request status comments for proposal
+modes. It keeps the default silent, reuses the existing proposal-mode `pull-requests: write`
+permission, bounds and owns the managed comment, and publishes only proposal status and links.
+Integration-lab PR `#212` validated create, update, unchanged, and single-comment behavior against
+the exact implementation SHA before release preparation. The immutable release still requires the
+full exact-candidate, post-tag, Marketplace, and `v0` promotion gates below.
+
 The first post-tag full-write run `29324962538` had one Ubuntu job fail while GitHub returned its
 `Unicorn!` timeout HTML during draft PR creation. macOS and Windows passed, cleanup ran, and orphan
 audit run `29325038208` found no residue. A complete new-correlation post-tag validation then passed

@@ -65,7 +65,7 @@ Do not publicly disclose:
 ## Supported Versions
 
 Clarissimi is pre-1.0. Security fixes are supported for the current immutable Action release
-`v0.4.0` and the moving `v0` release line. Fixes land on the default branch, ship in a new immutable
+`v0.5.0` and the moving `v0` release line. Fixes land on the default branch, ship in a new immutable
 `v0.x.y` release after release validation, and reach `v0` only after that release passes the alias
 promotion gates. Older immutable tags do not receive routine backports.
 

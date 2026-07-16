@@ -588,6 +588,195 @@ network = false
 destructive = false
 required_after = ["git_stage_source_pr_comment"]
 
+[intents.git_stage_release_v0_5_0]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Stage only the reviewed v0.5.0 source pull request status release preparation and bounded release commands."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  ".mustflow/config/manifest.lock.toml",
+  ".mustflow/review/docs.toml",
+  "README.md",
+  "SECURITY.md",
+  "docs/github-action/README.md",
+  "docs/ops/release.md",
+  "docs/product/04-implementation-tracker.md",
+  "scripts/release-notes/v0.5.0.md",
+  "scripts/release-readiness.mjs",
+  "scripts/test/release-readiness.test.mjs",
+  "scripts/test/validate-docs.test.mjs",
+  "scripts/validate-docs.mjs",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["release_v0_5_0_local_validation_complete", "documentation_review_queued"]
+
+[intents.git_commit_release_v0_5_0]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Commit the reviewed v0.5.0 source pull request status release preparation."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "chore(release): prepare v0.5.0 source comments",
+  "-m",
+  "Validation: docs, release-readiness, lint, format, migration-check, smoke, check, contract, bundle-action-check, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_release_v0_5_0"]
+
+[intents.hosted_ci_release_v0_5_0]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Confirm hosted CI passed for the pushed v0.5.0 release candidate at the current local HEAD."
+argv = ["pnpm", "run", "hosted-ci-validation"]
+cwd = "."
+timeout_seconds = 1800
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["git_push_main", "release_v0_5_0_candidate_pushed"]
+
+[intents.release_v0_5_0_marketplace_evidence]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["release"]
+description = "Collect exact-HEAD v0.5.0 Marketplace candidate validation records and create the external release record issue."
+argv = [
+  "pnpm",
+  "run",
+  "release-candidate-evidence-orchestrator",
+  "--",
+  "--provider-model",
+  "gpt-4.1-mini",
+  "--release-type",
+  "marketplace-action-tag",
+  "--release-version",
+  "v0.5.0",
+  "--create-issue",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["hosted_ci_release_v0_5_0", "user_authorized_release"]
+
+[intents.release_v0_5_0_stable_publish]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["release"]
+description = "Publish immutable v0.5.0 as a non-prerelease GitHub Marketplace Release from exact candidate validation records."
+argv = [
+  "pnpm",
+  "run",
+  "publish-action-release",
+  "--",
+  "--version",
+  "v0.5.0",
+  "--release-kind",
+  "stable",
+]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/refs/tags/v0.5.0", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["release_v0_5_0_marketplace_evidence", "user_authorized_release"]
+
+[intents.release_v0_5_0_post_tag_evidence]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["release"]
+description = "Revalidate published v0.5.0 with hosted live-provider, external dry-run, full-write, and orphan-audit workflows."
+argv = [
+  "pnpm",
+  "run",
+  "release-candidate-evidence-orchestrator",
+  "--",
+  "--provider-model",
+  "gpt-4.1-mini",
+  "--release-type",
+  "marketplace-action-tag",
+  "--release-version",
+  "v0.5.0",
+  "--external-ref",
+  "v0.5.0",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["release_v0_5_0_stable_publish"]
+
+[intents.verify_marketplace_v0_5_0]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Verify that the public Marketplace listing marks v0.5.0 as Latest and renders the matching Action reference."
+argv = ["pnpm", "run", "verify-marketplace-release", "--", "--version", "v0.5.0"]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = true
+destructive = false
+required_after = ["release_v0_5_0_stable_publish", "marketplace_publication"]
+
 [intents.git_push_main]
 status = "configured"
 lifecycle = "oneshot"

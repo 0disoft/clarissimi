@@ -855,6 +855,59 @@ network = false
 destructive = false
 required_after = ["git_stage_v0_5_0_promotion_contract"]
 
+[intents.git_stage_v0_5_0_release_completion]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Stage the reviewed v0.5.0 publication, post-tag validation, Marketplace, and v0 promotion records."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  ".mustflow/config/manifest.lock.toml",
+  "docs/ops/release.md",
+  "docs/product/04-implementation-tracker.md",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["v0_5_0_release_completion_validation_complete"]
+
+[intents.git_commit_v0_5_0_release_completion]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Commit the completed v0.5.0 Marketplace publication and v0 promotion records."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "docs(release): record v0.5.0 publication",
+  "-m",
+  "Validation: docs, release-readiness, format, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_v0_5_0_release_completion"]
+
 [intents.git_push_main]
 status = "configured"
 lifecycle = "oneshot"

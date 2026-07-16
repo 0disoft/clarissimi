@@ -111,10 +111,10 @@ and release checkbox state.
 Current publication record:
 
 - public listing: <https://github.com/marketplace/actions/clarissimi>
-- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.4.0>
-- exact release SHA: `5eaedc4dc5ed4462a36001eb7c6422c6b2cd17de`
-- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/17>
-- the listing identifies `v0.4.0` as `Latest`, renders `0disoft/clarissimi@v0.4.0`, and exposes
+- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.5.0>
+- exact release SHA: `f9322e10e9bd96880ef332c341c42b7e918173c4`
+- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/18>
+- the listing identifies `v0.5.0` as `Latest`, renders `0disoft/clarissimi@v0.5.0`, and exposes
   categories `Code review` and `Utilities`
 - `v0` resolves to the same exact release SHA after compare-and-swap promotion
 
@@ -134,12 +134,12 @@ release changes no Action input, output, permission, trigger, approval, ledger, 
 package-publication boundary. Its exact-SHA candidate validation, stable release publication,
 public Marketplace verification, post-tag external validation, and separate `v0` promotion passed.
 
-Marketplace release candidate `v0.5.0` adds opt-in source pull request status comments for proposal
+Marketplace release `v0.5.0` adds opt-in source pull request status comments for proposal
 modes. It keeps the default silent, reuses the existing proposal-mode `pull-requests: write`
 permission, bounds and owns the managed comment, and publishes only proposal status and links.
 Integration-lab PR `#212` validated create, update, unchanged, and single-comment behavior against
-the exact implementation SHA before release preparation. The immutable release still requires the
-full exact-candidate, post-tag, Marketplace, and `v0` promotion gates below.
+the exact implementation SHA before release preparation. Exact-candidate, post-tag, Marketplace,
+and moving-`v0` validation all passed without changing package-publication boundaries.
 
 The first post-tag full-write run `29324962538` had one Ubuntu job fail while GitHub returned its
 `Unicorn!` timeout HTML during draft PR creation. macOS and Windows passed, cleanup ran, and orphan
@@ -148,6 +148,23 @@ on all three runners; the failed attempt is retained as a transient GitHub API r
 not erased or counted as the final release result.
 
 Current promotion validation record:
+
+- `v0.5.0` candidate hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29488976370>
+- `v0.5.0` candidate live provider: <https://github.com/0disoft/clarissimi/actions/runs/29489078798>
+- `v0.5.0` candidate dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29489110673>
+- `v0.5.0` candidate full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29489143246>
+- `v0.5.0` candidate orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29489205643>
+- `v0.5.0` exact-tag live provider: <https://github.com/0disoft/clarissimi/actions/runs/29489319207>
+- `v0.5.0` exact-tag dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29489350435>
+- `v0.5.0` exact-tag full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29489384556>
+- `v0.5.0` exact-tag orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29489456245>
+- promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29489876636>
+- live provider through `v0.5.0`: <https://github.com/0disoft/clarissimi/actions/runs/29489977500>
+- external `v0` dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29490006463>
+- external `v0` full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29490039021>
+- external `v0` orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29490102887>
+
+Previous `v0.4.0` promotion validation record:
 
 - candidate hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29470945759>
 - candidate live provider: <https://github.com/0disoft/clarissimi/actions/runs/29471023007>

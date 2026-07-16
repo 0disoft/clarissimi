@@ -940,8 +940,8 @@ Validation completed:
 
 Source: `docs/adr/0045-publish-action-to-github-marketplace.md`, `docs/ops/release.md`
 
-Status: Completed through shell-completion and trust-hardening `v0.4.0` Marketplace publication, public verification,
-and `v0` promotion.
+Status: Completed through source pull request status `v0.5.0` Marketplace publication, public
+verification, and `v0` promotion.
 
 Goal: make the validated root Action discoverable in GitHub Marketplace without publishing npm
 packages or weakening the immutable tag and maintainer-approval boundaries.
@@ -952,7 +952,7 @@ Completed deliverables:
 - first non-prerelease `v0.3.0` GitHub Marketplace Release, corrective immutable `v0.3.1`,
   onboarding-focused immutable `v0.3.2`, runtime-hardening immutable `v0.3.3`, and
   provider-quality immutable `v0.3.4`, Action-diagnostics immutable `v0.3.5`, and shell-completion
-  and trust-hardening immutable `v0.4.0`
+  and trust-hardening immutable `v0.4.0`, and source pull request status immutable `v0.5.0`
 - Marketplace categories `Code review` and `Utilities`
 - interactive developer-agreement, publication toggle, and public listing verification
 - post-tag external consumer evidence and separate compare-and-swap `v0` promotion
@@ -961,15 +961,15 @@ Completed deliverables:
 Current publication record:
 
 - public Marketplace listing: <https://github.com/marketplace/actions/clarissimi>
-- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.4.0>
-- exact release and `v0` SHA: `5eaedc4dc5ed4462a36001eb7c6422c6b2cd17de`
-- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/17>
-- candidate hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29470945759>
-- successful post-tag full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29471254832>
-- promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29471814699>
-- `v0` external dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29471908883>
-- `v0` full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29471939207>
-- `v0` orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29471977337>
+- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.5.0>
+- exact release and `v0` SHA: `f9322e10e9bd96880ef332c341c42b7e918173c4`
+- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/18>
+- candidate hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29488976370>
+- successful post-tag full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29489384556>
+- promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29489876636>
+- `v0` external dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29490006463>
+- `v0` full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29490039021>
+- `v0` orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29490102887>
 
 Corrective follow-up completed:
 
@@ -1216,7 +1216,7 @@ Validation required:
 Source: `docs/adr/0044-authorize-v0-action-release-line.md`,
 `docs/adr/0053-add-opt-in-source-pr-comment-updates.md`, `docs/ops/release.md`
 
-Status: `v0.5.0` release candidate.
+Status: Completed through immutable release, Marketplace verification, and moving `v0` promotion.
 
 Goal: publish the opt-in source pull request comment contract as an immutable Marketplace Action
 release without changing package-publication or default-write boundaries.
@@ -1228,12 +1228,13 @@ Completed candidate scope:
   behavior
 - stable Action input, output, permission, documentation, and bundle contracts
 
-Release gates required:
+Completed release results:
 
-- final candidate local validation and hosted CI for the exact candidate SHA
-- hosted live-provider, external dry-run, full-write, and orphan-audit validation
-- immutable stable release publication, Marketplace `Latest` verification, and separate `v0`
-  compare-and-swap promotion
+- final candidate local validation and hosted CI passed for the exact candidate SHA
+- hosted live-provider, external dry-run, full-write, cleanup, and orphan-audit validation passed
+  for the candidate SHA, immutable tag, and moving alias
+- immutable stable release publication, Marketplace `Latest` verification, and `v0` compare-and-swap
+  promotion completed
 
 ## Deferred Work
 

@@ -21,25 +21,25 @@ test("retirement removes completed mutations and keeps exact-tag revalidation ma
   const input = [
     'schema_version = "1"',
     sharedIntents,
-    '[intents.release_v0_4_0_stable_publish]\nstatus = "configured"\nrun_policy = "agent_allowed"',
-    '[intents.promote_v0_to_v0_4_0]\nstatus = "configured"\nrun_policy = "agent_allowed"',
+    '[intents.release_v0_5_0_stable_publish]\nstatus = "configured"\nrun_policy = "agent_allowed"',
+    '[intents.promote_v0_to_v0_5_0]\nstatus = "configured"\nrun_policy = "agent_allowed"',
     '[intents.git_stage_provider_model_eval]\nstatus = "configured"\nrun_policy = "agent_allowed"',
     '[intents.hosted_ci_provider_model_eval]\nstatus = "configured"\nrun_policy = "agent_allowed"',
     '[intents.git_stage_remaining_hardening]\nstatus = "configured"\nrun_policy = "agent_allowed"',
-    '[intents.release_v0_4_0_post_tag_evidence]\nstatus = "configured"\nlifecycle = "oneshot"\nrun_policy = "agent_allowed"\ndescription = "Revalidate."\nrequired_after = ["release_v0_4_0_stable_publish"]',
+    '[intents.release_v0_5_0_post_tag_evidence]\nstatus = "configured"\nlifecycle = "oneshot"\nrun_policy = "agent_allowed"\ndescription = "Revalidate."\nrequired_after = ["release_v0_5_0_stable_publish"]',
   ].join("\n\n");
 
   const result = retireHistoricalCommandIntents(input);
 
   assert.deepEqual(result.removed, [
-    "release_v0_4_0_stable_publish",
-    "promote_v0_to_v0_4_0",
+    "release_v0_5_0_stable_publish",
+    "promote_v0_to_v0_5_0",
     "git_stage_provider_model_eval",
     "hosted_ci_provider_model_eval",
     "git_stage_remaining_hardening",
   ]);
-  assert.deepEqual(result.manualOnly, ["release_v0_4_0_post_tag_evidence"]);
-  assert.ok(!result.text.includes("release_v0_4_0_stable_publish"));
+  assert.deepEqual(result.manualOnly, ["release_v0_5_0_post_tag_evidence"]);
+  assert.ok(!result.text.includes("release_v0_5_0_stable_publish"));
   assert.ok(result.text.includes('status = "manual_only"'));
   assert.ok(result.text.includes('run_policy = "manual_only"'));
   assert.ok(result.text.includes('agent_action = "do_not_run_report_manual_only"'));

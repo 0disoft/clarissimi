@@ -1,0 +1,9 @@
+schema_version = "1"
+
+[[documents]]
+path = "README.md"
+status = "pending"
+origin = "llm_modified"
+reason = "LLM-created or LLM-modified documentation requires review"
+first_seen_at = "2026-07-16T03:16:14.501Z"
+last_touched_at = "2026-07-16T03:16:14.501Z"

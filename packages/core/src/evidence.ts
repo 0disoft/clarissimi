@@ -40,19 +40,85 @@ export interface PreparedProviderEvidence {
   readonly redactionReport: RedactionReport;
 }
 
+export const PROVIDER_EVIDENCE_LIMITS = {
+  maxItems: 256,
+  maxUtf8Bytes: 512 * 1024,
+} as const;
+
+export type EvidencePreparationErrorCode =
+  | "evidence_item_limit"
+  | "evidence_bytes_limit"
+  | "unsafe_structural_field";
+
+export class EvidencePreparationError extends Error {
+  readonly code: EvidencePreparationErrorCode;
+
+  constructor(code: EvidencePreparationErrorCode, message: string) {
+    super(message);
+    this.name = "EvidencePreparationError";
+    this.code = code;
+  }
+}
+
 export function prepareEvidenceForProvider(input: EvidenceBundleInput): PreparedProviderEvidence {
+  assertEvidenceItemCount(input.items.length);
   const items = input.items.map(prepareEvidenceItem);
   const redactionReport = mergeRedactionReports(items.map((item) => item.redactionReport));
-
-  return {
+  const prepared = {
     source: input.source,
     items,
     evidenceRefs: items.map(toEvidenceRef),
     redactionReport,
   };
+
+  assertPreparedEvidenceForProvider(prepared);
+  return prepared;
+}
+
+export function assertPreparedEvidenceForProvider(evidence: PreparedProviderEvidence): void {
+  assertEvidenceItemCount(evidence.items.length);
+  for (const [index, item] of evidence.items.entries()) {
+    assertSafeStructuralField(item.id, `items[${index}].id`);
+    if (item.url !== undefined) {
+      assertSafeStructuralField(item.url, `items[${index}].url`);
+    }
+  }
+  for (const [index, ref] of evidence.evidenceRefs.entries()) {
+    assertSafeStructuralField(ref.id, `evidenceRefs[${index}].id`);
+    if (ref.url !== undefined) {
+      assertSafeStructuralField(ref.url, `evidenceRefs[${index}].url`);
+    }
+  }
+
+  const bytes = new TextEncoder().encode(
+    JSON.stringify({
+      source: evidence.source,
+      items: evidence.items.map((item) => ({
+        kind: item.kind,
+        id: item.id,
+        url: item.url,
+        title: item.title,
+        excerpt: item.excerpt,
+        text: item.text,
+        metadata: item.metadata,
+      })),
+      evidenceRefs: evidence.evidenceRefs,
+    }),
+  ).byteLength;
+  if (bytes > PROVIDER_EVIDENCE_LIMITS.maxUtf8Bytes) {
+    throw new EvidencePreparationError(
+      "evidence_bytes_limit",
+      `Prepared provider evidence must not exceed ${PROVIDER_EVIDENCE_LIMITS.maxUtf8Bytes} UTF-8 bytes.`,
+    );
+  }
 }
 
 function prepareEvidenceItem(input: EvidenceItemInput): PreparedEvidenceItem {
+  assertSafeStructuralField(input.id, "item.id");
+  if (input.url !== undefined) {
+    assertSafeStructuralField(input.url, "item.url");
+  }
+
   const reports: RedactionReport[] = [];
   const title = redactOptionalText(input.title, reports);
   const excerpt = redactOptionalText(input.excerpt, reports);
@@ -72,6 +138,24 @@ function prepareEvidenceItem(input: EvidenceItemInput): PreparedEvidenceItem {
   assignOptional(item, "metadata", metadata);
 
   return item;
+}
+
+function assertEvidenceItemCount(count: number): void {
+  if (count > PROVIDER_EVIDENCE_LIMITS.maxItems) {
+    throw new EvidencePreparationError(
+      "evidence_item_limit",
+      `Prepared provider evidence must not exceed ${PROVIDER_EVIDENCE_LIMITS.maxItems} items.`,
+    );
+  }
+}
+
+function assertSafeStructuralField(value: string, field: string): void {
+  if (redactText(value).report.changed) {
+    throw new EvidencePreparationError(
+      "unsafe_structural_field",
+      `Prepared provider evidence ${field} contains secret-bearing data.`,
+    );
+  }
 }
 
 function toEvidenceRef(item: PreparedEvidenceItem): EvidenceRef {

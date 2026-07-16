@@ -86,6 +86,10 @@ engine.
   quarantined intake path for real provider-result failures without weakening the golden corpus
 - `0050-add-manual-multi-model-provider-eval.md`: add a credential-safe matrix check and manual-only
   sequential live eval across explicit provider model snapshots
+- `0051-add-static-shell-completion.md`: generate deterministic Bash, Zsh, fish, and PowerShell
+  completion from the CLI command descriptor without repository inspection
+- `0052-bound-provider-input-evidence.md`: bound live changed files, prepared evidence, and provider
+  request bodies while failing closed on secret-bearing structural evidence
 
 ## Review Blockers
 

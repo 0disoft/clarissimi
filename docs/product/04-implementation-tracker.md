@@ -1146,6 +1146,30 @@ Validation required:
 - complete CLI and repository test suites
 - `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, and `contract`
 
+### 30. Static Shell Completion
+
+Source: `docs/adr/0051-add-static-shell-completion.md`, `docs/cli/shell-completion.md`
+
+Status: Completed for Bash, Zsh, fish, and PowerShell generation.
+
+Goal: make the stable CLI contract discoverable in common shells without creating a second command
+list or reading repository and credential-bearing state during completion.
+
+Completed deliverables:
+
+- typed CLI command descriptor shared by help, supported-option rejection, and completion
+- static Bash, Zsh, fish, and PowerShell script generation
+- schema-owned provider and Markdown-summary enum reuse
+- no config, ledger, repository, environment, credential, provider, GitHub, network, or path
+  enumeration behavior
+- deterministic LF output with a final newline and explicit `--json` rejection
+- focused metadata, privacy, argument, and all-shell built-binary smoke coverage
+
+Validation required:
+
+- focused CLI shell-completion regression
+- `docs`, `release-readiness`, `lint`, `format`, `smoke`, `check`, and `contract`
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

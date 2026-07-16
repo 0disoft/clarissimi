@@ -11,6 +11,8 @@
     "lint": "oxlint . --deny-warnings --ignore-pattern=action-dist/**",
     "typecheck": "tsc -b --pretty false",
     "test": "pnpm run build && node --test packages/schemas/test/*.test.mjs packages/redaction/test/*.test.mjs packages/core/test/*.test.mjs packages/github/test/*.test.mjs packages/providers/test/*.test.mjs packages/renderers/test/*.test.mjs packages/cli/test/*.test.mjs packages/action/test/*.test.mjs scripts/test/*.test.mjs",
+    "test:cli-completion": "pnpm run build && node --test packages/cli/test/completion.test.mjs",
+    "test:cli-lock": "pnpm run build && node --test \"--test-name-pattern=(file (operations|locks)|import-draft serializes concurrent ledger updates)\" packages/cli/test/cli.test.mjs",
     "contract": "pnpm run typecheck && pnpm run test",
     "migration-check": "pnpm run build && node scripts/migration-check.mjs",
     "smoke": "pnpm run build && node scripts/smoke.mjs",
@@ -27,6 +29,7 @@
     "release-evidence-cleanup": "node scripts/release-evidence-cleanup.mjs",
     "release-candidate-evidence-issue": "node scripts/release-candidate-evidence-issue.mjs",
     "release-readiness": "node scripts/release-readiness.mjs",
+    "retire-historical-command-intents": "node scripts/retire-historical-command-intents.mjs",
     "docs": "node scripts/validate-docs.mjs",
     "check": "pnpm run typecheck && pnpm run test"
   },

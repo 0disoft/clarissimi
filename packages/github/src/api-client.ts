@@ -71,6 +71,7 @@ export function createGitHubApiClient(options: GitHubApiClientOptions = {}): Liv
 
     async listPullRequestFiles(
       input: LiveGitHubPullRequestLookup,
+      limit = DEFAULT_PAGE_SIZE,
     ): Promise<readonly LiveGitHubPullRequestFile[]> {
       const response = await requestPaginatedArray(
         fetchImpl,
@@ -79,6 +80,7 @@ export function createGitHubApiClient(options: GitHubApiClientOptions = {}): Liv
         "GitHub pull request files response must be an array.",
         timeoutMs,
         maxResponseBytes,
+        limit,
       );
 
       return response.map(parsePullRequestFile);
@@ -108,7 +110,9 @@ async function requestPaginatedArray(
   invalidResponseMessage: string,
   timeoutMs: number,
   maxResponseBytes: number,
+  maxItems = MAX_LIST_PAGES * DEFAULT_PAGE_SIZE,
 ): Promise<readonly unknown[]> {
+  positiveIntegerOption(maxItems, "listLimit");
   const entries: unknown[] = [];
 
   for (let page = 1; page <= MAX_LIST_PAGES; page += 1) {
@@ -124,6 +128,12 @@ async function requestPaginatedArray(
     }
 
     entries.push(...response);
+    if (entries.length > maxItems) {
+      throw new GitHubApiClientError(
+        "response_too_large",
+        `GitHub list response exceeded ${maxItems} items.`,
+      );
+    }
     if (response.length < DEFAULT_PAGE_SIZE) {
       return entries;
     }

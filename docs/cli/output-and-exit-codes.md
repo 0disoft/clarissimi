@@ -33,6 +33,12 @@ sanitized `message`; the process exit code remains the authoritative failure cat
 applies to argument parsing and usage errors. Without `--json`, failures remain human-readable on
 stderr.
 
+`clarissimi completion <shell>` is the deliberate exception to JSON success output: stdout is the
+generated shell program, and `--json` is rejected as an unsupported option. The program is static,
+uses LF line endings, ends with a newline, and contains no repository, environment, or credential
+data. If the unsupported `--json` flag is present, the usage failure still follows the global JSON
+failure contract above; it never wraps a successful completion script in JSON.
+
 ## Exit Codes
 
 - `0`: success

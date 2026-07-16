@@ -26,6 +26,23 @@ test("redacts environment-style secret assignments", () => {
   assert.equal(result.report.occurrences[0].kind, "env_assignment");
 });
 
+test("redacts quoted dotenv values and quoted generic assignments", () => {
+  const dotenv = redactText('API_KEY="sample value for tests"');
+  const generic = redactText('"token=synthetic-generic-secret"');
+
+  assert.equal(dotenv.text, REDACTION_PLACEHOLDER);
+  assert.equal(dotenv.report.occurrences[0].kind, "env_assignment");
+  assert.equal(generic.text, REDACTION_PLACEHOLDER);
+  assert.equal(generic.report.occurrences[0].kind, "generic_secret_assignment");
+});
+
+test("redacts unquoted generic secret assignments", () => {
+  const result = redactText("password=synthetic-generic-secret");
+
+  assert.equal(result.text, REDACTION_PLACEHOLDER);
+  assert.equal(result.report.occurrences[0].kind, "generic_secret_assignment");
+});
+
 test("redacts provider token patterns", () => {
   const openai = `sk-proj-${"a".repeat(16)}`;
   const anthropic = `sk-ant-${"b".repeat(16)}`;

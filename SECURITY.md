@@ -64,7 +64,9 @@ Do not publicly disclose:
 
 ## Supported Versions
 
-Clarissimi is pre-release. Until the first stable release, security fixes are expected to land on the
-default branch and the latest pre-release line.
+Clarissimi is pre-1.0. Security fixes are supported for the current immutable Action release
+`v0.3.5` and the moving `v0` release line. Fixes land on the default branch, ship in a new immutable
+`v0.x.y` release after release validation, and reach `v0` only after that release passes the alias
+promotion gates. Older immutable tags do not receive routine backports.
 
 Stable supported-version policy must be documented before a `1.0.0` release.

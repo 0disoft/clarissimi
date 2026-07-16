@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import test from "node:test";
 
 import { runCli } from "../dist/index.js";
-import { retryTransientFileOperation } from "../dist/io.js";
+import { retryTransientFileOperation, withFileLock } from "../dist/io.js";
 
 function assessment(overrides = {}) {
   return {
@@ -971,6 +971,37 @@ test("file operations stop after the configured Windows retry budget", async () 
   );
   assert.equal(attempts, 3);
   assert.deepEqual(waits, [1, 2]);
+});
+
+test("file locks retry transient Windows access failures while opening the owned lock", async () => {
+  await withTempDir(async (dir) => {
+    const waits = [];
+    let attempts = 0;
+    let closes = 0;
+    const value = await withFileLock(join(dir, "ledger.lock"), async () => "locked", {
+      platform: "win32",
+      retryDelaysMs: [7],
+      wait: async (milliseconds) => {
+        waits.push(milliseconds);
+      },
+      openFile: async () => {
+        attempts += 1;
+        if (attempts === 1) {
+          throw Object.assign(new Error("transient lock open"), { code: "EPERM" });
+        }
+        return {
+          close: async () => {
+            closes += 1;
+          },
+        };
+      },
+    });
+
+    assert.equal(value, "locked");
+    assert.equal(attempts, 2);
+    assert.equal(closes, 1);
+    assert.deepEqual(waits, [7]);
+  });
 });
 
 test("import-draft serializes concurrent ledger updates without losing successful imports", async () => {

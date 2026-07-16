@@ -9,6 +9,7 @@ import type {
 
 const DEFAULT_REVIEW_COMMENT_LIMIT = 25;
 const DEFAULT_LINKED_ISSUE_LIMIT = 25;
+const DEFAULT_CHANGED_FILE_LIMIT = 100;
 const TEXT_LIMIT = 2_000;
 const REPOSITORY_NAME_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
@@ -24,6 +25,7 @@ export interface LiveGitHubClient {
   getPullRequest(input: LiveGitHubPullRequestLookup): Promise<LiveGitHubPullRequest>;
   listPullRequestFiles(
     input: LiveGitHubPullRequestLookup,
+    limit?: number,
   ): Promise<readonly LiveGitHubPullRequestFile[]>;
   listPullRequestReviewComments(
     input: LiveGitHubPullRequestLookup,
@@ -95,7 +97,7 @@ export async function collectLiveMergedPullRequestEvidence(
   };
   const [pullRequest, files, reviewComments] = await Promise.all([
     input.client.getPullRequest(lookup),
-    input.client.listPullRequestFiles(lookup),
+    input.client.listPullRequestFiles(lookup, DEFAULT_CHANGED_FILE_LIMIT),
     input.client.listPullRequestReviewComments(lookup),
   ]);
 
@@ -110,6 +112,13 @@ export async function collectLiveMergedPullRequestEvidence(
     throw new LiveGitHubCollectionError(
       "pull_request_not_merged",
       "Live GitHub collector requires a merged pull request.",
+    );
+  }
+
+  if (files.length > DEFAULT_CHANGED_FILE_LIMIT) {
+    throw new LiveGitHubCollectionError(
+      "changed_file_limit",
+      `Live GitHub collector changed files must not exceed ${DEFAULT_CHANGED_FILE_LIMIT} items.`,
     );
   }
 

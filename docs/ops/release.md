@@ -118,6 +118,14 @@ Current publication record:
   categories `Code review` and `Utilities`
 - `v0` resolves to the same exact release SHA after compare-and-swap promotion
 
+After the completion record is committed, retire every version-fixed publish, promote, verification,
+Git staging, commit, push, and hosted-CI intent for that completed release. Historical exact-tag
+post-release revalidation may remain only as `manual_only` because it dispatches credentialed
+external and full-write workflows. Keep the shared publication and promotion regression tests and
+the parameterized release scripts; release history must not remain as runnable agent buttons. Run
+the bounded `retire_historical_command_intents` intent to apply this policy and synchronize the
+mustflow manifest lock.
+
 Marketplace release `v0.3.5` publishes bounded provider-quality failure summaries, a scrubbed
 observed-failure corpus intake contract, and maintainer-owned multi-model evaluation. Raw provider
 output, messages, prompts, and credentials remain excluded from summaries and committed failure

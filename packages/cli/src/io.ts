@@ -7,10 +7,14 @@ const LOCK_WAIT_TIMEOUT_MS = 30_000;
 const WINDOWS_FILE_OPERATION_RETRY_DELAYS_MS = [10, 25, 50, 100, 200, 400] as const;
 const TRANSIENT_WINDOWS_FILE_OPERATION_CODES = new Set(["EACCES", "EBUSY", "EPERM"]);
 
-interface FileOperationRetryOptions {
+export interface FileOperationRetryOptions {
   readonly platform?: NodeJS.Platform;
   readonly retryDelaysMs?: readonly number[];
   readonly wait?: (milliseconds: number) => Promise<void>;
+}
+
+export interface FileLockOptions extends FileOperationRetryOptions {
+  readonly openFile?: typeof open;
 }
 
 export interface CliIo {
@@ -34,14 +38,19 @@ export async function writeTextFile(path: string, value: string): Promise<void> 
   await writeFile(path, value, "utf8");
 }
 
-export async function withFileLock<T>(path: string, task: () => Promise<T>): Promise<T> {
+export async function withFileLock<T>(
+  path: string,
+  task: () => Promise<T>,
+  options: FileLockOptions = {},
+): Promise<T> {
   await mkdir(dirname(path), { recursive: true });
   let handle: Awaited<ReturnType<typeof open>> | undefined;
+  const openFile = options.openFile ?? open;
 
   const deadline = Date.now() + LOCK_WAIT_TIMEOUT_MS;
   while (handle === undefined) {
     try {
-      handle = await open(path, "wx", 0o600);
+      handle = await retryTransientFileOperation(() => openFile(path, "wx", 0o600), options);
       break;
     } catch (error) {
       if (!isNodeError(error) || error.code !== "EEXIST") {

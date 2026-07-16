@@ -225,8 +225,14 @@ The MVP CLI should expose:
 - `clarissimi import-draft --draft <path>`
 - `clarissimi rebuild`
 - `clarissimi analytics recent-share`
+- `clarissimi completion <bash|zsh|fish|powershell>`
 
 Fixture-first implementation is acceptable before live GitHub collection.
+
+Shell completion must be generated from the same command descriptor used by CLI help and option
+validation. It writes a static script to stdout, does not install files, and must not inspect the
+repository, config, ledger, environment, credentials, provider, GitHub, or network. Path-valued
+flags must not trigger repository file enumeration.
 
 ## GitHub Action Contract
 

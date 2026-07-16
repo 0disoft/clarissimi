@@ -4,7 +4,11 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 
-import { requiredDocumentationPaths, validateDocs } from "../validate-docs.mjs";
+import {
+  maintainedSourceTruthDocumentationPaths,
+  requiredDocumentationPaths,
+  validateDocs,
+} from "../validate-docs.mjs";
 import { validateContributionAssessment } from "../../packages/schemas/dist/index.js";
 
 test("validateDocs accepts required docs, local links, and fenced JSON examples", async (t) => {
@@ -86,6 +90,100 @@ test("validateDocs rejects missing required documentation targets", async (t) =>
   assert.equal(result.ok, false);
   assert.equal(
     result.issues.includes("missing required documentation target: docs/cli/missing-required.md"),
+    true,
+  );
+});
+
+test("validateDocs requires maintained architecture and development source-of-truth documents", () => {
+  for (const path of [
+    ...maintainedSourceTruthDocumentationPaths,
+    "SECURITY.md",
+    "docs/cli/shell-completion.md",
+  ]) {
+    assert.equal(requiredDocumentationPaths.includes(path), true, `${path} must be required`);
+  }
+});
+
+test("validateDocs rejects obvious scaffold placeholders in maintained source-of-truth docs", async (t) => {
+  const repoRoot = await createDocsFixture({ readme: "# Fixture\n" });
+  t.after(async () => {
+    await rm(repoRoot, { recursive: true, force: true });
+  });
+  await writeFile(
+    join(repoRoot, "DEVELOPMENT.md"),
+    "# Development\n\n- Product decision: UNDECIDED\n",
+    "utf8",
+  );
+
+  const result = await validateDocs({ repoRoot });
+
+  assert.equal(result.ok, false);
+  assert.equal(
+    result.issues.includes(
+      "DEVELOPMENT.md contains scaffold placeholder text matching \\bUNDECIDED\\b",
+    ),
+    true,
+  );
+});
+
+test("validateDocs rejects stale public Action release documentation", async (t) => {
+  const repoRoot = await createDocsFixture({ readme: "# Fixture\n" });
+  t.after(async () => {
+    await rm(repoRoot, { recursive: true, force: true });
+  });
+  const readmePath = join(repoRoot, "README.md");
+  const readme = await readFile(readmePath, "utf8");
+  await writeFile(readmePath, readme.replaceAll("v0.3.5", "v0.3.4"), "utf8");
+
+  const result = await validateDocs({ repoRoot });
+
+  assert.equal(result.ok, false);
+  assert.equal(
+    result.issues.includes(
+      "README.md is missing current-state contract text: 0disoft/clarissimi@v0.3.5",
+    ),
+    true,
+  );
+});
+
+test("validateDocs rejects stale gallery and supported-release lines", async (t) => {
+  const repoRoot = await createDocsFixture({ readme: "# Fixture\n" });
+  t.after(async () => {
+    await rm(repoRoot, { recursive: true, force: true });
+  });
+  const readmePath = join(repoRoot, "README.md");
+  const readme = await readFile(readmePath, "utf8");
+  await writeFile(
+    readmePath,
+    readme.replace(
+      "`gallery` is available in the current immutable `v0.3.5` release and moving `v0` line.",
+      "`gallery` requires a later release.",
+    ),
+    "utf8",
+  );
+  await writeFile(
+    join(repoRoot, "SECURITY.md"),
+    "# Security\n\nSecurity fixes land on the default branch.\n",
+    "utf8",
+  );
+
+  const result = await validateDocs({ repoRoot });
+
+  assert.equal(result.ok, false);
+  assert.equal(
+    result.issues.includes(
+      "README.md is missing current-state contract text: `gallery` is available in the current immutable `v0.3.5` release and moving `v0` line.",
+    ),
+    true,
+  );
+  assert.equal(
+    result.issues.includes("SECURITY.md is missing current-state contract text: `v0.3.5`"),
+    true,
+  );
+  assert.equal(
+    result.issues.includes(
+      "SECURITY.md is missing current-state contract text: moving `v0` release line",
+    ),
     true,
   );
 });
@@ -198,7 +296,7 @@ async function createDocsFixture(options) {
   const repoRoot = await mkdtemp(join(tmpdir(), "clarissimi-docs-validation-"));
   await writeRequiredFiles(repoRoot);
   await mkdir(join(repoRoot, "docs"), { recursive: true });
-  await writeFile(join(repoRoot, "README.md"), options.readme, "utf8");
+  await writeFile(join(repoRoot, "README.md"), withReadmeContracts(options.readme), "utf8");
 
   if (options.guide !== undefined) {
     await writeFile(join(repoRoot, "docs", "guide.md"), options.guide, "utf8");
@@ -230,6 +328,46 @@ async function writeRequiredFiles(repoRoot) {
 }
 
 function stubContentForPath(path) {
+  if (path === "ARCHITECTURE.md") {
+    return [
+      "# Architecture",
+      "",
+      "docs/architecture/00-system-boundary.md",
+      "docs/architecture/02-runtime-flow.md",
+      "docs/architecture/03-quality-attributes.md",
+      ".clarissimi/contributions.jsonl",
+      "",
+    ].join("\n");
+  }
+
+  if (path === "DEVELOPMENT.md") {
+    return [
+      "# Development",
+      "",
+      "docs/product/02-spec.md",
+      "docs/monorepo/package-ownership.md",
+      ".clarissimi/contributions.jsonl",
+      "VALIDATION.md",
+      "",
+    ].join("\n");
+  }
+
+  if (path === "docs/architecture/03-quality-attributes.md") {
+    return [
+      "# Quality Attributes",
+      "",
+      "docs/product/02-spec.md",
+      "docs/architecture/02-runtime-flow.md",
+      ".clarissimi/contributions.jsonl",
+      "packages/schemas",
+      "",
+    ].join("\n");
+  }
+
+  if (path === "SECURITY.md") {
+    return "# Security\n\nSupported immutable release `v0.3.5` and moving `v0` release line.\n";
+  }
+
   if (path.endsWith(".md")) {
     return `# ${path}\n`;
   }
@@ -243,6 +381,17 @@ function stubContentForPath(path) {
   }
 
   return "#!/usr/bin/env node\n";
+}
+
+function withReadmeContracts(readme) {
+  return [
+    readme.trimEnd(),
+    "",
+    "Current release: 0disoft/clarissimi@v0.3.5",
+    "`gallery` is available in the current immutable `v0.3.5` release and moving `v0` line.",
+    "clarissimi completion <bash|zsh|fish|powershell>",
+    "",
+  ].join("\n");
 }
 
 function extractJsonCodeBlocks(text) {

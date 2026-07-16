@@ -175,6 +175,22 @@ The command creates a deterministic fake-provider assessment from either a Clari
 fixture or a GitHub-shaped merged pull request fixture. Public output previews are rendered only
 when the fixture explicitly carries maintainer approval.
 
+Generate static shell completion with `clarissimi completion <bash|zsh|fish|powershell>`. The
+command writes only the completion program to stdout: it does not inspect the repository, read the
+environment, access credentials, or use the network. Clarissimi never edits shell startup files or
+completion directories; explicitly source the output for the current session or redirect it to a
+shell-owned completion file. For example:
+
+```bash
+source <(clarissimi completion bash)
+```
+
+```powershell
+clarissimi completion powershell | Out-String | Invoke-Expression
+```
+
+See `docs/cli/shell-completion.md` for Zsh and fish examples and the full completion contract.
+
 For the agent-assisted path, use an already-running AI coding agent to inspect a PR or issue and
 produce a `clarissimi.assessment/v1` JSON draft. The agent may draft directly or delegate that
 assessment to another LLM. Clarissimi can then validate and record the maintainer-approved draft
@@ -286,7 +302,7 @@ workflow should keep the sanitized JSON run summary as an uploadable artifact. S
 `markdown-summary: table` to add the compact table or `markdown-summary: gallery` to add stable-id
 GitHub avatars to proposed `CONTRIBUTORS.md` output; this input also works in `promote-draft`, which
 otherwise skips config and provider loading. The `table` input is available in immutable tag
-`v0.1.1`; `gallery` requires a later release.
+`v0.1.1`; `gallery` is available in the current immutable `v0.3.5` release and moving `v0` line.
 
 Release maintainers who want automated provider mode can run `pnpm run live-provider-smoke` with
 `CLARISSIMI_PROVIDER_TOKEN` and `CLARISSIMI_PROVIDER_MODEL` to perform an explicit credentialed
@@ -313,6 +329,7 @@ Workflow examples and permission details live in `docs/github-action/README.md` 
 - System boundary: `docs/architecture/00-system-boundary.md`
 - Domain model: `docs/architecture/01-domain-model.md`
 - Runtime flow: `docs/architecture/02-runtime-flow.md`
+- Quality attributes: `docs/architecture/03-quality-attributes.md`
 - Architecture decisions: `docs/adr/*.md`
 - Package ownership: `docs/monorepo/package-ownership.md`
 - License: `LICENSE`

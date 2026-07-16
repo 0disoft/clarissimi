@@ -4,7 +4,15 @@
 
 ## Boundary
 
-Define what this repository owns, what it consumes, and which contracts cannot drift.
+These attributes govern Clarissimi's owned schemas, policy, redaction, GitHub collection, provider
+adapters, renderers, CLI, and Action runner. They also constrain the repository and provider inputs
+Clarissimi consumes and the ledger, derived files, drafts, summaries, proposals, and direct commits
+it may produce. Hosted services, external databases, public rankings, and untrusted pull request
+execution remain outside this contract.
+
+The contracts that cannot drift are the approved-only ledger and schema vocabulary, redaction before
+provider access, bounded evidence, deterministic rebuilds, package ownership, review-before-write
+defaults, and least-privilege Action behavior.
 
 Source of truth:
 

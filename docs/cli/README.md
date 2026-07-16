@@ -24,6 +24,7 @@ redaction, providers, or renderers.
 - `clarissimi import-draft --draft <path>`
 - `clarissimi rebuild`
 - `clarissimi analytics recent-share`
+- `clarissimi completion <bash|zsh|fish|powershell>`
 
 Fixture-first behavior is acceptable for the first implementation. `--fixture` accepts Clarissimi's
 internal evidence fixture shape. `--github-fixture` accepts a GitHub-shaped merged pull request
@@ -49,6 +50,10 @@ create GitHub pull requests.
 `analytics recent-share` is a maintainer-only local report. It calculates recent recognition-weight
 share from approved ledger records and writes only to stdout. It must not be treated as public
 contributor ranking output.
+
+`completion` writes a deterministic Bash, Zsh, fish, or PowerShell completion program to stdout.
+It does not install files, inspect the repository or environment, enumerate paths, or make network
+requests. See [`shell-completion.md`](shell-completion.md) for session setup examples.
 
 The public ledger format is documented in [`ledger-format.md`](ledger-format.md). The ledger stores
 PR numbers in `source.pullRequestNumber`, PR URLs in `evidenceRefs`, and no public contributor

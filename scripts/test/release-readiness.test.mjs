@@ -10,6 +10,7 @@ import {
   packageReleasePolicy,
   requiredPackageScripts,
   requiredTestGlobs,
+  shellCompletionDocumentContract,
   validateAgentAssistedDraftsDocumentContract,
   validateActionContractDocumentContract,
   validateActionInputsOutputsDocumentContract,
@@ -20,6 +21,7 @@ import {
   validateCliCommandContract,
   validateCliConfigurationDocumentContract,
   validateCliOutputExitCodesDocumentContract,
+  validateHistoricalCommandIntentContract,
   validateCiWorkflowContract,
   validateCredentialedReleaseEvidence,
   validateDisasterRecoveryDocumentContract,
@@ -49,6 +51,7 @@ import {
   validateRollbackProcedureContract,
   validateSmokePackCandidateContract,
   validateServiceLevelsDocumentContract,
+  validateShellCompletionDocumentContract,
   validateSecretsDocumentContract,
   validateTrackedGeneratedOutputPaths,
   validateWorkspaceContract,
@@ -96,6 +99,19 @@ test("release readiness accepts all required validation scripts", () => {
   const scripts = createValidScripts();
 
   assert.deepEqual(validatePackageScriptRegistration({ scripts }), []);
+});
+
+test("release readiness rejects completed release mutations that remain runnable", () => {
+  const text = [
+    '[intents.test_release_publication]\nstatus = "configured"',
+    '[intents.test_major_alias_promotion]\nstatus = "configured"',
+    '[intents.test_marketplace_release]\nstatus = "configured"',
+    '[intents.promote_v0_to_v0_3_5]\nstatus = "configured"\nrun_policy = "agent_allowed"',
+  ].join("\n\n");
+
+  assert.deepEqual(validateHistoricalCommandIntentContract(text), [
+    "Historical completed intent must be removed: promote_v0_to_v0_3_5.",
+  ]);
 });
 
 test("release readiness rejects format command drift", () => {
@@ -660,7 +676,7 @@ test("release readiness rejects CLI command contract drift", () => {
       "imports assessments",
     )
     .replace(
-      "Unexpected positional arguments must fail as usage errors before config loading",
+      "Unexpected positional arguments fail as usage errors",
       "Unexpected positional arguments are ignored",
     )
     .replace("Unknown flags,", "Unknown flags are ignored,")
@@ -674,7 +690,7 @@ test("release readiness rejects CLI command contract drift", () => {
     "docs/cli/command-contract.md must include writes files only when `--out-dir`.",
     'docs/cli/command-contract.md must include accepts only `maintainerApprovalStatus: "draft"`.',
     "docs/cli/command-contract.md must include rejects non-public approval states, appends the sanitized public.",
-    "docs/cli/command-contract.md must include Unexpected positional arguments must fail as usage errors before config loading.",
+    "docs/cli/command-contract.md must include Unexpected positional arguments fail as usage errors.",
     "docs/cli/command-contract.md must include Unknown flags,.",
     "docs/cli/command-contract.md must include Repeating the same flag is.",
     "docs/cli/command-contract.md must include | `7`  | write failure.",
@@ -686,6 +702,25 @@ test("release readiness accepts the CLI output and exit codes document contract"
     validateCliOutputExitCodesDocumentContract(createCliOutputExitCodesDocumentText()),
     [],
   );
+});
+
+test("release readiness accepts the implemented shell completion document contract", () => {
+  const text = shellCompletionDocumentContract.requiredSnippets.join("\n");
+  assert.deepEqual(validateShellCompletionDocumentContract(text), []);
+});
+
+test("release readiness rejects deferred or incomplete shell completion documentation", () => {
+  const text = [
+    ...shellCompletionDocumentContract.requiredSnippets.slice(1),
+    "- Status: Deferred",
+    "Shell completion is not part of the MVP.",
+  ].join("\n");
+
+  assert.deepEqual(validateShellCompletionDocumentContract(text), [
+    "docs/cli/shell-completion.md must include - Status: Implemented.",
+    "docs/cli/shell-completion.md must not include - Status: Deferred.",
+    "docs/cli/shell-completion.md must not include Shell completion is not part of the MVP..",
+  ]);
 });
 
 test("release readiness rejects CLI output and exit codes drift", () => {
@@ -2393,11 +2428,14 @@ function createCliCommandContractText() {
     "By default, `--ledger` is `.clarissimi/contributions.jsonl`. The override is for local validation,",
     "test fixtures, and recovery workflows; it is not an MVP monthly or yearly partition mode.",
     "",
-    "Unexpected positional arguments must fail as usage errors before config loading, ledger reads,",
+    "Unexpected positional arguments fail as usage errors before config loading, ledger reads,",
     "provider resolution, draft writes, or rebuild work begins.",
     "Unknown flags, including flags that belong to another command, must fail as usage errors before",
     "config loading, ledger reads, provider resolution, draft writes, or rebuild work begins.",
     "Repeating the same flag is also a usage error instead of silently selecting the first or last value.",
+    "clarissimi completion <bash|zsh|fish|powershell>",
+    "The command does not install completion, write files, enumerate paths, load config or ledgers,",
+    "`--json` is unsupported because successful stdout is the shell program itself.",
     "",
     "| `7`  | write failure",
     "A command writes public recognition without approval or configured policy.",
@@ -2424,6 +2462,8 @@ function createCliOutputExitCodesDocumentText() {
     "sanitized `message`; the process exit code remains the authoritative failure category. This also",
     "applies to argument parsing and usage errors. Without `--json`, failures remain human-readable on",
     "stderr.",
+    "`clarissimi completion <shell>` is the deliberate exception to JSON success output:",
+    "generated shell program, and `--json` is rejected as an unsupported option.",
     "",
     "- `0`: success",
     "- `1`: usage error",

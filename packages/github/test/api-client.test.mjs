@@ -115,9 +115,29 @@ test("GitHub API client paginates pull request files and review comments", async
   });
   const lookup = { repository: "sample/project", pullRequestNumber: 42 };
 
-  assert.equal((await client.listPullRequestFiles(lookup)).length, 101);
+  assert.equal((await client.listPullRequestFiles(lookup, 1000)).length, 101);
   assert.equal((await client.listPullRequestReviewComments(lookup)).length, 101);
   assert.equal(requests.filter((url) => url.endsWith("page=2")).length, 2);
+});
+
+test("GitHub API client fails closed when changed files exceed the requested bound", async () => {
+  const client = createGitHubApiClient({
+    fetch: async (url) => {
+      const value = String(url);
+      const count = value.endsWith("page=1") ? 100 : 1;
+      return jsonResponse(
+        Array.from({ length: count }, (_, index) => ({ filename: `file-${index}.ts` })),
+      );
+    },
+  });
+
+  await assert.rejects(
+    () => client.listPullRequestFiles({ repository: "sample/project", pullRequestNumber: 42 }),
+    (error) =>
+      error instanceof GitHubApiClientError &&
+      error.code === "response_too_large" &&
+      error.message.includes("100 items"),
+  );
 });
 
 test("GitHub API client can make unauthenticated public requests", async () => {

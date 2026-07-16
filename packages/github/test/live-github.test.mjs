@@ -172,6 +172,22 @@ test("rejects live pull request number mismatches", async () => {
   );
 });
 
+test("fails closed when live changed files exceed the configured bound", async () => {
+  await assert.rejects(
+    () =>
+      collectLiveMergedPullRequestEvidence({
+        client: new FakeLiveClient({
+          files: Array.from({ length: 101 }, (_, index) => ({
+            filename: `src/file-${index}.ts`,
+          })),
+        }),
+        repository: "sample/project",
+        pullRequestNumber: 42,
+      }),
+    (error) => error instanceof LiveGitHubCollectionError && error.code === "changed_file_limit",
+  );
+});
+
 test("rejects invalid live collector inputs before calling the client", async () => {
   const client = new FakeLiveClient();
 
@@ -204,8 +220,8 @@ class FakeLiveClient {
     return this.#pullRequest;
   }
 
-  async listPullRequestFiles(input) {
-    this.calls.push(["listPullRequestFiles", input]);
+  async listPullRequestFiles(input, limit) {
+    this.calls.push(["listPullRequestFiles", input, limit]);
     return this.#files;
   }
 

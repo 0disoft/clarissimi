@@ -443,6 +443,148 @@ test("renders an optional contributor summary table before the detailed sections
   assert.equal(markdown.includes("%"), false);
 });
 
+test("encodes unsafe Markdown link destination characters without changing URL meaning", () => {
+  const profileUrl = "https://github.com/octocat/profile (primary)\\notes\t\u0001";
+  const evidenceUrl = "https://github.com/example/project/pull/42 (proof)\\details\n\u007f";
+  const markdown = renderContributorsMarkdown(
+    [
+      assessment({
+        contributor: {
+          platform: "github",
+          id: "123456",
+          login: "octocat",
+          profileUrl,
+        },
+        evidenceRefs: [
+          {
+            kind: "pull_request",
+            id: "PR-42",
+            url: evidenceUrl,
+            title: "Proof",
+          },
+        ],
+      }),
+    ],
+    { summary: "table" },
+  );
+
+  assert.equal(
+    markdown.includes(
+      "[@octocat](https://github.com/octocat/profile%20%28primary%29%5Cnotes%09%01)",
+    ),
+    true,
+  );
+  assert.equal(
+    markdown.includes(
+      "[Proof](https://github.com/example/project/pull/42%20%28proof%29%5Cdetails%0A%7F)",
+    ),
+    true,
+  );
+  assert.equal(markdown.includes(profileUrl), false);
+  assert.equal(markdown.includes(evidenceUrl), false);
+});
+
+test("rejects URL userinfo before rendering contributor or evidence links", () => {
+  assert.throws(
+    () =>
+      renderContributorsMarkdown(
+        [
+          assessment({
+            contributor: {
+              platform: "github",
+              id: "123456",
+              login: "octocat",
+              profileUrl: "https://github.com@attacker.example/octocat",
+            },
+          }),
+        ],
+        { summary: "table" },
+      ),
+    (error) => {
+      assert.equal(error instanceof RendererValidationError, true);
+      assert.equal(error.issues[0].path, "$.contributor.profileUrl");
+      assert.equal(error.issues[0].code, "invalid_url_userinfo");
+      return true;
+    },
+  );
+
+  assert.throws(
+    () =>
+      renderContributorsMarkdown([
+        assessment({
+          evidenceRefs: [
+            {
+              kind: "pull_request",
+              id: "PR-42",
+              url: "https://github.com:secret@attacker.example/example/project/pull/42",
+              title: "Proof",
+            },
+          ],
+        }),
+      ]),
+    (error) => {
+      assert.equal(error instanceof RendererValidationError, true);
+      assert.equal(error.issues[0].path, "$.evidenceRefs[].url");
+      assert.equal(error.issues[0].code, "invalid_url_userinfo");
+      return true;
+    },
+  );
+});
+
+test("rejects secret-bearing query and fragment values before rendering Markdown links", () => {
+  for (const url of [
+    "https://github.com/octocat?access_token=secret-value",
+    "https://github.com/octocat#api-key=secret-value",
+  ]) {
+    assert.throws(
+      () =>
+        renderContributorsMarkdown(
+          [
+            assessment({
+              contributor: {
+                platform: "github",
+                id: "123456",
+                login: "octocat",
+                profileUrl: url,
+              },
+            }),
+          ],
+          { summary: "table" },
+        ),
+      (error) => {
+        assert.equal(error instanceof RendererValidationError, true);
+        assert.equal(error.issues[0].path, "$.contributor.profileUrl");
+        assert.equal(error.issues[0].code, "unsafe_url_parameter");
+        return true;
+      },
+    );
+  }
+});
+
+test("keeps HTTPS validation in force for rendered Markdown links", () => {
+  assert.throws(
+    () =>
+      renderContributorsMarkdown([
+        assessment({
+          evidenceRefs: [
+            {
+              kind: "pull_request",
+              id: "PR-42",
+              url: "http://github.com/example/project/pull/42",
+              title: "Proof",
+            },
+          ],
+        }),
+      ]),
+    (error) => {
+      assert.equal(error instanceof RendererValidationError, true);
+      assert.equal(error.issues[0].path, "$.evidenceRefs[0].url");
+      assert.equal(error.issues[0].code, "invalid_url_protocol");
+      return true;
+    },
+  );
+});
+
 test("keeps the contributor summary table disabled by default", () => {
   const markdown = renderContributorsMarkdown([assessment()]);
 

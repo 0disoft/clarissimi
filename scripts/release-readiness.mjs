@@ -4,6 +4,10 @@ import { dirname, join, relative, sep } from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { validateHistoricalCommandIntentContract } from "./retire-historical-command-intents.mjs";
+
+export { validateHistoricalCommandIntentContract } from "./retire-historical-command-intents.mjs";
+
 const defaultRepoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 export const requiredPackageScripts = [
@@ -46,6 +50,18 @@ export const requiredPackageScripts = [
   {
     name: "release-readiness",
     includes: ["scripts/release-readiness.mjs"],
+  },
+  {
+    name: "test:cli-completion",
+    includes: ["pnpm run build", "packages/cli/test/completion.test.mjs"],
+  },
+  {
+    name: "test:cli-lock",
+    includes: ["pnpm run build", "import-draft serializes concurrent ledger updates"],
+  },
+  {
+    name: "retire-historical-command-intents",
+    includes: ["scripts/retire-historical-command-intents.mjs"],
   },
   {
     name: "live-provider-smoke",
@@ -441,12 +457,29 @@ export const cliCommandContract = {
     "rejects non-public approval states, appends the sanitized public",
     "does not call providers, read provider tokens, fetch GitHub evidence",
     "it is not an MVP monthly or yearly partition mode",
-    "Unexpected positional arguments must fail as usage errors before config loading",
+    "Unexpected positional arguments fail as usage errors",
     "Unknown flags,",
     "Repeating the same flag is",
+    "clarissimi completion <bash|zsh|fish|powershell>",
+    "does not install completion, write files, enumerate paths, load config or ledgers",
+    "`--json` is unsupported because successful stdout is the shell",
     "| `7`  | write failure",
     "A command writes public recognition without approval or configured policy.",
   ],
+};
+
+export const shellCompletionDocumentContract = {
+  path: "docs/cli/shell-completion.md",
+  requiredSnippets: [
+    "- Status: Implemented",
+    "clarissimi completion <bash|zsh|fish|powershell>",
+    "does not install or modify shell startup files",
+    "Help, flag validation, and completion use one typed CLI command descriptor.",
+    "Path-valued options complete only the option name.",
+    "does not read config, ledgers, `.clarissimi`, environment variables, provider tokens,",
+    "The command does not support `--json`",
+  ],
+  forbiddenSnippets: ["- Status: Deferred", "Shell completion is not part of the MVP."],
 };
 
 export const cliOutputExitCodesDocumentContract = {
@@ -463,6 +496,8 @@ export const cliOutputExitCodesDocumentContract = {
     "both success and failure write one JSON document to",
     "This also",
     "applies to argument parsing and usage errors.",
+    "`clarissimi completion <shell>` is the deliberate exception to JSON success output",
+    "generated shell program, and `--json` is rejected",
     "- `0`: success",
     "- `1`: usage error",
     "- `2`: invalid configuration",
@@ -476,6 +511,10 @@ export const cliOutputExitCodesDocumentContract = {
     "JSON output leaks raw evidence.",
     "Exit behavior changes without CLI tests.",
   ],
+};
+
+export const historicalCommandIntentContract = {
+  path: ".mustflow/config/commands.toml",
 };
 
 export const cliConfigurationDocumentContract = {
@@ -1361,6 +1400,7 @@ export async function runReleaseReadiness(options = {}) {
   });
 
   await runPackageScriptRegistrationCheck(repoRoot);
+  await runHistoricalCommandIntentContractCheck(repoRoot);
   await runFormatterContractCheck(repoRoot);
   await runMigrationCompatibilityContractCheck(repoRoot);
   await runRootPackageManagerContractCheck(repoRoot);
@@ -1375,6 +1415,7 @@ export async function runReleaseReadiness(options = {}) {
   await runLintAndFormatDecisionDocumentContractCheck(repoRoot);
   await runLedgerFormatDocumentContractCheck(repoRoot);
   await runCliCommandContractCheck(repoRoot);
+  await runShellCompletionDocumentContractCheck(repoRoot);
   await runCliOutputExitCodesDocumentContractCheck(repoRoot);
   await runCliConfigurationDocumentContractCheck(repoRoot);
   await runAgentAssistedDraftsDocumentContractCheck(repoRoot);
@@ -1769,6 +1810,24 @@ export function validateCliCommandContract(text, contract = cliCommandContract) 
     }
   }
 
+  return issues;
+}
+
+export function validateShellCompletionDocumentContract(
+  text,
+  contract = shellCompletionDocumentContract,
+) {
+  const issues = [];
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+  for (const snippet of contract.forbiddenSnippets) {
+    if (text.includes(snippet)) {
+      issues.push(`${contract.path} must not include ${snippet}.`);
+    }
+  }
   return issues;
 }
 
@@ -2356,6 +2415,23 @@ async function runPackageScriptRegistrationCheck(repoRoot) {
   console.log("package script registration passed");
 }
 
+async function runHistoricalCommandIntentContractCheck(repoRoot) {
+  const contractPath = join(repoRoot, historicalCommandIntentContract.path);
+  let text;
+  try {
+    text = await readFile(contractPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${historicalCommandIntentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateHistoricalCommandIntentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`historical command intent contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("historical command intent contract passed");
+}
+
 async function runRootPackageManagerContractCheck(repoRoot) {
   const packageJsonPath = join(repoRoot, rootPackageManagerContract.path);
   let packageJson;
@@ -2552,6 +2628,23 @@ async function runCliCommandContractCheck(repoRoot) {
   }
 
   console.log("CLI command contract passed");
+}
+
+async function runShellCompletionDocumentContractCheck(repoRoot) {
+  const documentPath = join(repoRoot, shellCompletionDocumentContract.path);
+  let text;
+  try {
+    text = await readFile(documentPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${shellCompletionDocumentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateShellCompletionDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`shell completion document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("shell completion document contract passed");
 }
 
 async function runCliOutputExitCodesDocumentContractCheck(repoRoot) {

@@ -33,6 +33,18 @@ paths = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
 concurrency = "exclusive_writer"
 description = "Clarissimi local Git index, commit objects, refs, and reflogs."
 
+[resources.mustflow_contract]
+type = "path"
+paths = [".mustflow/config/commands.toml", ".mustflow/config/manifest.lock.toml"]
+concurrency = "exclusive_writer"
+description = "Clarissimi command authority and its mustflow content-hash lock."
+
+[resources.docs_review_queue]
+type = "path"
+paths = [".mustflow/review/docs.toml"]
+concurrency = "exclusive_writer"
+description = "Repository-local documentation review queue and audit record."
+
 [intents.changes_status]
 status = "configured"
 lifecycle = "oneshot"
@@ -139,118 +151,36 @@ status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 description = "Run bounded Windows file-operation retry checks and the concurrent ledger import stress regression with worker failure diagnostics."
-argv = [
-  "node",
-  "--test",
-  "--test-name-pattern=(file operations|import-draft serializes concurrent ledger updates)",
-  "packages/cli/test/cli.test.mjs",
-]
+argv = ["pnpm", "run", "test:cli-lock"]
 cwd = "."
-timeout_seconds = 120
+timeout_seconds = 600
 stdin = "closed"
 success_exit_codes = [0]
-writes = []
-effects = []
+writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+effects = [
+  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+]
 network = false
 destructive = false
-preconditions = [
-  { kind = "artifact_freshness", artifact = "packages/cli/dist/index.js", sources = [
-    "packages/cli/src/**",
-    "packages/cli/tsconfig.json",
-    "tsconfig.json",
-  ], satisfy_intent = "build" },
-]
 required_after = ["cli_lock_change", "cli_lock_test_change"]
 
-[intents.git_stage_cli_write_coordination]
+[intents.test_cli_shell_completion]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed Windows CLI write-coordination hardening, regression tests, docs, tracker, and bounded command contract."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  ".mustflow/config/manifest.lock.toml",
-  "docs/cli/ledger-format.md",
-  "docs/product/04-implementation-tracker.md",
-  "packages/cli/src/io.ts",
-  "packages/cli/test/cli.test.mjs",
-]
+description = "Build and run deterministic Bash, Zsh, fish, and PowerShell completion contract regressions."
+argv = ["pnpm", "run", "test:cli-completion"]
 cwd = "."
-timeout_seconds = 60
+timeout_seconds = 600
 stdin = "closed"
 success_exit_codes = [0]
-writes = [".git/index"]
+writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
 effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
 ]
 network = false
 destructive = false
-required_after = ["cli_write_coordination_validation_complete"]
-
-[intents.git_commit_cli_write_coordination]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the validated Windows CLI write-coordination hardening."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "fix(cli): harden Windows write coordination",
-  "-m",
-  "Validation: focused lock regression, docs, release-readiness, lint, format, migration-check, smoke, check, contract, mustflow",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_cli_write_coordination"]
-
-[intents.git_push_main_cli_write_coordination]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated Windows CLI write-coordination hardening on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_cli_write_coordination", "user_authorized_push"]
-
-[intents.hosted_ci_cli_write_coordination]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed Windows CLI write-coordination hardening."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_cli_write_coordination"]
+required_after = ["cli_completion_change", "cli_completion_test_change"]
 
 [intents.lint]
 status = "configured"
@@ -321,6 +251,24 @@ effects = []
 network = false
 destructive = false
 required_after = ["documentation_change", "public_contract_change"]
+
+[intents.docs_review_add_changed]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Queue changed Clarissimi documentation for explicit review without changing product files."
+argv = ["mf", "docs", "review", "add", "--changed"]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".mustflow/review/docs.toml"]
+effects = [
+  { type = "write", mode = "replace", path = ".mustflow/review/docs.toml", lock = "docs_review_queue", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["documentation_change"]
 
 [intents.release_readiness]
 status = "configured"
@@ -479,62 +427,40 @@ network = false
 destructive = false
 required_after = ["mustflow_config_change", "before_final_report"]
 
-[intents.git_stage_contributor_features]
+[intents.test_historical_command_intent_retirement]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed Clarissimi gallery, automation-contributor, documentation, test, bundle, and local command-contract changes."
-argv = ["git", "add", "--", "."]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["contributor_feature_validation_complete"]
-
-[intents.git_commit_contributor_features]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the reviewed contributor gallery and automation recognition feature set."
-argv = ["git", "commit", "-m", "feat(contributors): recognize automation by default"]
+description = "Run focused regressions for completed release and milestone command-intent retirement."
+argv = ["node", "--test", "scripts/test/retire-historical-command-intents.test.mjs"]
 cwd = "."
 timeout_seconds = 120
 stdin = "closed"
 success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
+writes = []
+effects = []
 network = false
 destructive = false
-required_after = ["git_stage_contributor_features"]
+required_after = ["historical_command_intent_policy_change"]
 
-[intents.git_amend_contributor_features]
+[intents.retire_historical_command_intents]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Amend the contributor feature commit with the reviewed local push-approval contract."
-argv = ["git", "commit", "--amend", "--no-edit"]
+description = "Remove explicitly completed release and milestone command buttons, preserve shared tools, and make historical exact-tag revalidation manual-only."
+argv = ["pnpm", "run", "retire-historical-command-intents"]
 cwd = "."
 timeout_seconds = 120
 stdin = "closed"
 success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+writes = [".mustflow/config/commands.toml", ".mustflow/config/manifest.lock.toml"]
 effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = ".mustflow/config/commands.toml", lock = "mustflow_contract", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = ".mustflow/config/manifest.lock.toml", lock = "mustflow_contract", concurrency = "exclusive" },
 ]
 network = false
 destructive = false
-required_after = ["git_stage_contributor_features", "push_approval_contract_change"]
+required_after = ["completed_release_record_verified", "completed_milestone_list_reviewed"]
 
 [intents.git_push_main]
 status = "configured"
@@ -551,17 +477,69 @@ writes = []
 effects = []
 network = true
 destructive = false
-required_after = ["git_commit_contributor_features", "user_authorized_push"]
+required_after = ["validated_commit_on_main", "user_authorized_push"]
 
-[intents.git_stage_ci_format_fix]
+[intents.git_stage_remaining_hardening]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
-description = "Stage only the reviewed Clarissimi CI command-contract formatting fix."
-argv = ["git", "add", "--", ".mustflow/config/commands.toml"]
+description = "Stage the reviewed shell completion, trust-boundary hardening, command retirement, documentation, tests, and Action bundle."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  ".mustflow/config/manifest.lock.toml",
+  ".mustflow/review/docs.toml",
+  "ARCHITECTURE.md",
+  "DEVELOPMENT.md",
+  "README.md",
+  "SECURITY.md",
+  "action-dist/index.js",
+  "docs/adr/README.md",
+  "docs/adr/0051-add-static-shell-completion.md",
+  "docs/adr/0052-bound-provider-input-evidence.md",
+  "docs/architecture/03-quality-attributes.md",
+  "docs/cli/README.md",
+  "docs/cli/command-contract.md",
+  "docs/cli/output-and-exit-codes.md",
+  "docs/cli/shell-completion.md",
+  "docs/engineering/03-performance-budget.md",
+  "docs/monorepo/package-ownership.md",
+  "docs/ops/release.md",
+  "docs/product/02-spec.md",
+  "docs/product/04-implementation-tracker.md",
+  "package.json",
+  "packages/cli/README.md",
+  "packages/cli/src/command-spec.ts",
+  "packages/cli/src/completion.ts",
+  "packages/cli/src/io.ts",
+  "packages/cli/src/run.ts",
+  "packages/cli/test/cli.test.mjs",
+  "packages/cli/test/completion.test.mjs",
+  "packages/core/src/evidence.ts",
+  "packages/core/test/core.test.mjs",
+  "packages/github/src/api-client.ts",
+  "packages/github/src/live.ts",
+  "packages/github/test/api-client.test.mjs",
+  "packages/github/test/live-github.test.mjs",
+  "packages/providers/src/openai-compatible-provider.ts",
+  "packages/providers/test/openai-compatible-provider.test.mjs",
+  "packages/redaction/src/redact.ts",
+  "packages/redaction/test/redact.test.mjs",
+  "packages/renderers/src/markdown.ts",
+  "packages/renderers/test/renderers.test.mjs",
+  "scripts/release-readiness.mjs",
+  "scripts/retire-historical-command-intents.mjs",
+  "scripts/smoke.mjs",
+  "scripts/test/release-readiness.test.mjs",
+  "scripts/test/retire-historical-command-intents.test.mjs",
+  "scripts/test/validate-docs.test.mjs",
+  "scripts/validate-docs.mjs",
+]
 cwd = "."
-timeout_seconds = 60
+timeout_seconds = 120
 stdin = "closed"
 success_exit_codes = [0]
 writes = [".git/index"]
@@ -570,15 +548,24 @@ effects = [
 ]
 network = false
 destructive = false
-required_after = ["ci_format_fix_validation_complete"]
+required_after = ["local_validation_complete", "documentation_review_queued"]
 
-[intents.git_commit_ci_format_fix]
+[intents.git_commit_remaining_hardening]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
-description = "Commit the reviewed Clarissimi CI command-contract formatting fix."
-argv = ["git", "commit", "-m", "fix(ci): format local command contract"]
+description = "Commit the validated Clarissimi completion and trust-boundary hardening bundle."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "feat(cli): add completion and harden trust boundaries",
+  "-m",
+  "Generate static completion for four shells, bound and sanitize provider inputs, harden Markdown links and Windows lock acquisition, retire completed command buttons, and synchronize maintained documentation.",
+  "-m",
+  "Validation: 489 tests, check, contract, format, lint, docs, release-readiness, migration, smoke, and Action bundle freshness passed.",
+]
 cwd = "."
 timeout_seconds = 120
 stdin = "closed"
@@ -589,24 +576,25 @@ effects = [
 ]
 network = false
 destructive = false
-required_after = ["git_stage_ci_format_fix"]
+required_after = ["git_stage_remaining_hardening"]
 
-[intents.git_push_main_ci_format_fix]
+[intents.hosted_ci_main]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated Clarissimi CI formatting fix on main without force."
-argv = ["git", "push", "origin", "main"]
+description = "Verify the hosted CI result for the current pushed main commit without reading repository secrets."
+argv = ["pnpm", "run", "hosted-ci-validation"]
 cwd = "."
-timeout_seconds = 180
+timeout_seconds = 1800
 stdin = "closed"
 success_exit_codes = [0]
 writes = []
 effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
-required_after = ["git_commit_ci_format_fix", "user_authorized_push"]
+required_after = ["git_push_main"]
 
 [intents.test_release_publication]
 status = "configured"
@@ -654,60 +642,12 @@ network = false
 destructive = false
 required_after = ["major_alias_promotion_change", "major_alias_evidence_change"]
 
-[intents.release_v0_2_0_evidence]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Collect exact-HEAD v0.2.0 candidate evidence, dispatch bounded hosted smokes, and create the validated release evidence issue."
-argv = [
-  "pnpm",
-  "run",
-  "release-candidate-evidence-orchestrator",
-  "--",
-  "--provider-model",
-  "gpt-4.1-mini",
-  "--release-type",
-  "versioned-action-tag",
-  "--release-version",
-  "v0.2.0",
-  "--create-issue",
-]
-cwd = "."
-timeout_seconds = 3600
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["hosted_ci_success", "user_authorized_release"]
-
-[intents.release_v0_2_0_publish]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Publish immutable v0.2.0 and its GitHub pre-release from the validated exact-HEAD evidence issue."
-argv = ["pnpm", "run", "publish-action-release", "--", "--version", "v0.2.0"]
-cwd = "."
-timeout_seconds = 600
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/refs/tags/v0.2.0", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["release_v0_2_0_evidence", "user_authorized_release"]
-
 [intents.release_v0_2_0_post_tag_evidence]
-status = "configured"
+status = "manual_only"
 lifecycle = "oneshot"
-run_policy = "agent_allowed"
+run_policy = "manual_only"
+reason = "Historic exact-tag revalidation dispatches credentialed external and full-write workflows."
+agent_action = "do_not_run_report_manual_only"
 description = "Revalidate the published v0.2.0 tag with hosted live-provider, external dry-run, full-write, and orphan-audit workflows."
 argv = [
   "pnpm",
@@ -733,239 +673,6 @@ env_policy = "allowlist"
 env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
-required_after = ["release_v0_2_0_publish"]
-
-[intents.promote_v0_to_v0_2_0]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Promote moving alias v0 to immutable v0.2.0 with CAS rollback and hosted post-promotion evidence."
-argv = [
-  "pnpm",
-  "run",
-  "promote-action-major-alias",
-  "--",
-  "--release-version",
-  "v0.2.0",
-  "--sha",
-  "56f959d7ca74c8237d9fa0dbb8bef72cf49d877e",
-]
-cwd = "."
-timeout_seconds = 3600
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = true
-required_after = [
-  "release_v0_2_0_post_tag_evidence",
-  "hosted_ci_success",
-  "user_authorized_release",
-]
-
-[intents.git_stage_major_alias_promotion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed v0 CAS promoter, evidence mode, docs, tests, package script, and command contract."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  "package.json",
-  "README.md",
-  "docs/ops/release.md",
-  "scripts/promote-action-major-alias.mjs",
-  "scripts/release-candidate-evidence-orchestrator.mjs",
-  "scripts/release-candidate-evidence-issue.mjs",
-  "scripts/release-readiness.mjs",
-  "scripts/validate-docs.mjs",
-  "scripts/test/promote-action-major-alias.test.mjs",
-  "scripts/test/release-candidate-evidence-orchestrator.test.mjs",
-  "scripts/test/release-candidate-evidence-issue.test.mjs",
-  "scripts/test/release-readiness.test.mjs",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["major_alias_promotion_validation_complete"]
-
-[intents.git_commit_major_alias_promotion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the reviewed moving v0 alias promotion workflow."
-argv = ["git", "commit", "-m", "feat(release): automate v0 alias promotion"]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_major_alias_promotion"]
-
-[intents.git_push_main_major_alias_promotion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated major alias promotion workflow on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_major_alias_promotion", "user_authorized_push"]
-
-[intents.git_stage_release_v0_2_0]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed v0.2.0 release evidence, publisher, ADR, documentation, tests, package script, and command-contract changes."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  "package.json",
-  "scripts/release-candidate-evidence-orchestrator.mjs",
-  "scripts/release-candidate-evidence-issue.mjs",
-  "scripts/release-readiness.mjs",
-  "scripts/publish-action-release.mjs",
-  "scripts/release-notes/v0.2.0.md",
-  "scripts/test/release-candidate-evidence-orchestrator.test.mjs",
-  "scripts/test/release-candidate-evidence-issue.test.mjs",
-  "scripts/test/release-readiness.test.mjs",
-  "scripts/test/publish-action-release.test.mjs",
-  "docs/adr/0044-authorize-v0-action-release-line.md",
-  "docs/adr/README.md",
-  "docs/ops/release-candidate-evidence.md",
-  "docs/ops/release.md",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["release_v0_2_0_validation_complete"]
-
-[intents.git_commit_release_v0_2_0]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the reviewed v0.2.0 release workflow and policy changes."
-argv = ["git", "commit", "-m", "fix(release): support pre-tag v0 evidence"]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_release_v0_2_0"]
-
-[intents.git_push_main_release_v0_2_0]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated Clarissimi v0.2.0 release workflow commit on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_release_v0_2_0", "user_authorized_push"]
-
-[intents.git_stage_release_auth_fix]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage only the reviewed GitHub CLI authentication environment boundary for release intents."
-argv = ["git", "add", "--", ".mustflow/config/commands.toml"]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["release_auth_fix_validation_complete"]
-
-[intents.git_commit_release_auth_fix]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the reviewed GitHub CLI authentication environment boundary for release intents."
-argv = ["git", "commit", "-m", "fix(release): preserve gh authentication config"]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_release_auth_fix"]
-
-[intents.git_push_main_release_auth_fix]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated GitHub CLI release authentication fix on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_release_auth_fix", "user_authorized_push"]
 
 [intents.test_marketplace_release]
 status = "configured"
@@ -991,151 +698,12 @@ network = false
 destructive = false
 required_after = ["marketplace_release_change"]
 
-[intents.git_stage_marketplace_release]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed Marketplace ADR, Action metadata, release automation, docs, tests, notes, and command contract."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  "action.yml",
-  "README.md",
-  "docs/adr/0045-publish-action-to-github-marketplace.md",
-  "docs/adr/README.md",
-  "docs/ops/release.md",
-  "docs/product/04-implementation-tracker.md",
-  "scripts/publish-action-release.mjs",
-  "scripts/release-candidate-evidence-issue.mjs",
-  "scripts/release-candidate-evidence-orchestrator.mjs",
-  "scripts/release-notes/v0.3.0.md",
-  "scripts/release-readiness.mjs",
-  "scripts/test/publish-action-release.test.mjs",
-  "scripts/test/release-candidate-evidence-issue.test.mjs",
-  "scripts/test/release-candidate-evidence-orchestrator.test.mjs",
-  "scripts/test/release-readiness.test.mjs",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["marketplace_release_validation_complete"]
-
-[intents.git_commit_marketplace_release]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the reviewed GitHub Marketplace distribution boundary and v0.3.0 release preparation."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "feat(release): authorize Marketplace distribution",
-  "-m",
-  "Validation: docs, release-readiness, lint, format, migration-check, smoke, check, contract",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_marketplace_release"]
-
-[intents.git_push_main_marketplace_release]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated Marketplace release preparation on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_marketplace_release", "user_authorized_push"]
-
-[intents.release_v0_3_0_marketplace_evidence]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Collect exact-HEAD v0.3.0 Marketplace candidate evidence and create the validated external evidence issue."
-argv = [
-  "pnpm",
-  "run",
-  "release-candidate-evidence-orchestrator",
-  "--",
-  "--provider-model",
-  "gpt-4.1-mini",
-  "--release-type",
-  "marketplace-action-tag",
-  "--release-version",
-  "v0.3.0",
-  "--create-issue",
-]
-cwd = "."
-timeout_seconds = 3600
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["hosted_ci_success", "user_authorized_release"]
-
-[intents.release_v0_3_0_stable_publish]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Publish immutable v0.3.0 as a non-prerelease GitHub Release from exact candidate evidence."
-argv = [
-  "pnpm",
-  "run",
-  "publish-action-release",
-  "--",
-  "--version",
-  "v0.3.0",
-  "--release-kind",
-  "stable",
-]
-cwd = "."
-timeout_seconds = 600
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/refs/tags/v0.3.0", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["release_v0_3_0_marketplace_evidence", "user_authorized_release"]
-
 [intents.release_v0_3_0_post_tag_evidence]
-status = "configured"
+status = "manual_only"
 lifecycle = "oneshot"
-run_policy = "agent_allowed"
+run_policy = "manual_only"
+reason = "Historic exact-tag revalidation dispatches credentialed external and full-write workflows."
+agent_action = "do_not_run_report_manual_only"
 description = "Revalidate published v0.3.0 with hosted live-provider, external dry-run, full-write, and orphan-audit workflows."
 argv = [
   "pnpm",
@@ -1161,242 +729,13 @@ env_policy = "allowlist"
 env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
-required_after = ["release_v0_3_0_stable_publish"]
-
-[intents.promote_v0_to_v0_3_0]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Promote moving alias v0 to immutable Marketplace release v0.3.0 with CAS rollback and hosted post-promotion evidence."
-argv = [
-  "pnpm",
-  "run",
-  "promote-action-major-alias",
-  "--",
-  "--release-version",
-  "v0.3.0",
-  "--sha",
-  "55c4e54eee5a8a9fff69430d6341402e13ca3a1a",
-]
-cwd = "."
-timeout_seconds = 3600
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = true
-required_after = [
-  "release_v0_3_0_post_tag_evidence",
-  "marketplace_public_verified",
-  "hosted_ci_success",
-  "user_authorized_release",
-]
-
-[intents.git_stage_marketplace_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed current Marketplace publication record, public docs, exact v0 promotion contract, and completion tracker."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  "README.md",
-  "docs/ops/release.md",
-  "docs/product/04-implementation-tracker.md",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["marketplace_completion_validation_complete"]
-
-[intents.git_commit_marketplace_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the verified current Marketplace publication record and exact alias promotion result."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "docs(release): record Marketplace publication",
-  "-m",
-  "Validation: docs, release-readiness, format, mustflow",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_marketplace_completion"]
-
-[intents.git_push_main_marketplace_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated Marketplace completion record on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_marketplace_completion", "user_authorized_push"]
-
-[intents.git_stage_marketplace_evidence_status]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed Marketplace evidence-status correction, regression test, and bounded Git command contract."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  "scripts/release-candidate-evidence-issue.mjs",
-  "scripts/test/release-candidate-evidence-issue.test.mjs",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["marketplace_evidence_status_validation_complete"]
-
-[intents.git_commit_marketplace_evidence_status]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the reviewed correction that keeps major-alias evidence neutral about Marketplace publication state."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "fix(release): align Marketplace evidence status",
-  "-m",
-  "Validation: focused release tests, lint, format, release-readiness, mustflow",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_marketplace_evidence_status"]
-
-[intents.git_push_main_marketplace_evidence_status]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated Marketplace evidence-status correction on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_marketplace_evidence_status", "user_authorized_push"]
-
-[intents.release_v0_3_1_marketplace_evidence]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Collect exact-HEAD v0.3.1 corrective Marketplace candidate evidence and create the validated external evidence issue."
-argv = [
-  "pnpm",
-  "run",
-  "release-candidate-evidence-orchestrator",
-  "--",
-  "--provider-model",
-  "gpt-4.1-mini",
-  "--release-type",
-  "marketplace-action-tag",
-  "--release-version",
-  "v0.3.1",
-  "--create-issue",
-]
-cwd = "."
-timeout_seconds = 3600
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["hosted_ci_success", "user_authorized_release"]
-
-[intents.release_v0_3_1_stable_publish]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Publish immutable v0.3.1 as a non-prerelease corrective GitHub Marketplace Release from exact candidate evidence."
-argv = [
-  "pnpm",
-  "run",
-  "publish-action-release",
-  "--",
-  "--version",
-  "v0.3.1",
-  "--release-kind",
-  "stable",
-]
-cwd = "."
-timeout_seconds = 600
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/refs/tags/v0.3.1", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["release_v0_3_1_marketplace_evidence", "user_authorized_release"]
 
 [intents.release_v0_3_1_post_tag_evidence]
-status = "configured"
+status = "manual_only"
 lifecycle = "oneshot"
-run_policy = "agent_allowed"
+run_policy = "manual_only"
+reason = "Historic exact-tag revalidation dispatches credentialed external and full-write workflows."
+agent_action = "do_not_run_report_manual_only"
 description = "Revalidate published v0.3.1 with hosted live-provider, external dry-run, full-write, and orphan-audit workflows."
 argv = [
   "pnpm",
@@ -1422,464 +761,13 @@ env_policy = "allowlist"
 env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
-required_after = ["release_v0_3_1_stable_publish"]
-
-[intents.git_stage_release_v0_3_1]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed v0.3.1 corrective Marketplace notes, public docs, tracker, and bounded release command contract."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  "README.md",
-  "docs/ops/release.md",
-  "docs/product/04-implementation-tracker.md",
-  "scripts/release-notes/v0.3.1.md",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["release_v0_3_1_validation_complete"]
-
-[intents.git_commit_release_v0_3_1]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the reviewed v0.3.1 corrective Marketplace release preparation."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "fix(release): prepare Marketplace correction",
-  "-m",
-  "Validation: docs, release-readiness, lint, format, migration-check, smoke, check, contract",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_release_v0_3_1"]
-
-[intents.git_push_main_release_v0_3_1]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated v0.3.1 corrective Marketplace release preparation on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_release_v0_3_1", "user_authorized_push"]
-
-[intents.verify_marketplace_v0_3_1]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Verify that the public Marketplace listing marks v0.3.1 as Latest and renders the matching Action reference."
-argv = ["pnpm", "run", "verify-marketplace-release", "--", "--version", "v0.3.1"]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["release_v0_3_1_stable_publish", "marketplace_interactive_update"]
-
-[intents.promote_v0_to_v0_3_1]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Promote moving alias v0 to immutable Marketplace release v0.3.1 with CAS rollback and hosted post-promotion validation."
-argv = [
-  "pnpm",
-  "run",
-  "promote-action-major-alias",
-  "--",
-  "--release-version",
-  "v0.3.1",
-  "--sha",
-  "daa633b6802ea782783e02849c0a6345832f497f",
-]
-cwd = "."
-timeout_seconds = 3600
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = true
-required_after = [
-  "release_v0_3_1_post_tag_evidence",
-  "verify_marketplace_v0_3_1",
-  "hosted_ci_success",
-  "user_authorized_release",
-]
-
-[intents.git_stage_marketplace_verifier]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed Marketplace public verifier, maintainer-facing result terminology, tests, docs, and exact v0.3.1 promotion contract."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  "README.md",
-  "docs/ops/release.md",
-  "package.json",
-  "scripts/release-candidate-evidence-issue.mjs",
-  "scripts/release-readiness.mjs",
-  "scripts/validate-docs.mjs",
-  "scripts/verify-marketplace-release.mjs",
-  "scripts/test/release-candidate-evidence-issue.test.mjs",
-  "scripts/test/release-readiness.test.mjs",
-  "scripts/test/verify-marketplace-release.test.mjs",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["marketplace_verifier_validation_complete"]
-
-[intents.git_commit_marketplace_verifier]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the reviewed Marketplace publication verifier and maintainer-facing validation result terminology."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "fix(release): verify Marketplace publication",
-  "-m",
-  "Validation: focused Marketplace tests, docs, release-readiness, lint, format, check, contract, mustflow",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_marketplace_verifier"]
-
-[intents.git_push_main_marketplace_verifier]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated Marketplace publication verifier on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_marketplace_verifier", "user_authorized_push"]
-
-[intents.hosted_ci_marketplace_verifier]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed Marketplace verifier commit at the current local HEAD."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_marketplace_verifier"]
-
-[intents.git_stage_readme_onboarding]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed README onboarding, current Action examples, regression contract, tests, and bounded Git command contract."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  "README.md",
-  "docs/github-action/README.md",
-  "scripts/release-readiness.mjs",
-  "scripts/test/release-readiness.test.mjs",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["readme_onboarding_validation_complete"]
-
-[intents.git_commit_readme_onboarding]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the reviewed Action quick start and synchronized current release examples."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "docs(readme): surface Action quick start",
-  "-m",
-  "Validation: docs, release-readiness, format, check, mustflow",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_readme_onboarding"]
-
-[intents.git_push_main_readme_onboarding]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated README onboarding commit on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_readme_onboarding", "user_authorized_push"]
-
-[intents.hosted_ci_readme_onboarding]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed README onboarding commit at the current local HEAD."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_readme_onboarding"]
-
-[intents.git_stage_release_v0_3_2]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed v0.3.2 Marketplace onboarding release notes, current public examples, regression contract, tests, and bounded release commands."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  "README.md",
-  "docs/github-action/README.md",
-  "scripts/release-notes/v0.3.2.md",
-  "scripts/release-readiness.mjs",
-  "scripts/test/release-readiness.test.mjs",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["release_v0_3_2_local_validation_complete"]
-
-[intents.git_commit_release_v0_3_2]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the reviewed v0.3.2 Marketplace onboarding release preparation."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "docs(release): prepare v0.3.2 onboarding release",
-  "-m",
-  "Validation: docs, release-readiness, lint, format, migration-check, smoke, check, contract",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_release_v0_3_2"]
-
-[intents.git_push_main_release_v0_3_2]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated v0.3.2 Marketplace onboarding release preparation on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_release_v0_3_2", "user_authorized_push"]
-
-[intents.hosted_ci_release_v0_3_2]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed v0.3.2 release candidate at the current local HEAD."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_release_v0_3_2"]
-
-[intents.release_v0_3_2_marketplace_evidence]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Collect exact-HEAD v0.3.2 Marketplace candidate validation records and create the external release issue."
-argv = [
-  "pnpm",
-  "run",
-  "release-candidate-evidence-orchestrator",
-  "--",
-  "--provider-model",
-  "gpt-4.1-mini",
-  "--release-type",
-  "marketplace-action-tag",
-  "--release-version",
-  "v0.3.2",
-  "--create-issue",
-]
-cwd = "."
-timeout_seconds = 3600
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["hosted_ci_release_v0_3_2", "user_authorized_release"]
-
-[intents.release_v0_3_2_stable_publish]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Publish immutable v0.3.2 as a non-prerelease GitHub Marketplace Release from exact candidate validation records."
-argv = [
-  "pnpm",
-  "run",
-  "publish-action-release",
-  "--",
-  "--version",
-  "v0.3.2",
-  "--release-kind",
-  "stable",
-]
-cwd = "."
-timeout_seconds = 600
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/refs/tags/v0.3.2", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["release_v0_3_2_marketplace_evidence", "user_authorized_release"]
 
 [intents.release_v0_3_2_post_tag_evidence]
-status = "configured"
+status = "manual_only"
 lifecycle = "oneshot"
-run_policy = "agent_allowed"
+run_policy = "manual_only"
+reason = "Historic exact-tag revalidation dispatches credentialed external and full-write workflows."
+agent_action = "do_not_run_report_manual_only"
 description = "Revalidate published v0.3.2 with hosted live-provider, external dry-run, full-write, and orphan-audit workflows."
 argv = [
   "pnpm",
@@ -1905,493 +793,13 @@ env_policy = "allowlist"
 env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
-required_after = ["release_v0_3_2_stable_publish"]
-
-[intents.verify_marketplace_v0_3_2]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Verify that the public Marketplace listing marks v0.3.2 as Latest and renders the matching Action reference."
-argv = ["pnpm", "run", "verify-marketplace-release", "--", "--version", "v0.3.2"]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["release_v0_3_2_stable_publish", "marketplace_interactive_update"]
-
-[intents.promote_v0_to_v0_3_2]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Promote moving alias v0 to immutable Marketplace release v0.3.2 with compare-and-swap rollback and hosted post-promotion validation."
-argv = [
-  "pnpm",
-  "run",
-  "promote-action-major-alias",
-  "--",
-  "--release-version",
-  "v0.3.2",
-  "--sha",
-  "8cd4aa040b36ea4473722d1f1139f65c86e36b6d",
-]
-cwd = "."
-timeout_seconds = 3600
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = true
-required_after = [
-  "release_v0_3_2_post_tag_evidence",
-  "verify_marketplace_v0_3_2",
-  "hosted_ci_success",
-  "user_authorized_release",
-]
-
-[intents.git_stage_v0_3_2_promotion_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage only the exact-SHA v0.3.2 promotion and release-completion command contract."
-argv = ["git", "add", "--", ".mustflow/config/commands.toml"]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["v0_3_2_promotion_contract_validation_complete"]
-
-[intents.git_commit_v0_3_2_promotion_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the exact-SHA v0.3.2 promotion and release-completion command contract."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "chore(release): authorize v0.3.2 promotion",
-  "-m",
-  "Validation: docs, mustflow, release-readiness, lint, format, migration-check, smoke, check, contract",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_v0_3_2_promotion_contract"]
-
-[intents.git_push_main_v0_3_2_promotion_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated exact-SHA v0.3.2 promotion contract on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_v0_3_2_promotion_contract", "user_authorized_push"]
-
-[intents.hosted_ci_v0_3_2_promotion_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed exact-SHA v0.3.2 promotion contract."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_v0_3_2_promotion_contract"]
-
-[intents.git_stage_v0_3_2_release_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed v0.3.2 publication, post-tag validation, transient failure, and v0 promotion records."
-argv = ["git", "add", "--", "docs/ops/release.md", "docs/product/04-implementation-tracker.md"]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["v0_3_2_release_completion_validation_complete"]
-
-[intents.git_commit_v0_3_2_release_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the completed v0.3.2 Marketplace publication and v0 promotion records."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "docs(release): record v0.3.2 publication",
-  "-m",
-  "Validation: docs, release-readiness, format, check, contract",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_v0_3_2_release_completion"]
-
-[intents.git_push_main_v0_3_2_release_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the completed v0.3.2 Marketplace publication and v0 promotion record on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_v0_3_2_release_completion", "user_authorized_push"]
-
-[intents.hosted_ci_v0_3_2_release_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed v0.3.2 release completion record."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_v0_3_2_release_completion"]
-
-[intents.git_stage_transient_pr_recovery]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage only the reviewed transient GitHub pull request recovery implementation, ADR, tests, Action bundle, tracker, and bounded command contract."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  "action-dist/index.js",
-  "docs/adr/README.md",
-  "docs/adr/0046-recover-transient-proposal-pull-request-failures.md",
-  "docs/monorepo/package-ownership.md",
-  "docs/product/04-implementation-tracker.md",
-  "packages/action/src/github-client.ts",
-  "packages/action/src/pull-request.ts",
-  "packages/action/test/github-client.test.mjs",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["transient_pr_recovery_validation_complete"]
-
-[intents.git_commit_transient_pr_recovery]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the reviewed bounded retry and ambiguous pull request reconciliation behavior."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "fix(action): recover transient pull request failures",
-  "-m",
-  "Validation: docs, release-readiness, lint, format, migration-check, smoke, check, contract, bundle-action-check, mustflow",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_transient_pr_recovery"]
-
-[intents.git_push_main_transient_pr_recovery]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated transient pull request recovery commit on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_transient_pr_recovery", "user_authorized_push"]
-
-[intents.hosted_ci_transient_pr_recovery]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed transient pull request recovery commit at the current local HEAD."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_transient_pr_recovery"]
-
-[intents.external_source_validation_transient_pr_recovery]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Validate the exact transient pull request recovery SHA through hosted live-provider, external dry-run, full-write cleanup, and orphan-audit workflows."
-argv = [
-  "pnpm",
-  "run",
-  "release-candidate-evidence-orchestrator",
-  "--",
-  "--provider-model",
-  "gpt-4.1-mini",
-  "--sha",
-  "b615612f527f300fa825cd603eef2ce50a33498f",
-  "--external-ref",
-  "b615612f527f300fa825cd603eef2ce50a33498f",
-  "--release-type",
-  "source-only",
-]
-cwd = "."
-timeout_seconds = 3600
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["hosted_ci_transient_pr_recovery", "user_authorized_external_validation"]
-
-[intents.git_stage_release_v0_3_3]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed v0.3.3 runtime-hardening release notes, current public examples, regression contract, tests, and bounded release commands."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  "README.md",
-  "docs/github-action/README.md",
-  "scripts/release-notes/v0.3.3.md",
-  "scripts/release-readiness.mjs",
-  "scripts/test/release-readiness.test.mjs",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["release_v0_3_3_local_validation_complete"]
-
-[intents.git_commit_release_v0_3_3]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the reviewed v0.3.3 transient pull request recovery release preparation."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "chore(release): prepare v0.3.3 runtime hardening",
-  "-m",
-  "Validation: docs, release-readiness, lint, format, migration-check, smoke, check, contract, mustflow",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_release_v0_3_3"]
-
-[intents.git_push_main_release_v0_3_3]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated v0.3.3 runtime-hardening release preparation on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_release_v0_3_3", "user_authorized_push"]
-
-[intents.hosted_ci_release_v0_3_3]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed v0.3.3 release candidate at the current local HEAD."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_release_v0_3_3"]
-
-[intents.release_v0_3_3_marketplace_evidence]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Collect exact-HEAD v0.3.3 Marketplace candidate validation records and create the external release issue."
-argv = [
-  "pnpm",
-  "run",
-  "release-candidate-evidence-orchestrator",
-  "--",
-  "--provider-model",
-  "gpt-4.1-mini",
-  "--release-type",
-  "marketplace-action-tag",
-  "--release-version",
-  "v0.3.3",
-  "--create-issue",
-]
-cwd = "."
-timeout_seconds = 3600
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["hosted_ci_release_v0_3_3", "user_authorized_release"]
-
-[intents.release_v0_3_3_stable_publish]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Publish immutable v0.3.3 as a non-prerelease GitHub Marketplace Release from exact candidate validation records."
-argv = [
-  "pnpm",
-  "run",
-  "publish-action-release",
-  "--",
-  "--version",
-  "v0.3.3",
-  "--release-kind",
-  "stable",
-]
-cwd = "."
-timeout_seconds = 600
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/refs/tags/v0.3.3", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["release_v0_3_3_marketplace_evidence", "user_authorized_release"]
 
 [intents.release_v0_3_3_post_tag_evidence]
-status = "configured"
+status = "manual_only"
 lifecycle = "oneshot"
-run_policy = "agent_allowed"
+run_policy = "manual_only"
+reason = "Historic exact-tag revalidation dispatches credentialed external and full-write workflows."
+agent_action = "do_not_run_report_manual_only"
 description = "Revalidate published v0.3.3 with hosted live-provider, external dry-run, full-write, and orphan-audit workflows."
 argv = [
   "pnpm",
@@ -2417,215 +825,6 @@ env_policy = "allowlist"
 env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
-required_after = ["release_v0_3_3_stable_publish"]
-
-[intents.verify_marketplace_v0_3_3]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Verify that the public Marketplace listing marks v0.3.3 as Latest and renders the matching Action reference."
-argv = ["pnpm", "run", "verify-marketplace-release", "--", "--version", "v0.3.3"]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["release_v0_3_3_stable_publish", "marketplace_publication"]
-
-[intents.promote_v0_to_v0_3_3]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Promote moving alias v0 to immutable Marketplace release v0.3.3 with compare-and-swap rollback and hosted post-promotion validation."
-argv = [
-  "pnpm",
-  "run",
-  "promote-action-major-alias",
-  "--",
-  "--release-version",
-  "v0.3.3",
-  "--sha",
-  "140cb6d06893a3a6d8de5ab9cfa1eaebf2ad1e51",
-]
-cwd = "."
-timeout_seconds = 3600
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = true
-required_after = [
-  "release_v0_3_3_post_tag_evidence",
-  "verify_marketplace_v0_3_3",
-  "hosted_ci_success",
-  "user_authorized_release",
-]
-
-[intents.git_stage_v0_3_3_promotion_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage only the exact-SHA v0.3.3 promotion and release-completion command contract."
-argv = ["git", "add", "--", ".mustflow/config/commands.toml"]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["v0_3_3_promotion_contract_validation_complete"]
-
-[intents.git_commit_v0_3_3_promotion_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the exact-SHA v0.3.3 promotion and release-completion command contract."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "chore(release): authorize v0.3.3 promotion",
-  "-m",
-  "Validation: docs, mustflow, release-readiness, lint, format, migration-check, smoke, check, contract",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_v0_3_3_promotion_contract"]
-
-[intents.git_push_main_v0_3_3_promotion_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated exact-SHA v0.3.3 promotion contract on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_v0_3_3_promotion_contract", "user_authorized_push"]
-
-[intents.hosted_ci_v0_3_3_promotion_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed exact-SHA v0.3.3 promotion contract."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_v0_3_3_promotion_contract"]
-
-[intents.git_stage_v0_3_3_release_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed v0.3.3 publication, post-tag validation, Marketplace, and v0 promotion records."
-argv = ["git", "add", "--", "docs/ops/release.md", "docs/product/04-implementation-tracker.md"]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["v0_3_3_release_completion_validation_complete"]
-
-[intents.git_commit_v0_3_3_release_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the completed v0.3.3 Marketplace publication and v0 promotion records."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "docs(release): record v0.3.3 publication",
-  "-m",
-  "Validation: docs, release-readiness, format, check, contract",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_v0_3_3_release_completion"]
-
-[intents.git_push_main_v0_3_3_release_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the completed v0.3.3 Marketplace publication and v0 promotion record on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_v0_3_3_release_completion", "user_authorized_push"]
-
-[intents.hosted_ci_v0_3_3_release_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed v0.3.3 release completion record."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_v0_3_3_release_completion"]
 
 [intents.test_provider_result_quality]
 status = "configured"
@@ -2660,257 +859,12 @@ required_after = [
   "provider_quality_corpus_change",
 ]
 
-[intents.git_stage_provider_result_quality]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed provider result quality validator, 24-case corpus, prompt contract, Action bundle, ADR, ownership, tracker, documentation, and bounded command contract."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  "action-dist/index.js",
-  "docs/adr/README.md",
-  "docs/adr/0047-add-provider-result-quality-regression-corpus.md",
-  "docs/monorepo/package-ownership.md",
-  "docs/product/04-implementation-tracker.md",
-  "packages/providers/README.md",
-  "packages/providers/src/fake-provider.ts",
-  "packages/providers/src/index.ts",
-  "packages/providers/src/openai-compatible-provider.ts",
-  "packages/providers/src/result-quality.ts",
-  "packages/providers/test/fixtures/result-quality-corpus.json",
-  "packages/providers/test/openai-compatible-provider.test.mjs",
-  "packages/providers/test/result-quality-corpus.test.mjs",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["provider_result_quality_validation_complete"]
-
-[intents.git_commit_provider_result_quality]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the deterministic provider result quality boundary and balanced regression corpus."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "feat(providers): enforce result quality invariants",
-  "-m",
-  "Validation: provider-result-quality, docs, release-readiness, lint, format, migration-check, smoke, check, contract, bundle-action-check, mustflow",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_provider_result_quality"]
-
-[intents.git_push_main_provider_result_quality]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated provider result quality commit on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_provider_result_quality", "user_authorized_push"]
-
-[intents.hosted_ci_provider_result_quality]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed provider result quality commit."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_provider_result_quality"]
-
-[intents.git_stage_release_v0_3_4]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed v0.3.4 provider-result quality release notes, current public examples, regression contract, tests, and bounded release commands."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  "README.md",
-  "docs/github-action/README.md",
-  "scripts/release-notes/v0.3.4.md",
-  "scripts/release-readiness.mjs",
-  "scripts/test/release-readiness.test.mjs",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["release_v0_3_4_local_validation_complete"]
-
-[intents.git_commit_release_v0_3_4]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the reviewed v0.3.4 provider-result quality release preparation."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "chore(release): prepare v0.3.4 provider quality",
-  "-m",
-  "Validation: docs, release-readiness, lint, format, migration-check, smoke, check, contract, bundle-action-check, mustflow",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_release_v0_3_4"]
-
-[intents.git_push_main_release_v0_3_4]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated v0.3.4 provider-result quality release preparation on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_release_v0_3_4", "user_authorized_push"]
-
-[intents.hosted_ci_release_v0_3_4]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed v0.3.4 release candidate at the current local HEAD."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_release_v0_3_4"]
-
-[intents.release_v0_3_4_marketplace_evidence]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Collect exact-HEAD v0.3.4 Marketplace candidate validation records and create the external release issue."
-argv = [
-  "pnpm",
-  "run",
-  "release-candidate-evidence-orchestrator",
-  "--",
-  "--provider-model",
-  "gpt-4.1-mini",
-  "--release-type",
-  "marketplace-action-tag",
-  "--release-version",
-  "v0.3.4",
-  "--create-issue",
-]
-cwd = "."
-timeout_seconds = 3600
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["hosted_ci_release_v0_3_4", "user_authorized_release"]
-
-[intents.release_v0_3_4_stable_publish]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Publish immutable v0.3.4 as a non-prerelease GitHub Marketplace Release from exact candidate validation records."
-argv = [
-  "pnpm",
-  "run",
-  "publish-action-release",
-  "--",
-  "--version",
-  "v0.3.4",
-  "--release-kind",
-  "stable",
-]
-cwd = "."
-timeout_seconds = 600
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/refs/tags/v0.3.4", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["release_v0_3_4_marketplace_evidence", "user_authorized_release"]
-
 [intents.release_v0_3_4_post_tag_evidence]
-status = "configured"
+status = "manual_only"
 lifecycle = "oneshot"
-run_policy = "agent_allowed"
+run_policy = "manual_only"
+reason = "Historic exact-tag revalidation dispatches credentialed external and full-write workflows."
+agent_action = "do_not_run_report_manual_only"
 description = "Revalidate published v0.3.4 with hosted live-provider, external dry-run, full-write, and orphan-audit workflows."
 argv = [
   "pnpm",
@@ -2936,370 +890,13 @@ env_policy = "allowlist"
 env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
-required_after = ["release_v0_3_4_stable_publish"]
-
-[intents.verify_marketplace_v0_3_4]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Verify that the public Marketplace listing marks v0.3.4 as Latest and renders the matching Action reference."
-argv = ["pnpm", "run", "verify-marketplace-release", "--", "--version", "v0.3.4"]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["release_v0_3_4_stable_publish", "marketplace_publication"]
-
-[intents.promote_v0_to_v0_3_4]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Promote moving alias v0 to immutable Marketplace release v0.3.4 with compare-and-swap rollback and hosted post-promotion validation."
-argv = [
-  "pnpm",
-  "run",
-  "promote-action-major-alias",
-  "--",
-  "--release-version",
-  "v0.3.4",
-  "--sha",
-  "50f1251b07f510b65f11b0b77d9f54ed5ebe920b",
-]
-cwd = "."
-timeout_seconds = 3600
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = true
-required_after = [
-  "release_v0_3_4_post_tag_evidence",
-  "verify_marketplace_v0_3_4",
-  "hosted_ci_success",
-  "user_authorized_release",
-]
-
-[intents.git_stage_v0_3_4_promotion_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage only the exact-SHA v0.3.4 promotion and release-completion command contract."
-argv = ["git", "add", "--", ".mustflow/config/commands.toml"]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["v0_3_4_promotion_contract_validation_complete"]
-
-[intents.git_commit_v0_3_4_promotion_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the exact-SHA v0.3.4 promotion and release-completion command contract."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "chore(release): authorize v0.3.4 promotion",
-  "-m",
-  "Validation: docs, mustflow, release-readiness, lint, format, migration-check, smoke, check, contract",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_v0_3_4_promotion_contract"]
-
-[intents.git_push_main_v0_3_4_promotion_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated exact-SHA v0.3.4 promotion contract on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_v0_3_4_promotion_contract", "user_authorized_push"]
-
-[intents.hosted_ci_v0_3_4_promotion_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed exact-SHA v0.3.4 promotion contract."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_v0_3_4_promotion_contract"]
-
-[intents.git_stage_v0_3_4_release_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed v0.3.4 publication, post-tag validation, Marketplace, and v0 promotion records."
-argv = ["git", "add", "--", "docs/ops/release.md", "docs/product/04-implementation-tracker.md"]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["v0_3_4_release_completion_validation_complete"]
-
-[intents.git_commit_v0_3_4_release_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the completed v0.3.4 Marketplace publication and v0 promotion records."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "docs(release): record v0.3.4 publication",
-  "-m",
-  "Validation: docs, release-readiness, format, check, contract",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_v0_3_4_release_completion"]
-
-[intents.git_push_main_v0_3_4_release_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the completed v0.3.4 Marketplace publication and v0 promotion record on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_v0_3_4_release_completion", "user_authorized_push"]
-
-[intents.hosted_ci_v0_3_4_release_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed v0.3.4 release completion record."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_v0_3_4_release_completion"]
-
-[intents.git_stage_release_v0_3_5]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed v0.3.5 Action diagnostics release notes, current public examples, regression contract, tests, and bounded release commands."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  ".mustflow/config/manifest.lock.toml",
-  "README.md",
-  "docs/github-action/README.md",
-  "scripts/release-notes/v0.3.5.md",
-  "scripts/release-readiness.mjs",
-  "scripts/test/release-readiness.test.mjs",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["release_v0_3_5_local_validation_complete"]
-
-[intents.git_commit_release_v0_3_5]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the reviewed v0.3.5 Action diagnostics release preparation."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "chore(release): prepare v0.3.5 action diagnostics",
-  "-m",
-  "Validation: docs, release-readiness, lint, format, migration-check, smoke, check, contract, bundle-action-check, mustflow",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_release_v0_3_5"]
-
-[intents.git_push_main_release_v0_3_5]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated v0.3.5 Action diagnostics release preparation on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_release_v0_3_5", "user_authorized_push"]
-
-[intents.hosted_ci_release_v0_3_5]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed v0.3.5 release candidate at the current local HEAD."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_release_v0_3_5"]
-
-[intents.release_v0_3_5_marketplace_evidence]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Collect exact-HEAD v0.3.5 Marketplace candidate validation records and create the external release issue."
-argv = [
-  "pnpm",
-  "run",
-  "release-candidate-evidence-orchestrator",
-  "--",
-  "--provider-model",
-  "gpt-4.1-mini",
-  "--release-type",
-  "marketplace-action-tag",
-  "--release-version",
-  "v0.3.5",
-  "--create-issue",
-]
-cwd = "."
-timeout_seconds = 3600
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["hosted_ci_release_v0_3_5", "user_authorized_release"]
-
-[intents.release_v0_3_5_stable_publish]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Publish immutable v0.3.5 as a non-prerelease GitHub Marketplace Release from exact candidate validation records."
-argv = [
-  "pnpm",
-  "run",
-  "publish-action-release",
-  "--",
-  "--version",
-  "v0.3.5",
-  "--release-kind",
-  "stable",
-]
-cwd = "."
-timeout_seconds = 600
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/refs/tags/v0.3.5", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["release_v0_3_5_marketplace_evidence", "user_authorized_release"]
 
 [intents.release_v0_3_5_post_tag_evidence]
-status = "configured"
+status = "manual_only"
 lifecycle = "oneshot"
-run_policy = "agent_allowed"
+run_policy = "manual_only"
+reason = "Historic exact-tag revalidation dispatches credentialed external and full-write workflows."
+agent_action = "do_not_run_report_manual_only"
 description = "Revalidate published v0.3.5 with hosted live-provider, external dry-run, full-write, and orphan-audit workflows."
 argv = [
   "pnpm",
@@ -3325,215 +922,6 @@ env_policy = "allowlist"
 env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
-required_after = ["release_v0_3_5_stable_publish"]
-
-[intents.verify_marketplace_v0_3_5]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Verify that the public Marketplace listing marks v0.3.5 as Latest and renders the matching Action reference."
-argv = ["pnpm", "run", "verify-marketplace-release", "--", "--version", "v0.3.5"]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["release_v0_3_5_stable_publish", "marketplace_publication"]
-
-[intents.promote_v0_to_v0_3_5]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Promote moving alias v0 to immutable Marketplace release v0.3.5 with compare-and-swap rollback and hosted post-promotion validation."
-argv = [
-  "pnpm",
-  "run",
-  "promote-action-major-alias",
-  "--",
-  "--release-version",
-  "v0.3.5",
-  "--sha",
-  "b1654c4f88c231b8f6beeee399c990b63d935ecc",
-]
-cwd = "."
-timeout_seconds = 3600
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = true
-required_after = [
-  "release_v0_3_5_post_tag_evidence",
-  "verify_marketplace_v0_3_5",
-  "hosted_ci_success",
-  "user_authorized_release",
-]
-
-[intents.git_stage_v0_3_5_promotion_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage only the exact-SHA v0.3.5 promotion and release-completion command contract."
-argv = ["git", "add", "--", ".mustflow/config/commands.toml", ".mustflow/config/manifest.lock.toml"]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["v0_3_5_promotion_contract_validation_complete"]
-
-[intents.git_commit_v0_3_5_promotion_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the exact-SHA v0.3.5 promotion and release-completion command contract."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "chore(release): authorize v0.3.5 promotion",
-  "-m",
-  "Validation: docs, mustflow, release-readiness, lint, format, migration-check, smoke, check, contract",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_v0_3_5_promotion_contract"]
-
-[intents.git_push_main_v0_3_5_promotion_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated exact-SHA v0.3.5 promotion contract on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_v0_3_5_promotion_contract", "user_authorized_push"]
-
-[intents.hosted_ci_v0_3_5_promotion_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed exact-SHA v0.3.5 promotion contract."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_v0_3_5_promotion_contract"]
-
-[intents.git_stage_v0_3_5_release_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed v0.3.5 publication, post-tag validation, Marketplace, and v0 promotion records."
-argv = ["git", "add", "--", "docs/ops/release.md", "docs/product/04-implementation-tracker.md"]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["v0_3_5_release_completion_validation_complete"]
-
-[intents.git_commit_v0_3_5_release_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the completed v0.3.5 Marketplace publication and v0 promotion records."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "docs(release): record v0.3.5 publication",
-  "-m",
-  "Validation: docs, release-readiness, format, check, contract",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_v0_3_5_release_completion"]
-
-[intents.git_push_main_v0_3_5_release_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the completed v0.3.5 Marketplace publication and v0 promotion record on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_v0_3_5_release_completion", "user_authorized_push"]
-
-[intents.hosted_ci_v0_3_5_release_completion]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed v0.3.5 release completion record."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_v0_3_5_release_completion"]
 
 [intents.mustflow_update_dry_run]
 status = "configured"
@@ -3574,86 +962,6 @@ required_after = [
   "user_authorized_workflow_repair",
 ]
 
-[intents.git_stage_mustflow_update_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage only the reviewed Mustflow update and manifest-lock recovery command contract."
-argv = ["git", "add", "--", ".mustflow/config/commands.toml"]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["mustflow_update_contract_validation_complete"]
-
-[intents.git_commit_mustflow_update_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the bounded Mustflow update and manifest-lock recovery command contract."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "chore(mustflow): add trusted update recovery",
-  "-m",
-  "Validation: mustflow, format, release-readiness",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_mustflow_update_contract"]
-
-[intents.git_push_main_mustflow_update_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated Mustflow update recovery contract on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_mustflow_update_contract", "user_authorized_push"]
-
-[intents.hosted_ci_mustflow_update_contract]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed Mustflow update recovery contract."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_mustflow_update_contract"]
-
 [intents.mustflow_init_recovery_dry_run]
 status = "configured"
 lifecycle = "oneshot"
@@ -3693,86 +1001,6 @@ required_after = [
   "user_authorized_workflow_repair",
 ]
 
-[intents.git_stage_mustflow_init_recovery]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed Mustflow missing-lock recovery command contract and customized installation baseline."
-argv = ["git", "add", "--", ".mustflow/config/commands.toml", ".mustflow/config/manifest.lock.toml"]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["mustflow_init_recovery_contract_validation_complete"]
-
-[intents.git_commit_mustflow_init_recovery]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the bounded Mustflow missing-lock recovery contract and customized installation baseline."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "chore(mustflow): add missing-lock recovery",
-  "-m",
-  "Validation: mustflow, format, release-readiness",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_mustflow_init_recovery"]
-
-[intents.git_push_main_mustflow_init_recovery]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated Mustflow missing-lock recovery contract on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_mustflow_init_recovery", "user_authorized_push"]
-
-[intents.hosted_ci_mustflow_init_recovery]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed Mustflow missing-lock recovery contract."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_mustflow_init_recovery"]
-
 [intents.test_action_provider_failure_summary]
 status = "configured"
 lifecycle = "oneshot"
@@ -3803,103 +1031,6 @@ preconditions = [
 ]
 required_after = ["action_provider_failure_summary_change"]
 
-[intents.git_stage_action_provider_failure_summary]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed Action provider-quality failure summary implementation, contract docs, tests, bundle, command contract, and lock baseline."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  ".mustflow/config/manifest.lock.toml",
-  "packages/action/src/run.ts",
-  "packages/action/test/action.test.mjs",
-  "action-dist/index.js",
-  "docs/adr/0048-report-provider-quality-failures-in-action-summary.md",
-  "docs/adr/README.md",
-  "docs/product/02-spec.md",
-  "docs/product/04-implementation-tracker.md",
-  "docs/monorepo/package-ownership.md",
-  "docs/github-action/README.md",
-  "docs/github-action/action-contract.md",
-  "docs/github-action/inputs-and-outputs.md",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["action_provider_failure_summary_validation_complete"]
-
-[intents.git_commit_action_provider_failure_summary]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the bounded Action provider-result quality failure summary."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "feat(action): summarize provider quality failures",
-  "-m",
-  "Validation: focused Action regression, docs, release-readiness, lint, format, smoke, check, contract, bundle-action-check, mustflow",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_action_provider_failure_summary"]
-
-[intents.git_push_main_action_provider_failure_summary]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated Action provider-quality failure summary on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_action_provider_failure_summary", "user_authorized_push"]
-
-[intents.hosted_ci_action_provider_failure_summary]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed Action provider-quality failure summary."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_action_provider_failure_summary"]
-
 [intents.test_provider_result_dirty_corpus]
 status = "configured"
 lifecycle = "oneshot"
@@ -3923,98 +1054,6 @@ preconditions = [
   ], satisfy_intent = "build" },
 ]
 required_after = ["provider_result_dirty_corpus_change"]
-
-[intents.git_stage_provider_result_dirty_corpus]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed provider dirty-corpus intake, privacy contract, tests, docs, command contract, and lock baseline."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  ".mustflow/config/manifest.lock.toml",
-  "packages/providers/test/fixtures/result-quality-dirty-corpus.json",
-  "packages/providers/test/fixtures/provider-result-dirty-corpus.md",
-  "packages/providers/test/result-quality-dirty-corpus.test.mjs",
-  "docs/adr/0049-add-scrubbed-provider-failure-dirty-corpus.md",
-  "docs/adr/README.md",
-  "docs/product/04-implementation-tracker.md",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["provider_result_dirty_corpus_validation_complete"]
-
-[intents.git_commit_provider_result_dirty_corpus]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the scrubbed observed provider-failure dirty-corpus intake contract."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "test(providers): add scrubbed failure corpus",
-  "-m",
-  "Validation: focused dirty corpus, docs, release-readiness, lint, format, check, contract, mustflow",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_provider_result_dirty_corpus"]
-
-[intents.git_push_main_provider_result_dirty_corpus]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated provider dirty-corpus intake on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_provider_result_dirty_corpus", "user_authorized_push"]
-
-[intents.hosted_ci_provider_result_dirty_corpus]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed provider dirty-corpus intake contract."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_provider_result_dirty_corpus"]
 
 [intents.provider_model_eval_check]
 status = "configured"
@@ -4100,100 +1139,3 @@ preconditions = [
   ], satisfy_intent = "build" },
 ]
 required_after = ["provider_model_eval_script_change", "provider_model_eval_test_change"]
-
-[intents.git_stage_provider_model_eval]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage the reviewed manual multi-model eval script, example, docs, tests, package command, hygiene rule, command contract, and lock baseline."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  ".mustflow/config/manifest.lock.toml",
-  ".gitignore",
-  "package.json",
-  "scripts/provider-model-eval.mjs",
-  "scripts/test/provider-model-eval.test.mjs",
-  "fixtures/provider-model-eval.example.json",
-  "docs/adr/0050-add-manual-multi-model-provider-eval.md",
-  "docs/adr/README.md",
-  "docs/README.md",
-  "docs/ops/provider-model-eval.md",
-  "docs/ops/config-and-env.md",
-  "docs/product/04-implementation-tracker.md",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["provider_model_eval_validation_complete"]
-
-[intents.git_commit_provider_model_eval]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the bounded manual multi-model provider eval command and contract."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "feat(eval): add manual provider model matrix",
-  "-m",
-  "Validation: provider model eval check and tests, docs, release-readiness, lint, format, smoke, check, contract, mustflow",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_provider_model_eval"]
-
-[intents.git_push_main_provider_model_eval]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_push"]
-description = "Push the validated manual provider model eval on main without force."
-argv = ["git", "push", "origin", "main"]
-cwd = "."
-timeout_seconds = 180
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-network = true
-destructive = false
-required_after = ["git_commit_provider_model_eval", "user_authorized_push"]
-
-[intents.hosted_ci_provider_model_eval]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed manual provider model eval contract."
-argv = ["pnpm", "run", "hosted-ci-validation"]
-cwd = "."
-timeout_seconds = 900
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["git_push_main_provider_model_eval"]

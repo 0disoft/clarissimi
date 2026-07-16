@@ -17,6 +17,7 @@
 - Config schema boundary: `docs/adr/0025-centralize-config-schema-validation.md`
 - Maintainer analytics boundary: `docs/adr/0026-add-maintainer-recent-share-analytics.md`
 - TypeScript config loader boundary: `docs/adr/0028-add-native-typescript-config-loading.md`
+- Static shell completion boundary: `docs/adr/0051-add-static-shell-completion.md`
 
 ## MVP Commands
 
@@ -147,6 +148,19 @@ derived outputs still use the canonical Clarissimi output paths when `--out-dir`
 Import loads the selected or default Clarissimi config. `--markdown-summary none|table|gallery` overrides
 `markdownSummary` when derived files are rendered.
 
+### `clarissimi completion <bash|zsh|fish|powershell>`
+
+Writes a deterministic static completion program for the selected shell to stdout. The supported
+shell names are exactly `bash`, `zsh`, `fish`, and `powershell`.
+
+The command does not install completion, write files, enumerate paths, load config or ledgers, read
+environment variables or credentials, call a provider or GitHub, or make network requests. Help,
+supported-option rejection, and completion consume one typed command descriptor. Schema-owned
+provider and presentation values remain imported from `packages/schemas`.
+
+`--help` prints normal CLI help. `--json` is unsupported because successful stdout is the shell
+program itself. Missing, unknown, or extra shell arguments and unsupported flags are usage errors.
+
 ## Modes
 
 - `dry-run`: writes no recognition files
@@ -156,9 +170,11 @@ Import loads the selected or default Clarissimi config. `--markdown-summary none
 
 ## Argument Handling
 
-Current CLI commands are flag-only except for the `analytics recent-share` subcommand selector.
-Unexpected positional arguments must fail as usage errors before config loading, ledger reads,
-provider resolution, draft writes, or rebuild work begins.
+Current CLI commands are flag-only except for the `analytics recent-share` subcommand selector and
+the single required shell selector accepted by `completion`.
+
+Unexpected positional arguments fail as usage errors before config loading, ledger reads, provider
+resolution, draft writes, completion generation, or rebuild work begins.
 
 Each command accepts only the flags listed in its command contract and help output. Unknown flags,
 including flags that belong to another command, must fail as usage errors before config loading,

@@ -45,6 +45,12 @@ import {
   parseArgs,
   type ParsedArgs,
 } from "./args.js";
+import {
+  getSupportedCliFlagNames,
+  isSupportedCompletionShell,
+  renderCliHelp,
+} from "./command-spec.js";
+import { renderShellCompletion } from "./completion.js";
 import { validateConfigFile, type CliConfig } from "./config.js";
 import { CLI_EXIT_CODES, type CliExitCode } from "./exit-codes.js";
 import { recognizeFixture, recognizeGitHubFixture } from "./fixture.js";
@@ -59,50 +65,6 @@ import {
   type CliIo,
 } from "./io.js";
 
-const GLOBAL_FLAGS = new Set(["help"]);
-const COMMAND_FLAGS: Readonly<Record<string, ReadonlySet<string>>> = {
-  help: new Set(["help"]),
-  "validate-config": new Set(["config", "json", "help"]),
-  "validate-ledger": new Set(["ledger", "json", "help"]),
-  recognize: new Set([
-    "fixture",
-    "github-fixture",
-    "mode",
-    "config",
-    "markdown-summary",
-    "exclude-automation-contributors",
-    "provider",
-    "provider-model",
-    "provider-endpoint",
-    "provider-endpoint-trust",
-    "provider-thinking",
-    "json",
-    "help",
-  ]),
-  "stage-draft": new Set(["draft", "drafts-dir", "json", "help"]),
-  "approve-draft": new Set(["draft", "json", "help"]),
-  "import-draft": new Set([
-    "draft",
-    "ledger",
-    "out-dir",
-    "config",
-    "markdown-summary",
-    "exclude-automation-contributors",
-    "json",
-    "help",
-  ]),
-  rebuild: new Set([
-    "ledger",
-    "out-dir",
-    "config",
-    "markdown-summary",
-    "exclude-automation-contributors",
-    "json",
-    "help",
-  ]),
-  analytics: new Set(["ledger", "window-days", "as-of", "json", "help"]),
-};
-
 export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExitCode> {
   let args: ParsedArgs | undefined;
   try {
@@ -116,7 +78,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExi
           throw new CliUsageError(positionalError);
         }
       }
-      io.stdout(renderHelp());
+      io.stdout(renderCliHelp());
       return CLI_EXIT_CODES.success;
     }
 
@@ -137,6 +99,8 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExi
         return await runRebuild(args, io);
       case "analytics":
         return await runAnalytics(args, io);
+      case "completion":
+        return runCompletion(args, io);
       default:
         throw new CliUsageError(`Unknown command: ${args.command}`);
     }
@@ -158,7 +122,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExi
 }
 
 function rejectUnsupportedFlags(args: ParsedArgs): void {
-  const supported = args.command === undefined ? GLOBAL_FLAGS : COMMAND_FLAGS[args.command];
+  const supported = getSupportedCliFlagNames(args.command);
   if (supported === undefined) {
     return;
   }
@@ -169,6 +133,24 @@ function rejectUnsupportedFlags(args: ParsedArgs): void {
       throw new CliUsageError(`Unknown option for ${scope}: --${name}.`);
     }
   }
+}
+
+function runCompletion(args: ParsedArgs, io: CliIo): CliExitCode {
+  const [shell, ...extraPositionals] = args.positionals;
+  if (shell === undefined) {
+    throw new CliUsageError("completion requires one shell: bash, zsh, fish, or powershell.");
+  }
+  if (extraPositionals.length > 0) {
+    throw new CliUsageError(
+      `completion accepts exactly one shell, received: ${args.positionals.join(" ")}`,
+    );
+  }
+  if (!isSupportedCompletionShell(shell)) {
+    throw new CliUsageError(`Unsupported completion shell: ${shell}.`);
+  }
+
+  io.stdout(renderShellCompletion(shell));
+  return CLI_EXIT_CODES.success;
 }
 
 async function runValidateConfig(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
@@ -720,25 +702,6 @@ function writeFailure(io: CliIo, args: ParsedArgs, command: string, error: unkno
   }
 
   io.stderr(`${message}\n`);
-}
-
-function renderHelp(): string {
-  return [
-    "Clarissimi CLI",
-    "",
-    "Commands:",
-    "  clarissimi help",
-    "  clarissimi --help",
-    "  clarissimi validate-config [--config <path>] [--json]",
-    "  clarissimi validate-ledger [--ledger <path>] [--json]",
-    "  clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run [--config <path>] [--markdown-summary none|table|gallery] [--exclude-automation-contributors] [--provider <id>] [--provider-model <model>] [--provider-endpoint <url>] [--provider-endpoint-trust public|private-network] [--provider-thinking disabled] [--json]",
-    "  clarissimi stage-draft --draft <path> [--drafts-dir <path>] [--json]",
-    "  clarissimi approve-draft --draft <path> [--json]",
-    "  clarissimi import-draft --draft <path> [--ledger <path>] [--out-dir <path>] [--config <path>] [--markdown-summary none|table|gallery] [--exclude-automation-contributors] [--json]",
-    "  clarissimi rebuild [--ledger <path>] [--out-dir <path>] [--config <path>] [--markdown-summary none|table|gallery] [--exclude-automation-contributors] [--json]",
-    "  clarissimi analytics recent-share [--ledger <path>] [--window-days <days>] [--as-of <iso-date>] [--json]",
-    "",
-  ].join("\n");
 }
 
 function rejectUnexpectedPositionals(args: ParsedArgs, command: string): string | undefined {

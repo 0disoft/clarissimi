@@ -6,8 +6,15 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 const defaultRepoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 export const requiredDocumentationPaths = [
   "README.md",
+  "ARCHITECTURE.md",
+  "DEVELOPMENT.md",
+  "SECURITY.md",
   "action.yml",
   "VALIDATION.md",
+  "docs/architecture/00-system-boundary.md",
+  "docs/architecture/01-domain-model.md",
+  "docs/architecture/02-runtime-flow.md",
+  "docs/architecture/03-quality-attributes.md",
   "docs/product/00-product-brief.md",
   "docs/product/01-roadmap.md",
   "docs/product/02-spec.md",
@@ -17,6 +24,7 @@ export const requiredDocumentationPaths = [
   "docs/cli/configuration.md",
   "docs/cli/ledger-format.md",
   "docs/cli/output-and-exit-codes.md",
+  "docs/cli/shell-completion.md",
   "docs/product/04-implementation-tracker.md",
   "docs/github-action/README.md",
   "docs/github-action/action-contract.md",
@@ -51,6 +59,58 @@ export const requiredDocumentationPaths = [
   "scripts/verify-marketplace-release.mjs",
   "scripts/promote-action-major-alias.mjs",
 ];
+
+export const maintainedSourceTruthDocumentationPaths = [
+  "ARCHITECTURE.md",
+  "DEVELOPMENT.md",
+  "docs/architecture/03-quality-attributes.md",
+];
+
+const forbiddenSourceTruthPlaceholders = [
+  /\bUNDECIDED\b/i,
+  /\bUNASSIGNED\b/i,
+  /intentionally (?:a )?scaffold/i,
+  /define what this repository owns/i,
+];
+
+const requiredCurrentStateText = new Map([
+  [
+    "ARCHITECTURE.md",
+    [
+      "docs/architecture/00-system-boundary.md",
+      "docs/architecture/02-runtime-flow.md",
+      "docs/architecture/03-quality-attributes.md",
+      ".clarissimi/contributions.jsonl",
+    ],
+  ],
+  [
+    "DEVELOPMENT.md",
+    [
+      "docs/product/02-spec.md",
+      "docs/monorepo/package-ownership.md",
+      ".clarissimi/contributions.jsonl",
+      "VALIDATION.md",
+    ],
+  ],
+  [
+    "docs/architecture/03-quality-attributes.md",
+    [
+      "docs/product/02-spec.md",
+      "docs/architecture/02-runtime-flow.md",
+      ".clarissimi/contributions.jsonl",
+      "packages/schemas",
+    ],
+  ],
+  [
+    "README.md",
+    [
+      "0disoft/clarissimi@v0.3.5",
+      "`gallery` is available in the current immutable `v0.3.5` release and moving `v0` line.",
+      "clarissimi completion <bash|zsh|fish|powershell>",
+    ],
+  ],
+  ["SECURITY.md", ["`v0.3.5`", "moving `v0` release line"]],
+]);
 
 export async function validateDocs(options = {}) {
   const repoRoot = options.repoRoot ?? defaultRepoRoot;
@@ -98,6 +158,7 @@ export async function validateDocs(options = {}) {
     }
   }
 
+  await validateMaintainedSourceTruthDocs(repoRoot, issues);
   await validateAdrIndex(repoRoot, issues);
 
   return {
@@ -105,6 +166,40 @@ export async function validateDocs(options = {}) {
     issues,
     markdownFileCount: markdownFiles.length,
   };
+}
+
+async function validateMaintainedSourceTruthDocs(repoRoot, issues) {
+  for (const documentationPath of maintainedSourceTruthDocumentationPaths) {
+    const absolutePath = join(repoRoot, documentationPath);
+    if (!existsSync(absolutePath)) {
+      continue;
+    }
+
+    const text = await readFile(absolutePath, "utf8");
+    for (const pattern of forbiddenSourceTruthPlaceholders) {
+      if (pattern.test(text)) {
+        issues.push(
+          `${documentationPath} contains scaffold placeholder text matching ${pattern.source}`,
+        );
+      }
+    }
+  }
+
+  for (const [documentationPath, requiredFragments] of requiredCurrentStateText) {
+    const absolutePath = join(repoRoot, documentationPath);
+    if (!existsSync(absolutePath)) {
+      continue;
+    }
+
+    const text = await readFile(absolutePath, "utf8");
+    for (const requiredFragment of requiredFragments) {
+      if (!text.includes(requiredFragment)) {
+        issues.push(
+          `${documentationPath} is missing current-state contract text: ${requiredFragment}`,
+        );
+      }
+    }
+  }
 }
 
 export async function runValidateDocs(options = {}) {

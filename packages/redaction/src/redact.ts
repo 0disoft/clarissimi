@@ -38,11 +38,12 @@ const REDACTION_RULES: readonly RedactionRule[] = [
   {
     kind: "env_assignment",
     pattern:
-      /\b(?:[A-Z][A-Z0-9_]*_)?(?:TOKEN|SECRET|PASSWORD|PRIVATE_KEY|API_KEY)\s*=\s*["']?[^"'\s]+["']?/g,
+      /["']?\b(?:[A-Z][A-Z0-9_]*_)?(?:TOKEN|SECRET|PASSWORD|PRIVATE_KEY|API_KEY)\s*=\s*(?:"[^"\r\n]*"|'[^'\r\n]*'|[^"'\s]+)["']?/g,
   },
   {
     kind: "generic_secret_assignment",
-    pattern: /\b(?:token|secret|password|api[_-]?key)\s*[:=]\s*["'][^"']{8,}["']/gi,
+    pattern:
+      /["']?\b(?:token|secret|password|api[_-]?key)\s*[:=]\s*(?:"[^"\r\n]{8,}"|'[^'\r\n]{8,}'|[^"'`\s]{8,})["']?/gi,
   },
   {
     kind: "email",

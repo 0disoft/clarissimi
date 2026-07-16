@@ -17,6 +17,29 @@ await runJsonCommand({
   },
 });
 
+for (const [shell, marker] of Object.entries({
+  bash: "complete -F _clarissimi_completion clarissimi",
+  zsh: "#compdef clarissimi",
+  fish: "complete -c clarissimi -f",
+  powershell: "Register-ArgumentCompleter -Native -CommandName clarissimi",
+})) {
+  await runCommand({
+    name: `CLI ${shell} completion`,
+    command: process.execPath,
+    args: ["packages/cli/dist/bin/clarissimi.js", "completion", shell],
+    expectExitCode: 0,
+    validate({ stdout, stderr }) {
+      assertEqual(stderr, "", `${shell} completion should not write stderr.`);
+      if (!stdout.includes(marker) || !stdout.endsWith("\n") || stdout.includes("\r")) {
+        throw new Error(`${shell} completion did not emit the deterministic static script.`);
+      }
+      if (stdout.includes(".clarissimi") || stdout.includes("GITHUB_TOKEN")) {
+        throw new Error(`${shell} completion crossed the repository privacy boundary.`);
+      }
+    },
+  });
+}
+
 await runJsonCommand({
   name: "CLI GitHub fixture recognize",
   command: process.execPath,

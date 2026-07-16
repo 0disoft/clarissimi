@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { canPublishAssessment, prepareEvidenceForProvider } from "../dist/index.js";
+import {
+  EvidencePreparationError,
+  PROVIDER_EVIDENCE_LIMITS,
+  canPublishAssessment,
+  prepareEvidenceForProvider,
+} from "../dist/index.js";
 import { ASSESSMENT_SCHEMA_VERSION, REDACTION_PLACEHOLDER } from "./support.mjs";
 
 const source = {
@@ -86,6 +91,54 @@ test("keeps provider evidence source and item identity intact", () => {
   assert.equal(prepared.items[0].kind, "test");
   assert.equal(prepared.items[0].id, "tests/parser.test.ts");
   assert.equal(prepared.redactionReport.changed, false);
+});
+
+test("rejects prepared evidence above the item budget", () => {
+  assert.throws(
+    () =>
+      prepareEvidenceForProvider({
+        source,
+        items: Array.from({ length: PROVIDER_EVIDENCE_LIMITS.maxItems + 1 }, (_, index) => ({
+          kind: "file",
+          id: `src/file-${index}.ts`,
+        })),
+      }),
+    (error) => error instanceof EvidencePreparationError && error.code === "evidence_item_limit",
+  );
+});
+
+test("rejects prepared evidence above the aggregate UTF-8 byte budget", () => {
+  assert.throws(
+    () =>
+      prepareEvidenceForProvider({
+        source,
+        items: [
+          {
+            kind: "file",
+            id: "src/large.ts",
+            metadata: { content: "x".repeat(PROVIDER_EVIDENCE_LIMITS.maxUtf8Bytes) },
+          },
+        ],
+      }),
+    (error) => error instanceof EvidencePreparationError && error.code === "evidence_bytes_limit",
+  );
+});
+
+test("fails closed when evidence identity fields contain secret-bearing assignments", () => {
+  for (const item of [
+    { kind: "file", id: '"API_KEY=synthetic-secret-value"' },
+    {
+      kind: "file",
+      id: "src/safe.ts",
+      url: "https://example.invalid/evidence?token=synthetic-secret-value",
+    },
+  ]) {
+    assert.throws(
+      () => prepareEvidenceForProvider({ source, items: [item] }),
+      (error) =>
+        error instanceof EvidencePreparationError && error.code === "unsafe_structural_field",
+    );
+  }
 });
 
 test("allows approved assessments to become public records", () => {

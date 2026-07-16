@@ -13,6 +13,9 @@ Current MVP budgets:
 - Provider input must be bounded prepared evidence, not full raw diffs or unbounded comments.
 - GitHub collection must bound review comments, linked issue candidates, changed files, and patch
   excerpts before provider preparation.
+- Live GitHub collection accepts at most 100 changed files.
+- Provider preparation accepts at most 256 evidence items and 512 KiB of serialized UTF-8 evidence.
+- The complete OpenAI-compatible provider request body accepts at most 1 MiB of UTF-8 data.
 - Renderers should rebuild derived outputs from the canonical ledger in memory for the MVP.
 - Proposal branches should stage only Clarissimi-owned output files.
 - Monthly ledger partitions are deferred until real repository volume justifies the extra lookup
@@ -30,7 +33,8 @@ Hot paths:
 ## Required Evidence
 
 - Source of truth: `docs/product/02-spec.md`, `docs/architecture/02-runtime-flow.md`,
-  `docs/adr/0022-keep-ledger-single-file-with-partition-path.md`
+  `docs/adr/0022-keep-ledger-single-file-with-partition-path.md`,
+  `docs/adr/0052-bound-provider-input-evidence.md`
 - Owner: Repository maintainers
 - Merge-blocking validation: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,
   `pnpm run smoke`, `pnpm run check`, `pnpm run contract`

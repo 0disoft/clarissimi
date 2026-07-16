@@ -10,6 +10,7 @@ import type {
   SourcePullRequestComment,
   SourcePullRequestCommentClient,
   SourcePullRequestCommentCreateInput,
+  SourcePullRequestCommentDeleteInput,
   SourcePullRequestCommentListResult,
   SourcePullRequestCommentLookupInput,
   SourcePullRequestCommentUpdateInput,
@@ -280,6 +281,33 @@ export function createGitHubPullRequestClient(
         { timeoutMs, maxResponseBytes, sleep, random },
       );
       return parseSourcePullRequestComment(response);
+    },
+
+    async deletePullRequestComment(input: SourcePullRequestCommentDeleteInput): Promise<void> {
+      const url = new URL(`${apiUrl}/repos/${input.repository}/issues/comments/${input.commentId}`);
+      try {
+        await requestJsonOnce(
+          fetchImpl,
+          token,
+          url,
+          { method: "DELETE" },
+          timeoutMs,
+          maxResponseBytes,
+        );
+      } catch (error) {
+        if (error instanceof ProposalPullRequestClientError && error.code === "not_found") {
+          return;
+        }
+        if (!(error instanceof ProposalPullRequestClientError) || !error.retryable) {
+          throw error;
+        }
+
+        const listed = await listPullRequestComments(input);
+        if (listed.complete && !listed.comments.some((comment) => comment.id === input.commentId)) {
+          return;
+        }
+        throw error;
+      }
     },
   };
 }

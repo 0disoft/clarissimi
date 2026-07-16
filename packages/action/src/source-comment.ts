@@ -17,6 +17,7 @@ export interface SourcePullRequestCommentClient {
   updatePullRequestComment(
     input: SourcePullRequestCommentUpdateInput,
   ): Promise<SourcePullRequestComment>;
+  deletePullRequestComment(input: SourcePullRequestCommentDeleteInput): Promise<void>;
 }
 
 export interface SourcePullRequestCommentLookupInput {
@@ -32,6 +33,10 @@ export interface SourcePullRequestCommentUpdateInput {
   readonly repository: string;
   readonly commentId: number;
   readonly body: string;
+}
+
+export interface SourcePullRequestCommentDeleteInput extends SourcePullRequestCommentLookupInput {
+  readonly commentId: number;
 }
 
 export interface SourcePullRequestComment {
@@ -102,12 +107,12 @@ export async function upsertSourcePullRequestComment(
 
   const existing = managed[0];
   if (existing === undefined) {
-    const comment = await input.client.createPullRequestComment({
+    const created = await input.client.createPullRequestComment({
       repository: input.repository,
       pullRequestNumber: input.pullRequestNumber,
       body,
     });
-    return { action: "created", comment, body };
+    return await reconcileCreatedSourceComment(input, created, body);
   }
 
   if (existing.body === body) {
@@ -120,6 +125,93 @@ export async function upsertSourcePullRequestComment(
     body,
   });
   return { action: "updated", comment, body };
+}
+
+async function reconcileCreatedSourceComment(
+  input: SourcePullRequestCommentUpsertInput,
+  created: SourcePullRequestComment,
+  body: string,
+): Promise<SourcePullRequestCommentUpsertResult> {
+  const listed = await input.client.listPullRequestComments({
+    repository: input.repository,
+    pullRequestNumber: input.pullRequestNumber,
+  });
+
+  if (!listed.complete) {
+    await deleteCreatedComment(input, created.id);
+    throw new SourcePullRequestCommentError(
+      "comment_scan_incomplete_after_create",
+      "Clarissimi removed the comment it just created because the bounded reconciliation scan did not reach the end.",
+    );
+  }
+
+  const managed = listed.comments.filter(isManagedSourceComment);
+  if (managed.length === 0 || !managed.some((comment) => comment.id === created.id)) {
+    await deleteCreatedComment(input, created.id);
+    throw new SourcePullRequestCommentError(
+      "created_comment_not_visible",
+      "Clarissimi removed the comment it just created because the reconciliation scan could not prove that exact managed comment was visible.",
+    );
+  }
+
+  if (managed.some((comment) => comment.body !== body)) {
+    await deleteCreatedComment(input, created.id);
+    throw new SourcePullRequestCommentError(
+      "concurrent_managed_comment_conflict",
+      "Clarissimi removed the comment it just created because a concurrent managed comment had different content.",
+    );
+  }
+
+  const survivor = managed.reduce((current, comment) =>
+    comment.id < current.id ? comment : current,
+  );
+  for (const duplicate of managed) {
+    if (duplicate.id === survivor.id) {
+      continue;
+    }
+    await input.client.deletePullRequestComment({
+      repository: input.repository,
+      pullRequestNumber: input.pullRequestNumber,
+      commentId: duplicate.id,
+    });
+  }
+
+  if (managed.length > 1) {
+    const confirmed = await input.client.listPullRequestComments({
+      repository: input.repository,
+      pullRequestNumber: input.pullRequestNumber,
+    });
+    const remaining = confirmed.comments.filter(isManagedSourceComment);
+    if (
+      !confirmed.complete ||
+      remaining.length !== 1 ||
+      remaining[0]?.id !== survivor.id ||
+      remaining[0].body !== body
+    ) {
+      throw new SourcePullRequestCommentError(
+        "comment_reconciliation_failed",
+        "Clarissimi could not prove that concurrent source comment creation converged to one managed comment.",
+      );
+    }
+    return {
+      action: survivor.id === created.id ? "created" : "unchanged",
+      comment: remaining[0],
+      body,
+    };
+  }
+
+  return { action: "created", comment: survivor, body };
+}
+
+async function deleteCreatedComment(
+  input: SourcePullRequestCommentUpsertInput,
+  commentId: number,
+): Promise<void> {
+  await input.client.deletePullRequestComment({
+    repository: input.repository,
+    pullRequestNumber: input.pullRequestNumber,
+    commentId,
+  });
 }
 
 export function buildSourcePullRequestCommentBody(

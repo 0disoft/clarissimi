@@ -67,6 +67,8 @@ those values through `config-path`. Expose `CLARISSIMI_PROVIDER_TOKEN` from the 
 boundary. Do not pass provider tokens as action inputs.
 Custom endpoints use public HTTPS trust by default. A trusted self-hosted HTTP or private-network
 gateway also requires `provider-endpoint-trust: private-network`.
+Public mode validates every DNS answer, pins the connection to one validated address, and refuses
+automatic redirects. Configure the final chat-completions endpoint directly.
 
 Repository config-file loading is explicit through `config-path`; the Action does not automatically
 discover config files. Action inputs and workflow environment values take precedence over config

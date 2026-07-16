@@ -192,6 +192,7 @@ test("propose mode upserts one source pull request status comment after proposal
     );
     assert.deepEqual(sourceCommentClient.lookups, [
       { repository: "sample/project", pullRequestNumber: 42 },
+      { repository: "sample/project", pullRequestNumber: 42 },
     ]);
     assert.equal(sourceCommentClient.created[0].body.includes("pull/1"), true);
     assert.equal(sourceCommentClient.created[0].body.includes("PATCH_EXCERPT_SENTINEL"), false);
@@ -923,15 +924,16 @@ class FakePullRequestClient {
 class FakeSourceCommentClient {
   lookups = [];
   created = [];
+  comments = [];
 
   async listPullRequestComments(input) {
     this.lookups.push(input);
-    return { comments: [], complete: true };
+    return { comments: this.comments, complete: true };
   }
 
   async createPullRequestComment(input) {
     this.created.push(input);
-    return {
+    const comment = {
       id: 10,
       url: "https://github.com/sample/project/pull/42#issuecomment-10",
       body: input.body,
@@ -939,10 +941,16 @@ class FakeSourceCommentClient {
       authorType: "Bot",
       appSlug: "github-actions",
     };
+    this.comments.push(comment);
+    return comment;
   }
 
   async updatePullRequestComment() {
     throw new Error("updatePullRequestComment was not expected in this test.");
+  }
+
+  async deletePullRequestComment(input) {
+    this.comments = this.comments.filter((comment) => comment.id !== input.commentId);
   }
 }
 

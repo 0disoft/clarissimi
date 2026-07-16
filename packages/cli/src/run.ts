@@ -779,8 +779,8 @@ async function resolveRecognitionProvider(
         "--provider-model or config providerModel",
       ),
       token: requiredProviderToken(io.env ?? process.env),
-      fetch: io.fetch ?? fetch,
     };
+    assignOptional(options, "fetch", io.fetch);
     assignOptional(
       options,
       "endpoint",

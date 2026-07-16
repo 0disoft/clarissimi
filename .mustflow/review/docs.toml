@@ -2,8 +2,12 @@ schema_version = "1"
 
 [[documents]]
 path = "README.md"
-status = "pending"
+status = "approved"
 origin = "llm_modified"
 reason = "LLM-created or LLM-modified documentation requires review"
 first_seen_at = "2026-07-16T03:16:14.501Z"
 last_touched_at = "2026-07-16T09:46:08.976Z"
+reviewed_at = "2026-07-16T12:33:47.090Z"
+reviewer_kind = "llm"
+reviewer_id = "codex"
+review_summary = "Reviewed onboarding, release, write-mode, contributor display, and validation claims against current repository contracts."

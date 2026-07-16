@@ -17,7 +17,9 @@ exact model prose, and it requires no provider credentials.
 
 Provider endpoints default to the `public` trust policy: credential-free HTTPS with a public-form
 hostname or address. Trusted self-hosted HTTP or private-network gateways require the explicit
-`private-network` endpoint trust option. Literal checks do not provide DNS rebinding protection.
+`private-network` endpoint trust option. The default transport validates every resolved address,
+pins the connection to one validated address while preserving Host and TLS SNI, verifies the peer
+address, and refuses automatic redirects. Configure the final completion endpoint directly.
 
 It does not own schema vocabulary, redaction policy, maintainer approval policy, environment token
 loading, or provider-specific behavior inside core, CLI, Action, or renderer packages.

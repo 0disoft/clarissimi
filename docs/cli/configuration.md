@@ -37,7 +37,8 @@ The current config object supports:
 - `providerModel`: model name for `openai-compatible`
 - `providerEndpoint`: optional OpenAI-compatible chat completions endpoint
 - `providerEndpointTrust`: `public` or `private-network`, default `public`; public endpoints require
-  credential-free HTTPS with a public-form hostname or address
+  credential-free HTTPS, public-only DNS answers, connection pinning, and a final endpoint that does
+  not require an HTTP redirect
 - `providerThinking`: optional OpenAI-compatible thinking mode; currently only `disabled`
 - `mode`: `dry-run`, `propose`, or `commit` as schema-recognized output mode values
 - `markdownSummary`: `none`, `table`, or `gallery`; `table` adds compact counts and `gallery` adds

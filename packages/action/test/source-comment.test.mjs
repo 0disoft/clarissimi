@@ -17,8 +17,45 @@ test("source pull request comment creates one managed status comment", async () 
   assert.equal(result.action, "created");
   assert.equal(client.created.length, 1);
   assert.equal(client.updated.length, 0);
+  assert.equal(client.deleted.length, 0);
   assert.equal(result.body.includes("Clarissimi recognition proposal"), true);
   assert.equal(result.body.includes("raw evidence"), false);
+});
+
+test("source pull request comment converges concurrent creation on the lowest comment id", async () => {
+  const client = new RacingCommentClient();
+
+  const result = await upsertSourcePullRequestComment(input(client));
+
+  assert.equal(result.action, "created");
+  assert.equal(result.comment.id, 7);
+  assert.deepEqual(client.deleted, [8]);
+  assert.deepEqual(
+    client.comments.map((value) => value.id),
+    [7],
+  );
+});
+
+test("source pull request comment removes its own later racing duplicate", async () => {
+  const client = new LaterRacingCommentClient();
+
+  const result = await upsertSourcePullRequestComment(input(client));
+
+  assert.equal(result.action, "unchanged");
+  assert.equal(result.comment.id, 6);
+  assert.deepEqual(client.deleted, [7]);
+});
+
+test("source pull request comment rolls back creation when reconciliation is incomplete", async () => {
+  const client = new IncompleteAfterCreateCommentClient();
+
+  await assert.rejects(
+    () => upsertSourcePullRequestComment(input(client)),
+    (error) =>
+      error instanceof SourcePullRequestCommentError &&
+      error.code === "comment_scan_incomplete_after_create",
+  );
+  assert.deepEqual(client.deleted, [7]);
 });
 
 test("source pull request comment updates only the GitHub Actions managed marker", async () => {
@@ -119,8 +156,9 @@ function comment(overrides = {}) {
 class FakeCommentClient {
   created = [];
   updated = [];
+  deleted = [];
 
-  constructor(comments, complete = true) {
+  constructor(comments = [], complete = true) {
     this.comments = comments;
     this.complete = complete;
   }
@@ -131,11 +169,43 @@ class FakeCommentClient {
 
   async createPullRequestComment(value) {
     this.created.push(value);
-    return comment({ id: 7, body: value.body });
+    const created = comment({ id: 7, body: value.body });
+    this.comments.push(created);
+    return created;
   }
 
   async updatePullRequestComment(value) {
     this.updated.push(value);
     return comment({ id: value.commentId, body: value.body });
+  }
+
+  async deletePullRequestComment(value) {
+    this.deleted.push(value.commentId);
+    this.comments = this.comments.filter((entry) => entry.id !== value.commentId);
+  }
+}
+
+class RacingCommentClient extends FakeCommentClient {
+  async createPullRequestComment(value) {
+    const created = await super.createPullRequestComment(value);
+    this.comments.push(comment({ id: 8, body: value.body }));
+    return created;
+  }
+}
+
+class LaterRacingCommentClient extends FakeCommentClient {
+  async createPullRequestComment(value) {
+    const created = await super.createPullRequestComment(value);
+    this.comments.unshift(comment({ id: 6, body: value.body }));
+    return created;
+  }
+}
+
+class IncompleteAfterCreateCommentClient extends FakeCommentClient {
+  scans = 0;
+
+  async listPullRequestComments() {
+    this.scans += 1;
+    return { comments: this.comments, complete: this.scans === 1 };
   }
 }

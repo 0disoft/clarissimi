@@ -67,7 +67,8 @@ The root `action.yml` exposes the same surface as a composite action:
 - `provider-model`: provider model required for `openai-compatible`
 - `provider-endpoint`: optional OpenAI-compatible endpoint
 - `provider-endpoint-trust`: `public` or `private-network`, default `public`; private-network is an
-  explicit opt-in for a trusted self-hosted endpoint
+  explicit opt-in for a trusted self-hosted endpoint; public mode validates all DNS answers, pins
+  the connection, and does not follow redirects
 - `provider-thinking`: optional OpenAI-compatible thinking mode, currently only `disabled`
 - `draft-path`: approved draft inbox path required by `promote-draft`
 

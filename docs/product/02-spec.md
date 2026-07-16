@@ -211,6 +211,8 @@ Tests for core correctness must use fake deterministic providers, not live LLM A
 - Security contributions require maintainer confirmation, security label, advisory reference, or
   test evidence before strong impact is recorded.
 - Provider raw responses are not logged by default.
+- Public provider endpoints must resolve only to public addresses and the validated address must be
+  pinned through the actual connection. Provider redirects are not followed automatically.
 - Clarissimi must not execute untrusted PR head code.
 
 ## CLI Contract
@@ -254,6 +256,8 @@ Proposal modes may opt into one source pull request status comment with `comment
 The default is `none`. The comment points to the draft-review or recognition proposal and is updated
 in place only when its versioned marker and GitHub Actions app ownership both match. It must not
 contain raw evidence, assessment prose, provider output, patches, secrets, scores, or rankings.
+Concurrent first-run comment creation must reconcile to one deterministic managed comment before a
+run reports success; incomplete or conflicting reconciliation fails closed.
 Dry-run and direct commit modes do not write source pull request comments.
 
 When provider-result validation rejects a draft, the Action may render bounded structured issue

@@ -588,6 +588,79 @@ network = false
 destructive = false
 required_after = ["git_stage_source_pr_comment"]
 
+[intents.git_stage_comment_endpoint_hardening]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Stage only the reviewed source-comment race defense, provider endpoint pinning, synchronized contracts, generated Action bundle, README review record, and command authority."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  ".mustflow/config/manifest.lock.toml",
+  ".mustflow/review/docs.toml",
+  "action-dist/index.js",
+  "docs/adr/0041-restrict-provider-endpoint-trust.md",
+  "docs/adr/0053-add-opt-in-source-pr-comment-updates.md",
+  "docs/cli/command-contract.md",
+  "docs/cli/configuration.md",
+  "docs/github-action/README.md",
+  "docs/github-action/action-contract.md",
+  "docs/github-action/inputs-and-outputs.md",
+  "docs/monorepo/package-ownership.md",
+  "docs/product/02-spec.md",
+  "packages/action/src/github-client.ts",
+  "packages/action/src/source-comment.ts",
+  "packages/action/test/github-client.test.mjs",
+  "packages/action/test/propose-runner.test.mjs",
+  "packages/action/test/source-comment.test.mjs",
+  "packages/cli/src/run.ts",
+  "packages/providers/README.md",
+  "packages/providers/src/openai-compatible-provider.ts",
+  "packages/providers/src/provider-endpoint-transport.ts",
+  "packages/providers/test/provider-endpoint-transport.test.mjs",
+  "packages/providers/tsconfig.json",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["comment_endpoint_hardening_validation_complete", "user_authorized_commit"]
+
+[intents.git_commit_comment_endpoint_hardening]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Commit the reviewed source-comment race defense and provider endpoint pinning."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "fix(security): harden comment and endpoint races",
+  "-m",
+  "Validation: test, check, contract, lint, format, docs, smoke, release-readiness, migration-check, bundle-action-check, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_comment_endpoint_hardening"]
+
 [intents.release_v0_5_0_post_tag_evidence]
 status = "manual_only"
 lifecycle = "oneshot"

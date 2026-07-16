@@ -9,6 +9,14 @@ import {
 
 import type { ContributionDraftProvider, ProviderAssessmentInput } from "./types.js";
 import { validateProviderAssessmentResult } from "./result-quality.js";
+import {
+  ProviderEndpointTrustError,
+  isPublicNetworkAddress,
+  requestPinnedProviderEndpoint,
+  type OpenAiCompatibleEndpointTrust,
+} from "./provider-endpoint-transport.js";
+
+export type { OpenAiCompatibleEndpointTrust } from "./provider-endpoint-transport.js";
 
 const DEFAULT_PROVIDER_ID = "openai-compatible";
 const DEFAULT_ENDPOINT = "https://api.openai.com/v1/chat/completions";
@@ -20,8 +28,6 @@ const MAX_REQUEST_BODY_BYTES = 1024 * 1024;
 const THINKING_TYPES = ["disabled"] as const;
 
 export type OpenAiCompatibleThinkingType = (typeof THINKING_TYPES)[number];
-export type OpenAiCompatibleEndpointTrust = "public" | "private-network";
-
 export type OpenAiCompatibleProviderErrorCode =
   | "invalid_options"
   | "http_error"
@@ -74,7 +80,7 @@ export function createOpenAiCompatibleContributionDraftProvider(
   const endpoint = parseEndpoint(options.endpoint ?? DEFAULT_ENDPOINT, endpointTrust);
   const model = nonEmptyOption(options.model, "model");
   const token = nonEmptyOption(options.token, "token");
-  const fetchImpl = options.fetch ?? fetch;
+  const fetchImpl = options.fetch;
   const temperature = finiteNumberOption(options.temperature ?? DEFAULT_TEMPERATURE, "temperature");
   const maxTokens = positiveIntegerOption(options.maxTokens ?? DEFAULT_MAX_TOKENS, "maxTokens");
   const timeoutMs = positiveIntegerOption(
@@ -92,14 +98,15 @@ export function createOpenAiCompatibleContributionDraftProvider(
     async createAssessment(input: ProviderAssessmentInput): Promise<ContributionAssessment> {
       const requestInput = {
         endpoint,
+        endpointTrust,
         model,
         token,
-        fetchImpl,
         temperature,
         maxTokens,
         timeoutMs,
         maxResponseBytes,
         input,
+        ...(fetchImpl === undefined ? {} : { fetchImpl }),
         ...(thinking === undefined ? {} : { thinking }),
       } satisfies RequestAssessmentDraftInput;
 
@@ -111,9 +118,10 @@ export function createOpenAiCompatibleContributionDraftProvider(
 
 interface RequestAssessmentDraftInput {
   readonly endpoint: URL;
+  readonly endpointTrust: OpenAiCompatibleEndpointTrust;
   readonly model: string;
   readonly token: string;
-  readonly fetchImpl: typeof fetch;
+  readonly fetchImpl?: typeof fetch;
   readonly temperature: number;
   readonly maxTokens: number;
   readonly timeoutMs: number;
@@ -171,16 +179,28 @@ async function requestAssessmentDraft(options: RequestAssessmentDraftInput): Pro
   let text: string;
   try {
     ({ response, text } = await withTimeout(options.timeoutMs, async (signal) => {
-      const result = await options.fetchImpl(options.endpoint, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${options.token}`,
-          "Content-Type": "application/json",
-        },
-        body: requestBodyText,
-        signal,
-      });
+      const headers = {
+        Accept: "application/json",
+        Authorization: `Bearer ${options.token}`,
+        "Content-Type": "application/json",
+      };
+      const result =
+        options.fetchImpl === undefined
+          ? await requestPinnedProviderEndpoint({
+              endpoint: options.endpoint,
+              endpointTrust: options.endpointTrust,
+              method: "POST",
+              headers,
+              body: requestBodyText,
+              signal,
+            })
+          : await options.fetchImpl(options.endpoint, {
+              method: "POST",
+              headers,
+              body: requestBodyText,
+              signal,
+              redirect: "error",
+            });
       return {
         response: result,
         text: await readBoundedResponseText(result, options.maxResponseBytes),
@@ -189,6 +209,12 @@ async function requestAssessmentDraft(options: RequestAssessmentDraftInput): Pro
   } catch (error) {
     if (error instanceof OpenAiCompatibleProviderError) {
       throw error;
+    }
+    if (error instanceof ProviderEndpointTrustError) {
+      throw new OpenAiCompatibleProviderError(
+        "invalid_options",
+        "OpenAI-compatible public endpoint resolved outside the public network trust boundary.",
+      );
     }
     if (error instanceof RequestTimeoutError) {
       throw providerTransportError(
@@ -490,11 +516,11 @@ function isPublicEndpointHostname(value: string): boolean {
     .replace(/^\[(.*)\]$/, "$1")
     .replace(/\.$/, "");
   if (hostname.includes(":")) {
-    return !isNonPublicIpv6(hostname);
+    return isPublicNetworkAddress({ address: hostname, family: 6 });
   }
   const ipv4 = parseIpv4(hostname);
   if (ipv4 !== undefined) {
-    return !isNonPublicIpv4(ipv4);
+    return isPublicNetworkAddress({ address: ipv4.join("."), family: 4 });
   }
 
   if (hostname.length === 0 || !hostname.includes(".") || hostname === "localhost") {
@@ -515,39 +541,6 @@ function parseIpv4(value: string): readonly [number, number, number, number] | u
     return undefined;
   }
   return octets as [number, number, number, number];
-}
-
-function isNonPublicIpv4([first, second, third]: readonly number[]): boolean {
-  return (
-    first === 0 ||
-    first === 10 ||
-    (first === 100 && second >= 64 && second <= 127) ||
-    first === 127 ||
-    (first === 169 && second === 254) ||
-    (first === 172 && second >= 16 && second <= 31) ||
-    (first === 192 && second === 0 && third === 0) ||
-    (first === 192 && second === 0 && third === 2) ||
-    (first === 192 && second === 168) ||
-    (first === 198 && (second === 18 || second === 19)) ||
-    (first === 198 && second === 51 && third === 100) ||
-    (first === 203 && second === 0 && third === 113) ||
-    first >= 224
-  );
-}
-
-function isNonPublicIpv6(value: string): boolean {
-  return (
-    value === "::" ||
-    value === "::1" ||
-    value.startsWith("::ffff:") ||
-    value.startsWith("64:ff9b:") ||
-    value.startsWith("100:") ||
-    value.startsWith("2001:db8:") ||
-    value.startsWith("fc") ||
-    value.startsWith("fd") ||
-    /^fe[89ab]/.test(value) ||
-    value.startsWith("ff")
-  );
 }
 
 function endpointTrustOption(

@@ -29,14 +29,23 @@ redacted evidence to an unintended network destination.
 - The provider package owns the final endpoint check. Schemas own only the fixed trust vocabulary,
   while CLI and Action pass the selected value without duplicating network policy.
 - Provider tokens remain authorization headers and must never be embedded in endpoint URLs.
+- Before every request, the default provider transport resolves all endpoint addresses. `public`
+  rejects the whole answer set when any address is non-public, selects one validated address, and
+  connects directly to that address while preserving the original HTTP Host header and TLS SNI.
+- The transport verifies the connected peer address matches the selected address. It does not
+  automatically follow redirects; a redirect is returned as an HTTP failure instead of starting a
+  second unvalidated request.
+- `private-network` uses the same resolve-and-pin transport but deliberately permits private
+  addresses. An explicitly injected test transport replaces this default boundary and is not used
+  by normal CLI or Action execution.
 
 ## Security Boundary
 
-This decision blocks unsafe schemes, hostnames, and literal addresses. It does not resolve a public
-hostname and pin its addresses to the subsequent connection. DNS rebinding or a public hostname
-that resolves to a private address therefore remains possible in the platform `fetch` layer.
-Complete DNS enforcement requires a resolver-aware, connection-pinning transport and is deferred
-until Clarissimi owns such a transport boundary.
+This decision blocks unsafe schemes, hostnames, literal addresses, mixed public/private DNS answer
+sets, and DNS changes between validation and connection in the default transport. The selected IP
+is the actual connection target, while Host and SNI preserve normal virtual hosting and certificate
+checks. DNS answers can still change between separate Clarissimi requests; each request resolves,
+validates, and pins again rather than treating an earlier answer as permanent authority.
 
 ## Consequences
 
@@ -44,10 +53,13 @@ until Clarissimi owns such a transport boundary.
 - Existing HTTP, localhost, or private-network endpoints must add the explicit trust opt-in.
 - The opt-in is deliberately visible in workflow and configuration review.
 - Private-network mode represents maintainer trust; it is not a claim that the destination is safe.
+- Public endpoints that rely on HTTP redirects must configure the final HTTPS completion endpoint.
 
 ## Validation
 
 - default rejection tests for HTTP, local, private, reserved, IPv4, and IPv6 endpoints
 - explicit private-network CLI, Action, and provider tests
+- mixed-address DNS rejection, public-address pin selection, Host/SNI preservation, compressed IPv6
+  denial, and redirect refusal tests
 - credential-bearing URL rejection in both trust modes
 - repository `format`, `lint`, `test`, `smoke`, `check`, and `contract` gates

@@ -32,7 +32,8 @@
 - `provider-model`: model name required when `provider` is `openai-compatible`
 - `provider-endpoint`: optional OpenAI-compatible chat completions endpoint
 - `provider-endpoint-trust`: `public` or `private-network`, default `public`; use private-network
-  only for an explicitly trusted self-hosted gateway
+  only for an explicitly trusted self-hosted gateway; public mode validates all DNS answers, pins
+  the connection, and requires a final non-redirecting endpoint
 - `provider-thinking`: optional OpenAI-compatible thinking mode; currently only `disabled`
 
 ## Future Inputs

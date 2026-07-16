@@ -36,6 +36,13 @@ GitHub's issue-comment API applies to pull requests. Its create and update endpo
 - Comment creation is not blindly retried after an ambiguous network failure. Clarissimi first
   reconciles the comment list and returns the one matching Actions-owned comment when present;
   otherwise it fails so a later Action rerun can repeat the full bounded upsert.
+- After a successful create, Clarissimi scans again before reporting success. Concurrent creates
+  with identical managed content converge on the lowest comment id; later duplicates are deleted,
+  and a final bounded scan must prove that exactly one managed comment remains. A conflicting body,
+  an incomplete scan, or a missing just-created comment fails closed and removes the just-created
+  comment when it can do so safely.
+- Comment deletion is never blindly retried after an ambiguous network failure. Clarissimi first
+  reconciles the bounded comment list and accepts the operation only when the target id is absent.
 - `source-comment-action` and `source-comment-url` expose the result when `upsert` is enabled.
 
 ## Boundaries
@@ -60,10 +67,13 @@ GitHub's issue-comment API applies to pull requests. Its create and update endpo
   leave the feature disabled.
 - A repository that already has multiple genuine Clarissimi-managed comments must remove the
   duplicate before the Action can continue.
+- Concurrent first runs can briefly create more than one identical managed comment, but successful
+  runs converge deterministically and do not overwrite user or third-party bot comments.
 
 ## Validation
 
-- focused managed-comment ownership, spoofing, pagination, create, update, and unchanged tests
+- focused managed-comment ownership, spoofing, pagination, create-race convergence, rollback,
+  ambiguous deletion, update, and unchanged tests
 - proposal-runner integration test
 - Action manifest, bundle freshness, docs, release-readiness, lint, format, smoke, check, and
   contract gates

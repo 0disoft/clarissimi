@@ -302,7 +302,7 @@ test("GitHub pull request client rejects invalid transport budgets", () => {
   );
 });
 
-test("GitHub pull request client lists, creates, and updates source comments", async () => {
+test("GitHub pull request client lists, creates, updates, and deletes source comments", async () => {
   const requests = [];
   const client = createGitHubPullRequestClient({
     token: "test-token",
@@ -310,6 +310,9 @@ test("GitHub pull request client lists, creates, and updates source comments", a
       requests.push({ url: String(url), method: init.method, body: init.body });
       if (init.method === "GET") {
         return jsonResponse([sourceCommentResponse(11, "old")]);
+      }
+      if (init.method === "DELETE") {
+        return textResponse("", 204);
       }
       const body = JSON.parse(init.body);
       return jsonResponse(sourceCommentResponse(init.method === "POST" ? 12 : 11, body.body));
@@ -329,6 +332,11 @@ test("GitHub pull request client lists, creates, and updates source comments", a
     repository: "sample/project",
     commentId: 11,
     body: "updated body",
+  });
+  await client.deletePullRequestComment({
+    repository: "sample/project",
+    pullRequestNumber: 42,
+    commentId: 11,
   });
 
   assert.equal(listed.complete, true);
@@ -350,8 +358,34 @@ test("GitHub pull request client lists, creates, and updates source comments", a
         url: "https://api.github.com/repos/sample/project/issues/comments/11",
         method: "PATCH",
       },
+      {
+        url: "https://api.github.com/repos/sample/project/issues/comments/11",
+        method: "DELETE",
+      },
     ],
   );
+});
+
+test("GitHub pull request client reconciles an ambiguous comment deletion", async () => {
+  const methods = [];
+  const client = createGitHubPullRequestClient({
+    token: "test-token",
+    fetch: async (_url, init) => {
+      methods.push(init.method);
+      if (init.method === "DELETE") {
+        throw new TypeError("socket disconnected after write");
+      }
+      return jsonResponse([]);
+    },
+  });
+
+  await client.deletePullRequestComment({
+    repository: "sample/project",
+    pullRequestNumber: 42,
+    commentId: 11,
+  });
+
+  assert.deepEqual(methods, ["DELETE", "GET"]);
 });
 
 test("GitHub pull request client reports an incomplete bounded comment scan", async () => {

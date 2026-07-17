@@ -398,6 +398,15 @@ Maintainers can collect the complete hosted evidence set and render the issue bo
 `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`. This
 defaults to an issue preview; `--create-issue` is required for GitHub issue creation. Preview mode
 still dispatches the credentialed, external dry-run, full-write, and orphan-audit workflows.
+When a watched run fails, the orchestrator distinguishes workflow execution failures from GitHub
+Actions runner admission failures. It reports an admission failure only when all jobs report
+`runner_id` as zero or unassigned, every job has zero steps, and a check-run annotation names an
+Actions billing, payment, spending-limit, or included-minutes restriction. For a full-write run
+that meets all of those conditions, the orphan audit is not dispatched because no full-write or
+cleanup step could have changed repository state; the release gate still fails and the maintainer
+must wait for included minutes to reset or resolve GitHub Billing & plans before retrying. If job
+or annotation inspection is unavailable, any step ran, or the annotation does not identify that
+restriction, the failure remains a normal workflow failure and the orphan audit still runs.
 If the full-write run leaves integration-lab residue, preview the bounded recovery set with
 `pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`. Apply cleanup only after
 reviewing that output, then rerun the read-only orphan audit.

@@ -119,22 +119,29 @@ async function run(argv, runtime) {
       expectedTitle: (run) =>
         `Clarissimi full write smoke · ${externalRef} · ${evidenceId} · ${run.databaseId}`,
       label: "external full-write smoke",
+      skipOrphanAuditOnRunnerAdmissionFailure: true,
     });
   } catch (error) {
     primaryError = error;
   } finally {
-    try {
-      auditRun = await dispatchAndWatch(runtime, {
-        repo: externalRepo,
-        workflow: "clarissimi-orphan-audit.yml",
-        ref: "main",
-        fields: ["evidence-id", evidenceId],
-        expectedTitle: `Clarissimi smoke orphan audit · ${evidenceId}`,
-        label: "external orphan audit",
-      });
-    } catch (error) {
-      if (primaryError === undefined) primaryError = error;
-      else runtime.error(`orphan audit also failed: ${error.message}`);
+    if (primaryError instanceof RunnerAdmissionError && primaryError.skipOrphanAudit) {
+      runtime.log(
+        "external orphan audit was not dispatched because GitHub assigned no runner and ran no full-write steps.",
+      );
+    } else {
+      try {
+        auditRun = await dispatchAndWatch(runtime, {
+          repo: externalRepo,
+          workflow: "clarissimi-orphan-audit.yml",
+          ref: "main",
+          fields: ["evidence-id", evidenceId],
+          expectedTitle: `Clarissimi smoke orphan audit · ${evidenceId}`,
+          label: "external orphan audit",
+        });
+      } catch (error) {
+        if (primaryError === undefined) primaryError = error;
+        else runtime.error(`orphan audit also failed: ${error.message}`);
+      }
     }
   }
   if (primaryError !== undefined) throw primaryError;
@@ -356,7 +363,10 @@ async function dispatchAndWatch(runtime, options) {
     createdAfter: dispatchedAfter,
     expectedTitle: options.expectedTitle,
   });
-  await watchIfNeeded(runtime, options.repo, run, options.label);
+  await watchIfNeeded(runtime, options.repo, run, options.label, {
+    skipOrphanAuditOnRunnerAdmissionFailure:
+      options.skipOrphanAuditOnRunnerAdmissionFailure === true,
+  });
   return run;
 }
 
@@ -404,16 +414,103 @@ async function findRun(runtime, options) {
   throw new Error(`Unable to find ${options.workflow} run for ${options.repo}@${options.branch}.`);
 }
 
-async function watchIfNeeded(runtime, repo, run, label) {
+async function watchIfNeeded(runtime, repo, run, label, options = {}) {
   if (run.status === "completed" && run.conclusion === "success") return;
-  if (run.status === "completed")
-    throw new Error(`${label} failed: conclusion=${run.conclusion ?? "unknown"} (${run.url}).`);
-  await command(
-    runtime,
+  if (run.status === "completed") {
+    await throwRunFailure(runtime, repo, run, label, options, {
+      fallbackMessage: `${label} failed: conclusion=${run.conclusion ?? "unknown"} (${run.url}).`,
+    });
+  }
+  const result = await runtime.runCommand(
     "gh",
     ["run", "watch", String(run.databaseId), "--repo", repo, "--exit-status"],
-    `watch ${label}`,
     { inherit: true },
+  );
+  if (result.exitCode !== 0) {
+    await throwRunFailure(runtime, repo, run, label, options, {
+      fallbackMessage: `Unable to watch ${label}: exit code ${result.exitCode}.`,
+    });
+  }
+}
+
+async function throwRunFailure(runtime, repo, run, label, options, failure) {
+  const admission = await detectRunnerAdmissionFailure(runtime, repo, run.databaseId);
+  if (admission !== undefined) {
+    throw new RunnerAdmissionError({
+      label,
+      run,
+      annotation: admission.annotation,
+      skipOrphanAudit: options.skipOrphanAuditOnRunnerAdmissionFailure === true,
+    });
+  }
+  throw new Error(failure.fallbackMessage);
+}
+
+async function detectRunnerAdmissionFailure(runtime, repo, runId) {
+  let jobsPayload;
+  try {
+    jobsPayload = parseJson(
+      await commandText(
+        runtime,
+        "gh",
+        ["api", `repos/${repo}/actions/runs/${runId}/jobs?filter=all&per_page=100`],
+        `inspect jobs for failed run ${runId}`,
+      ),
+      `jobs for failed run ${runId}`,
+    );
+  } catch {
+    return undefined;
+  }
+
+  const jobs = jobsPayload?.jobs;
+  if (
+    !Array.isArray(jobs) ||
+    jobs.length === 0 ||
+    !Number.isSafeInteger(jobsPayload?.total_count) ||
+    jobsPayload.total_count !== jobs.length ||
+    !jobs.every(
+      (job) =>
+        (job?.runner_id === 0 || job?.runner_id === null) &&
+        Array.isArray(job?.steps) &&
+        job.steps.length === 0 &&
+        Number.isSafeInteger(job?.id) &&
+        job.id > 0,
+    )
+  ) {
+    return undefined;
+  }
+
+  for (const job of jobs) {
+    let annotations;
+    try {
+      annotations = parseJson(
+        await commandText(
+          runtime,
+          "gh",
+          ["api", `repos/${repo}/check-runs/${job.id}/annotations?per_page=100`],
+          `inspect annotations for failed job ${job.id}`,
+        ),
+        `annotations for failed job ${job.id}`,
+      );
+    } catch {
+      continue;
+    }
+    if (!Array.isArray(annotations)) continue;
+    const annotation = annotations.find((candidate) =>
+      isActionsBillingAdmissionMessage(
+        [candidate?.title, candidate?.message, candidate?.raw_details]
+          .filter((value) => typeof value === "string")
+          .join(" "),
+      ),
+    );
+    if (annotation !== undefined) return { annotation };
+  }
+  return undefined;
+}
+
+function isActionsBillingAdmissionMessage(message) {
+  return /(?:account payments? (?:have )?failed|spending limit|included (?:actions )?minutes|actions minutes|billing)/i.test(
+    message,
   );
 }
 
@@ -469,6 +566,27 @@ class UsageError extends Error {
   constructor() {
     super("Invalid release evidence orchestration arguments.");
     this.exitCode = 2;
+  }
+}
+
+class RunnerAdmissionError extends Error {
+  constructor({ label, run, annotation, skipOrphanAudit }) {
+    const annotationMessage = [annotation?.title, annotation?.message]
+      .filter((value) => typeof value === "string" && value.trim() !== "")
+      .join(": ");
+    const boundedAnnotationMessage = bounded(annotationMessage);
+    const auditMessage = skipOrphanAudit
+      ? " The orphan audit was not dispatched because no full-write or cleanup step ran, so this run could not create repository residue."
+      : "";
+    super(
+      `${label} never started: GitHub assigned no runner and ran no workflow steps for run ${run.databaseId} (${run.url}). ` +
+        `Check-run annotations report an Actions billing or included-minutes limit${boundedAnnotationMessage === "" ? "." : `: ${boundedAnnotationMessage}`}` +
+        " Wait for included minutes to reset or resolve GitHub Billing & plans, then retry." +
+        auditMessage +
+        " The release gate remains failed.",
+    );
+    this.name = "RunnerAdmissionError";
+    this.skipOrphanAudit = skipOrphanAudit;
   }
 }
 

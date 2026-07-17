@@ -216,6 +216,72 @@ test("runs orphan audit after a full-write failure", async () => {
   );
 });
 
+test("reports billing runner admission failures without dispatching an orphan audit", async () => {
+  const runtime = fakeRuntime({ failWatchId: 104, runnerAdmissionFailureId: 104 });
+  assert.equal(
+    await runReleaseCandidateEvidenceOrchestrator(
+      ["--provider-model", "gpt-4.1-mini", "--sha", sha],
+      runtime,
+    ),
+    1,
+  );
+
+  assert.deepEqual(runtime.watched, [102, 103, 104]);
+  assert.equal(
+    runtime.calls.some(
+      (call) =>
+        call.command === "gh" &&
+        call.args[0] === "workflow" &&
+        call.args[1] === "run" &&
+        call.args.includes("clarissimi-orphan-audit.yml"),
+    ),
+    false,
+  );
+  assert.match(runtime.errors.at(-1), /assigned no runner and ran no workflow steps/);
+  assert.match(
+    runtime.errors.at(-1),
+    /included minutes to reset or resolve GitHub Billing & plans/,
+  );
+  assert.match(runtime.errors.at(-1), /orphan audit was not dispatched/);
+  assert.match(runtime.errors.at(-1), /release gate remains failed/);
+});
+
+test("keeps the orphan audit for zero-step failures without a billing annotation", async () => {
+  const runtime = fakeRuntime({
+    failWatchId: 104,
+    runnerAdmissionFailureId: 104,
+    runnerAnnotation: "The job was cancelled by an administrator.",
+  });
+  assert.equal(
+    await runReleaseCandidateEvidenceOrchestrator(
+      ["--provider-model", "gpt-4.1-mini", "--sha", sha],
+      runtime,
+    ),
+    1,
+  );
+
+  assert.deepEqual(runtime.watched, [102, 103, 104, 105]);
+  assert.doesNotMatch(runtime.errors.at(-1), /assigned no runner/);
+});
+
+test("keeps the orphan audit when the failed jobs response is incomplete", async () => {
+  const runtime = fakeRuntime({
+    failWatchId: 104,
+    runnerAdmissionFailureId: 104,
+    runnerTotalCount: 2,
+  });
+  assert.equal(
+    await runReleaseCandidateEvidenceOrchestrator(
+      ["--provider-model", "gpt-4.1-mini", "--sha", sha],
+      runtime,
+    ),
+    1,
+  );
+
+  assert.deepEqual(runtime.watched, [102, 103, 104, 105]);
+  assert.doesNotMatch(runtime.errors.at(-1), /assigned no runner/);
+});
+
 test("rejects a mismatched source-only external ref before dispatch", async () => {
   const runtime = fakeRuntime();
   assert.equal(
@@ -306,6 +372,40 @@ function fakeRuntime(options = {}) {
     runCommand: async (command, args) => {
       calls.push({ command, args });
       if (command === "gh" && args[0] === "--version") return ok("gh version 2");
+      if (
+        command === "gh" &&
+        args[0] === "api" &&
+        args[1]?.includes("/actions/runs/") &&
+        args[1]?.includes("/jobs?")
+      ) {
+        const runId = Number(args[1].match(/\/actions\/runs\/(\d+)\/jobs\?/)?.[1]);
+        const admissionFailure = runId === options.runnerAdmissionFailureId;
+        return ok(
+          JSON.stringify({
+            total_count: options.runnerTotalCount ?? 1,
+            jobs: [
+              admissionFailure
+                ? { id: runId + 1_000, runner_id: 0, steps: [] }
+                : {
+                    id: runId + 1_000,
+                    runner_id: 10,
+                    steps: [{ name: "run", status: "completed", conclusion: "failure" }],
+                  },
+            ],
+          }),
+        );
+      }
+      if (command === "gh" && args[0] === "api" && args[1]?.includes("/check-runs/")) {
+        return ok(
+          JSON.stringify([
+            {
+              message:
+                options.runnerAnnotation ??
+                "The job was not started because recent account payments have failed or your spending limit needs to be increased.",
+            },
+          ]),
+        );
+      }
       if (command === "gh" && args[0] === "api") return ok(options.resolvedSha ?? sha);
       if (command === "gh" && args[0] === "workflow" && args[1] === "view") {
         return args.includes(options.missingWorkflow)

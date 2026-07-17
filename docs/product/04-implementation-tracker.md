@@ -1288,6 +1288,30 @@ Completed scope:
   release-record closure
 - cover missing, mixed-version, and stale-security cases with deterministic publisher regressions
 
+### 35. Actions Runner Admission Diagnostics
+
+Source: `docs/ops/release.md`, `scripts/release-candidate-evidence-orchestrator.mjs`
+
+Status: Implemented on `main`; applies to release candidate orchestration retries after hosted
+Actions capacity, billing, or included-minutes failures.
+
+Goal: distinguish a workflow that ran and failed from a workflow that GitHub never admitted to a
+runner, without weakening the full-write cleanup gate.
+
+Completed scope:
+
+- inspect failed run jobs and check-run annotations after `gh run watch` fails
+- classify runner admission failure only when every job has no assigned runner and zero steps and
+  an annotation identifies an Actions billing, payment, spending-limit, or included-minutes block
+- report that no repository code ran and direct the maintainer to wait for included minutes or
+  resolve GitHub Billing & plans
+- skip the orphan-audit dispatch only for a proven full-write admission failure while keeping the
+  release gate failed
+- preserve orphan-audit dispatch for ordinary failures, incomplete API diagnostics, and zero-step
+  failures without a matching billing annotation
+- cover both the narrow admission classification and its fail-closed fallback with deterministic
+  command-runner regressions
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

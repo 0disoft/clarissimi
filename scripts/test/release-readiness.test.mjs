@@ -376,6 +376,11 @@ test("release readiness rejects release policy document drift", () => {
       "`pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
       "",
     )
+    .replace("all jobs report", "jobs are not inspected")
+    .replace("`runner_id` as zero or unassigned", "runner assignment is ignored")
+    .replace("the orphan audit is not dispatched because no full-write or", "")
+    .replace("the release gate still fails", "the release gate passes")
+    .replace("the orphan audit still runs", "the orphan audit is skipped")
     .replace("pnpm run publish-action-release -- --version <v0.x.y> --sha <candidate-sha>", "")
     .replace(
       "pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>",
@@ -410,6 +415,11 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>.",
     "docs/ops/release.md must include `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`.",
     "docs/ops/release.md must include `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`.",
+    "docs/ops/release.md must include all jobs report.",
+    "docs/ops/release.md must include `runner_id` as zero or unassigned.",
+    "docs/ops/release.md must include the orphan audit is not dispatched because no full-write or.",
+    "docs/ops/release.md must include the release gate still fails.",
+    "docs/ops/release.md must include the orphan audit still runs.",
     "docs/ops/release.md must include pnpm run publish-action-release -- --version <v0.x.y> --sha <candidate-sha>.",
   ]);
 });
@@ -2210,6 +2220,11 @@ function createReleasePolicyText() {
     "`pnpm run hosted-ci-validation`",
     "`pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
     "`pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
+    "all jobs report",
+    "`runner_id` as zero or unassigned",
+    "the orphan audit is not dispatched because no full-write or",
+    "the release gate still fails",
+    "the orphan audit still runs",
     "pnpm run publish-action-release -- --version <v0.x.y> --sha <candidate-sha>",
     "`pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`",
     "release PR, release issue, or GitHub release notes",

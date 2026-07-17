@@ -678,6 +678,67 @@ network = true
 destructive = false
 required_after = ["git_push_main", "release_version_guard_pushed"]
 
+[intents.git_stage_runner_admission_diagnostics]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Stage only the reviewed Actions runner-admission diagnostics, fail-closed regressions, synchronized operational docs, and command authority."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  ".mustflow/config/manifest.lock.toml",
+  "docs/ops/release.md",
+  "docs/product/04-implementation-tracker.md",
+  "scripts/release-candidate-evidence-orchestrator.mjs",
+  "scripts/release-readiness.mjs",
+  "scripts/test/release-candidate-evidence-orchestrator.test.mjs",
+  "scripts/test/release-readiness.test.mjs",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = [
+  "runner_admission_diagnostics_validation_complete",
+  "documentation_review_checked",
+  "user_authorized_commit",
+]
+
+[intents.git_commit_runner_admission_diagnostics]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Commit the reviewed Actions runner-admission diagnostics and fail-closed regressions."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "fix(release): diagnose runner admission failures",
+  "-m",
+  "Validation: release publication tests, docs, release-readiness, lint, format, migration-check, smoke, check, contract, bundle-action-check, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_runner_admission_diagnostics"]
+
 [intents.git_stage_release_v0_5_2]
 status = "configured"
 lifecycle = "oneshot"

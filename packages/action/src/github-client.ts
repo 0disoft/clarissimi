@@ -598,8 +598,34 @@ function parseSourcePullRequestComment(value: unknown): SourcePullRequestComment
 }
 
 function normalizeApiUrl(value: string | undefined): string {
-  const normalized = value?.replace(/\/+$/g, "").trim();
-  return normalized === undefined || normalized.length === 0 ? DEFAULT_GITHUB_API_URL : normalized;
+  const normalized = value?.trim().replace(/\/+$/g, "");
+  if (normalized === undefined || normalized.length === 0) {
+    return DEFAULT_GITHUB_API_URL;
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(normalized);
+  } catch {
+    throw new ProposalPullRequestClientError(
+      "invalid_options",
+      "GitHub API URL must be a valid HTTPS base URL.",
+    );
+  }
+  if (
+    parsed.protocol !== "https:" ||
+    parsed.username !== "" ||
+    parsed.password !== "" ||
+    parsed.search !== "" ||
+    parsed.hash !== ""
+  ) {
+    throw new ProposalPullRequestClientError(
+      "invalid_options",
+      "GitHub API URL must use HTTPS and must not include credentials, a query, or a fragment.",
+    );
+  }
+
+  return parsed.href.replace(/\/+$/g, "");
 }
 
 function splitRepository(repository: string): readonly [string, string] {

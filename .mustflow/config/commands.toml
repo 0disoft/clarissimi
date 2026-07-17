@@ -739,6 +739,74 @@ network = false
 destructive = false
 required_after = ["git_stage_runner_admission_diagnostics"]
 
+[intents.git_stage_external_review_hardening]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Stage only the revalidated external-review hardening for merged-event parsing, GitHub API transport, CLI output typing, Action bundle, synchronized contracts, tests, and command authority."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  ".mustflow/config/manifest.lock.toml",
+  "action-dist/index.js",
+  "docs/engineering/08-threat-model.md",
+  "docs/github-action/action-contract.md",
+  "docs/product/04-implementation-tracker.md",
+  "packages/action/src/event.ts",
+  "packages/action/src/github-client.ts",
+  "packages/action/test/action.test.mjs",
+  "packages/action/test/github-client.test.mjs",
+  "packages/cli/src/run.ts",
+  "packages/github/src/api-client.ts",
+  "packages/github/test/api-client.test.mjs",
+  "scripts/release-readiness.mjs",
+  "scripts/test/release-readiness.test.mjs",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = [
+  "external_review_hardening_validation_complete",
+  "documentation_review_checked",
+  "user_authorized_commit",
+]
+
+[intents.git_commit_external_review_hardening]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Commit the revalidated merged-event and GitHub API transport hardening with synchronized regressions and contracts."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "fix(security): validate GitHub input boundaries",
+  "-m",
+  "Validation: focused Action and GitHub tests, docs, release-readiness, lint, format, migration-check, smoke, check, contract, bundle-action-check, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_external_review_hardening"]
+
 [intents.git_stage_release_v0_5_2]
 status = "configured"
 lifecycle = "oneshot"

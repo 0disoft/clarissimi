@@ -1312,6 +1312,27 @@ Completed scope:
 - cover both the narrow admission classification and its fail-closed fallback with deterministic
   command-runner regressions
 
+### 36. External Review Input And API Transport Hardening
+
+Source: `docs/github-action/action-contract.md`, `docs/engineering/08-threat-model.md`
+
+Status: Implemented on `main` after revalidating external review claims against current ADRs,
+source, and regression tests.
+
+Completed scope:
+
+- route required merged pull request event fields through the existing GitHub fixture runtime
+  validator instead of unchecked TypeScript casts
+- reject non-HTTPS GitHub API bases and bases containing URL credentials, queries, or fragments
+  before a GitHub token can be attached to a request
+- retain arbitrary HTTPS GitHub Enterprise Server hosts and API paths
+- type CLI assessment summary redaction against `EvidenceRef` and the explicit omission of
+  `excerpt`
+- add deterministic malformed-event and unsafe-API-base regressions for both GitHub clients
+- retain accepted TypeScript config execution, remote branch lease concurrency, source-comment
+  reconciliation, single-file ledger, and existing Action bundle CI gates because current ADRs and
+  tests already own those boundaries
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

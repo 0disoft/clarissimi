@@ -91,6 +91,11 @@ Secret values must be read from GitHub Actions secrets or environment variables,
 Public provider endpoints require credential-free HTTPS and reject local, private, and reserved
 literal destinations. URL credentials are forbidden in every endpoint trust mode. DNS resolution
 and connection pinning remain outside the current provider transport boundary.
+Required merged pull request event fields are parsed through the same runtime fixture validator
+before evidence collection, so malformed numbers, titles, actor ids, and actor logins fail with
+field-specific diagnostics instead of unchecked runtime errors.
+GitHub API base URLs must use HTTPS and must not include URL credentials, a query, or a fragment.
+Arbitrary HTTPS GitHub Enterprise Server hosts and API paths remain supported.
 
 Action mode validation is owned inside `packages/action`. Unsupported `INPUT_MODE` values must fail
 as usage errors before collection, provider, staging, branch, or pull request work begins.

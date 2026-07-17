@@ -4,8 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { GitHubEvidenceCollectionError } from "../../github/dist/index.js";
 import { OpenAiCompatibleProviderError } from "../../providers/dist/index.js";
-import { ActionUsageError, runActionDryRun, runActionFromEnvironment } from "../dist/index.js";
+import {
+  ActionUsageError,
+  resolveGitHubEventPayload,
+  runActionDryRun,
+  runActionFromEnvironment,
+} from "../dist/index.js";
 
 function githubFixture(overrides = {}) {
   return {
@@ -166,6 +172,22 @@ test("maps a merged pull request event from GITHUB_EVENT_PATH", async () => {
     assert.equal(summary.assessment.source.repository, "sample/project");
     assert.equal(summary.assessment.source.pullRequestNumber, 42);
   });
+});
+
+test("rejects malformed required merged pull request event fields before collection", () => {
+  const cases = [
+    [{ number: "42" }, "$.pullRequest.number"],
+    [{ title: null }, "$.pullRequest.title"],
+    [{ user: { id: {}, login: "octocat" } }, "$.pullRequest.user.id"],
+    [{ user: { id: 123456, login: null } }, "$.pullRequest.user.login"],
+  ];
+
+  for (const [overrides, expectedField] of cases) {
+    assert.throws(
+      () => resolveGitHubEventPayload(pullRequestEvent(overrides)),
+      (error) => error instanceof GitHubEvidenceCollectionError && error.field === expectedField,
+    );
+  }
 });
 
 test("uses an injected live GitHub collector for merged pull request events", async () => {

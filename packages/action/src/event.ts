@@ -1,4 +1,7 @@
-import type { GitHubMergedPullRequestFixture } from "@clarissimi/github";
+import {
+  parseGitHubMergedPullRequestFixture,
+  type GitHubMergedPullRequestFixture,
+} from "@clarissimi/github";
 
 export type GitHubActionEventResolution =
   | {
@@ -51,31 +54,31 @@ export function resolveGitHubEventPayload(value: unknown): GitHubActionEventReso
     };
   }
 
-  const fixture: GitHubMergedPullRequestFixture = {
+  const body = optionalString(pullRequest.body);
+  const htmlUrl = optionalString(pullRequest.html_url);
+  const userHtmlUrl = optionalString(pullRequest.user.html_url);
+  const mergeCommitSha = optionalString(pullRequest.merge_commit_sha);
+
+  const fixture = parseGitHubMergedPullRequestFixture({
     repository: {
       fullName: value.repository.full_name,
     },
     pullRequest: {
-      number: pullRequest.number as number,
-      title: pullRequest.title as string,
+      number: pullRequest.number,
+      title: pullRequest.title,
       mergedAt,
       user: {
-        id: pullRequest.user.id as number | string,
-        login: pullRequest.user.login as string,
+        id: pullRequest.user.id,
+        login: pullRequest.user.login,
         ...(contributorKind === undefined ? {} : { kind: contributorKind }),
+        ...(userHtmlUrl === undefined ? {} : { htmlUrl: userHtmlUrl }),
       },
       labels: parseLabels(pullRequest.labels),
+      ...(body === undefined ? {} : { body }),
+      ...(htmlUrl === undefined ? {} : { htmlUrl }),
+      ...(mergeCommitSha === undefined ? {} : { mergeCommitSha }),
     },
-  };
-
-  assignOptional(fixture.pullRequest, "body", optionalString(pullRequest.body));
-  assignOptional(fixture.pullRequest, "htmlUrl", optionalString(pullRequest.html_url));
-  assignOptional(fixture.pullRequest.user, "htmlUrl", optionalString(pullRequest.user.html_url));
-  assignOptional(
-    fixture.pullRequest,
-    "mergeCommitSha",
-    optionalString(pullRequest.merge_commit_sha),
-  );
+  });
 
   return {
     kind: "merged_pull_request",
@@ -121,14 +124,4 @@ function optionalString(value: unknown): string | undefined {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function assignOptional<T extends object, K extends keyof T>(
-  target: T,
-  key: K,
-  value: T[K] | undefined,
-): void {
-  if (value !== undefined) {
-    target[key] = value;
-  }
 }

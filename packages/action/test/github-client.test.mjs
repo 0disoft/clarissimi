@@ -85,6 +85,29 @@ test("GitHub pull request client finds open proposal pull requests", async () =>
   );
 });
 
+test("GitHub pull request client rejects unsafe API base URLs before requests", () => {
+  for (const apiUrl of [
+    "not a URL",
+    "http://github.example/api/v3",
+    "https://user:password@github.example/api/v3",
+    "https://github.example/api/v3?token=value",
+    "https://github.example/api/v3#fragment",
+  ]) {
+    assert.throws(
+      () =>
+        createGitHubPullRequestClient({
+          token: "test-token",
+          apiUrl,
+          fetch: async () => {
+            throw new Error("fetch must not run");
+          },
+        }),
+      (error) =>
+        error instanceof ProposalPullRequestClientError && error.code === "invalid_options",
+    );
+  }
+});
+
 test("GitHub pull request client maps permission failures without leaking tokens", async () => {
   const client = createGitHubPullRequestClient({
     token: "secret-token",

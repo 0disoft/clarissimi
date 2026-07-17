@@ -120,6 +120,28 @@ test("GitHub API client paginates pull request files and review comments", async
   assert.equal(requests.filter((url) => url.endsWith("page=2")).length, 2);
 });
 
+test("GitHub API client rejects unsafe API base URLs before requests", () => {
+  for (const apiUrl of [
+    "not a URL",
+    "http://github.example/api/v3",
+    "https://user:password@github.example/api/v3",
+    "https://github.example/api/v3?token=value",
+    "https://github.example/api/v3#fragment",
+  ]) {
+    assert.throws(
+      () =>
+        createGitHubApiClient({
+          token: "test-token",
+          apiUrl,
+          fetch: async () => {
+            throw new Error("fetch must not run");
+          },
+        }),
+      (error) => error instanceof GitHubApiClientError && error.code === "invalid_options",
+    );
+  }
+});
+
 test("GitHub API client fails closed when changed files exceed the requested bound", async () => {
   const client = createGitHubApiClient({
     fetch: async (url) => {

@@ -33,6 +33,7 @@ Trust boundaries and mitigations:
 | Provider output to assessment         | malformed or overreaching claims              | schema validation and maintainer approval                                                |
 | Draft inbox to public ledger          | unapproved recognition                        | `import-draft` rejects draft, rejected, skipped, and duplicate records                   |
 | Action write mode to repository       | unauthorized branch mutation or unsafe files  | explicit mode, clean and expected HEAD, owned paths, non-force push, proposal boundaries |
+| GitHub API base to token transport    | token disclosure to an unsafe endpoint        | HTTPS-only base URL without URL credentials, query, or fragment                          |
 | Logs and summaries                    | secret or raw evidence leakage                | bounded outputs and no raw provider bodies                                               |
 
 ## Required Evidence

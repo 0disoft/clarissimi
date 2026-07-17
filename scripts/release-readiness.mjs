@@ -771,6 +771,8 @@ export const actionContractDocumentContract = {
     "- `CLARISSIMI_PROVIDER_TOKEN`: provider token required only for `openai-compatible`",
     "- `GITHUB_TOKEN`: token used by write modes for live GitHub collection and repository publication",
     "Secret values must be read from GitHub Actions secrets or environment variables, not action inputs.",
+    "Required merged pull request event fields are parsed through the same runtime fixture validator",
+    "GitHub API base URLs must use HTTPS and must not include URL credentials, a query, or a fragment.",
     "Unsupported `INPUT_MODE` values must fail",
     "`config-path` is explicit and optional. The Action does not automatically discover repository config",
     "`markdown-summary` controls presentation only.",

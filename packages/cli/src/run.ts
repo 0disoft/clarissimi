@@ -32,9 +32,11 @@ import {
   isConfigProviderThinking,
   isConfigMarkdownSummary,
   validateContributionAssessment,
+  type ContributionAssessment,
   type ConfigMarkdownSummary,
   type ConfigProviderThinking,
   type ConfigProviderEndpointTrust,
+  type EvidenceRef,
   type ValidationIssue,
 } from "@clarissimi/schemas";
 
@@ -887,13 +889,17 @@ function assignOptional<T extends object, K extends keyof T>(
   }
 }
 
-function sanitizeAssessmentForCliOutput<T extends { evidenceRefs: readonly object[] }>(
-  assessment: T,
-): T {
+type SanitizedContributionAssessment = Omit<ContributionAssessment, "evidenceRefs"> & {
+  readonly evidenceRefs: readonly Omit<EvidenceRef, "excerpt">[];
+};
+
+function sanitizeAssessmentForCliOutput(
+  assessment: ContributionAssessment,
+): SanitizedContributionAssessment {
   return {
     ...assessment,
     evidenceRefs: assessment.evidenceRefs.map((ref) => {
-      const { excerpt: _excerpt, ...safeRef } = ref as Record<string, unknown>;
+      const { excerpt: _excerpt, ...safeRef } = ref;
       return safeRef;
     }),
   };

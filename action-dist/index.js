@@ -540,28 +540,882 @@ function runGit3(repositoryDir, args) {
   });
 }
 
+// packages/github/dist/api-client.js
+var DEFAULT_GITHUB_API_URL = "https://api.github.com";
+var DEFAULT_PAGE_SIZE = 100;
+var MAX_LIST_PAGES = 10;
+var DEFAULT_REQUEST_TIMEOUT_MS = 3e4;
+var DEFAULT_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+var GitHubApiClientError = class extends Error {
+  code;
+  retryable;
+  constructor(code, message) {
+    super(message);
+    this.name = "GitHubApiClientError";
+    this.code = code;
+    this.retryable = isRetryableCode(code);
+  }
+};
+function createGitHubApiClient(options = {}) {
+  const apiUrl = normalizeApiUrl(options.apiUrl);
+  const fetchImpl = options.fetch ?? fetch;
+  const timeoutMs = positiveIntegerOption(options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS, "timeoutMs");
+  const maxResponseBytes = positiveIntegerOption(options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES, "maxResponseBytes");
+  return {
+    async getPullRequest(input) {
+      const response = await requestJson(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}`, timeoutMs, maxResponseBytes);
+      return parsePullRequest(response);
+    },
+    async listPullRequestFiles(input, limit = DEFAULT_PAGE_SIZE) {
+      const response = await requestPaginatedArray(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/files`, "GitHub pull request files response must be an array.", timeoutMs, maxResponseBytes, limit);
+      return response.map(parsePullRequestFile);
+    },
+    async listPullRequestReviewComments(input) {
+      const response = await requestPaginatedArray(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/comments`, "GitHub pull request review comments response must be an array.", timeoutMs, maxResponseBytes);
+      return response.map(parseReviewComment);
+    }
+  };
+}
+async function requestPaginatedArray(fetchImpl, token, baseUrl, invalidResponseMessage, timeoutMs, maxResponseBytes, maxItems = MAX_LIST_PAGES * DEFAULT_PAGE_SIZE) {
+  positiveIntegerOption(maxItems, "listLimit");
+  const entries = [];
+  for (let page = 1; page <= MAX_LIST_PAGES; page += 1) {
+    const response = await requestJson(fetchImpl, token, `${baseUrl}?per_page=${DEFAULT_PAGE_SIZE}&page=${page}`, timeoutMs, maxResponseBytes);
+    if (!Array.isArray(response)) {
+      throw new GitHubApiClientError("unexpected_response", invalidResponseMessage);
+    }
+    entries.push(...response);
+    if (entries.length > maxItems) {
+      throw new GitHubApiClientError("response_too_large", `GitHub list response exceeded ${maxItems} items.`);
+    }
+    if (response.length < DEFAULT_PAGE_SIZE) {
+      return entries;
+    }
+  }
+  throw new GitHubApiClientError("response_too_large", `GitHub list response exceeded ${MAX_LIST_PAGES * DEFAULT_PAGE_SIZE} items.`);
+}
+async function requestJson(fetchImpl, token, url, timeoutMs, maxResponseBytes) {
+  const headers = {
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28"
+  };
+  const normalizedToken = token?.trim();
+  if (normalizedToken !== void 0 && normalizedToken.length > 0) {
+    headers.Authorization = `Bearer ${normalizedToken}`;
+  }
+  try {
+    return await withTimeout(timeoutMs, async (signal) => {
+      const response = await fetchImpl(url, {
+        method: "GET",
+        headers,
+        signal
+      });
+      const text = await readBoundedResponseText(response, maxResponseBytes);
+      const body = parseOptionalJson(text);
+      if (response.ok) {
+        return body;
+      }
+      throw mapGitHubApiError(response.status, body);
+    });
+  } catch (error) {
+    if (error instanceof GitHubApiClientError) {
+      throw error;
+    }
+    if (error instanceof RequestTimeoutError) {
+      throw new GitHubApiClientError("timeout", "GitHub API request timed out.");
+    }
+    throw new GitHubApiClientError("network_error", "GitHub API request failed before a response.");
+  }
+}
+function parsePullRequest(value) {
+  assertRecord(value, "pull request");
+  assertRecord(value.user, "pull request user");
+  const user = {
+    id: expectStringOrNumber(value.user.id, "user.id"),
+    login: expectString(value.user.login, "user.login")
+  };
+  assignOptional(user, "htmlUrl", expectOptionalNullableString(value.user.html_url, "user.html_url"));
+  assignOptional(user, "kind", parseGitHubActorKind(value.user.type, "user.type"));
+  const pullRequest = {
+    number: expectNumber(value.number, "number"),
+    title: expectString(value.title, "title"),
+    htmlUrl: expectString(value.html_url, "html_url"),
+    user,
+    labels: parseLabels(value.labels)
+  };
+  assignOptional(pullRequest, "body", expectOptionalNullableString(value.body, "body"));
+  assignOptional(pullRequest, "mergedAt", expectOptionalNullableString(value.merged_at, "merged_at"));
+  assignOptional(pullRequest, "mergeCommitSha", expectOptionalNullableString(value.merge_commit_sha, "merge_commit_sha"));
+  return pullRequest;
+}
+function parsePullRequestFile(value) {
+  assertRecord(value, "pull request file");
+  const file = {
+    filename: expectString(value.filename, "filename")
+  };
+  assignOptional(file, "status", expectOptionalNullableString(value.status, "status"));
+  assignOptional(file, "additions", expectOptionalNullableNumber(value.additions, "additions"));
+  assignOptional(file, "deletions", expectOptionalNullableNumber(value.deletions, "deletions"));
+  assignOptional(file, "patch", expectOptionalNullableString(value.patch, "patch"));
+  return file;
+}
+function parseReviewComment(value) {
+  assertRecord(value, "review comment");
+  const comment = {
+    id: expectStringOrNumber(value.id, "id")
+  };
+  assignOptional(comment, "body", expectOptionalNullableString(value.body, "body"));
+  assignOptional(comment, "htmlUrl", expectOptionalNullableString(value.html_url, "html_url"));
+  assignOptional(comment, "path", expectOptionalNullableString(value.path, "path"));
+  assignOptional(comment, "diffHunk", expectOptionalNullableString(value.diff_hunk, "diff_hunk"));
+  if (isRecord(value.user)) {
+    const user = {
+      id: expectStringOrNumber(value.user.id, "user.id"),
+      login: expectString(value.user.login, "user.login")
+    };
+    assignOptional(user, "htmlUrl", expectOptionalNullableString(value.user.html_url, "user.html_url"));
+    assignOptional(user, "kind", parseGitHubActorKind(value.user.type, "user.type"));
+    assignOptional(comment, "user", user);
+  }
+  return comment;
+}
+function parseGitHubActorKind(value, path) {
+  if (value === void 0 || value === null) {
+    return void 0;
+  }
+  if (value === "Bot") {
+    return "bot";
+  }
+  if (value === "User" || value === "Organization") {
+    return "human";
+  }
+  throw new GitHubApiClientError("unexpected_response", `${path} must be Bot, User, or Organization.`);
+}
+function parseLabels(value) {
+  if (value === void 0) {
+    return [];
+  }
+  if (!Array.isArray(value)) {
+    throw new GitHubApiClientError("unexpected_response", "Pull request labels must be an array.");
+  }
+  return value.map((entry) => {
+    assertRecord(entry, "label");
+    return {
+      name: expectString(entry.name, "label.name")
+    };
+  });
+}
+function mapGitHubApiError(status, body) {
+  const message = githubMessage(body);
+  if (status === 401 || status === 403) {
+    return new GitHubApiClientError("permission_denied", message);
+  }
+  if (status === 404) {
+    return new GitHubApiClientError("not_found", message);
+  }
+  if (status === 429) {
+    return new GitHubApiClientError("rate_limited", message);
+  }
+  if (status >= 500) {
+    return new GitHubApiClientError("server_error", message);
+  }
+  return new GitHubApiClientError("request_failed", message);
+}
+async function readBoundedResponseText(response, maxBytes) {
+  const contentLength = response.headers?.get?.("content-length");
+  if (contentLength !== null && contentLength !== void 0) {
+    const declaredBytes = Number(contentLength);
+    if (Number.isFinite(declaredBytes) && declaredBytes > maxBytes) {
+      throw new GitHubApiClientError("response_too_large", `GitHub API response exceeded ${maxBytes} bytes.`);
+    }
+  }
+  if (response.body === null || response.body === void 0) {
+    const text2 = await response.text();
+    if (new TextEncoder().encode(text2).byteLength > maxBytes) {
+      throw new GitHubApiClientError("response_too_large", `GitHub API response exceeded ${maxBytes} bytes.`);
+    }
+    return text2;
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let bytes = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        return text + decoder.decode();
+      }
+      bytes += value.byteLength;
+      if (bytes > maxBytes) {
+        await reader.cancel();
+        throw new GitHubApiClientError("response_too_large", `GitHub API response exceeded ${maxBytes} bytes.`);
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+async function withTimeout(timeoutMs, task) {
+  const controller = new AbortController();
+  let timer;
+  const timeout = new Promise((_resolve, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new RequestTimeoutError());
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([task(controller.signal), timeout]);
+  } finally {
+    if (timer !== void 0) {
+      clearTimeout(timer);
+    }
+  }
+}
+var RequestTimeoutError = class extends Error {
+};
+function positiveIntegerOption(value, name) {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new GitHubApiClientError("invalid_options", `GitHub API client ${name} must be a positive integer.`);
+  }
+  return value;
+}
+function isRetryableCode(code) {
+  return ["rate_limited", "server_error", "network_error", "timeout"].includes(code);
+}
+function normalizeApiUrl(value) {
+  const normalized = value?.trim().replace(/\/+$/g, "");
+  if (normalized === void 0 || normalized.length === 0) {
+    return DEFAULT_GITHUB_API_URL;
+  }
+  let parsed;
+  try {
+    parsed = new URL(normalized);
+  } catch {
+    throw new GitHubApiClientError("invalid_options", "GitHub API URL must be a valid HTTPS base URL.");
+  }
+  if (parsed.protocol !== "https:" || parsed.username !== "" || parsed.password !== "" || parsed.search !== "" || parsed.hash !== "") {
+    throw new GitHubApiClientError("invalid_options", "GitHub API URL must use HTTPS and must not include credentials, a query, or a fragment.");
+  }
+  return parsed.href.replace(/\/+$/g, "");
+}
+function parseOptionalJson(text) {
+  if (text.trim().length === 0) {
+    return {};
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return {
+      message: text
+    };
+  }
+}
+function githubMessage(value) {
+  if (isRecord(value) && typeof value.message === "string") {
+    return value.message;
+  }
+  return "GitHub API request failed.";
+}
+function expectString(value, field) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new GitHubApiClientError("unexpected_response", `GitHub API response field ${field} must be a non-empty string.`);
+  }
+  return value;
+}
+function expectOptionalNullableString(value, field) {
+  if (value === void 0 || value === null) {
+    return value;
+  }
+  return expectString(value, field);
+}
+function expectNumber(value, field) {
+  if (typeof value !== "number" || !Number.isInteger(value)) {
+    throw new GitHubApiClientError("unexpected_response", `GitHub API response field ${field} must be an integer.`);
+  }
+  return value;
+}
+function expectOptionalNullableNumber(value, field) {
+  if (value === void 0 || value === null) {
+    return value;
+  }
+  return expectNumber(value, field);
+}
+function expectStringOrNumber(value, field) {
+  if (typeof value !== "string" && typeof value !== "number") {
+    throw new GitHubApiClientError("unexpected_response", `GitHub API response field ${field} must be a string or number.`);
+  }
+  return value;
+}
+function assertRecord(value, name) {
+  if (!isRecord(value)) {
+    throw new GitHubApiClientError("unexpected_response", `GitHub API ${name} response must be an object.`);
+  }
+}
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function assignOptional(target, key, value) {
+  if (value !== void 0) {
+    target[key] = value;
+  }
+}
+
+// packages/github/dist/merged-pr.js
+var DEFAULT_TEXT_LIMIT = 2e3;
+var REPOSITORY_NAME_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+var TEST_PATH_PATTERN = /(^|\/)(__tests__|tests?|specs?)(\/|$)|[./_-](test|spec)\.[cm]?[jt]sx?$/i;
+var GitHubEvidenceCollectionError = class extends Error {
+  field;
+  constructor(field, message) {
+    super(message);
+    this.name = "GitHubEvidenceCollectionError";
+    this.field = field;
+  }
+};
+function parseGitHubMergedPullRequestFixture(value) {
+  assertRecord2(value, "$");
+  assertRecord2(value.repository, "$.repository");
+  assertRecord2(value.pullRequest, "$.pullRequest");
+  const pullRequest = value.pullRequest;
+  assertRecord2(pullRequest.user, "$.pullRequest.user");
+  const fixture = {
+    repository: {
+      fullName: expectString2(value.repository.fullName, "$.repository.fullName")
+    },
+    pullRequest: {
+      number: expectNumber2(pullRequest.number, "$.pullRequest.number"),
+      title: expectString2(pullRequest.title, "$.pullRequest.title"),
+      user: {
+        id: expectStringOrNumber2(pullRequest.user.id, "$.pullRequest.user.id"),
+        login: expectString2(pullRequest.user.login, "$.pullRequest.user.login")
+      }
+    }
+  };
+  assignOptional2(fixture.pullRequest, "body", expectOptionalString(pullRequest.body, "$.pullRequest.body"));
+  assignOptional2(fixture.pullRequest, "htmlUrl", expectOptionalString(pullRequest.htmlUrl, "$.pullRequest.htmlUrl"));
+  assignOptional2(fixture.pullRequest, "mergedAt", expectOptionalString(pullRequest.mergedAt, "$.pullRequest.mergedAt"));
+  assignOptional2(fixture.pullRequest.user, "htmlUrl", expectOptionalString(pullRequest.user.htmlUrl, "$.pullRequest.user.htmlUrl"));
+  assignOptional2(fixture.pullRequest.user, "kind", expectOptionalContributorKind(pullRequest.user.kind, "$.pullRequest.user.kind"));
+  assignOptional2(fixture.pullRequest, "labels", parseOptionalLabels(pullRequest.labels, "$.pullRequest.labels"));
+  assignOptional2(fixture.pullRequest, "changedFiles", parseOptionalChangedFiles(pullRequest.changedFiles, "$.pullRequest.changedFiles"));
+  assignOptional2(fixture.pullRequest, "mergeCommitSha", expectOptionalString(pullRequest.mergeCommitSha, "$.pullRequest.mergeCommitSha"));
+  return fixture;
+}
+function collectMergedPullRequestEvidence(fixture) {
+  const repository = normalizeRequiredString(fixture.repository.fullName, "repository.fullName");
+  if (!REPOSITORY_NAME_PATTERN.test(repository)) {
+    throw new GitHubEvidenceCollectionError("repository.fullName", "Repository full name must use owner/name format.");
+  }
+  const pullRequest = fixture.pullRequest;
+  const pullRequestNumber = normalizePositiveInteger(pullRequest.number, "pullRequest.number");
+  const title = normalizeRequiredString(pullRequest.title, "pullRequest.title");
+  const mergedAt = normalizeOptionalDateTime(pullRequest.mergedAt, "pullRequest.mergedAt");
+  const pullRequestUrl = normalizeOptionalHttpsUrl(pullRequest.htmlUrl, "pullRequest.htmlUrl");
+  const contributor = collectContributor(pullRequest.user);
+  const source = {
+    repository,
+    event: "merged_pull_request",
+    pullRequestNumber
+  };
+  assignOptional2(source, "mergedAt", mergedAt);
+  const items = [
+    buildPullRequestItem(pullRequestNumber, title, pullRequest.body, pullRequestUrl),
+    ...buildLabelItems(pullRequest.labels ?? []),
+    ...buildChangedFileItems(pullRequest.changedFiles ?? []),
+    ...buildMergeCommitItems(pullRequest.mergeCommitSha)
+  ];
+  return {
+    contributor,
+    evidence: {
+      source,
+      items: dedupeEvidenceItems(items)
+    }
+  };
+}
+function collectContributor(user) {
+  const id = normalizeRequiredString(String(user.id), "pullRequest.user.id");
+  const login = normalizeRequiredString(user.login, "pullRequest.user.login");
+  const profileUrl = normalizeOptionalHttpsUrl(user.htmlUrl, "pullRequest.user.htmlUrl") ?? `https://github.com/${encodeURIComponent(login)}`;
+  const contributor = {
+    platform: "github",
+    id,
+    login,
+    profileUrl
+  };
+  assignOptional2(contributor, "kind", user.kind);
+  return contributor;
+}
+function expectOptionalContributorKind(value, path) {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (value !== "human" && value !== "bot" && value !== "ai_agent") {
+    throw new GitHubEvidenceCollectionError(path, `${path} must be human, bot, or ai_agent.`);
+  }
+  return value;
+}
+function buildPullRequestItem(pullRequestNumber, title, body, url) {
+  const item = {
+    kind: "pull_request",
+    id: `PR-${pullRequestNumber}`,
+    title
+  };
+  assignOptional2(item, "url", url);
+  assignOptional2(item, "excerpt", normalizeOptionalExcerpt(body));
+  return item;
+}
+function buildLabelItems(labels) {
+  return labels.flatMap((label, index) => {
+    const name = normalizeOptionalString(label.name);
+    if (name === void 0) {
+      return [];
+    }
+    return [
+      {
+        kind: "label",
+        id: `label:${name.toLowerCase()}`,
+        title: name,
+        metadata: {
+          sourceIndex: index
+        }
+      }
+    ];
+  });
+}
+function buildChangedFileItems(files) {
+  return files.map((file) => {
+    const filename = normalizeRequiredString(file.filename, "pullRequest.changedFiles[].filename");
+    const status = normalizeOptionalString(file.status);
+    const additions = normalizeOptionalNonNegativeInteger(file.additions, "additions");
+    const deletions = normalizeOptionalNonNegativeInteger(file.deletions, "deletions");
+    const metadata = buildFileMetadata(status, additions, deletions);
+    const item = {
+      kind: isTestPath(filename) ? "test" : "file",
+      id: filename,
+      title: filename
+    };
+    assignOptional2(item, "excerpt", buildFileExcerpt(file, status, additions, deletions));
+    assignOptional2(item, "metadata", metadata);
+    return item;
+  });
+}
+function buildMergeCommitItems(mergeCommitSha) {
+  const normalized = normalizeOptionalString(mergeCommitSha);
+  if (normalized === void 0) {
+    return [];
+  }
+  return [
+    {
+      kind: "commit",
+      id: normalized,
+      title: `Merge commit ${normalized.slice(0, 12)}`
+    }
+  ];
+}
+function buildFileExcerpt(file, status, additions, deletions) {
+  const patchExcerpt = normalizeOptionalExcerpt(file.patchExcerpt);
+  if (patchExcerpt !== void 0) {
+    return patchExcerpt;
+  }
+  const changeSummary = [
+    status ?? "changed",
+    additions === void 0 ? void 0 : `${additions} additions`,
+    deletions === void 0 ? void 0 : `${deletions} deletions`
+  ].filter((entry) => entry !== void 0);
+  return changeSummary.length === 0 ? void 0 : changeSummary.join(", ");
+}
+function buildFileMetadata(status, additions, deletions) {
+  const metadata = {};
+  assignOptional2(metadata, "status", status);
+  assignOptional2(metadata, "additions", additions);
+  assignOptional2(metadata, "deletions", deletions);
+  return Object.keys(metadata).length === 0 ? void 0 : metadata;
+}
+function dedupeEvidenceItems(items) {
+  const seen = /* @__PURE__ */ new Set();
+  const deduped = [];
+  for (const item of items) {
+    const key = `${item.kind}:${item.id}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    deduped.push(item);
+  }
+  return deduped;
+}
+function normalizeRequiredString(value, field) {
+  const normalized = normalizeOptionalString(value);
+  if (normalized === void 0) {
+    throw new GitHubEvidenceCollectionError(field, `${field} must be a non-empty string.`);
+  }
+  return normalized;
+}
+function parseOptionalLabels(value, field) {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (!Array.isArray(value)) {
+    throw new GitHubEvidenceCollectionError(field, `${field} must be an array when provided.`);
+  }
+  return value.map((entry, index) => {
+    assertRecord2(entry, `${field}[${index}]`);
+    return {
+      name: expectString2(entry.name, `${field}[${index}].name`)
+    };
+  });
+}
+function parseOptionalChangedFiles(value, field) {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (!Array.isArray(value)) {
+    throw new GitHubEvidenceCollectionError(field, `${field} must be an array when provided.`);
+  }
+  return value.map((entry, index) => {
+    const itemPath = `${field}[${index}]`;
+    assertRecord2(entry, itemPath);
+    const changedFile = {
+      filename: expectString2(entry.filename, `${itemPath}.filename`)
+    };
+    assignOptional2(changedFile, "status", expectOptionalString(entry.status, `${itemPath}.status`));
+    assignOptional2(changedFile, "additions", expectOptionalNumber(entry.additions, `${itemPath}.additions`));
+    assignOptional2(changedFile, "deletions", expectOptionalNumber(entry.deletions, `${itemPath}.deletions`));
+    assignOptional2(changedFile, "patchExcerpt", expectOptionalString(entry.patchExcerpt, `${itemPath}.patchExcerpt`));
+    return changedFile;
+  });
+}
+function expectString2(value, field) {
+  if (typeof value !== "string") {
+    throw new GitHubEvidenceCollectionError(field, `${field} must be a string.`);
+  }
+  return value;
+}
+function expectOptionalString(value, field) {
+  if (value === void 0) {
+    return void 0;
+  }
+  return expectString2(value, field);
+}
+function expectNumber2(value, field) {
+  if (typeof value !== "number") {
+    throw new GitHubEvidenceCollectionError(field, `${field} must be a number.`);
+  }
+  return value;
+}
+function expectOptionalNumber(value, field) {
+  if (value === void 0) {
+    return void 0;
+  }
+  return expectNumber2(value, field);
+}
+function expectStringOrNumber2(value, field) {
+  if (typeof value !== "string" && typeof value !== "number") {
+    throw new GitHubEvidenceCollectionError(field, `${field} must be a string or number.`);
+  }
+  return value;
+}
+function assertRecord2(value, field) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new GitHubEvidenceCollectionError(field, `${field} must be an object.`);
+  }
+}
+function normalizeOptionalString(value) {
+  if (value === void 0) {
+    return void 0;
+  }
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return normalized.length === 0 ? void 0 : normalized;
+}
+function normalizeOptionalExcerpt(value) {
+  const normalized = normalizeOptionalString(value);
+  if (normalized === void 0) {
+    return void 0;
+  }
+  return normalized.length > DEFAULT_TEXT_LIMIT ? `${normalized.slice(0, DEFAULT_TEXT_LIMIT - 1)}...` : normalized;
+}
+function normalizePositiveInteger(value, field) {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new GitHubEvidenceCollectionError(field, `${field} must be a positive integer.`);
+  }
+  return value;
+}
+function normalizeOptionalNonNegativeInteger(value, field) {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (!Number.isInteger(value) || value < 0) {
+    throw new GitHubEvidenceCollectionError(`pullRequest.changedFiles[].${field}`, `${field} must be a non-negative integer when provided.`);
+  }
+  return value;
+}
+function normalizeOptionalDateTime(value, field) {
+  const normalized = normalizeOptionalString(value);
+  if (normalized === void 0) {
+    return void 0;
+  }
+  if (Number.isNaN(Date.parse(normalized))) {
+    throw new GitHubEvidenceCollectionError(field, `${field} must be an ISO-compatible date time.`);
+  }
+  return normalized;
+}
+function normalizeOptionalHttpsUrl(value, field) {
+  const normalized = normalizeOptionalString(value);
+  if (normalized === void 0) {
+    return void 0;
+  }
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.protocol !== "https:") {
+      throw new GitHubEvidenceCollectionError(field, `${field} must use https.`);
+    }
+  } catch (error) {
+    if (error instanceof GitHubEvidenceCollectionError) {
+      throw error;
+    }
+    throw new GitHubEvidenceCollectionError(field, `${field} must be a valid URL.`);
+  }
+  return normalized;
+}
+function isTestPath(filename) {
+  return TEST_PATH_PATTERN.test(filename.replace(/\\/g, "/"));
+}
+function assignOptional2(target, key, value) {
+  if (value !== void 0) {
+    target[key] = value;
+  }
+}
+
+// packages/github/dist/live.js
+var DEFAULT_REVIEW_COMMENT_LIMIT = 25;
+var DEFAULT_LINKED_ISSUE_LIMIT = 25;
+var DEFAULT_CHANGED_FILE_LIMIT = 100;
+var TEXT_LIMIT = 2e3;
+var REPOSITORY_NAME_PATTERN2 = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+var LiveGitHubCollectionError = class extends Error {
+  code;
+  constructor(code, message) {
+    super(message);
+    this.name = "LiveGitHubCollectionError";
+    this.code = code;
+  }
+};
+async function collectLiveMergedPullRequestEvidence(input) {
+  validateLiveInput(input);
+  const lookup = {
+    repository: input.repository,
+    pullRequestNumber: input.pullRequestNumber
+  };
+  const [pullRequest, files, reviewComments] = await Promise.all([
+    input.client.getPullRequest(lookup),
+    input.client.listPullRequestFiles(lookup, DEFAULT_CHANGED_FILE_LIMIT),
+    input.client.listPullRequestReviewComments(lookup)
+  ]);
+  if (pullRequest.number !== input.pullRequestNumber) {
+    throw new LiveGitHubCollectionError("pull_request_number_mismatch", "Live GitHub collector received a pull request for a different number.");
+  }
+  if (normalizeOptionalString2(pullRequest.mergedAt) === void 0) {
+    throw new LiveGitHubCollectionError("pull_request_not_merged", "Live GitHub collector requires a merged pull request.");
+  }
+  if (files.length > DEFAULT_CHANGED_FILE_LIMIT) {
+    throw new LiveGitHubCollectionError("changed_file_limit", `Live GitHub collector changed files must not exceed ${DEFAULT_CHANGED_FILE_LIMIT} items.`);
+  }
+  const fixture = toMergedPullRequestFixture(input.repository, pullRequest, files);
+  const collected = collectMergedPullRequestEvidence(fixture);
+  const extraItems = [
+    ...buildLinkedIssueItems(pullRequest, input.linkedIssueLimit ?? DEFAULT_LINKED_ISSUE_LIMIT),
+    ...buildReviewCommentItems(reviewComments, input.reviewCommentLimit ?? DEFAULT_REVIEW_COMMENT_LIMIT)
+  ];
+  return {
+    contributor: collected.contributor,
+    evidence: {
+      source: collected.evidence.source,
+      items: dedupeEvidenceItems2([...collected.evidence.items, ...extraItems])
+    }
+  };
+}
+function toMergedPullRequestFixture(repository, pullRequest, files) {
+  const fixture = {
+    repository: {
+      fullName: repository
+    },
+    pullRequest: {
+      number: pullRequest.number,
+      title: pullRequest.title,
+      htmlUrl: pullRequest.htmlUrl,
+      mergedAt: normalizeRequiredString2(pullRequest.mergedAt, "pullRequest.mergedAt"),
+      user: {
+        id: pullRequest.user.id,
+        login: pullRequest.user.login
+      },
+      labels: (pullRequest.labels ?? []).map((label) => ({ name: label.name })),
+      changedFiles: files.map(toChangedFileFixture)
+    }
+  };
+  assignOptional3(fixture.pullRequest, "body", normalizeOptionalString2(pullRequest.body));
+  assignOptional3(fixture.pullRequest.user, "htmlUrl", normalizeOptionalString2(pullRequest.user.htmlUrl));
+  assignOptional3(fixture.pullRequest.user, "kind", pullRequest.user.kind);
+  assignOptional3(fixture.pullRequest, "mergeCommitSha", normalizeOptionalString2(pullRequest.mergeCommitSha));
+  return fixture;
+}
+function toChangedFileFixture(file) {
+  const changedFile = {
+    filename: file.filename
+  };
+  assignOptional3(changedFile, "status", normalizeOptionalString2(file.status));
+  assignOptional3(changedFile, "additions", normalizeOptionalNonNegativeInteger2(file.additions));
+  assignOptional3(changedFile, "deletions", normalizeOptionalNonNegativeInteger2(file.deletions));
+  assignOptional3(changedFile, "patchExcerpt", normalizeOptionalExcerpt2(file.patch));
+  return changedFile;
+}
+function buildLinkedIssueItems(pullRequest, limit) {
+  const references = collectLinkedIssueRefs(`${pullRequest.title}
+${pullRequest.body ?? ""}`, limit);
+  return references.map((reference) => ({
+    kind: "issue",
+    id: reference,
+    title: `Linked issue candidate ${reference}`
+  }));
+}
+function collectLinkedIssueRefs(value, limit) {
+  const refs = [];
+  const seen = /* @__PURE__ */ new Set();
+  const pattern = /(?:^|[\s([:{])(?:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)?#([1-9][0-9]{0,8})\b/g;
+  let match;
+  while ((match = pattern.exec(value)) !== null && refs.length < limit) {
+    const ref = `#${match[1]}`;
+    if (!seen.has(ref)) {
+      seen.add(ref);
+      refs.push(ref);
+    }
+  }
+  return refs;
+}
+function buildReviewCommentItems(comments, limit) {
+  return comments.slice(0, limit).map((comment) => {
+    const id = `review-comment:${String(comment.id)}`;
+    const path = normalizeOptionalString2(comment.path);
+    const title = path === void 0 ? `Review comment ${comment.id}` : `Review comment on ${path}`;
+    const item = {
+      kind: "review",
+      id,
+      title
+    };
+    assignOptional3(item, "url", normalizeOptionalHttpsUrl2(comment.htmlUrl, "reviewComment.htmlUrl"));
+    assignOptional3(item, "excerpt", normalizeOptionalExcerpt2(comment.body));
+    return item;
+  });
+}
+function validateLiveInput(input) {
+  if (!REPOSITORY_NAME_PATTERN2.test(input.repository)) {
+    throw new LiveGitHubCollectionError("invalid_repository", "Live GitHub collector repository must use owner/name format.");
+  }
+  if (!Number.isInteger(input.pullRequestNumber) || input.pullRequestNumber <= 0) {
+    throw new LiveGitHubCollectionError("invalid_pull_request_number", "Live GitHub collector pull request number must be a positive integer.");
+  }
+  validateLimit(input.reviewCommentLimit, "review_comment_limit");
+  validateLimit(input.linkedIssueLimit, "linked_issue_limit");
+}
+function validateLimit(value, code) {
+  if (value === void 0) {
+    return;
+  }
+  if (!Number.isInteger(value) || value < 0 || value > 100) {
+    throw new LiveGitHubCollectionError(code, "Live GitHub collector limits must be integers between 0 and 100.");
+  }
+}
+function normalizeRequiredString2(value, field) {
+  const normalized = normalizeOptionalString2(value);
+  if (normalized === void 0) {
+    throw new GitHubEvidenceCollectionError(field, `${field} must be a non-empty string.`);
+  }
+  return normalized;
+}
+function normalizeOptionalString2(value) {
+  if (value === void 0 || value === null) {
+    return void 0;
+  }
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return normalized.length === 0 ? void 0 : normalized;
+}
+function normalizeOptionalExcerpt2(value) {
+  const normalized = normalizeOptionalString2(value);
+  if (normalized === void 0) {
+    return void 0;
+  }
+  return normalized.length > TEXT_LIMIT ? `${normalized.slice(0, TEXT_LIMIT - 1)}...` : normalized;
+}
+function normalizeOptionalHttpsUrl2(value, field) {
+  const normalized = normalizeOptionalString2(value);
+  if (normalized === void 0) {
+    return void 0;
+  }
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.protocol !== "https:") {
+      throw new GitHubEvidenceCollectionError(field, `${field} must use https.`);
+    }
+  } catch (error) {
+    if (error instanceof GitHubEvidenceCollectionError) {
+      throw error;
+    }
+    throw new GitHubEvidenceCollectionError(field, `${field} must be a valid URL.`);
+  }
+  return normalized;
+}
+function normalizeOptionalNonNegativeInteger2(value) {
+  if (value === void 0 || value === null) {
+    return void 0;
+  }
+  if (!Number.isInteger(value) || value < 0) {
+    throw new GitHubEvidenceCollectionError("pullRequest.changedFiles[]", "Changed file additions and deletions must be non-negative integers when provided.");
+  }
+  return value;
+}
+function dedupeEvidenceItems2(items) {
+  const seen = /* @__PURE__ */ new Set();
+  const deduped = [];
+  for (const item of items) {
+    const key = `${item.kind}:${item.id}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    deduped.push(item);
+  }
+  return deduped;
+}
+function assignOptional3(target, key, value) {
+  if (value !== void 0) {
+    target[key] = value;
+  }
+}
+
 // packages/action/dist/event.js
 function resolveGitHubEventPayload(value) {
-  if (!isRecord(value)) {
+  if (!isRecord2(value)) {
     return {
       kind: "skipped",
       reason: "GitHub event payload must be a JSON object."
     };
   }
-  if (!isRecord(value.repository) || typeof value.repository.full_name !== "string") {
+  if (!isRecord2(value.repository) || typeof value.repository.full_name !== "string") {
     return {
       kind: "skipped",
       reason: "GitHub event payload does not include repository.full_name."
     };
   }
-  if (!isRecord(value.pull_request)) {
+  if (!isRecord2(value.pull_request)) {
     return {
       kind: "skipped",
       reason: "GitHub event payload does not include a pull_request object."
     };
   }
   const pullRequest = value.pull_request;
-  const contributorKind = isRecord(pullRequest.user) ? parseActorKind(pullRequest.user.type) : void 0;
+  const contributorKind = isRecord2(pullRequest.user) ? parseActorKind(pullRequest.user.type) : void 0;
   const mergedAt = typeof pullRequest.merged_at === "string" ? pullRequest.merged_at : void 0;
   if (mergedAt === void 0) {
     return {
@@ -569,13 +1423,17 @@ function resolveGitHubEventPayload(value) {
       reason: "GitHub pull request event is not a merged pull request."
     };
   }
-  if (!isRecord(pullRequest.user)) {
+  if (!isRecord2(pullRequest.user)) {
     return {
       kind: "skipped",
       reason: "GitHub pull request event does not include pull_request.user."
     };
   }
-  const fixture = {
+  const body = optionalString(pullRequest.body);
+  const htmlUrl = optionalString(pullRequest.html_url);
+  const userHtmlUrl = optionalString(pullRequest.user.html_url);
+  const mergeCommitSha = optionalString(pullRequest.merge_commit_sha);
+  const fixture = parseGitHubMergedPullRequestFixture({
     repository: {
       fullName: value.repository.full_name
     },
@@ -586,15 +1444,15 @@ function resolveGitHubEventPayload(value) {
       user: {
         id: pullRequest.user.id,
         login: pullRequest.user.login,
-        ...contributorKind === void 0 ? {} : { kind: contributorKind }
+        ...contributorKind === void 0 ? {} : { kind: contributorKind },
+        ...userHtmlUrl === void 0 ? {} : { htmlUrl: userHtmlUrl }
       },
-      labels: parseLabels(pullRequest.labels)
+      labels: parseLabels2(pullRequest.labels),
+      ...body === void 0 ? {} : { body },
+      ...htmlUrl === void 0 ? {} : { htmlUrl },
+      ...mergeCommitSha === void 0 ? {} : { mergeCommitSha }
     }
-  };
-  assignOptional(fixture.pullRequest, "body", optionalString(pullRequest.body));
-  assignOptional(fixture.pullRequest, "htmlUrl", optionalString(pullRequest.html_url));
-  assignOptional(fixture.pullRequest.user, "htmlUrl", optionalString(pullRequest.user.html_url));
-  assignOptional(fixture.pullRequest, "mergeCommitSha", optionalString(pullRequest.merge_commit_sha));
+  });
   return {
     kind: "merged_pull_request",
     fixture
@@ -609,12 +1467,12 @@ function parseActorKind(value) {
   }
   return void 0;
 }
-function parseLabels(value) {
+function parseLabels2(value) {
   if (!Array.isArray(value)) {
     return [];
   }
   return value.flatMap((entry) => {
-    if (!isRecord(entry) || typeof entry.name !== "string") {
+    if (!isRecord2(entry) || typeof entry.name !== "string") {
       return [];
     }
     return [
@@ -627,13 +1485,8 @@ function parseLabels(value) {
 function optionalString(value) {
   return typeof value === "string" ? value : void 0;
 }
-function isRecord(value) {
+function isRecord2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function assignOptional(target, key, value) {
-  if (value !== void 0) {
-    target[key] = value;
-  }
 }
 
 // packages/action/dist/pull-request.js
@@ -828,9 +1681,9 @@ function truncateLine(value, maxLength) {
 }
 
 // packages/action/dist/github-client.js
-var DEFAULT_GITHUB_API_URL = "https://api.github.com";
-var DEFAULT_REQUEST_TIMEOUT_MS = 3e4;
-var DEFAULT_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+var DEFAULT_GITHUB_API_URL2 = "https://api.github.com";
+var DEFAULT_REQUEST_TIMEOUT_MS2 = 3e4;
+var DEFAULT_MAX_RESPONSE_BYTES2 = 2 * 1024 * 1024;
 var MAX_ATTEMPTS = 3;
 var RETRY_BASE_DELAY_MS = 500;
 var MAX_RETRY_DELAY_MS = 6e4;
@@ -841,10 +1694,10 @@ function createGitHubPullRequestClient(options) {
   if (token.length === 0) {
     throw new ProposalPullRequestClientError("permission_denied", "A GitHub token is required to create or update proposal pull requests.");
   }
-  const apiUrl = normalizeApiUrl(options.apiUrl);
+  const apiUrl = normalizeApiUrl2(options.apiUrl);
   const fetchImpl = options.fetch ?? fetch;
-  const timeoutMs = positiveIntegerOption(options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS, "timeoutMs");
-  const maxResponseBytes = positiveIntegerOption(options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES, "maxResponseBytes");
+  const timeoutMs = positiveIntegerOption2(options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS2, "timeoutMs");
+  const maxResponseBytes = positiveIntegerOption2(options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES2, "maxResponseBytes");
   const sleep = options.sleep ?? defaultSleep;
   const random = randomOption(options.random ?? Math.random);
   const findOpenPullRequest = async (input) => {
@@ -858,7 +1711,7 @@ function createGitHubPullRequestClient(options) {
       throw new ProposalPullRequestClientError("unexpected", "GitHub pull request lookup returned an unexpected response.");
     }
     const first = response[0];
-    return first === void 0 ? null : parsePullRequest(first);
+    return first === void 0 ? null : parsePullRequest2(first);
   };
   const listPullRequestComments = async (input) => {
     const comments = [];
@@ -895,7 +1748,7 @@ function createGitHubPullRequestClient(options) {
         try {
           const response = await requestJsonOnce(fetchImpl, token, url, init, timeoutMs, maxResponseBytes);
           try {
-            return parsePullRequest(response);
+            return parsePullRequest2(response);
           } catch (error) {
             const reconciled = await findOpenPullRequest(input);
             if (reconciled !== null) {
@@ -941,7 +1794,7 @@ function createGitHubPullRequestClient(options) {
           body: input.body
         })
       }, { timeoutMs, maxResponseBytes, sleep, random });
-      return parsePullRequest(response);
+      return parsePullRequest2(response);
     },
     listPullRequestComments,
     async createPullRequestComment(input) {
@@ -1019,7 +1872,7 @@ async function requestJsonWithRetry(fetchImpl, token, url, init, runtime) {
 }
 async function requestJsonOnce(fetchImpl, token, url, init, timeoutMs, maxResponseBytes) {
   try {
-    return await withTimeout(timeoutMs, async (signal) => {
+    return await withTimeout2(timeoutMs, async (signal) => {
       const response = await fetchImpl(url, {
         ...init,
         headers: {
@@ -1030,8 +1883,8 @@ async function requestJsonOnce(fetchImpl, token, url, init, timeoutMs, maxRespon
         },
         signal
       });
-      const text = await readBoundedResponseText(response, maxResponseBytes);
-      const body = parseOptionalJson(text);
+      const text = await readBoundedResponseText2(response, maxResponseBytes);
+      const body = parseOptionalJson2(text);
       if (response.ok) {
         return body;
       }
@@ -1041,7 +1894,7 @@ async function requestJsonOnce(fetchImpl, token, url, init, timeoutMs, maxRespon
     if (error instanceof ProposalPullRequestClientError) {
       throw error;
     }
-    if (error instanceof RequestTimeoutError) {
+    if (error instanceof RequestTimeoutError2) {
       throw new ProposalPullRequestClientError("timeout", "GitHub pull request request timed out.", { retryable: true });
     }
     throw new ProposalPullRequestClientError("network_error", "GitHub pull request request failed before a response.", { retryable: true });
@@ -1049,7 +1902,7 @@ async function requestJsonOnce(fetchImpl, token, url, init, timeoutMs, maxRespon
 }
 function mapGitHubError(response, body) {
   const status = response.status;
-  const message = githubMessage(body);
+  const message = githubMessage2(body);
   const retryAfterMs = parseRetryAfterMs(response);
   const rateLimited = status === 429 || status === 403 && (retryAfterMs !== void 0 || response.headers?.get?.("x-ratelimit-remaining") === "0");
   if (rateLimited) {
@@ -1077,7 +1930,7 @@ function mapGitHubError(response, body) {
   }
   return new ProposalPullRequestClientError("request_failed", message, { status });
 }
-async function readBoundedResponseText(response, maxBytes) {
+async function readBoundedResponseText2(response, maxBytes) {
   const contentLength = response.headers?.get?.("content-length");
   if (contentLength !== null && contentLength !== void 0) {
     const declaredBytes = Number(contentLength);
@@ -1113,13 +1966,13 @@ async function readBoundedResponseText(response, maxBytes) {
     reader.releaseLock();
   }
 }
-async function withTimeout(timeoutMs, task) {
+async function withTimeout2(timeoutMs, task) {
   const controller = new AbortController();
   let timer;
   const timeout = new Promise((_resolve, reject) => {
     timer = setTimeout(() => {
       controller.abort();
-      reject(new RequestTimeoutError());
+      reject(new RequestTimeoutError2());
     }, timeoutMs);
   });
   try {
@@ -1130,7 +1983,7 @@ async function withTimeout(timeoutMs, task) {
     }
   }
 }
-var RequestTimeoutError = class extends Error {
+var RequestTimeoutError2 = class extends Error {
 };
 function responseTooLargeError(maxBytes) {
   return new ProposalPullRequestClientError("response_too_large", `GitHub pull request response exceeded ${maxBytes} bytes.`);
@@ -1154,43 +2007,55 @@ function parseRetryAfterMs(response) {
   const date = Date.parse(value);
   return Number.isFinite(date) ? Math.max(0, date - Date.now()) : void 0;
 }
-function parsePullRequest(value) {
-  if (!isRecord2(value)) {
+function parsePullRequest2(value) {
+  if (!isRecord3(value)) {
     throw new ProposalPullRequestClientError("unexpected", "GitHub pull request response must be an object.");
   }
   const head = value.head;
   const base = value.base;
-  if (!isRecord2(head) || !isRecord2(base)) {
+  if (!isRecord3(head) || !isRecord3(base)) {
     throw new ProposalPullRequestClientError("unexpected", "GitHub pull request response must include head and base refs.");
   }
   return {
-    number: expectNumber(value.number, "number"),
-    url: expectString(value.html_url, "html_url"),
-    headBranch: expectString(head.ref, "head.ref"),
-    baseBranch: expectString(base.ref, "base.ref"),
-    title: expectString(value.title, "title")
+    number: expectNumber3(value.number, "number"),
+    url: expectString3(value.html_url, "html_url"),
+    headBranch: expectString3(head.ref, "head.ref"),
+    baseBranch: expectString3(base.ref, "base.ref"),
+    title: expectString3(value.title, "title")
   };
 }
 function parseSourcePullRequestComment(value) {
-  if (!isRecord2(value) || !isRecord2(value.user)) {
+  if (!isRecord3(value) || !isRecord3(value.user)) {
     throw new ProposalPullRequestClientError("unexpected", "GitHub source pull request comment response must include an author.");
   }
   const app = value.performed_via_github_app;
   const comment = {
-    id: expectNumber(value.id, "id"),
-    url: expectString(value.html_url, "html_url"),
+    id: expectNumber3(value.id, "id"),
+    url: expectString3(value.html_url, "html_url"),
     body: typeof value.body === "string" ? value.body : "",
-    authorLogin: expectString(value.user.login, "user.login"),
-    authorType: expectString(value.user.type, "user.type")
+    authorLogin: expectString3(value.user.login, "user.login"),
+    authorType: expectString3(value.user.type, "user.type")
   };
-  if (isRecord2(app) && typeof app.slug === "string" && app.slug.trim().length > 0) {
+  if (isRecord3(app) && typeof app.slug === "string" && app.slug.trim().length > 0) {
     return { ...comment, appSlug: app.slug };
   }
   return comment;
 }
-function normalizeApiUrl(value) {
-  const normalized = value?.replace(/\/+$/g, "").trim();
-  return normalized === void 0 || normalized.length === 0 ? DEFAULT_GITHUB_API_URL : normalized;
+function normalizeApiUrl2(value) {
+  const normalized = value?.trim().replace(/\/+$/g, "");
+  if (normalized === void 0 || normalized.length === 0) {
+    return DEFAULT_GITHUB_API_URL2;
+  }
+  let parsed;
+  try {
+    parsed = new URL(normalized);
+  } catch {
+    throw new ProposalPullRequestClientError("invalid_options", "GitHub API URL must be a valid HTTPS base URL.");
+  }
+  if (parsed.protocol !== "https:" || parsed.username !== "" || parsed.password !== "" || parsed.search !== "" || parsed.hash !== "") {
+    throw new ProposalPullRequestClientError("invalid_options", "GitHub API URL must use HTTPS and must not include credentials, a query, or a fragment.");
+  }
+  return parsed.href.replace(/\/+$/g, "");
 }
 function splitRepository(repository) {
   const parts = repository.split("/");
@@ -1199,7 +2064,7 @@ function splitRepository(repository) {
   }
   return [parts[0], parts[1]];
 }
-function parseOptionalJson(text) {
+function parseOptionalJson2(text) {
   if (text.trim().length === 0) {
     return {};
   }
@@ -1209,8 +2074,8 @@ function parseOptionalJson(text) {
     return {};
   }
 }
-function githubMessage(value) {
-  if (isRecord2(value) && typeof value.message === "string") {
+function githubMessage2(value) {
+  if (isRecord3(value) && typeof value.message === "string") {
     const normalized = value.message.replace(/\s+/g, " ").trim();
     if (normalized.length > 0) {
       return normalized.length <= 500 ? normalized : `${normalized.slice(0, 497)}...`;
@@ -1218,7 +2083,7 @@ function githubMessage(value) {
   }
   return "GitHub pull request request failed.";
 }
-function positiveIntegerOption(value, name) {
+function positiveIntegerOption2(value, name) {
   if (!Number.isInteger(value) || value <= 0) {
     throw new ProposalPullRequestClientError("invalid_options", `GitHub pull request client ${name} must be a positive integer.`);
   }
@@ -1236,19 +2101,19 @@ function randomOption(value) {
 function defaultSleep(milliseconds) {
   return new Promise((resolve2) => setTimeout(resolve2, milliseconds));
 }
-function expectString(value, field) {
+function expectString3(value, field) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new ProposalPullRequestClientError("unexpected", `GitHub pull request response field ${field} must be a non-empty string.`);
   }
   return value;
 }
-function expectNumber(value, field) {
+function expectNumber3(value, field) {
   if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
     throw new ProposalPullRequestClientError("unexpected", `GitHub pull request response field ${field} must be a positive integer.`);
   }
   return value;
 }
-function isRecord2(value) {
+function isRecord3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -1410,13 +2275,13 @@ function sanitizeAssessmentForActionSummary(assessment) {
         kind: ref.kind,
         id: ref.id
       };
-      assignOptional2(sanitized, "url", ref.url);
-      assignOptional2(sanitized, "title", ref.title);
+      assignOptional4(sanitized, "url", ref.url);
+      assignOptional4(sanitized, "title", ref.title);
       return sanitized;
     })
   };
 }
-function assignOptional2(target, key, value) {
+function assignOptional4(target, key, value) {
   if (value !== void 0) {
     target[key] = value;
   }
@@ -1589,11 +2454,11 @@ function prepareEvidenceItem(input) {
     id: input.id,
     redactionReport: mergeRedactionReports(reports)
   };
-  assignOptional3(item, "url", input.url);
-  assignOptional3(item, "title", title);
-  assignOptional3(item, "excerpt", excerpt);
-  assignOptional3(item, "text", text);
-  assignOptional3(item, "metadata", metadata);
+  assignOptional5(item, "url", input.url);
+  assignOptional5(item, "title", title);
+  assignOptional5(item, "excerpt", excerpt);
+  assignOptional5(item, "text", text);
+  assignOptional5(item, "metadata", metadata);
   return item;
 }
 function assertEvidenceItemCount(count) {
@@ -1611,9 +2476,9 @@ function toEvidenceRef(item) {
     kind: item.kind,
     id: item.id
   };
-  assignOptional3(ref, "url", item.url);
-  assignOptional3(ref, "title", item.title);
-  assignOptional3(ref, "excerpt", item.excerpt ?? item.text);
+  assignOptional5(ref, "url", item.url);
+  assignOptional5(ref, "title", item.title);
+  assignOptional5(ref, "excerpt", item.excerpt ?? item.text);
   return ref;
 }
 function redactOptionalText(value, reports) {
@@ -1632,7 +2497,7 @@ function redactOptionalJson(value, reports) {
   reports.push(result.report);
   return result.value;
 }
-function assignOptional3(target, key, value) {
+function assignOptional5(target, key, value) {
   if (value !== void 0) {
     target[key] = value;
   }
@@ -1782,7 +2647,7 @@ function hasPublicRankingLanguage(value) {
 }
 function validateContributionAssessment(value) {
   const issues = [];
-  if (!isRecord3(value)) {
+  if (!isRecord4(value)) {
     return invalid([
       {
         path: "$",
@@ -1815,7 +2680,7 @@ function validateContributionAssessment(value) {
 }
 function validateClarissimiConfig(value) {
   const issues = [];
-  if (!isRecord3(value)) {
+  if (!isRecord4(value)) {
     return invalid([
       {
         path: "$",
@@ -1867,7 +2732,7 @@ function validateClarissimiConfig(value) {
   };
 }
 function validateContributor(value, path, issues) {
-  if (!isRecord3(value)) {
+  if (!isRecord4(value)) {
     pushIssue(issues, path, "expected_object", "Contributor must be an object.");
     return;
   }
@@ -1890,7 +2755,7 @@ function validateEvidenceRefs(value, path, issues) {
   }
   value.forEach((entry, index) => {
     const entryPath = `${path}[${index}]`;
-    if (!isRecord3(entry)) {
+    if (!isRecord4(entry)) {
       pushIssue(issues, entryPath, "expected_object", "Evidence ref must be an object.");
       return;
     }
@@ -1908,7 +2773,7 @@ function validateEvidenceRefs(value, path, issues) {
   });
 }
 function validateSource(value, path, issues) {
-  if (!isRecord3(value)) {
+  if (!isRecord4(value)) {
     pushIssue(issues, path, "expected_object", "Source must be an object.");
     return;
   }
@@ -1941,7 +2806,7 @@ function rejectPublicScoreFields(value, path, issues) {
     });
     return;
   }
-  if (!isRecord3(value)) {
+  if (!isRecord4(value)) {
     return;
   }
   for (const [key, nestedValue] of Object.entries(value)) {
@@ -2050,7 +2915,7 @@ function expectIsoDateTime(value, path, issues) {
     pushIssue(issues, path, "invalid_datetime", "Value must be an ISO-compatible date time.");
   }
 }
-function isRecord3(value) {
+function isRecord4(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function pushIssue(issues, path, code, message) {
@@ -2243,7 +3108,7 @@ function sortJsonValue(value) {
   if (Array.isArray(value)) {
     return value.map(sortJsonValue);
   }
-  if (isRecord4(value)) {
+  if (isRecord5(value)) {
     const sorted = {};
     Object.keys(value).sort().forEach((key) => {
       sorted[key] = sortJsonValue(value[key]);
@@ -2252,7 +3117,7 @@ function sortJsonValue(value) {
   }
   return value;
 }
-function isRecord4(value) {
+function isRecord5(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -2755,848 +3620,6 @@ import { appendFile, lstat as lstat2, mkdir as mkdir3, readFile as readFile2, re
 import { basename, dirname as dirname3, isAbsolute as isAbsolute3, join as join3, relative as relative2, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
-
-// packages/github/dist/api-client.js
-var DEFAULT_GITHUB_API_URL2 = "https://api.github.com";
-var DEFAULT_PAGE_SIZE = 100;
-var MAX_LIST_PAGES = 10;
-var DEFAULT_REQUEST_TIMEOUT_MS2 = 3e4;
-var DEFAULT_MAX_RESPONSE_BYTES2 = 2 * 1024 * 1024;
-var GitHubApiClientError = class extends Error {
-  code;
-  retryable;
-  constructor(code, message) {
-    super(message);
-    this.name = "GitHubApiClientError";
-    this.code = code;
-    this.retryable = isRetryableCode(code);
-  }
-};
-function createGitHubApiClient(options = {}) {
-  const apiUrl = normalizeApiUrl2(options.apiUrl);
-  const fetchImpl = options.fetch ?? fetch;
-  const timeoutMs = positiveIntegerOption2(options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS2, "timeoutMs");
-  const maxResponseBytes = positiveIntegerOption2(options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES2, "maxResponseBytes");
-  return {
-    async getPullRequest(input) {
-      const response = await requestJson(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}`, timeoutMs, maxResponseBytes);
-      return parsePullRequest2(response);
-    },
-    async listPullRequestFiles(input, limit = DEFAULT_PAGE_SIZE) {
-      const response = await requestPaginatedArray(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/files`, "GitHub pull request files response must be an array.", timeoutMs, maxResponseBytes, limit);
-      return response.map(parsePullRequestFile);
-    },
-    async listPullRequestReviewComments(input) {
-      const response = await requestPaginatedArray(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/comments`, "GitHub pull request review comments response must be an array.", timeoutMs, maxResponseBytes);
-      return response.map(parseReviewComment);
-    }
-  };
-}
-async function requestPaginatedArray(fetchImpl, token, baseUrl, invalidResponseMessage, timeoutMs, maxResponseBytes, maxItems = MAX_LIST_PAGES * DEFAULT_PAGE_SIZE) {
-  positiveIntegerOption2(maxItems, "listLimit");
-  const entries = [];
-  for (let page = 1; page <= MAX_LIST_PAGES; page += 1) {
-    const response = await requestJson(fetchImpl, token, `${baseUrl}?per_page=${DEFAULT_PAGE_SIZE}&page=${page}`, timeoutMs, maxResponseBytes);
-    if (!Array.isArray(response)) {
-      throw new GitHubApiClientError("unexpected_response", invalidResponseMessage);
-    }
-    entries.push(...response);
-    if (entries.length > maxItems) {
-      throw new GitHubApiClientError("response_too_large", `GitHub list response exceeded ${maxItems} items.`);
-    }
-    if (response.length < DEFAULT_PAGE_SIZE) {
-      return entries;
-    }
-  }
-  throw new GitHubApiClientError("response_too_large", `GitHub list response exceeded ${MAX_LIST_PAGES * DEFAULT_PAGE_SIZE} items.`);
-}
-async function requestJson(fetchImpl, token, url, timeoutMs, maxResponseBytes) {
-  const headers = {
-    Accept: "application/vnd.github+json",
-    "X-GitHub-Api-Version": "2022-11-28"
-  };
-  const normalizedToken = token?.trim();
-  if (normalizedToken !== void 0 && normalizedToken.length > 0) {
-    headers.Authorization = `Bearer ${normalizedToken}`;
-  }
-  try {
-    return await withTimeout2(timeoutMs, async (signal) => {
-      const response = await fetchImpl(url, {
-        method: "GET",
-        headers,
-        signal
-      });
-      const text = await readBoundedResponseText2(response, maxResponseBytes);
-      const body = parseOptionalJson2(text);
-      if (response.ok) {
-        return body;
-      }
-      throw mapGitHubApiError(response.status, body);
-    });
-  } catch (error) {
-    if (error instanceof GitHubApiClientError) {
-      throw error;
-    }
-    if (error instanceof RequestTimeoutError2) {
-      throw new GitHubApiClientError("timeout", "GitHub API request timed out.");
-    }
-    throw new GitHubApiClientError("network_error", "GitHub API request failed before a response.");
-  }
-}
-function parsePullRequest2(value) {
-  assertRecord(value, "pull request");
-  assertRecord(value.user, "pull request user");
-  const user = {
-    id: expectStringOrNumber(value.user.id, "user.id"),
-    login: expectString2(value.user.login, "user.login")
-  };
-  assignOptional4(user, "htmlUrl", expectOptionalNullableString(value.user.html_url, "user.html_url"));
-  assignOptional4(user, "kind", parseGitHubActorKind(value.user.type, "user.type"));
-  const pullRequest = {
-    number: expectNumber2(value.number, "number"),
-    title: expectString2(value.title, "title"),
-    htmlUrl: expectString2(value.html_url, "html_url"),
-    user,
-    labels: parseLabels2(value.labels)
-  };
-  assignOptional4(pullRequest, "body", expectOptionalNullableString(value.body, "body"));
-  assignOptional4(pullRequest, "mergedAt", expectOptionalNullableString(value.merged_at, "merged_at"));
-  assignOptional4(pullRequest, "mergeCommitSha", expectOptionalNullableString(value.merge_commit_sha, "merge_commit_sha"));
-  return pullRequest;
-}
-function parsePullRequestFile(value) {
-  assertRecord(value, "pull request file");
-  const file = {
-    filename: expectString2(value.filename, "filename")
-  };
-  assignOptional4(file, "status", expectOptionalNullableString(value.status, "status"));
-  assignOptional4(file, "additions", expectOptionalNullableNumber(value.additions, "additions"));
-  assignOptional4(file, "deletions", expectOptionalNullableNumber(value.deletions, "deletions"));
-  assignOptional4(file, "patch", expectOptionalNullableString(value.patch, "patch"));
-  return file;
-}
-function parseReviewComment(value) {
-  assertRecord(value, "review comment");
-  const comment = {
-    id: expectStringOrNumber(value.id, "id")
-  };
-  assignOptional4(comment, "body", expectOptionalNullableString(value.body, "body"));
-  assignOptional4(comment, "htmlUrl", expectOptionalNullableString(value.html_url, "html_url"));
-  assignOptional4(comment, "path", expectOptionalNullableString(value.path, "path"));
-  assignOptional4(comment, "diffHunk", expectOptionalNullableString(value.diff_hunk, "diff_hunk"));
-  if (isRecord5(value.user)) {
-    const user = {
-      id: expectStringOrNumber(value.user.id, "user.id"),
-      login: expectString2(value.user.login, "user.login")
-    };
-    assignOptional4(user, "htmlUrl", expectOptionalNullableString(value.user.html_url, "user.html_url"));
-    assignOptional4(user, "kind", parseGitHubActorKind(value.user.type, "user.type"));
-    assignOptional4(comment, "user", user);
-  }
-  return comment;
-}
-function parseGitHubActorKind(value, path) {
-  if (value === void 0 || value === null) {
-    return void 0;
-  }
-  if (value === "Bot") {
-    return "bot";
-  }
-  if (value === "User" || value === "Organization") {
-    return "human";
-  }
-  throw new GitHubApiClientError("unexpected_response", `${path} must be Bot, User, or Organization.`);
-}
-function parseLabels2(value) {
-  if (value === void 0) {
-    return [];
-  }
-  if (!Array.isArray(value)) {
-    throw new GitHubApiClientError("unexpected_response", "Pull request labels must be an array.");
-  }
-  return value.map((entry) => {
-    assertRecord(entry, "label");
-    return {
-      name: expectString2(entry.name, "label.name")
-    };
-  });
-}
-function mapGitHubApiError(status, body) {
-  const message = githubMessage2(body);
-  if (status === 401 || status === 403) {
-    return new GitHubApiClientError("permission_denied", message);
-  }
-  if (status === 404) {
-    return new GitHubApiClientError("not_found", message);
-  }
-  if (status === 429) {
-    return new GitHubApiClientError("rate_limited", message);
-  }
-  if (status >= 500) {
-    return new GitHubApiClientError("server_error", message);
-  }
-  return new GitHubApiClientError("request_failed", message);
-}
-async function readBoundedResponseText2(response, maxBytes) {
-  const contentLength = response.headers?.get?.("content-length");
-  if (contentLength !== null && contentLength !== void 0) {
-    const declaredBytes = Number(contentLength);
-    if (Number.isFinite(declaredBytes) && declaredBytes > maxBytes) {
-      throw new GitHubApiClientError("response_too_large", `GitHub API response exceeded ${maxBytes} bytes.`);
-    }
-  }
-  if (response.body === null || response.body === void 0) {
-    const text2 = await response.text();
-    if (new TextEncoder().encode(text2).byteLength > maxBytes) {
-      throw new GitHubApiClientError("response_too_large", `GitHub API response exceeded ${maxBytes} bytes.`);
-    }
-    return text2;
-  }
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let bytes = 0;
-  let text = "";
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        return text + decoder.decode();
-      }
-      bytes += value.byteLength;
-      if (bytes > maxBytes) {
-        await reader.cancel();
-        throw new GitHubApiClientError("response_too_large", `GitHub API response exceeded ${maxBytes} bytes.`);
-      }
-      text += decoder.decode(value, { stream: true });
-    }
-  } finally {
-    reader.releaseLock();
-  }
-}
-async function withTimeout2(timeoutMs, task) {
-  const controller = new AbortController();
-  let timer;
-  const timeout = new Promise((_resolve, reject) => {
-    timer = setTimeout(() => {
-      controller.abort();
-      reject(new RequestTimeoutError2());
-    }, timeoutMs);
-  });
-  try {
-    return await Promise.race([task(controller.signal), timeout]);
-  } finally {
-    if (timer !== void 0) {
-      clearTimeout(timer);
-    }
-  }
-}
-var RequestTimeoutError2 = class extends Error {
-};
-function positiveIntegerOption2(value, name) {
-  if (!Number.isInteger(value) || value <= 0) {
-    throw new GitHubApiClientError("invalid_options", `GitHub API client ${name} must be a positive integer.`);
-  }
-  return value;
-}
-function isRetryableCode(code) {
-  return ["rate_limited", "server_error", "network_error", "timeout"].includes(code);
-}
-function normalizeApiUrl2(value) {
-  const normalized = value?.replace(/\/+$/g, "").trim();
-  return normalized === void 0 || normalized.length === 0 ? DEFAULT_GITHUB_API_URL2 : normalized;
-}
-function parseOptionalJson2(text) {
-  if (text.trim().length === 0) {
-    return {};
-  }
-  try {
-    return JSON.parse(text);
-  } catch {
-    return {
-      message: text
-    };
-  }
-}
-function githubMessage2(value) {
-  if (isRecord5(value) && typeof value.message === "string") {
-    return value.message;
-  }
-  return "GitHub API request failed.";
-}
-function expectString2(value, field) {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new GitHubApiClientError("unexpected_response", `GitHub API response field ${field} must be a non-empty string.`);
-  }
-  return value;
-}
-function expectOptionalNullableString(value, field) {
-  if (value === void 0 || value === null) {
-    return value;
-  }
-  return expectString2(value, field);
-}
-function expectNumber2(value, field) {
-  if (typeof value !== "number" || !Number.isInteger(value)) {
-    throw new GitHubApiClientError("unexpected_response", `GitHub API response field ${field} must be an integer.`);
-  }
-  return value;
-}
-function expectOptionalNullableNumber(value, field) {
-  if (value === void 0 || value === null) {
-    return value;
-  }
-  return expectNumber2(value, field);
-}
-function expectStringOrNumber(value, field) {
-  if (typeof value !== "string" && typeof value !== "number") {
-    throw new GitHubApiClientError("unexpected_response", `GitHub API response field ${field} must be a string or number.`);
-  }
-  return value;
-}
-function assertRecord(value, name) {
-  if (!isRecord5(value)) {
-    throw new GitHubApiClientError("unexpected_response", `GitHub API ${name} response must be an object.`);
-  }
-}
-function isRecord5(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function assignOptional4(target, key, value) {
-  if (value !== void 0) {
-    target[key] = value;
-  }
-}
-
-// packages/github/dist/merged-pr.js
-var DEFAULT_TEXT_LIMIT = 2e3;
-var REPOSITORY_NAME_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
-var TEST_PATH_PATTERN = /(^|\/)(__tests__|tests?|specs?)(\/|$)|[./_-](test|spec)\.[cm]?[jt]sx?$/i;
-var GitHubEvidenceCollectionError = class extends Error {
-  field;
-  constructor(field, message) {
-    super(message);
-    this.name = "GitHubEvidenceCollectionError";
-    this.field = field;
-  }
-};
-function parseGitHubMergedPullRequestFixture(value) {
-  assertRecord2(value, "$");
-  assertRecord2(value.repository, "$.repository");
-  assertRecord2(value.pullRequest, "$.pullRequest");
-  const pullRequest = value.pullRequest;
-  assertRecord2(pullRequest.user, "$.pullRequest.user");
-  const fixture = {
-    repository: {
-      fullName: expectString3(value.repository.fullName, "$.repository.fullName")
-    },
-    pullRequest: {
-      number: expectNumber3(pullRequest.number, "$.pullRequest.number"),
-      title: expectString3(pullRequest.title, "$.pullRequest.title"),
-      user: {
-        id: expectStringOrNumber2(pullRequest.user.id, "$.pullRequest.user.id"),
-        login: expectString3(pullRequest.user.login, "$.pullRequest.user.login")
-      }
-    }
-  };
-  assignOptional5(fixture.pullRequest, "body", expectOptionalString(pullRequest.body, "$.pullRequest.body"));
-  assignOptional5(fixture.pullRequest, "htmlUrl", expectOptionalString(pullRequest.htmlUrl, "$.pullRequest.htmlUrl"));
-  assignOptional5(fixture.pullRequest, "mergedAt", expectOptionalString(pullRequest.mergedAt, "$.pullRequest.mergedAt"));
-  assignOptional5(fixture.pullRequest.user, "htmlUrl", expectOptionalString(pullRequest.user.htmlUrl, "$.pullRequest.user.htmlUrl"));
-  assignOptional5(fixture.pullRequest.user, "kind", expectOptionalContributorKind(pullRequest.user.kind, "$.pullRequest.user.kind"));
-  assignOptional5(fixture.pullRequest, "labels", parseOptionalLabels(pullRequest.labels, "$.pullRequest.labels"));
-  assignOptional5(fixture.pullRequest, "changedFiles", parseOptionalChangedFiles(pullRequest.changedFiles, "$.pullRequest.changedFiles"));
-  assignOptional5(fixture.pullRequest, "mergeCommitSha", expectOptionalString(pullRequest.mergeCommitSha, "$.pullRequest.mergeCommitSha"));
-  return fixture;
-}
-function collectMergedPullRequestEvidence(fixture) {
-  const repository = normalizeRequiredString(fixture.repository.fullName, "repository.fullName");
-  if (!REPOSITORY_NAME_PATTERN.test(repository)) {
-    throw new GitHubEvidenceCollectionError("repository.fullName", "Repository full name must use owner/name format.");
-  }
-  const pullRequest = fixture.pullRequest;
-  const pullRequestNumber = normalizePositiveInteger(pullRequest.number, "pullRequest.number");
-  const title = normalizeRequiredString(pullRequest.title, "pullRequest.title");
-  const mergedAt = normalizeOptionalDateTime(pullRequest.mergedAt, "pullRequest.mergedAt");
-  const pullRequestUrl = normalizeOptionalHttpsUrl(pullRequest.htmlUrl, "pullRequest.htmlUrl");
-  const contributor = collectContributor(pullRequest.user);
-  const source = {
-    repository,
-    event: "merged_pull_request",
-    pullRequestNumber
-  };
-  assignOptional5(source, "mergedAt", mergedAt);
-  const items = [
-    buildPullRequestItem(pullRequestNumber, title, pullRequest.body, pullRequestUrl),
-    ...buildLabelItems(pullRequest.labels ?? []),
-    ...buildChangedFileItems(pullRequest.changedFiles ?? []),
-    ...buildMergeCommitItems(pullRequest.mergeCommitSha)
-  ];
-  return {
-    contributor,
-    evidence: {
-      source,
-      items: dedupeEvidenceItems(items)
-    }
-  };
-}
-function collectContributor(user) {
-  const id = normalizeRequiredString(String(user.id), "pullRequest.user.id");
-  const login = normalizeRequiredString(user.login, "pullRequest.user.login");
-  const profileUrl = normalizeOptionalHttpsUrl(user.htmlUrl, "pullRequest.user.htmlUrl") ?? `https://github.com/${encodeURIComponent(login)}`;
-  const contributor = {
-    platform: "github",
-    id,
-    login,
-    profileUrl
-  };
-  assignOptional5(contributor, "kind", user.kind);
-  return contributor;
-}
-function expectOptionalContributorKind(value, path) {
-  if (value === void 0) {
-    return void 0;
-  }
-  if (value !== "human" && value !== "bot" && value !== "ai_agent") {
-    throw new GitHubEvidenceCollectionError(path, `${path} must be human, bot, or ai_agent.`);
-  }
-  return value;
-}
-function buildPullRequestItem(pullRequestNumber, title, body, url) {
-  const item = {
-    kind: "pull_request",
-    id: `PR-${pullRequestNumber}`,
-    title
-  };
-  assignOptional5(item, "url", url);
-  assignOptional5(item, "excerpt", normalizeOptionalExcerpt(body));
-  return item;
-}
-function buildLabelItems(labels) {
-  return labels.flatMap((label, index) => {
-    const name = normalizeOptionalString(label.name);
-    if (name === void 0) {
-      return [];
-    }
-    return [
-      {
-        kind: "label",
-        id: `label:${name.toLowerCase()}`,
-        title: name,
-        metadata: {
-          sourceIndex: index
-        }
-      }
-    ];
-  });
-}
-function buildChangedFileItems(files) {
-  return files.map((file) => {
-    const filename = normalizeRequiredString(file.filename, "pullRequest.changedFiles[].filename");
-    const status = normalizeOptionalString(file.status);
-    const additions = normalizeOptionalNonNegativeInteger(file.additions, "additions");
-    const deletions = normalizeOptionalNonNegativeInteger(file.deletions, "deletions");
-    const metadata = buildFileMetadata(status, additions, deletions);
-    const item = {
-      kind: isTestPath(filename) ? "test" : "file",
-      id: filename,
-      title: filename
-    };
-    assignOptional5(item, "excerpt", buildFileExcerpt(file, status, additions, deletions));
-    assignOptional5(item, "metadata", metadata);
-    return item;
-  });
-}
-function buildMergeCommitItems(mergeCommitSha) {
-  const normalized = normalizeOptionalString(mergeCommitSha);
-  if (normalized === void 0) {
-    return [];
-  }
-  return [
-    {
-      kind: "commit",
-      id: normalized,
-      title: `Merge commit ${normalized.slice(0, 12)}`
-    }
-  ];
-}
-function buildFileExcerpt(file, status, additions, deletions) {
-  const patchExcerpt = normalizeOptionalExcerpt(file.patchExcerpt);
-  if (patchExcerpt !== void 0) {
-    return patchExcerpt;
-  }
-  const changeSummary = [
-    status ?? "changed",
-    additions === void 0 ? void 0 : `${additions} additions`,
-    deletions === void 0 ? void 0 : `${deletions} deletions`
-  ].filter((entry) => entry !== void 0);
-  return changeSummary.length === 0 ? void 0 : changeSummary.join(", ");
-}
-function buildFileMetadata(status, additions, deletions) {
-  const metadata = {};
-  assignOptional5(metadata, "status", status);
-  assignOptional5(metadata, "additions", additions);
-  assignOptional5(metadata, "deletions", deletions);
-  return Object.keys(metadata).length === 0 ? void 0 : metadata;
-}
-function dedupeEvidenceItems(items) {
-  const seen = /* @__PURE__ */ new Set();
-  const deduped = [];
-  for (const item of items) {
-    const key = `${item.kind}:${item.id}`;
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    deduped.push(item);
-  }
-  return deduped;
-}
-function normalizeRequiredString(value, field) {
-  const normalized = normalizeOptionalString(value);
-  if (normalized === void 0) {
-    throw new GitHubEvidenceCollectionError(field, `${field} must be a non-empty string.`);
-  }
-  return normalized;
-}
-function parseOptionalLabels(value, field) {
-  if (value === void 0) {
-    return void 0;
-  }
-  if (!Array.isArray(value)) {
-    throw new GitHubEvidenceCollectionError(field, `${field} must be an array when provided.`);
-  }
-  return value.map((entry, index) => {
-    assertRecord2(entry, `${field}[${index}]`);
-    return {
-      name: expectString3(entry.name, `${field}[${index}].name`)
-    };
-  });
-}
-function parseOptionalChangedFiles(value, field) {
-  if (value === void 0) {
-    return void 0;
-  }
-  if (!Array.isArray(value)) {
-    throw new GitHubEvidenceCollectionError(field, `${field} must be an array when provided.`);
-  }
-  return value.map((entry, index) => {
-    const itemPath = `${field}[${index}]`;
-    assertRecord2(entry, itemPath);
-    const changedFile = {
-      filename: expectString3(entry.filename, `${itemPath}.filename`)
-    };
-    assignOptional5(changedFile, "status", expectOptionalString(entry.status, `${itemPath}.status`));
-    assignOptional5(changedFile, "additions", expectOptionalNumber(entry.additions, `${itemPath}.additions`));
-    assignOptional5(changedFile, "deletions", expectOptionalNumber(entry.deletions, `${itemPath}.deletions`));
-    assignOptional5(changedFile, "patchExcerpt", expectOptionalString(entry.patchExcerpt, `${itemPath}.patchExcerpt`));
-    return changedFile;
-  });
-}
-function expectString3(value, field) {
-  if (typeof value !== "string") {
-    throw new GitHubEvidenceCollectionError(field, `${field} must be a string.`);
-  }
-  return value;
-}
-function expectOptionalString(value, field) {
-  if (value === void 0) {
-    return void 0;
-  }
-  return expectString3(value, field);
-}
-function expectNumber3(value, field) {
-  if (typeof value !== "number") {
-    throw new GitHubEvidenceCollectionError(field, `${field} must be a number.`);
-  }
-  return value;
-}
-function expectOptionalNumber(value, field) {
-  if (value === void 0) {
-    return void 0;
-  }
-  return expectNumber3(value, field);
-}
-function expectStringOrNumber2(value, field) {
-  if (typeof value !== "string" && typeof value !== "number") {
-    throw new GitHubEvidenceCollectionError(field, `${field} must be a string or number.`);
-  }
-  return value;
-}
-function assertRecord2(value, field) {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new GitHubEvidenceCollectionError(field, `${field} must be an object.`);
-  }
-}
-function normalizeOptionalString(value) {
-  if (value === void 0) {
-    return void 0;
-  }
-  const normalized = value.replace(/\s+/g, " ").trim();
-  return normalized.length === 0 ? void 0 : normalized;
-}
-function normalizeOptionalExcerpt(value) {
-  const normalized = normalizeOptionalString(value);
-  if (normalized === void 0) {
-    return void 0;
-  }
-  return normalized.length > DEFAULT_TEXT_LIMIT ? `${normalized.slice(0, DEFAULT_TEXT_LIMIT - 1)}...` : normalized;
-}
-function normalizePositiveInteger(value, field) {
-  if (!Number.isInteger(value) || value <= 0) {
-    throw new GitHubEvidenceCollectionError(field, `${field} must be a positive integer.`);
-  }
-  return value;
-}
-function normalizeOptionalNonNegativeInteger(value, field) {
-  if (value === void 0) {
-    return void 0;
-  }
-  if (!Number.isInteger(value) || value < 0) {
-    throw new GitHubEvidenceCollectionError(`pullRequest.changedFiles[].${field}`, `${field} must be a non-negative integer when provided.`);
-  }
-  return value;
-}
-function normalizeOptionalDateTime(value, field) {
-  const normalized = normalizeOptionalString(value);
-  if (normalized === void 0) {
-    return void 0;
-  }
-  if (Number.isNaN(Date.parse(normalized))) {
-    throw new GitHubEvidenceCollectionError(field, `${field} must be an ISO-compatible date time.`);
-  }
-  return normalized;
-}
-function normalizeOptionalHttpsUrl(value, field) {
-  const normalized = normalizeOptionalString(value);
-  if (normalized === void 0) {
-    return void 0;
-  }
-  try {
-    const parsed = new URL(normalized);
-    if (parsed.protocol !== "https:") {
-      throw new GitHubEvidenceCollectionError(field, `${field} must use https.`);
-    }
-  } catch (error) {
-    if (error instanceof GitHubEvidenceCollectionError) {
-      throw error;
-    }
-    throw new GitHubEvidenceCollectionError(field, `${field} must be a valid URL.`);
-  }
-  return normalized;
-}
-function isTestPath(filename) {
-  return TEST_PATH_PATTERN.test(filename.replace(/\\/g, "/"));
-}
-function assignOptional5(target, key, value) {
-  if (value !== void 0) {
-    target[key] = value;
-  }
-}
-
-// packages/github/dist/live.js
-var DEFAULT_REVIEW_COMMENT_LIMIT = 25;
-var DEFAULT_LINKED_ISSUE_LIMIT = 25;
-var DEFAULT_CHANGED_FILE_LIMIT = 100;
-var TEXT_LIMIT = 2e3;
-var REPOSITORY_NAME_PATTERN2 = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
-var LiveGitHubCollectionError = class extends Error {
-  code;
-  constructor(code, message) {
-    super(message);
-    this.name = "LiveGitHubCollectionError";
-    this.code = code;
-  }
-};
-async function collectLiveMergedPullRequestEvidence(input) {
-  validateLiveInput(input);
-  const lookup = {
-    repository: input.repository,
-    pullRequestNumber: input.pullRequestNumber
-  };
-  const [pullRequest, files, reviewComments] = await Promise.all([
-    input.client.getPullRequest(lookup),
-    input.client.listPullRequestFiles(lookup, DEFAULT_CHANGED_FILE_LIMIT),
-    input.client.listPullRequestReviewComments(lookup)
-  ]);
-  if (pullRequest.number !== input.pullRequestNumber) {
-    throw new LiveGitHubCollectionError("pull_request_number_mismatch", "Live GitHub collector received a pull request for a different number.");
-  }
-  if (normalizeOptionalString2(pullRequest.mergedAt) === void 0) {
-    throw new LiveGitHubCollectionError("pull_request_not_merged", "Live GitHub collector requires a merged pull request.");
-  }
-  if (files.length > DEFAULT_CHANGED_FILE_LIMIT) {
-    throw new LiveGitHubCollectionError("changed_file_limit", `Live GitHub collector changed files must not exceed ${DEFAULT_CHANGED_FILE_LIMIT} items.`);
-  }
-  const fixture = toMergedPullRequestFixture(input.repository, pullRequest, files);
-  const collected = collectMergedPullRequestEvidence(fixture);
-  const extraItems = [
-    ...buildLinkedIssueItems(pullRequest, input.linkedIssueLimit ?? DEFAULT_LINKED_ISSUE_LIMIT),
-    ...buildReviewCommentItems(reviewComments, input.reviewCommentLimit ?? DEFAULT_REVIEW_COMMENT_LIMIT)
-  ];
-  return {
-    contributor: collected.contributor,
-    evidence: {
-      source: collected.evidence.source,
-      items: dedupeEvidenceItems2([...collected.evidence.items, ...extraItems])
-    }
-  };
-}
-function toMergedPullRequestFixture(repository, pullRequest, files) {
-  const fixture = {
-    repository: {
-      fullName: repository
-    },
-    pullRequest: {
-      number: pullRequest.number,
-      title: pullRequest.title,
-      htmlUrl: pullRequest.htmlUrl,
-      mergedAt: normalizeRequiredString2(pullRequest.mergedAt, "pullRequest.mergedAt"),
-      user: {
-        id: pullRequest.user.id,
-        login: pullRequest.user.login
-      },
-      labels: (pullRequest.labels ?? []).map((label) => ({ name: label.name })),
-      changedFiles: files.map(toChangedFileFixture)
-    }
-  };
-  assignOptional6(fixture.pullRequest, "body", normalizeOptionalString2(pullRequest.body));
-  assignOptional6(fixture.pullRequest.user, "htmlUrl", normalizeOptionalString2(pullRequest.user.htmlUrl));
-  assignOptional6(fixture.pullRequest.user, "kind", pullRequest.user.kind);
-  assignOptional6(fixture.pullRequest, "mergeCommitSha", normalizeOptionalString2(pullRequest.mergeCommitSha));
-  return fixture;
-}
-function toChangedFileFixture(file) {
-  const changedFile = {
-    filename: file.filename
-  };
-  assignOptional6(changedFile, "status", normalizeOptionalString2(file.status));
-  assignOptional6(changedFile, "additions", normalizeOptionalNonNegativeInteger2(file.additions));
-  assignOptional6(changedFile, "deletions", normalizeOptionalNonNegativeInteger2(file.deletions));
-  assignOptional6(changedFile, "patchExcerpt", normalizeOptionalExcerpt2(file.patch));
-  return changedFile;
-}
-function buildLinkedIssueItems(pullRequest, limit) {
-  const references = collectLinkedIssueRefs(`${pullRequest.title}
-${pullRequest.body ?? ""}`, limit);
-  return references.map((reference) => ({
-    kind: "issue",
-    id: reference,
-    title: `Linked issue candidate ${reference}`
-  }));
-}
-function collectLinkedIssueRefs(value, limit) {
-  const refs = [];
-  const seen = /* @__PURE__ */ new Set();
-  const pattern = /(?:^|[\s([:{])(?:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)?#([1-9][0-9]{0,8})\b/g;
-  let match;
-  while ((match = pattern.exec(value)) !== null && refs.length < limit) {
-    const ref = `#${match[1]}`;
-    if (!seen.has(ref)) {
-      seen.add(ref);
-      refs.push(ref);
-    }
-  }
-  return refs;
-}
-function buildReviewCommentItems(comments, limit) {
-  return comments.slice(0, limit).map((comment) => {
-    const id = `review-comment:${String(comment.id)}`;
-    const path = normalizeOptionalString2(comment.path);
-    const title = path === void 0 ? `Review comment ${comment.id}` : `Review comment on ${path}`;
-    const item = {
-      kind: "review",
-      id,
-      title
-    };
-    assignOptional6(item, "url", normalizeOptionalHttpsUrl2(comment.htmlUrl, "reviewComment.htmlUrl"));
-    assignOptional6(item, "excerpt", normalizeOptionalExcerpt2(comment.body));
-    return item;
-  });
-}
-function validateLiveInput(input) {
-  if (!REPOSITORY_NAME_PATTERN2.test(input.repository)) {
-    throw new LiveGitHubCollectionError("invalid_repository", "Live GitHub collector repository must use owner/name format.");
-  }
-  if (!Number.isInteger(input.pullRequestNumber) || input.pullRequestNumber <= 0) {
-    throw new LiveGitHubCollectionError("invalid_pull_request_number", "Live GitHub collector pull request number must be a positive integer.");
-  }
-  validateLimit(input.reviewCommentLimit, "review_comment_limit");
-  validateLimit(input.linkedIssueLimit, "linked_issue_limit");
-}
-function validateLimit(value, code) {
-  if (value === void 0) {
-    return;
-  }
-  if (!Number.isInteger(value) || value < 0 || value > 100) {
-    throw new LiveGitHubCollectionError(code, "Live GitHub collector limits must be integers between 0 and 100.");
-  }
-}
-function normalizeRequiredString2(value, field) {
-  const normalized = normalizeOptionalString2(value);
-  if (normalized === void 0) {
-    throw new GitHubEvidenceCollectionError(field, `${field} must be a non-empty string.`);
-  }
-  return normalized;
-}
-function normalizeOptionalString2(value) {
-  if (value === void 0 || value === null) {
-    return void 0;
-  }
-  const normalized = value.replace(/\s+/g, " ").trim();
-  return normalized.length === 0 ? void 0 : normalized;
-}
-function normalizeOptionalExcerpt2(value) {
-  const normalized = normalizeOptionalString2(value);
-  if (normalized === void 0) {
-    return void 0;
-  }
-  return normalized.length > TEXT_LIMIT ? `${normalized.slice(0, TEXT_LIMIT - 1)}...` : normalized;
-}
-function normalizeOptionalHttpsUrl2(value, field) {
-  const normalized = normalizeOptionalString2(value);
-  if (normalized === void 0) {
-    return void 0;
-  }
-  try {
-    const parsed = new URL(normalized);
-    if (parsed.protocol !== "https:") {
-      throw new GitHubEvidenceCollectionError(field, `${field} must use https.`);
-    }
-  } catch (error) {
-    if (error instanceof GitHubEvidenceCollectionError) {
-      throw error;
-    }
-    throw new GitHubEvidenceCollectionError(field, `${field} must be a valid URL.`);
-  }
-  return normalized;
-}
-function normalizeOptionalNonNegativeInteger2(value) {
-  if (value === void 0 || value === null) {
-    return void 0;
-  }
-  if (!Number.isInteger(value) || value < 0) {
-    throw new GitHubEvidenceCollectionError("pullRequest.changedFiles[]", "Changed file additions and deletions must be non-negative integers when provided.");
-  }
-  return value;
-}
-function dedupeEvidenceItems2(items) {
-  const seen = /* @__PURE__ */ new Set();
-  const deduped = [];
-  for (const item of items) {
-    const key = `${item.kind}:${item.id}`;
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    deduped.push(item);
-  }
-  return deduped;
-}
-function assignOptional6(target, key, value) {
-  if (value !== void 0) {
-    target[key] = value;
-  }
-}
 
 // packages/providers/dist/result-quality.js
 var SECURITY_CLAIM_PATTERN = /\b(?:security|vulnerabilit(?:y|ies)|exploit|advisory|cve-\d{4}-\d{4,})\b/i;
@@ -4521,14 +4544,14 @@ async function runActionPropose(input) {
     repositoryDir: input.repositoryDir,
     branch
   };
-  assignOptional7(publishInput, "remoteName", input.remoteName);
+  assignOptional6(publishInput, "remoteName", input.remoteName);
   const publishedBranch = await publishProposalBranch(publishInput);
   const pullRequestInput = {
     client: input.pullRequestClient,
     manifest: staging.manifest,
     branch
   };
-  assignOptional7(pullRequestInput, "targetRepository", input.targetRepository);
+  assignOptional6(pullRequestInput, "targetRepository", input.targetRepository);
   const pullRequest = await createOrUpdateProposalPullRequest(pullRequestInput);
   const sourceComment = await maybeUpsertProposalSourceComment(input, staging.manifest, pullRequest.pullRequest, "recognition");
   return {
@@ -4573,13 +4596,13 @@ async function runActionCommit(input) {
     manifest: staging.manifest,
     targetBranch: input.targetBranch
   };
-  assignOptional7(commitInput, "expectedHeadSha", input.expectedHeadSha);
+  assignOptional6(commitInput, "expectedHeadSha", input.expectedHeadSha);
   const commit = await createDirectCommit(commitInput);
   const publishInput = {
     repositoryDir: input.repositoryDir,
     commit
   };
-  assignOptional7(publishInput, "remoteName", input.remoteName);
+  assignOptional6(publishInput, "remoteName", input.remoteName);
   const published = await publishDirectCommit(publishInput);
   return {
     ok: true,
@@ -4621,7 +4644,7 @@ async function runActionStageDraft(input) {
     repositoryDir: input.repositoryDir,
     branch
   };
-  assignOptional7(publishInput, "remoteName", input.remoteName);
+  assignOptional6(publishInput, "remoteName", input.remoteName);
   const publishedBranch = await publishProposalBranch(publishInput);
   const pullRequestInput = {
     client: input.pullRequestClient,
@@ -4629,7 +4652,7 @@ async function runActionStageDraft(input) {
     branch,
     maintainerApprovalNote: "This pull request stages an unapproved Clarissimi draft. Review and edit the draft, then approve and import it before public recognition."
   };
-  assignOptional7(pullRequestInput, "targetRepository", input.targetRepository);
+  assignOptional6(pullRequestInput, "targetRepository", input.targetRepository);
   const pullRequest = await createOrUpdateProposalPullRequest(pullRequestInput);
   const sourceComment = await maybeUpsertProposalSourceComment(input, staging.manifest, pullRequest.pullRequest, "draft-review");
   return {
@@ -4676,7 +4699,7 @@ async function runActionPromoteDraft(input) {
     repositoryDir: input.repositoryDir,
     branch
   };
-  assignOptional7(publishInput, "remoteName", input.remoteName);
+  assignOptional6(publishInput, "remoteName", input.remoteName);
   const publishedBranch = await publishProposalBranch(publishInput);
   const pullRequestInput = {
     client: input.pullRequestClient,
@@ -4684,7 +4707,7 @@ async function runActionPromoteDraft(input) {
     branch,
     maintainerApprovalNote: "This recognition proposal was rendered from an explicitly approved Clarissimi draft. Maintainers still own the final merge decision."
   };
-  assignOptional7(pullRequestInput, "targetRepository", input.targetRepository);
+  assignOptional6(pullRequestInput, "targetRepository", input.targetRepository);
   const pullRequest = await createOrUpdateProposalPullRequest(pullRequestInput);
   const sourceComment = await maybeUpsertProposalSourceComment(input, staging.manifest, pullRequest.pullRequest, "recognition");
   return {
@@ -4766,10 +4789,10 @@ async function runActionFromEnvironment(env, io, runtime = {}) {
         throw new ActionUsageError("promote-draft accepts draft-path instead of event-path or github-fixture.");
       }
     } else {
-      assignOptional7(input, "eventPath", explicitEventPath ?? fallbackEventPath);
-      assignOptional7(input, "githubFixturePath", githubFixturePath);
-      assignOptional7(input, "liveGitHubClient", runtime.liveGitHubClient);
-      assignOptional7(input, "provider", runtime.provider ?? resolveActionProvider(env, runtime, config));
+      assignOptional6(input, "eventPath", explicitEventPath ?? fallbackEventPath);
+      assignOptional6(input, "githubFixturePath", githubFixturePath);
+      assignOptional6(input, "liveGitHubClient", runtime.liveGitHubClient);
+      assignOptional6(input, "provider", runtime.provider ?? resolveActionProvider(env, runtime, config));
     }
     const summary = await runActionMode(input, env, runtime);
     await writeActionSummaryJson(summaryJsonPath, summary);
@@ -4856,8 +4879,8 @@ function buildActionCommitInput(input, env, runtime) {
   const clientOptions = {
     token: env.GITHUB_TOKEN
   };
-  assignOptional7(clientOptions, "apiUrl", readEnvInput(env.GITHUB_API_URL));
-  assignOptional7(clientOptions, "fetch", runtime.fetch);
+  assignOptional6(clientOptions, "apiUrl", readEnvInput(env.GITHUB_API_URL));
+  assignOptional6(clientOptions, "fetch", runtime.fetch);
   const commitInput = {
     ...input,
     mode: "commit",
@@ -4866,8 +4889,8 @@ function buildActionCommitInput(input, env, runtime) {
     targetBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
     liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(clientOptions)
   };
-  assignOptional7(commitInput, "expectedHeadSha", readEnvInput(env.GITHUB_SHA));
-  assignOptional7(commitInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
+  assignOptional6(commitInput, "expectedHeadSha", readEnvInput(env.GITHUB_SHA));
+  assignOptional6(commitInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
   return commitInput;
 }
 function normalizeActionMode(value) {
@@ -4886,8 +4909,8 @@ function buildActionWriteInput(input, env, runtime, mode) {
   const clientOptions = {
     token: requireEnvInput(env.GITHUB_TOKEN, "GITHUB_TOKEN")
   };
-  assignOptional7(clientOptions, "apiUrl", readEnvInput(env.GITHUB_API_URL));
-  assignOptional7(clientOptions, "fetch", runtime.fetch);
+  assignOptional6(clientOptions, "apiUrl", readEnvInput(env.GITHUB_API_URL));
+  assignOptional6(clientOptions, "fetch", runtime.fetch);
   const defaultGitHubClient = createGitHubPullRequestClient(clientOptions);
   const pullRequestClient = runtime.pullRequestClient ?? defaultGitHubClient;
   const sourceCommentClient = runtime.sourceCommentClient ?? defaultGitHubClient;
@@ -4905,8 +4928,8 @@ function buildActionWriteInput(input, env, runtime, mode) {
       sourceCommentClient,
       liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(liveGitHubClientOptions2)
     };
-    assignOptional7(proposeInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
-    assignOptional7(proposeInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
+    assignOptional6(proposeInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
+    assignOptional6(proposeInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
     return proposeInput;
   }
   if (mode === "promote-draft") {
@@ -4920,10 +4943,10 @@ function buildActionWriteInput(input, env, runtime, mode) {
       commentMode,
       sourceCommentClient
     };
-    assignOptional7(promoteDraftInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
-    assignOptional7(promoteDraftInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
-    assignOptional7(promoteDraftInput, "markdownSummary", input.markdownSummary);
-    assignOptional7(promoteDraftInput, "includeAutomationContributors", input.includeAutomationContributors);
+    assignOptional6(promoteDraftInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
+    assignOptional6(promoteDraftInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
+    assignOptional6(promoteDraftInput, "markdownSummary", input.markdownSummary);
+    assignOptional6(promoteDraftInput, "includeAutomationContributors", input.includeAutomationContributors);
     return promoteDraftInput;
   }
   const liveGitHubClientOptions = buildLiveGitHubClientOptions(clientOptions, runtime);
@@ -4938,16 +4961,16 @@ function buildActionWriteInput(input, env, runtime, mode) {
     sourceCommentClient,
     liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(liveGitHubClientOptions)
   };
-  assignOptional7(stageDraftInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
-  assignOptional7(stageDraftInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
+  assignOptional6(stageDraftInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
+  assignOptional6(stageDraftInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
   return stageDraftInput;
 }
 function buildLiveGitHubClientOptions(clientOptions, runtime) {
   const options = {
     token: clientOptions.token
   };
-  assignOptional7(options, "apiUrl", clientOptions.apiUrl);
-  assignOptional7(options, "fetch", runtime.fetch);
+  assignOptional6(options, "apiUrl", clientOptions.apiUrl);
+  assignOptional6(options, "fetch", runtime.fetch);
   return options;
 }
 function resolvePromoteDraftPath(env) {
@@ -5161,10 +5184,10 @@ function resolveActionProvider(env, runtime, config) {
       model: requireProviderEnvInput(readEnvInput(env.INPUT_PROVIDER_MODEL) ?? config.providerModel, "INPUT_PROVIDER_MODEL or config providerModel"),
       token: requireProviderEnvInput(env.CLARISSIMI_PROVIDER_TOKEN, "CLARISSIMI_PROVIDER_TOKEN")
     };
-    assignOptional7(options, "endpoint", readEnvInput(env.INPUT_PROVIDER_ENDPOINT) ?? config.providerEndpoint);
-    assignOptional7(options, "endpointTrust", parseProviderEndpointTrust(readEnvInput(env.INPUT_PROVIDER_ENDPOINT_TRUST) ?? config.providerEndpointTrust));
-    assignOptional7(options, "thinking", parseProviderThinking(readEnvInput(env.INPUT_PROVIDER_THINKING) ?? config.providerThinking));
-    assignOptional7(options, "fetch", runtime.fetch);
+    assignOptional6(options, "endpoint", readEnvInput(env.INPUT_PROVIDER_ENDPOINT) ?? config.providerEndpoint);
+    assignOptional6(options, "endpointTrust", parseProviderEndpointTrust(readEnvInput(env.INPUT_PROVIDER_ENDPOINT_TRUST) ?? config.providerEndpointTrust));
+    assignOptional6(options, "thinking", parseProviderThinking(readEnvInput(env.INPUT_PROVIDER_THINKING) ?? config.providerThinking));
+    assignOptional6(options, "fetch", runtime.fetch);
     return createOpenAiCompatibleContributionDraftProvider(options);
   }
   throw new ActionUsageError(`Unsupported provider: ${providerId}.`);
@@ -5308,7 +5331,7 @@ function escapeMarkdownTableCell(value) {
 function isRecord7(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function assignOptional7(target, key, value) {
+function assignOptional6(target, key, value) {
   if (value !== void 0) {
     target[key] = value;
   }

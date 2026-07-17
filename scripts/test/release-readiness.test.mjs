@@ -1173,6 +1173,14 @@ test("release readiness rejects Action contract document drift", () => {
       "Secret values may be action inputs.",
     )
     .replace(
+      "Required merged pull request event fields are parsed through the same runtime fixture validator",
+      "Merged pull request event fields rely on unchecked casts",
+    )
+    .replace(
+      "GitHub API base URLs must use HTTPS and must not include URL credentials, a query, or a fragment.",
+      "GitHub API base URLs accept any protocol.",
+    )
+    .replace(
       "Unsupported `INPUT_MODE` values must fail",
       "Unsupported `INPUT_MODE` values are ignored",
     )
@@ -1212,6 +1220,8 @@ test("release readiness rejects Action contract document drift", () => {
   assert.deepEqual(validateActionContractDocumentContract(text), [
     "docs/github-action/action-contract.md must include The Action supports dry-run summaries, public recognition proposals, direct commits.",
     "docs/github-action/action-contract.md must include Secret values must be read from GitHub Actions secrets or environment variables, not action inputs..",
+    "docs/github-action/action-contract.md must include Required merged pull request event fields are parsed through the same runtime fixture validator.",
+    "docs/github-action/action-contract.md must include GitHub API base URLs must use HTTPS and must not include URL credentials, a query, or a fragment..",
     "docs/github-action/action-contract.md must include Unsupported `INPUT_MODE` values must fail.",
     "docs/github-action/action-contract.md must include Invalid summary paths fail before provider.",
     "docs/github-action/action-contract.md must include Normal provider drafts remain non-public and fail closed.",
@@ -2832,6 +2842,8 @@ function createActionContractDocumentText() {
     "- `GITHUB_TOKEN`: token used by write modes for live GitHub collection and repository publication",
     "",
     "Secret values must be read from GitHub Actions secrets or environment variables, not action inputs.",
+    "Required merged pull request event fields are parsed through the same runtime fixture validator",
+    "GitHub API base URLs must use HTTPS and must not include URL credentials, a query, or a fragment.",
     "Unsupported `INPUT_MODE` values must fail as usage errors before collection, provider, staging,",
     "branch, or pull request work begins.",
     "",

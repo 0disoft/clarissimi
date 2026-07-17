@@ -56,6 +56,17 @@ export const requiredPackageScripts = [
     includes: ["pnpm run build", "packages/cli/test/completion.test.mjs"],
   },
   {
+    name: "test:automation-contributors",
+    includes: [
+      "pnpm run build",
+      "packages/schemas/test/*.test.mjs",
+      "packages/github/test/*.test.mjs",
+      "packages/renderers/test/*.test.mjs",
+      "packages/cli/test/*.test.mjs",
+      "packages/action/test/*.test.mjs",
+    ],
+  },
+  {
     name: "test:cli-lock",
     includes: ["pnpm run build", "import-draft serializes concurrent ledger updates"],
   },

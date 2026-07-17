@@ -96,6 +96,15 @@ test("release readiness rejects drifted release-critical script commands", () =>
   ]);
 });
 
+test("release readiness requires automation contributor tests to build first", () => {
+  const scripts = createValidScripts();
+  delete scripts["test:automation-contributors"];
+
+  assert.deepEqual(validatePackageScriptRegistration({ scripts }), [
+    "package.json scripts.test:automation-contributors must be configured.",
+  ]);
+});
+
 test("release readiness accepts all required validation scripts", () => {
   const scripts = createValidScripts();
 

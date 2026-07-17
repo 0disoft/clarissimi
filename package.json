@@ -11,6 +11,7 @@
     "lint": "oxlint . --deny-warnings --ignore-pattern=action-dist/**",
     "typecheck": "tsc -b --pretty false",
     "test": "pnpm run build && node --test packages/schemas/test/*.test.mjs packages/redaction/test/*.test.mjs packages/core/test/*.test.mjs packages/github/test/*.test.mjs packages/providers/test/*.test.mjs packages/renderers/test/*.test.mjs packages/cli/test/*.test.mjs packages/action/test/*.test.mjs scripts/test/*.test.mjs",
+    "test:automation-contributors": "pnpm run build && node --test packages/schemas/test/*.test.mjs packages/github/test/*.test.mjs packages/renderers/test/*.test.mjs packages/cli/test/*.test.mjs packages/action/test/*.test.mjs",
     "test:cli-completion": "pnpm run build && node --test packages/cli/test/completion.test.mjs",
     "test:cli-lock": "pnpm run build && node --test \"--test-name-pattern=(file (operations|locks)|import-draft serializes concurrent ledger updates)\" packages/cli/test/cli.test.mjs",
     "contract": "pnpm run typecheck && pnpm run test",

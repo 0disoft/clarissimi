@@ -223,6 +223,8 @@ export const releasePolicyDocumentContract = {
     "Public package publication remains blocked even when every technical gate above passes.",
     "## Marketplace Release Procedure",
     "release type `marketplace-action-tag`",
+    "Before any tag is created or pushed, the publisher reads `README.md`,",
+    "documents must name only the requested immutable Action version",
     "pnpm run publish-action-release -- --version v0.3.0 --sha <candidate-sha> --release-kind stable",
     "primary category `Code review` and secondary category `Utilities`",
     "pnpm run verify-marketplace-release -- --version <v0.x.y>",

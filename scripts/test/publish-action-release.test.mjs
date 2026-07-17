@@ -77,6 +77,58 @@ test("rejects a remote tag that points to another commit before publication", as
   );
 });
 
+test("rejects candidate release-reference drift before remote mutation", async (testContext) => {
+  const cases = [
+    {
+      name: "README misses the requested immutable Action reference",
+      candidateFiles: {
+        "README.md": "- uses: 0disoft/clarissimi@v0.1.9",
+      },
+      error: /Candidate README\.md must contain 0disoft\/clarissimi@v0\.2\.0/,
+    },
+    {
+      name: "Action guide retains another immutable release reference",
+      candidateFiles: {
+        "docs/github-action/README.md": [
+          "- uses: 0disoft/clarissimi@v0.2.0",
+          "- uses: 0disoft/clarissimi@v0.1.9",
+        ].join("\n"),
+      },
+      error: /contains stale immutable Action references \(v0\.1\.9\)/,
+    },
+    {
+      name: "security policy misses the requested supported release",
+      candidateFiles: {
+        "SECURITY.md": "Supported immutable release `v0.1.9`.",
+      },
+      error: /Candidate SECURITY\.md must identify `v0\.2\.0`/,
+    },
+  ];
+
+  for (const testCase of cases) {
+    await testContext.test(testCase.name, async () => {
+      const runtime = fakeRuntime({ candidateFiles: testCase.candidateFiles });
+      const exitCode = await runPublishActionRelease(
+        ["--version", "v0.2.0", "--sha", sha],
+        runtime,
+      );
+
+      assert.equal(exitCode, 1);
+      assert.match(runtime.errors.at(-1), testCase.error);
+      assert.equal(
+        runtime.calls.some(
+          (call) => call.command === "git" && ["tag", "push"].includes(call.args[0]),
+        ),
+        false,
+      );
+      assert.equal(
+        runtime.calls.some((call) => call.command === "gh" && call.args[0] === "release"),
+        false,
+      );
+    });
+  }
+});
+
 function fakeRuntime(options = {}) {
   const calls = [];
   const logs = [];
@@ -84,6 +136,12 @@ function fakeRuntime(options = {}) {
   let releaseCreated = false;
   const version = options.version ?? "v0.2.0";
   const isPrerelease = (options.releaseKind ?? "prerelease") === "prerelease";
+  const candidateFiles = {
+    "README.md": `- uses: 0disoft/clarissimi@${version}`,
+    "docs/github-action/README.md": `- uses: 0disoft/clarissimi@${version}`,
+    "SECURITY.md": `Supported immutable release \`${version}\`.`,
+    ...options.candidateFiles,
+  };
   return {
     calls,
     logs,
@@ -96,6 +154,11 @@ function fakeRuntime(options = {}) {
       calls.push({ command, args, options: commandOptions });
       if (command === "gh" && args[0] === "--version") return ok("gh version 2");
       if (command === "git" && args[0] === "status") return ok();
+      if (command === "git" && args[0] === "show") {
+        const separator = args[1].indexOf(":");
+        const path = separator === -1 ? "" : args[1].slice(separator + 1);
+        return path in candidateFiles ? ok(candidateFiles[path]) : fail(`missing ${path}`);
+      }
       if (command === "gh" && args[0] === "api") return ok(sha);
       if (command === "gh" && args[0] === "issue" && args[1] === "list") {
         return ok(

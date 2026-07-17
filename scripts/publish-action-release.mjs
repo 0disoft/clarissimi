@@ -15,6 +15,12 @@ const usageText = [
   "Publishes an immutable annotated tag and GitHub release only after finding one matching release evidence issue.",
 ].join("\n");
 
+const candidateReleaseReferenceContracts = [
+  { path: "README.md", kind: "action-reference" },
+  { path: "docs/github-action/README.md", kind: "action-reference" },
+  { path: "SECURITY.md", kind: "supported-version" },
+];
+
 export async function runPublishActionRelease(argv, runtime = defaultRuntime()) {
   try {
     return await run(argv, runtime);
@@ -59,6 +65,12 @@ async function run(argv, runtime) {
   );
   if (remoteSha.toLowerCase() !== sha.toLowerCase())
     throw new Error(`Remote candidate resolved to ${remoteSha}, expected ${sha}.`);
+
+  await validateCandidateReleaseReferences(runtime, {
+    repo,
+    version: args.version,
+    sha,
+  });
 
   const issue = await findEvidenceIssue(runtime, { repo, version: args.version, sha });
   const notesTemplate = args.notesTemplate ?? `scripts/release-notes/${args.version}.md`;
@@ -145,6 +157,46 @@ async function run(argv, runtime) {
     ),
   );
   return 0;
+}
+
+async function validateCandidateReleaseReferences(runtime, options) {
+  for (const contract of candidateReleaseReferenceContracts) {
+    const text = await commandText(
+      runtime,
+      "git",
+      ["show", `${options.sha}:${contract.path}`],
+      `read candidate ${contract.path}`,
+    );
+
+    if (contract.kind === "supported-version") {
+      const expected = `\`${options.version}\``;
+      if (!text.includes(expected)) {
+        throw new Error(
+          `Candidate ${contract.path} must identify ${expected} as the supported immutable release before publication.`,
+        );
+      }
+      continue;
+    }
+
+    const expected = `${options.repo}@${options.version}`;
+    if (!text.includes(expected)) {
+      throw new Error(`Candidate ${contract.path} must contain ${expected} before publication.`);
+    }
+
+    const immutableVersions = new Set(
+      [...text.matchAll(new RegExp(`${escapeRegExp(options.repo)}@(v0\\.\\d+\\.\\d+)`, "g"))].map(
+        (match) => match[1],
+      ),
+    );
+    const staleVersions = [...immutableVersions]
+      .filter((version) => version !== options.version)
+      .sort();
+    if (staleVersions.length > 0) {
+      throw new Error(
+        `Candidate ${contract.path} contains stale immutable Action references (${staleVersions.join(", ")}); expected only ${options.version}.`,
+      );
+    }
+  }
 }
 
 async function findEvidenceIssue(runtime, options) {
@@ -302,6 +354,10 @@ function isVersion(value) {
 
 function isSha(value) {
   return typeof value === "string" && /^[0-9a-f]{40}$/i.test(value.trim());
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function parseJson(value, label) {

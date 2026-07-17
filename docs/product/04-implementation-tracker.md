@@ -1269,6 +1269,25 @@ Release results and corrective gates:
 - corrective `v0.5.2` must synchronize consumer documentation and repeat candidate, publication,
   exact-tag, Marketplace, and separate `v0` compare-and-swap gates
 
+### 34. Candidate Release Reference Guard
+
+Source: `docs/ops/release.md`, `scripts/publish-action-release.mjs`
+
+Status: Implemented on `main`; applies to future immutable Action publication attempts.
+
+Goal: reject a stale consumer-version release before it creates or pushes an immutable tag.
+
+Completed scope:
+
+- read root onboarding, the detailed Action guide, and the security support policy from the exact
+  candidate SHA rather than from mutable working-tree files
+- require both consumer documents to name the requested immutable Action reference
+- reject any other immutable Clarissimi Action version left in those consumer documents
+- require the security policy to identify the requested immutable release as supported
+- execute every reference check before local tag creation, tag push, GitHub Release creation, or
+  release-record closure
+- cover missing, mixed-version, and stale-security cases with deterministic publisher regressions
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

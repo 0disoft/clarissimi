@@ -82,16 +82,20 @@ the following requirements:
 2. A public Marketplace search finds no existing Action named `Clarissimi` before publication.
 3. Candidate evidence uses release type `marketplace-action-tag`, release version `v0.3.0`, and the
    exact candidate SHA.
-4. Publish the immutable tag as a non-draft, non-prerelease GitHub Release:
+4. Before any tag is created or pushed, the publisher reads `README.md`,
+   `docs/github-action/README.md`, and `SECURITY.md` from the exact candidate SHA. Both consumer
+   documents must name only the requested immutable Action version, and the security policy must
+   identify that version as supported.
+5. Publish the immutable tag as a non-draft, non-prerelease GitHub Release:
 
    ```powershell
    pnpm run publish-action-release -- --version v0.3.0 --sha <candidate-sha> --release-kind stable
    ```
 
-5. In GitHub's release UI, enable `Publish this Action to the GitHub Marketplace`, choose the
+6. In GitHub's release UI, enable `Publish this Action to the GitHub Marketplace`, choose the
    primary category `Code review` and secondary category `Utilities`, and complete the GitHub-owned
    developer-agreement and two-factor-authentication gates when requested.
-6. Verify the public Marketplace listing resolves to `0disoft/clarissimi`, identifies the expected
+7. Verify the public Marketplace listing resolves to `0disoft/clarissimi`, identifies the expected
    release as `Latest`, and renders the matching Action reference before alias promotion:
 
    ```powershell
@@ -102,7 +106,7 @@ the following requirements:
    rendered README still names an older Action reference. A version mismatch prints the exact
    GitHub release edit URL for the required interactive handoff.
 
-7. Run post-tag validation for the selected immutable release, then promote `v0` separately
+8. Run post-tag validation for the selected immutable release, then promote `v0` separately
    through ADR 0034.
 
 Marketplace publication is intentionally interactive because GitHub owns the agreement, category,

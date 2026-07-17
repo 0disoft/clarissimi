@@ -598,6 +598,86 @@ network = false
 destructive = false
 required_after = ["git_stage_source_pr_comment"]
 
+[intents.git_stage_release_version_guard]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Stage only the reviewed exact-candidate release-version guard, synchronized operational contract, regressions, documentation review record, and command authority."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  ".mustflow/config/manifest.lock.toml",
+  ".mustflow/review/docs.toml",
+  "docs/ops/release.md",
+  "docs/product/04-implementation-tracker.md",
+  "scripts/publish-action-release.mjs",
+  "scripts/release-readiness.mjs",
+  "scripts/test/publish-action-release.test.mjs",
+  "scripts/test/release-readiness.test.mjs",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = [
+  "release_version_guard_validation_complete",
+  "documentation_review_queued",
+  "user_authorized_commit",
+]
+
+[intents.git_commit_release_version_guard]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Commit the reviewed exact-candidate release-version publication guard and regressions."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "fix(release): validate candidate version references",
+  "-m",
+  "Validation: Marketplace release tests, docs, release-readiness, lint, format, migration-check, smoke, check, contract, bundle-action-check, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_release_version_guard"]
+
+[intents.hosted_ci_release_version_guard]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Confirm hosted CI passed for the pushed exact-candidate release-version guard at the current local HEAD."
+argv = ["pnpm", "run", "hosted-ci-validation"]
+cwd = "."
+timeout_seconds = 1800
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["git_push_main", "release_version_guard_pushed"]
+
 [intents.git_stage_release_v0_5_2]
 status = "configured"
 lifecycle = "oneshot"

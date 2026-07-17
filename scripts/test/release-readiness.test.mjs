@@ -359,6 +359,8 @@ test("release readiness rejects release policy document drift", () => {
     )
     .replace("## Marketplace Release Procedure", "## Uncontrolled Marketplace Publication")
     .replace("release type `marketplace-action-tag`", "")
+    .replace("Before any tag is created or pushed, the publisher reads `README.md`,", "")
+    .replace("documents must name only the requested immutable Action version", "")
     .replace(
       "pnpm run publish-action-release -- --version v0.3.0 --sha <candidate-sha> --release-kind stable",
       "",
@@ -397,6 +399,8 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include - GitHub Marketplace publication: allowed for the validated root Action under ADR 0045.",
     "docs/ops/release.md must include ## Marketplace Release Procedure.",
     "docs/ops/release.md must include release type `marketplace-action-tag`.",
+    "docs/ops/release.md must include Before any tag is created or pushed, the publisher reads `README.md`,.",
+    "docs/ops/release.md must include documents must name only the requested immutable Action version.",
     "docs/ops/release.md must include pnpm run publish-action-release -- --version v0.3.0 --sha <candidate-sha> --release-kind stable.",
     "docs/ops/release.md must include primary category `Code review` and secondary category `Utilities`.",
     "docs/ops/release.md must include pnpm run verify-marketplace-release -- --version <v0.x.y>.",
@@ -2191,6 +2195,8 @@ function createReleasePolicyText() {
     "Public package publication remains blocked even when every technical gate above passes.",
     "## Marketplace Release Procedure",
     "release type `marketplace-action-tag`",
+    "Before any tag is created or pushed, the publisher reads `README.md`,",
+    "documents must name only the requested immutable Action version",
     "pnpm run publish-action-release -- --version v0.3.0 --sha <candidate-sha> --release-kind stable",
     "primary category `Code review` and secondary category `Utilities`",
     "pnpm run verify-marketplace-release -- --version <v0.x.y>",

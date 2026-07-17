@@ -19,7 +19,7 @@ const source = {
   mergedAt: "2026-07-08T00:00:00.000Z",
 };
 
-function assessment() {
+function assessment(overrides = {}) {
   return {
     schemaVersion: "clarissimi.assessment/v1",
     contributor: {
@@ -45,6 +45,7 @@ function assessment() {
     confidence: 0.82,
     maintainerApprovalStatus: "approved",
     source,
+    ...overrides,
   };
 }
 
@@ -173,6 +174,124 @@ test("updates an existing proposal branch from a fresh clone with an explicit le
   });
 });
 
+test("accepts an equivalent concurrent proposal branch lease winner", async () => {
+  await withTempDir(async (dir) => {
+    const remoteDir = join(dir, "remote.git");
+    const winnerRepositoryDir = join(dir, "winner");
+    const loserRepositoryDir = join(dir, "loser");
+    await initRepositoryWithRemote(winnerRepositoryDir, remoteDir);
+    await git(dir, ["clone", "--branch", "main", remoteDir, loserRepositoryDir]);
+
+    const winnerStaging = await stageProposalRecognitionOutputs({
+      outputDir: join(dir, "winner-staged"),
+      assessments: [assessment()],
+      redactionMatchCount: 0,
+    });
+    const loserStaging = await stageProposalRecognitionOutputs({
+      outputDir: join(dir, "loser-staged"),
+      assessments: [assessment()],
+      redactionMatchCount: 0,
+    });
+    const winnerBranch = await writeProposalBranch({
+      repositoryDir: winnerRepositoryDir,
+      stagedOutputDir: winnerStaging.outputDir,
+      manifest: winnerStaging.manifest,
+      baseBranch: "main",
+      commitMessage: "Concurrent proposal winner",
+    });
+    const loserBranch = await writeProposalBranch({
+      repositoryDir: loserRepositoryDir,
+      stagedOutputDir: loserStaging.outputDir,
+      manifest: loserStaging.manifest,
+      baseBranch: "main",
+      commitMessage: "Concurrent proposal loser",
+    });
+    let winnerPublished = false;
+
+    const result = await publishProposalBranch(
+      { repositoryDir: loserRepositoryDir, branch: loserBranch },
+      {
+        runGit: async (repositoryDir, args) => {
+          if (!winnerPublished && args[0] === "push") {
+            winnerPublished = true;
+            await publishProposalBranch({
+              repositoryDir: winnerRepositoryDir,
+              branch: winnerBranch,
+            });
+          }
+          return runGitResult(repositoryDir, args);
+        },
+      },
+    );
+
+    assert.equal(winnerBranch.commitSha === loserBranch.commitSha, false);
+    assert.equal(result.commitSha, winnerBranch.commitSha);
+    assert.equal(
+      await remoteBranchSha(loserRepositoryDir, loserBranch.branchName),
+      winnerBranch.commitSha,
+    );
+  });
+});
+
+test("rejects a concurrent proposal branch lease winner with different output", async () => {
+  await withTempDir(async (dir) => {
+    const remoteDir = join(dir, "remote.git");
+    const winnerRepositoryDir = join(dir, "winner");
+    const loserRepositoryDir = join(dir, "loser");
+    await initRepositoryWithRemote(winnerRepositoryDir, remoteDir);
+    await git(dir, ["clone", "--branch", "main", remoteDir, loserRepositoryDir]);
+
+    const winnerStaging = await stageProposalRecognitionOutputs({
+      outputDir: join(dir, "winner-staged"),
+      assessments: [assessment()],
+      redactionMatchCount: 0,
+    });
+    const loserStaging = await stageProposalRecognitionOutputs({
+      outputDir: join(dir, "loser-staged"),
+      assessments: [
+        assessment({ publicRecognitionText: "Changed recognition output from another execution." }),
+      ],
+      redactionMatchCount: 0,
+    });
+    const winnerBranch = await writeProposalBranch({
+      repositoryDir: winnerRepositoryDir,
+      stagedOutputDir: winnerStaging.outputDir,
+      manifest: winnerStaging.manifest,
+      baseBranch: "main",
+      commitMessage: "Concurrent proposal winner",
+    });
+    const loserBranch = await writeProposalBranch({
+      repositoryDir: loserRepositoryDir,
+      stagedOutputDir: loserStaging.outputDir,
+      manifest: loserStaging.manifest,
+      baseBranch: "main",
+      commitMessage: "Concurrent divergent proposal",
+    });
+    let winnerPublished = false;
+
+    await assert.rejects(
+      () =>
+        publishProposalBranch(
+          { repositoryDir: loserRepositoryDir, branch: loserBranch },
+          {
+            runGit: async (repositoryDir, args) => {
+              if (!winnerPublished && args[0] === "push") {
+                winnerPublished = true;
+                await publishProposalBranch({
+                  repositoryDir: winnerRepositoryDir,
+                  branch: winnerBranch,
+                });
+              }
+              return runGitResult(repositoryDir, args);
+            },
+          },
+        ),
+      (error) =>
+        error instanceof ProposalBranchPublisherError && error.code === "git_command_failed",
+    );
+  });
+});
+
 test("rejects missing publisher metadata before git push", async () => {
   await assert.rejects(
     () =>
@@ -234,6 +353,30 @@ function git(repositoryDir, args) {
       }
 
       resolve(stdout.trim());
+    });
+  });
+}
+
+function runGitResult(repositoryDir, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn("git", args, {
+      cwd: repositoryDir,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    child.on("error", reject);
+    child.on("close", (exitCode) => {
+      resolve({ exitCode: exitCode ?? 1, stdout, stderr });
     });
   });
 }

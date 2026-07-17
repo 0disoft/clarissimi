@@ -92,6 +92,8 @@ engine.
   request bodies while failing closed on secret-bearing structural evidence
 - `0053-add-opt-in-source-pr-comment-updates.md`: add one opt-in, ownership-checked source pull
   request status comment without duplicate notification noise
+- `0054-reconcile-equivalent-proposal-branch-races.md`: accept only an identical, same-base
+  concurrent proposal branch winner after a compare-and-swap lease loss
 
 ## Review Blockers
 

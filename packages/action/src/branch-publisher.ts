@@ -8,6 +8,17 @@ export interface ProposalBranchPublisherInput {
   readonly remoteName?: string;
 }
 
+export interface ProposalBranchPublisherRuntime {
+  readonly runGit: (
+    repositoryDir: string,
+    args: readonly string[],
+  ) => Promise<{
+    readonly exitCode: number;
+    readonly stdout: string;
+    readonly stderr: string;
+  }>;
+}
+
 export interface ProposalBranchPublishResult {
   readonly remoteName: string;
   readonly branchName: string;
@@ -27,11 +38,12 @@ export class ProposalBranchPublisherError extends Error {
 
 export async function publishProposalBranch(
   input: ProposalBranchPublisherInput,
+  runtime: ProposalBranchPublisherRuntime = { runGit },
 ): Promise<ProposalBranchPublishResult> {
   validatePublisherInput(input);
 
   const remoteName = input.remoteName ?? "origin";
-  const localSha = await git(input.repositoryDir, ["rev-parse", input.branch.branchName]);
+  const localSha = await git(runtime, input.repositoryDir, ["rev-parse", input.branch.branchName]);
   if (localSha !== input.branch.commitSha) {
     throw new ProposalBranchPublisherError(
       "branch_commit_mismatch",
@@ -40,28 +52,107 @@ export async function publishProposalBranch(
   }
 
   const remoteRef = `refs/heads/${input.branch.branchName}`;
-  const remoteSha = await remoteBranchSha(input.repositoryDir, remoteName, remoteRef);
-  await git(input.repositoryDir, [
+  const remoteSha = await remoteBranchSha(runtime, input.repositoryDir, remoteName, remoteRef);
+  const pushResult = await runtime.runGit(input.repositoryDir, [
     "push",
     `--force-with-lease=${remoteRef}:${remoteSha ?? ""}`,
     remoteName,
     `${input.branch.branchName}:${remoteRef}`,
   ]);
+  let publishedSha = localSha;
+  if (pushResult.exitCode !== 0) {
+    const equivalentWinnerSha = await reconcileEquivalentLeaseWinner(
+      runtime,
+      input,
+      remoteName,
+      remoteRef,
+      localSha,
+    );
+    if (equivalentWinnerSha === undefined) {
+      throw new ProposalBranchPublisherError(
+        "git_command_failed",
+        pushResult.stderr.trim() || "Proposal branch push failed.",
+      );
+    }
+    publishedSha = equivalentWinnerSha;
+  }
 
   return {
     remoteName,
     branchName: input.branch.branchName,
-    commitSha: input.branch.commitSha,
+    commitSha: publishedSha,
     rollbackHint: `Delete remote branch ${remoteName}/${input.branch.branchName} before merge to discard this proposal.`,
   };
 }
 
+async function reconcileEquivalentLeaseWinner(
+  runtime: ProposalBranchPublisherRuntime,
+  input: ProposalBranchPublisherInput,
+  remoteName: string,
+  remoteRef: string,
+  localSha: string,
+): Promise<string | undefined> {
+  try {
+    const winnerSha = await remoteBranchSha(runtime, input.repositoryDir, remoteName, remoteRef);
+    if (winnerSha === undefined) {
+      return undefined;
+    }
+    if (winnerSha === localSha) {
+      return winnerSha;
+    }
+
+    const fetchResult = await runtime.runGit(input.repositoryDir, [
+      "fetch",
+      "--no-tags",
+      "--quiet",
+      remoteName,
+      remoteRef,
+    ]);
+    if (fetchResult.exitCode !== 0) {
+      return undefined;
+    }
+
+    const fetchedSha = await git(runtime, input.repositoryDir, [
+      "rev-parse",
+      "--verify",
+      "FETCH_HEAD^{commit}",
+    ]);
+    if (fetchedSha !== winnerSha) {
+      return undefined;
+    }
+
+    const winnerParents = (
+      await git(runtime, input.repositoryDir, ["rev-list", "--parents", "-n", "1", winnerSha])
+    ).split(/\s+/);
+    const hasExpectedBase =
+      winnerSha === input.branch.baseCommitSha ||
+      (winnerParents.length === 2 && winnerParents[1] === input.branch.baseCommitSha);
+    if (!hasExpectedBase) {
+      return undefined;
+    }
+
+    const [localTree, winnerTree] = await Promise.all([
+      git(runtime, input.repositoryDir, ["rev-parse", `${localSha}^{tree}`]),
+      git(runtime, input.repositoryDir, ["rev-parse", `${winnerSha}^{tree}`]),
+    ]);
+    if (localTree !== winnerTree) {
+      return undefined;
+    }
+
+    const confirmedSha = await remoteBranchSha(runtime, input.repositoryDir, remoteName, remoteRef);
+    return confirmedSha === winnerSha ? winnerSha : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function remoteBranchSha(
+  runtime: ProposalBranchPublisherRuntime,
   repositoryDir: string,
   remoteName: string,
   remoteRef: string,
 ): Promise<string | undefined> {
-  const output = await git(repositoryDir, ["ls-remote", "--heads", remoteName, remoteRef]);
+  const output = await git(runtime, repositoryDir, ["ls-remote", "--heads", remoteName, remoteRef]);
   if (output.length === 0) {
     return undefined;
   }
@@ -107,8 +198,12 @@ function validatePublisherInput(input: ProposalBranchPublisherInput): void {
   }
 }
 
-async function git(repositoryDir: string, args: readonly string[]): Promise<string> {
-  const result = await runGit(repositoryDir, args);
+async function git(
+  runtime: ProposalBranchPublisherRuntime,
+  repositoryDir: string,
+  args: readonly string[],
+): Promise<string> {
+  const result = await runtime.runGit(repositoryDir, args);
   if (result.exitCode !== 0) {
     throw new ProposalBranchPublisherError(
       "git_command_failed",

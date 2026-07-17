@@ -146,7 +146,7 @@ export async function runActionPropose(input: ActionProposeInput): Promise<Actio
     branch,
   };
   assignOptional(publishInput, "remoteName", input.remoteName);
-  await publishProposalBranch(publishInput);
+  const publishedBranch = await publishProposalBranch(publishInput);
   const pullRequestInput: Parameters<typeof createOrUpdateProposalPullRequest>[0] = {
     client: input.pullRequestClient,
     manifest: staging.manifest,
@@ -174,7 +174,7 @@ export async function runActionPropose(input: ActionProposeInput): Promise<Actio
     redactionMatchCount: prepared.redactionMatchCount,
     stagedFileCount: staging.manifest.files.length,
     proposalBranch: branch.branchName,
-    proposalCommitSha: branch.commitSha,
+    proposalCommitSha: publishedBranch.commitSha,
     proposalPullRequestNumber: pullRequest.pullRequest.number,
     proposalPullRequestUrl: pullRequest.pullRequest.url,
     proposalPullRequestAction: pullRequest.action,
@@ -263,7 +263,7 @@ export async function runActionStageDraft(
     branch,
   };
   assignOptional(publishInput, "remoteName", input.remoteName);
-  await publishProposalBranch(publishInput);
+  const publishedBranch = await publishProposalBranch(publishInput);
   const pullRequestInput: Parameters<typeof createOrUpdateProposalPullRequest>[0] = {
     client: input.pullRequestClient,
     manifest: staging.manifest,
@@ -293,7 +293,7 @@ export async function runActionStageDraft(
     redactionMatchCount: prepared.redactionMatchCount,
     stagedFileCount: staging.manifest.files.length,
     proposalBranch: branch.branchName,
-    proposalCommitSha: branch.commitSha,
+    proposalCommitSha: publishedBranch.commitSha,
     proposalPullRequestNumber: pullRequest.pullRequest.number,
     proposalPullRequestUrl: pullRequest.pullRequest.url,
     proposalPullRequestAction: pullRequest.action,
@@ -332,7 +332,7 @@ export async function runActionPromoteDraft(
     branch,
   };
   assignOptional(publishInput, "remoteName", input.remoteName);
-  await publishProposalBranch(publishInput);
+  const publishedBranch = await publishProposalBranch(publishInput);
   const pullRequestInput: Parameters<typeof createOrUpdateProposalPullRequest>[0] = {
     client: input.pullRequestClient,
     manifest: staging.manifest,
@@ -362,7 +362,7 @@ export async function runActionPromoteDraft(
     redactionMatchCount: 0,
     stagedFileCount: staging.manifest.files.length,
     proposalBranch: branch.branchName,
-    proposalCommitSha: branch.commitSha,
+    proposalCommitSha: publishedBranch.commitSha,
     proposalPullRequestNumber: pullRequest.pullRequest.number,
     proposalPullRequestUrl: pullRequest.pullRequest.url,
     proposalPullRequestAction: pullRequest.action,

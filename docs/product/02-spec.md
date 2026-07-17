@@ -256,6 +256,9 @@ Proposal modes may opt into one source pull request status comment with `comment
 The default is `none`. The comment points to the draft-review or recognition proposal and is updated
 in place only when its versioned marker and GitHub Actions app ownership both match. It must not
 contain raw evidence, assessment prose, provider output, patches, secrets, scores, or rankings.
+When identical concurrent proposal runs lose a branch compare-and-swap lease, they may continue
+only after proving that the remote winner has the same base and exact generated file tree. A
+different base, tree, or moving winner fails closed without another push.
 Concurrent first-run comment creation must reconcile to one deterministic managed comment before a
 run reports success; incomplete or conflicting reconciliation fails closed.
 Dry-run and direct commit modes do not write source pull request comments.

@@ -221,6 +221,11 @@ the merged source pull request after the proposal succeeds, then updates only th
 Clarissimi's marker and GitHub Actions app ownership. The existing `pull-requests: write`
 permission is sufficient; do not add `issues: write`. Dry-run and direct commit reject this option.
 
+Concurrent identical proposal runs keep the compare-and-swap branch lease. A losing run continues
+to comment reconciliation only when the remote winner is a single commit on the same base with the
+exact same generated tree and remains unchanged during verification. Divergent or moving winners
+fail without another push.
+
 Fixture-first propose mode requires an approved or auto-approved fixture and the same write
 permissions:
 

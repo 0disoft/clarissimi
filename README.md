@@ -86,6 +86,8 @@ with:
 The default is `none`. With `upsert`, Clarissimi creates one GitHub Actions-owned status comment
 after the proposal succeeds and updates that comment on reruns instead of posting duplicates. It
 never overwrites a user comment or includes raw evidence, provider output, patches, or secrets.
+Identical concurrent proposal runs may share the same winning proposal branch only after Clarissimi
+proves its base and generated file tree match; divergent runs still stop without force-pushing.
 
 ## What Clarissimi Creates
 

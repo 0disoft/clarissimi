@@ -24,30 +24,83 @@ var ProposalBranchPublisherError = class extends Error {
     this.code = code;
   }
 };
-async function publishProposalBranch(input) {
+async function publishProposalBranch(input, runtime = { runGit }) {
   validatePublisherInput(input);
   const remoteName = input.remoteName ?? "origin";
-  const localSha = await git(input.repositoryDir, ["rev-parse", input.branch.branchName]);
+  const localSha = await git(runtime, input.repositoryDir, ["rev-parse", input.branch.branchName]);
   if (localSha !== input.branch.commitSha) {
     throw new ProposalBranchPublisherError("branch_commit_mismatch", "Proposal branch publisher refuses to push when the local branch no longer matches the branch writer result.");
   }
   const remoteRef = `refs/heads/${input.branch.branchName}`;
-  const remoteSha = await remoteBranchSha(input.repositoryDir, remoteName, remoteRef);
-  await git(input.repositoryDir, [
+  const remoteSha = await remoteBranchSha(runtime, input.repositoryDir, remoteName, remoteRef);
+  const pushResult = await runtime.runGit(input.repositoryDir, [
     "push",
     `--force-with-lease=${remoteRef}:${remoteSha ?? ""}`,
     remoteName,
     `${input.branch.branchName}:${remoteRef}`
   ]);
+  let publishedSha = localSha;
+  if (pushResult.exitCode !== 0) {
+    const equivalentWinnerSha = await reconcileEquivalentLeaseWinner(runtime, input, remoteName, remoteRef, localSha);
+    if (equivalentWinnerSha === void 0) {
+      throw new ProposalBranchPublisherError("git_command_failed", pushResult.stderr.trim() || "Proposal branch push failed.");
+    }
+    publishedSha = equivalentWinnerSha;
+  }
   return {
     remoteName,
     branchName: input.branch.branchName,
-    commitSha: input.branch.commitSha,
+    commitSha: publishedSha,
     rollbackHint: `Delete remote branch ${remoteName}/${input.branch.branchName} before merge to discard this proposal.`
   };
 }
-async function remoteBranchSha(repositoryDir, remoteName, remoteRef) {
-  const output = await git(repositoryDir, ["ls-remote", "--heads", remoteName, remoteRef]);
+async function reconcileEquivalentLeaseWinner(runtime, input, remoteName, remoteRef, localSha) {
+  try {
+    const winnerSha = await remoteBranchSha(runtime, input.repositoryDir, remoteName, remoteRef);
+    if (winnerSha === void 0) {
+      return void 0;
+    }
+    if (winnerSha === localSha) {
+      return winnerSha;
+    }
+    const fetchResult = await runtime.runGit(input.repositoryDir, [
+      "fetch",
+      "--no-tags",
+      "--quiet",
+      remoteName,
+      remoteRef
+    ]);
+    if (fetchResult.exitCode !== 0) {
+      return void 0;
+    }
+    const fetchedSha = await git(runtime, input.repositoryDir, [
+      "rev-parse",
+      "--verify",
+      "FETCH_HEAD^{commit}"
+    ]);
+    if (fetchedSha !== winnerSha) {
+      return void 0;
+    }
+    const winnerParents = (await git(runtime, input.repositoryDir, ["rev-list", "--parents", "-n", "1", winnerSha])).split(/\s+/);
+    const hasExpectedBase = winnerSha === input.branch.baseCommitSha || winnerParents.length === 2 && winnerParents[1] === input.branch.baseCommitSha;
+    if (!hasExpectedBase) {
+      return void 0;
+    }
+    const [localTree, winnerTree] = await Promise.all([
+      git(runtime, input.repositoryDir, ["rev-parse", `${localSha}^{tree}`]),
+      git(runtime, input.repositoryDir, ["rev-parse", `${winnerSha}^{tree}`])
+    ]);
+    if (localTree !== winnerTree) {
+      return void 0;
+    }
+    const confirmedSha = await remoteBranchSha(runtime, input.repositoryDir, remoteName, remoteRef);
+    return confirmedSha === winnerSha ? winnerSha : void 0;
+  } catch {
+    return void 0;
+  }
+}
+async function remoteBranchSha(runtime, repositoryDir, remoteName, remoteRef) {
+  const output = await git(runtime, repositoryDir, ["ls-remote", "--heads", remoteName, remoteRef]);
   if (output.length === 0) {
     return void 0;
   }
@@ -71,8 +124,8 @@ function validatePublisherInput(input) {
     throw new ProposalBranchPublisherError("missing_remote", "Proposal branch publishing requires a non-empty remote name.");
   }
 }
-async function git(repositoryDir, args) {
-  const result = await runGit(repositoryDir, args);
+async function git(runtime, repositoryDir, args) {
+  const result = await runtime.runGit(repositoryDir, args);
   if (result.exitCode !== 0) {
     throw new ProposalBranchPublisherError("git_command_failed", result.stderr.trim() || `git ${args.join(" ")} failed.`);
   }
@@ -4469,7 +4522,7 @@ async function runActionPropose(input) {
     branch
   };
   assignOptional7(publishInput, "remoteName", input.remoteName);
-  await publishProposalBranch(publishInput);
+  const publishedBranch = await publishProposalBranch(publishInput);
   const pullRequestInput = {
     client: input.pullRequestClient,
     manifest: staging.manifest,
@@ -4491,7 +4544,7 @@ async function runActionPropose(input) {
     redactionMatchCount: prepared.redactionMatchCount,
     stagedFileCount: staging.manifest.files.length,
     proposalBranch: branch.branchName,
-    proposalCommitSha: branch.commitSha,
+    proposalCommitSha: publishedBranch.commitSha,
     proposalPullRequestNumber: pullRequest.pullRequest.number,
     proposalPullRequestUrl: pullRequest.pullRequest.url,
     proposalPullRequestAction: pullRequest.action,
@@ -4569,7 +4622,7 @@ async function runActionStageDraft(input) {
     branch
   };
   assignOptional7(publishInput, "remoteName", input.remoteName);
-  await publishProposalBranch(publishInput);
+  const publishedBranch = await publishProposalBranch(publishInput);
   const pullRequestInput = {
     client: input.pullRequestClient,
     manifest: staging.manifest,
@@ -4592,7 +4645,7 @@ async function runActionStageDraft(input) {
     redactionMatchCount: prepared.redactionMatchCount,
     stagedFileCount: staging.manifest.files.length,
     proposalBranch: branch.branchName,
-    proposalCommitSha: branch.commitSha,
+    proposalCommitSha: publishedBranch.commitSha,
     proposalPullRequestNumber: pullRequest.pullRequest.number,
     proposalPullRequestUrl: pullRequest.pullRequest.url,
     proposalPullRequestAction: pullRequest.action,
@@ -4624,7 +4677,7 @@ async function runActionPromoteDraft(input) {
     branch
   };
   assignOptional7(publishInput, "remoteName", input.remoteName);
-  await publishProposalBranch(publishInput);
+  const publishedBranch = await publishProposalBranch(publishInput);
   const pullRequestInput = {
     client: input.pullRequestClient,
     manifest: staging.manifest,
@@ -4647,7 +4700,7 @@ async function runActionPromoteDraft(input) {
     redactionMatchCount: 0,
     stagedFileCount: staging.manifest.files.length,
     proposalBranch: branch.branchName,
-    proposalCommitSha: branch.commitSha,
+    proposalCommitSha: publishedBranch.commitSha,
     proposalPullRequestNumber: pullRequest.pullRequest.number,
     proposalPullRequestUrl: pullRequest.pullRequest.url,
     proposalPullRequestAction: pullRequest.action,

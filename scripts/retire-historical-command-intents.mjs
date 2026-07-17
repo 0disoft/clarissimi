@@ -34,6 +34,8 @@ const COMPLETED_MILESTONES = [
   "provider_result_dirty_corpus",
   "provider_model_eval",
   "remaining_hardening",
+  "comment_endpoint_hardening",
+  "proposal_branch_race_reconciliation",
 ];
 
 const COMPLETED_LIFECYCLE_PREFIXES = [

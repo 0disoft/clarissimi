@@ -1236,6 +1236,37 @@ Completed release results:
 - immutable stable release publication, Marketplace `Latest` verification, and `v0` compare-and-swap
   promotion completed
 
+### 33. Concurrent Proposal And Endpoint Hardening Release
+
+Source: `docs/adr/0041-restrict-provider-endpoint-trust.md`,
+`docs/adr/0053-add-opt-in-source-pr-comment-updates.md`,
+`docs/adr/0054-reconcile-equivalent-proposal-branch-races.md`, `docs/ops/release.md`
+
+Status: Candidate preparation for immutable `v0.5.1`; publication and moving `v0` remain gated.
+
+Goal: publish the compatible source-comment, proposal-branch, and provider-endpoint race fixes
+without changing Action inputs, permissions, defaults, or package-publication boundaries.
+
+Completed implementation scope:
+
+- post-create source-comment reconciliation converges identical concurrent creates to one managed
+  GitHub Actions-owned comment
+- compare-and-swap proposal publication accepts only an equivalent same-base Git-tree winner
+- the default provider transport validates every resolved address, pins the selected public address,
+  preserves Host and TLS identity, and disables redirects
+- deterministic regressions cover equivalent and divergent proposal publication plus public/private
+  endpoint address sets
+- exact implementation SHA hosted CI, live-provider smoke, and integration-lab concurrent promotion
+  smoke passed
+
+Candidate gates still required:
+
+- final preparation commit local validation and hosted CI
+- hosted live-provider, external dry-run, full-write, cleanup, and orphan-audit validation for the
+  exact candidate SHA
+- immutable stable release publication, Marketplace `Latest` verification, exact-tag validation,
+  and separate `v0` compare-and-swap promotion
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

@@ -224,12 +224,22 @@ cwd = "."
 timeout_seconds = 300
 stdin = "closed"
 success_exit_codes = [0]
-writes = ["**/*.ts", "**/*.js", "**/*.mjs", "**/*.json", "**/*.md", "**/*.yml", "**/*.yaml"]
+writes = [
+  "**/*.ts",
+  "**/*.js",
+  "**/*.mjs",
+  "**/*.json",
+  "**/*.md",
+  "**/*.toml",
+  "**/*.yml",
+  "**/*.yaml",
+]
 effects = [
   { type = "write", mode = "replace", path = "**/*.ts", concurrency = "exclusive" },
   { type = "write", mode = "replace", path = "**/*.mjs", concurrency = "exclusive" },
   { type = "write", mode = "replace", path = "**/*.json", concurrency = "exclusive" },
   { type = "write", mode = "replace", path = "**/*.md", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "**/*.toml", concurrency = "exclusive" },
   { type = "write", mode = "replace", path = "**/*.yml", concurrency = "exclusive" },
 ]
 network = false
@@ -588,12 +598,12 @@ network = false
 destructive = false
 required_after = ["git_stage_source_pr_comment"]
 
-[intents.git_stage_comment_endpoint_hardening]
+[intents.git_stage_release_v0_5_1]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
-description = "Stage only the reviewed source-comment race defense, provider endpoint pinning, synchronized contracts, generated Action bundle, README review record, and command authority."
+description = "Stage only the reviewed v0.5.1 hardening release preparation, completed-command retirement policy, validation records, and bounded release commands."
 argv = [
   "git",
   "add",
@@ -601,88 +611,13 @@ argv = [
   ".mustflow/config/commands.toml",
   ".mustflow/config/manifest.lock.toml",
   ".mustflow/review/docs.toml",
-  "action-dist/index.js",
-  "docs/adr/0041-restrict-provider-endpoint-trust.md",
-  "docs/adr/0053-add-opt-in-source-pr-comment-updates.md",
-  "docs/cli/command-contract.md",
-  "docs/cli/configuration.md",
-  "docs/github-action/README.md",
-  "docs/github-action/action-contract.md",
-  "docs/github-action/inputs-and-outputs.md",
-  "docs/monorepo/package-ownership.md",
-  "docs/product/02-spec.md",
-  "packages/action/src/github-client.ts",
-  "packages/action/src/source-comment.ts",
-  "packages/action/test/github-client.test.mjs",
-  "packages/action/test/propose-runner.test.mjs",
-  "packages/action/test/source-comment.test.mjs",
-  "packages/cli/src/run.ts",
-  "packages/providers/README.md",
-  "packages/providers/src/openai-compatible-provider.ts",
-  "packages/providers/src/provider-endpoint-transport.ts",
-  "packages/providers/test/provider-endpoint-transport.test.mjs",
-  "packages/providers/tsconfig.json",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["comment_endpoint_hardening_validation_complete", "user_authorized_commit"]
-
-[intents.git_commit_comment_endpoint_hardening]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the reviewed source-comment race defense and provider endpoint pinning."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "fix(security): harden comment and endpoint races",
-  "-m",
-  "Validation: test, check, contract, lint, format, docs, smoke, release-readiness, migration-check, bundle-action-check, mustflow",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_comment_endpoint_hardening"]
-
-[intents.git_stage_proposal_branch_race_reconciliation]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage only the reviewed equivalent proposal branch race reconciliation, deterministic regressions, synchronized contracts, generated Action bundle, documentation review record, and command authority."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  ".mustflow/config/manifest.lock.toml",
-  ".mustflow/review/docs.toml",
-  "README.md",
-  "action-dist/index.js",
-  "docs/adr/0054-reconcile-equivalent-proposal-branch-races.md",
-  "docs/adr/README.md",
-  "docs/github-action/README.md",
-  "docs/product/02-spec.md",
-  "packages/action/src/branch-publisher.ts",
-  "packages/action/src/run.ts",
-  "packages/action/test/branch-publisher.test.mjs",
+  "docs/ops/release.md",
+  "docs/product/04-implementation-tracker.md",
+  "scripts/release-readiness.mjs",
+  "scripts/release-notes/v0.5.1.md",
+  "scripts/retire-historical-command-intents.mjs",
+  "scripts/test/release-readiness.test.mjs",
+  "scripts/test/retire-historical-command-intents.test.mjs",
 ]
 cwd = "."
 timeout_seconds = 60
@@ -695,23 +630,24 @@ effects = [
 network = false
 destructive = false
 required_after = [
-  "proposal_branch_race_reconciliation_validation_complete",
+  "release_v0_5_1_local_validation_complete",
+  "documentation_review_queued",
   "user_authorized_commit",
 ]
 
-[intents.git_commit_proposal_branch_race_reconciliation]
+[intents.git_commit_release_v0_5_1]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
-description = "Commit the reviewed equivalent proposal branch race reconciliation."
+description = "Commit the reviewed v0.5.1 concurrent proposal and provider endpoint hardening release preparation."
 argv = [
   "git",
   "commit",
   "-m",
-  "fix(action): reconcile equivalent proposal races",
+  "chore(release): prepare v0.5.1 hardening",
   "-m",
-  "Validation: test, check, contract, lint, format, docs, smoke, release-readiness, migration-check, bundle-action-check, mustflow, hosted source-comment race",
+  "Validation: docs, release-readiness, lint, format, migration-check, smoke, check, contract, release publication regressions, command retirement regressions, bundle-action-check, mustflow",
 ]
 cwd = "."
 timeout_seconds = 120
@@ -723,7 +659,136 @@ effects = [
 ]
 network = false
 destructive = false
-required_after = ["git_stage_proposal_branch_race_reconciliation"]
+required_after = ["git_stage_release_v0_5_1"]
+
+[intents.hosted_ci_release_v0_5_1]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Confirm hosted CI passed for the pushed v0.5.1 release candidate at the current local HEAD."
+argv = ["pnpm", "run", "hosted-ci-validation"]
+cwd = "."
+timeout_seconds = 1800
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["git_push_main", "release_v0_5_1_candidate_pushed"]
+
+[intents.release_v0_5_1_marketplace_evidence]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["release"]
+description = "Collect exact-HEAD v0.5.1 Marketplace candidate validation records and create the compatibility-named release record issue without publishing a tag."
+argv = [
+  "pnpm",
+  "run",
+  "release-candidate-evidence-orchestrator",
+  "--",
+  "--provider-model",
+  "gpt-4.1-mini",
+  "--release-type",
+  "marketplace-action-tag",
+  "--release-version",
+  "v0.5.1",
+  "--create-issue",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["hosted_ci_release_v0_5_1", "user_authorized_release_preparation"]
+
+[intents.release_v0_5_1_stable_publish]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["release"]
+description = "Publish immutable v0.5.1 as a non-prerelease GitHub Marketplace Release from exact candidate validation records."
+argv = [
+  "pnpm",
+  "run",
+  "publish-action-release",
+  "--",
+  "--version",
+  "v0.5.1",
+  "--release-kind",
+  "stable",
+]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/refs/tags/v0.5.1", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["release_v0_5_1_marketplace_evidence", "user_authorized_release_publication"]
+
+[intents.release_v0_5_1_post_tag_evidence]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["release"]
+description = "Revalidate published v0.5.1 with hosted live-provider, external dry-run, full-write, and orphan-audit workflows."
+argv = [
+  "pnpm",
+  "run",
+  "release-candidate-evidence-orchestrator",
+  "--",
+  "--provider-model",
+  "gpt-4.1-mini",
+  "--release-type",
+  "marketplace-action-tag",
+  "--release-version",
+  "v0.5.1",
+  "--external-ref",
+  "v0.5.1",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["release_v0_5_1_stable_publish"]
+
+[intents.verify_marketplace_v0_5_1]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Verify that the public Marketplace listing marks v0.5.1 as Latest and renders the matching Action reference."
+argv = ["pnpm", "run", "verify-marketplace-release", "--", "--version", "v0.5.1"]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["release_v0_5_1_stable_publish", "marketplace_publication"]
 
 [intents.release_v0_5_0_post_tag_evidence]
 status = "manual_only"

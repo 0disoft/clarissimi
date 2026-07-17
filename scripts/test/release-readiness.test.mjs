@@ -29,6 +29,7 @@ import {
   validateDogfoodWorkflowContract,
   validateDocsValidationScriptContract,
   validateEngineeringValidationDocumentContract,
+  validateFormatWriteCommandContract,
   validateFormatterContract,
   validateMigrationCompatibilityContract,
   validateHostedLiveProviderWorkflowContract,
@@ -111,6 +112,36 @@ test("release readiness rejects completed release mutations that remain runnable
 
   assert.deepEqual(validateHistoricalCommandIntentContract(text), [
     "Historical completed intent must be removed: promote_v0_to_v0_3_5.",
+  ]);
+});
+
+test("release readiness accepts declared TOML writes for format_write", () => {
+  const text = `[intents.format_write]
+status = "configured"
+writes = ["**/*.md", "**/*.toml"]
+effects = [
+  { type = "write", mode = "replace", path = "**/*.toml", concurrency = "exclusive" },
+]
+network = false
+
+[intents.format]
+status = "configured"`;
+
+  assert.deepEqual(validateFormatWriteCommandContract(text), []);
+});
+
+test("release readiness rejects undeclared TOML writes for format_write", () => {
+  const text = `[intents.format_write]
+status = "configured"
+writes = ["**/*.md"]
+effects = [
+  { type = "write", mode = "replace", path = "**/*.md", concurrency = "exclusive" },
+]
+network = false`;
+
+  assert.deepEqual(validateFormatWriteCommandContract(text), [
+    "format_write writes must include **/*.toml.",
+    "format_write effects must declare **/*.toml replacement writes.",
   ]);
 });
 

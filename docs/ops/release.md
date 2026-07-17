@@ -141,6 +141,13 @@ Integration-lab PR `#212` validated create, update, unchanged, and single-commen
 the exact implementation SHA before release preparation. Exact-candidate, post-tag, Marketplace,
 and moving-`v0` validation all passed without changing package-publication boundaries.
 
+Marketplace release candidate `v0.5.1` is a compatible hardening release for concurrent proposal
+reruns and custom provider endpoints. Integration-lab run `29548522178` validated two simultaneous
+promotions converging to one managed source comment and one recognition proposal at implementation
+SHA `9b28fd3d283c1adeb1be91174b4f0ce4056de44a`; hosted provider run `29548687433` validated the same
+implementation SHA against the configured live provider. The final release-preparation commit still
+requires the complete exact-candidate validation record before immutable publication.
+
 The first post-tag full-write run `29324962538` had one Ubuntu job fail while GitHub returned its
 `Unicorn!` timeout HTML during draft PR creation. macOS and Windows passed, cleanup ran, and orphan
 audit run `29325038208` found no residue. A complete new-correlation post-tag validation then passed

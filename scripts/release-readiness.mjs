@@ -517,6 +517,30 @@ export const historicalCommandIntentContract = {
   path: ".mustflow/config/commands.toml",
 };
 
+export function validateFormatWriteCommandContract(text) {
+  const issues = [];
+  const intentHeader = "[intents.format_write]";
+  const intentStart = text.indexOf(intentHeader);
+
+  if (intentStart === -1) {
+    return ["Missing configured format_write command intent."];
+  }
+
+  const nextIntentStart = text.indexOf("\n[intents.", intentStart + intentHeader.length);
+  const intent = text.slice(intentStart, nextIntentStart === -1 ? text.length : nextIntentStart);
+  const writesMatch = intent.match(/writes\s*=\s*\[([\s\S]*?)\]\s*effects\s*=/);
+  const effectsMatch = intent.match(/effects\s*=\s*\[([\s\S]*?)\]\s*network\s*=/);
+
+  if (!writesMatch?.[1].includes('"**/*.toml"')) {
+    issues.push("format_write writes must include **/*.toml.");
+  }
+  if (!effectsMatch?.[1].includes('path = "**/*.toml"')) {
+    issues.push("format_write effects must declare **/*.toml replacement writes.");
+  }
+
+  return issues;
+}
+
 export const cliConfigurationDocumentContract = {
   path: "docs/cli/configuration.md",
   requiredSnippets: [
@@ -1412,6 +1436,7 @@ export async function runReleaseReadiness(options = {}) {
 
   await runPackageScriptRegistrationCheck(repoRoot);
   await runHistoricalCommandIntentContractCheck(repoRoot);
+  await runFormatWriteCommandContractCheck(repoRoot);
   await runFormatterContractCheck(repoRoot);
   await runMigrationCompatibilityContractCheck(repoRoot);
   await runRootPackageManagerContractCheck(repoRoot);
@@ -2441,6 +2466,23 @@ async function runHistoricalCommandIntentContractCheck(repoRoot) {
   }
 
   console.log("historical command intent contract passed");
+}
+
+async function runFormatWriteCommandContractCheck(repoRoot) {
+  const contractPath = join(repoRoot, historicalCommandIntentContract.path);
+  let text;
+  try {
+    text = await readFile(contractPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${historicalCommandIntentContract.path}: ${error.message}`);
+  }
+
+  const issues = validateFormatWriteCommandContract(text);
+  if (issues.length > 0) {
+    throw new Error(`format_write command contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("format_write command contract passed");
 }
 
 async function runRootPackageManagerContractCheck(repoRoot) {

@@ -26,6 +26,8 @@ test("retirement removes completed mutations and keeps exact-tag revalidation ma
     '[intents.git_stage_provider_model_eval]\nstatus = "configured"\nrun_policy = "agent_allowed"',
     '[intents.hosted_ci_provider_model_eval]\nstatus = "configured"\nrun_policy = "agent_allowed"',
     '[intents.git_stage_remaining_hardening]\nstatus = "configured"\nrun_policy = "agent_allowed"',
+    '[intents.git_stage_comment_endpoint_hardening]\nstatus = "configured"\nrun_policy = "agent_allowed"',
+    '[intents.git_commit_proposal_branch_race_reconciliation]\nstatus = "configured"\nrun_policy = "agent_allowed"',
     '[intents.release_v0_5_0_post_tag_evidence]\nstatus = "configured"\nlifecycle = "oneshot"\nrun_policy = "agent_allowed"\ndescription = "Revalidate."\nrequired_after = ["release_v0_5_0_stable_publish"]',
   ].join("\n\n");
 
@@ -37,6 +39,8 @@ test("retirement removes completed mutations and keeps exact-tag revalidation ma
     "git_stage_provider_model_eval",
     "hosted_ci_provider_model_eval",
     "git_stage_remaining_hardening",
+    "git_stage_comment_endpoint_hardening",
+    "git_commit_proposal_branch_race_reconciliation",
   ]);
   assert.deepEqual(result.manualOnly, ["release_v0_5_0_post_tag_evidence"]);
   assert.ok(!result.text.includes("release_v0_5_0_stable_publish"));

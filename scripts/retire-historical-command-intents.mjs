@@ -13,6 +13,7 @@ const COMPLETED_VERSION_TOKENS = [
   "v0_3_5",
   "v0_4_0",
   "v0_5_0",
+  "v0_5_1",
 ];
 
 const COMPLETED_MILESTONES = [

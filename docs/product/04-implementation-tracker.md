@@ -1242,7 +1242,8 @@ Source: `docs/adr/0041-restrict-provider-endpoint-trust.md`,
 `docs/adr/0053-add-opt-in-source-pr-comment-updates.md`,
 `docs/adr/0054-reconcile-equivalent-proposal-branch-races.md`, `docs/ops/release.md`
 
-Status: Candidate preparation for immutable `v0.5.1`; publication and moving `v0` remain gated.
+Status: Corrective `v0.5.2` preparation after the immutable `v0.5.1` Marketplace README gate
+failed; moving `v0` remains gated.
 
 Goal: publish the compatible source-comment, proposal-branch, and provider-endpoint race fixes
 without changing Action inputs, permissions, defaults, or package-publication boundaries.
@@ -1259,13 +1260,14 @@ Completed implementation scope:
 - exact implementation SHA hosted CI, live-provider smoke, and integration-lab concurrent promotion
   smoke passed
 
-Candidate gates still required:
+Release results and corrective gates:
 
-- final preparation commit local validation and hosted CI
-- hosted live-provider, external dry-run, full-write, cleanup, and orphan-audit validation for the
-  exact candidate SHA
-- immutable stable release publication, Marketplace `Latest` verification, exact-tag validation,
-  and separate `v0` compare-and-swap promotion
+- `v0.5.1` candidate and exact-tag live-provider, external dry-run, full-write, cleanup, and
+  orphan-audit validation passed at `a11039149ebffb82cf1accb2c559365c2376cad4`
+- immutable `v0.5.1` publication succeeded, but Marketplace verification found its rendered README
+  still naming `v0.5.0`; moving `v0` was not attempted
+- corrective `v0.5.2` must synchronize consumer documentation and repeat candidate, publication,
+  exact-tag, Marketplace, and separate `v0` compare-and-swap gates
 
 ## Deferred Work
 

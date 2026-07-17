@@ -111,12 +111,12 @@ and release checkbox state.
 Current publication record:
 
 - public listing: <https://github.com/marketplace/actions/clarissimi>
-- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.5.0>
-- exact release SHA: `f9322e10e9bd96880ef332c341c42b7e918173c4`
-- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/18>
-- the listing identifies `v0.5.0` as `Latest`, renders `0disoft/clarissimi@v0.5.0`, and exposes
-  categories `Code review` and `Utilities`
-- `v0` resolves to the same exact release SHA after compare-and-swap promotion
+- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.5.1>
+- exact release SHA: `a11039149ebffb82cf1accb2c559365c2376cad4`
+- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/19>
+- the listing identifies `v0.5.1` as `Latest` but still renders
+  `0disoft/clarissimi@v0.5.0`; the Marketplace gate therefore failed closed
+- `v0` remains at the last fully verified immutable release and was not moved to `v0.5.1`
 
 After the completion record is committed, retire every version-fixed publish, promote, verification,
 Git staging, commit, push, and hosted-CI intent for that completed release. Historical exact-tag
@@ -141,12 +141,17 @@ Integration-lab PR `#212` validated create, update, unchanged, and single-commen
 the exact implementation SHA before release preparation. Exact-candidate, post-tag, Marketplace,
 and moving-`v0` validation all passed without changing package-publication boundaries.
 
-Marketplace release candidate `v0.5.1` is a compatible hardening release for concurrent proposal
-reruns and custom provider endpoints. Integration-lab run `29548522178` validated two simultaneous
-promotions converging to one managed source comment and one recognition proposal at implementation
-SHA `9b28fd3d283c1adeb1be91174b4f0ce4056de44a`; hosted provider run `29548687433` validated the same
-implementation SHA against the configured live provider. The final release-preparation commit still
-requires the complete exact-candidate validation record before immutable publication.
+Marketplace release `v0.5.1` contains the compatible concurrent proposal and provider endpoint
+hardening at `a11039149ebffb82cf1accb2c559365c2376cad4`. Candidate and exact-tag live-provider,
+external dry-run, full-write, cleanup, and orphan-audit validation passed. Marketplace verification
+then failed because the immutable release README still names `v0.5.0`; `v0` was intentionally left
+unchanged.
+
+Corrective Marketplace release `v0.5.2` republishes the same Action runtime with synchronized
+README, Action guide, security policy, and validation contracts naming `v0.5.2`. It changes no
+Action runtime, inputs, outputs, permissions, defaults, or package-publication boundary. It must
+repeat exact-SHA candidate validation, stable publication, exact-tag external validation,
+Marketplace verification, and separate compare-and-swap `v0` promotion.
 
 The first post-tag full-write run `29324962538` had one Ubuntu job fail while GitHub returned its
 `Unicorn!` timeout HTML during draft PR creation. macOS and Windows passed, cleanup ran, and orphan

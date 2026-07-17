@@ -598,12 +598,12 @@ network = false
 destructive = false
 required_after = ["git_stage_source_pr_comment"]
 
-[intents.git_stage_release_v0_5_1]
+[intents.git_stage_release_v0_5_2]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
-description = "Stage only the reviewed v0.5.1 hardening release preparation, completed-command retirement policy, validation records, and bounded release commands."
+description = "Stage only the reviewed v0.5.2 Marketplace README correction, synchronized public docs and validators, completed-command retirement, and bounded release commands."
 argv = [
   "git",
   "add",
@@ -611,13 +611,18 @@ argv = [
   ".mustflow/config/commands.toml",
   ".mustflow/config/manifest.lock.toml",
   ".mustflow/review/docs.toml",
+  "README.md",
+  "SECURITY.md",
+  "docs/github-action/README.md",
   "docs/ops/release.md",
   "docs/product/04-implementation-tracker.md",
   "scripts/release-readiness.mjs",
-  "scripts/release-notes/v0.5.1.md",
+  "scripts/release-notes/v0.5.2.md",
   "scripts/retire-historical-command-intents.mjs",
+  "scripts/validate-docs.mjs",
   "scripts/test/release-readiness.test.mjs",
   "scripts/test/retire-historical-command-intents.test.mjs",
+  "scripts/test/validate-docs.test.mjs",
 ]
 cwd = "."
 timeout_seconds = 60
@@ -630,22 +635,22 @@ effects = [
 network = false
 destructive = false
 required_after = [
-  "release_v0_5_1_local_validation_complete",
+  "release_v0_5_2_local_validation_complete",
   "documentation_review_queued",
   "user_authorized_commit",
 ]
 
-[intents.git_commit_release_v0_5_1]
+[intents.git_commit_release_v0_5_2]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
-description = "Commit the reviewed v0.5.1 concurrent proposal and provider endpoint hardening release preparation."
+description = "Commit the reviewed v0.5.2 corrective Marketplace README release preparation."
 argv = [
   "git",
   "commit",
   "-m",
-  "chore(release): prepare v0.5.1 hardening",
+  "fix(release): prepare Marketplace correction",
   "-m",
   "Validation: docs, release-readiness, lint, format, migration-check, smoke, check, contract, release publication regressions, command retirement regressions, bundle-action-check, mustflow",
 ]
@@ -659,13 +664,13 @@ effects = [
 ]
 network = false
 destructive = false
-required_after = ["git_stage_release_v0_5_1"]
+required_after = ["git_stage_release_v0_5_2"]
 
-[intents.hosted_ci_release_v0_5_1]
+[intents.hosted_ci_release_v0_5_2]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
-description = "Confirm hosted CI passed for the pushed v0.5.1 release candidate at the current local HEAD."
+description = "Confirm hosted CI passed for the pushed v0.5.2 corrective release candidate at the current local HEAD."
 argv = ["pnpm", "run", "hosted-ci-validation"]
 cwd = "."
 timeout_seconds = 1800
@@ -677,14 +682,14 @@ env_policy = "allowlist"
 env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
-required_after = ["git_push_main", "release_v0_5_1_candidate_pushed"]
+required_after = ["git_push_main", "release_v0_5_2_candidate_pushed"]
 
-[intents.release_v0_5_1_marketplace_evidence]
+[intents.release_v0_5_2_marketplace_evidence]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["release"]
-description = "Collect exact-HEAD v0.5.1 Marketplace candidate validation records and create the compatibility-named release record issue without publishing a tag."
+description = "Collect exact-HEAD v0.5.2 corrective Marketplace candidate validation records and create the compatibility-named release record issue without publishing a tag."
 argv = [
   "pnpm",
   "run",
@@ -695,7 +700,7 @@ argv = [
   "--release-type",
   "marketplace-action-tag",
   "--release-version",
-  "v0.5.1",
+  "v0.5.2",
   "--create-issue",
 ]
 cwd = "."
@@ -708,21 +713,21 @@ env_policy = "allowlist"
 env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
-required_after = ["hosted_ci_release_v0_5_1", "user_authorized_release_preparation"]
+required_after = ["hosted_ci_release_v0_5_2", "user_authorized_release_correction"]
 
-[intents.release_v0_5_1_stable_publish]
+[intents.release_v0_5_2_stable_publish]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["release"]
-description = "Publish immutable v0.5.1 as a non-prerelease GitHub Marketplace Release from exact candidate validation records."
+description = "Publish immutable v0.5.2 as a non-prerelease corrective GitHub Marketplace Release from exact candidate validation records."
 argv = [
   "pnpm",
   "run",
   "publish-action-release",
   "--",
   "--version",
-  "v0.5.1",
+  "v0.5.2",
   "--release-kind",
   "stable",
 ]
@@ -730,7 +735,7 @@ cwd = "."
 timeout_seconds = 600
 stdin = "closed"
 success_exit_codes = [0]
-writes = [".git/refs/tags/v0.5.1", ".git/logs/**", ".git/objects/**"]
+writes = [".git/refs/tags/v0.5.2", ".git/logs/**", ".git/objects/**"]
 effects = [
   { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
 ]
@@ -738,12 +743,64 @@ env_policy = "allowlist"
 env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
-required_after = ["release_v0_5_1_marketplace_evidence", "user_authorized_release_publication"]
+required_after = ["release_v0_5_2_marketplace_evidence", "user_authorized_release_publication"]
 
-[intents.release_v0_5_1_post_tag_evidence]
+[intents.release_v0_5_2_post_tag_evidence]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
+approval_actions = ["release"]
+description = "Revalidate published v0.5.2 with hosted live-provider, external dry-run, full-write, and orphan-audit workflows."
+argv = [
+  "pnpm",
+  "run",
+  "release-candidate-evidence-orchestrator",
+  "--",
+  "--provider-model",
+  "gpt-4.1-mini",
+  "--release-type",
+  "marketplace-action-tag",
+  "--release-version",
+  "v0.5.2",
+  "--external-ref",
+  "v0.5.2",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["release_v0_5_2_stable_publish"]
+
+[intents.verify_marketplace_v0_5_2]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Verify that the public Marketplace listing marks v0.5.2 as Latest and renders the matching Action reference."
+argv = ["pnpm", "run", "verify-marketplace-release", "--", "--version", "v0.5.2"]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["release_v0_5_2_stable_publish", "marketplace_publication"]
+
+[intents.release_v0_5_1_post_tag_evidence]
+status = "manual_only"
+lifecycle = "oneshot"
+run_policy = "manual_only"
+reason = "Historic exact-tag revalidation dispatches credentialed external and full-write workflows."
+agent_action = "do_not_run_report_manual_only"
 approval_actions = ["release"]
 description = "Revalidate published v0.5.1 with hosted live-provider, external dry-run, full-write, and orphan-audit workflows."
 argv = [
@@ -770,25 +827,6 @@ env_policy = "allowlist"
 env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
-required_after = ["release_v0_5_1_stable_publish"]
-
-[intents.verify_marketplace_v0_5_1]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-description = "Verify that the public Marketplace listing marks v0.5.1 as Latest and renders the matching Action reference."
-argv = ["pnpm", "run", "verify-marketplace-release", "--", "--version", "v0.5.1"]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = []
-effects = []
-env_policy = "allowlist"
-env_allowlist = ["APPDATA", "USERPROFILE"]
-network = true
-destructive = false
-required_after = ["release_v0_5_1_stable_publish", "marketplace_publication"]
 
 [intents.release_v0_5_0_post_tag_evidence]
 status = "manual_only"

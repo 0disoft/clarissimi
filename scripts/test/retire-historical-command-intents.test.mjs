@@ -21,6 +21,7 @@ test("retirement removes completed mutations and keeps exact-tag revalidation ma
   const input = [
     'schema_version = "1"',
     sharedIntents,
+    '[intents.release_v0_5_1_stable_publish]\nstatus = "configured"\nrun_policy = "agent_allowed"',
     '[intents.release_v0_5_0_stable_publish]\nstatus = "configured"\nrun_policy = "agent_allowed"',
     '[intents.promote_v0_to_v0_5_0]\nstatus = "configured"\nrun_policy = "agent_allowed"',
     '[intents.git_stage_provider_model_eval]\nstatus = "configured"\nrun_policy = "agent_allowed"',
@@ -28,12 +29,14 @@ test("retirement removes completed mutations and keeps exact-tag revalidation ma
     '[intents.git_stage_remaining_hardening]\nstatus = "configured"\nrun_policy = "agent_allowed"',
     '[intents.git_stage_comment_endpoint_hardening]\nstatus = "configured"\nrun_policy = "agent_allowed"',
     '[intents.git_commit_proposal_branch_race_reconciliation]\nstatus = "configured"\nrun_policy = "agent_allowed"',
+    '[intents.release_v0_5_1_post_tag_evidence]\nstatus = "configured"\nlifecycle = "oneshot"\nrun_policy = "agent_allowed"\ndescription = "Revalidate."\nrequired_after = ["release_v0_5_1_stable_publish"]',
     '[intents.release_v0_5_0_post_tag_evidence]\nstatus = "configured"\nlifecycle = "oneshot"\nrun_policy = "agent_allowed"\ndescription = "Revalidate."\nrequired_after = ["release_v0_5_0_stable_publish"]',
   ].join("\n\n");
 
   const result = retireHistoricalCommandIntents(input);
 
   assert.deepEqual(result.removed, [
+    "release_v0_5_1_stable_publish",
     "release_v0_5_0_stable_publish",
     "promote_v0_to_v0_5_0",
     "git_stage_provider_model_eval",
@@ -42,7 +45,11 @@ test("retirement removes completed mutations and keeps exact-tag revalidation ma
     "git_stage_comment_endpoint_hardening",
     "git_commit_proposal_branch_race_reconciliation",
   ]);
-  assert.deepEqual(result.manualOnly, ["release_v0_5_0_post_tag_evidence"]);
+  assert.deepEqual(result.manualOnly, [
+    "release_v0_5_1_post_tag_evidence",
+    "release_v0_5_0_post_tag_evidence",
+  ]);
+  assert.ok(!result.text.includes("release_v0_5_1_stable_publish"));
   assert.ok(!result.text.includes("release_v0_5_0_stable_publish"));
   assert.ok(result.text.includes('status = "manual_only"'));
   assert.ok(result.text.includes('run_policy = "manual_only"'));

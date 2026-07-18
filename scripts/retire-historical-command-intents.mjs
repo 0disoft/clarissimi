@@ -14,6 +14,7 @@ const COMPLETED_VERSION_TOKENS = [
   "v0_4_0",
   "v0_5_0",
   "v0_5_1",
+  "v0_5_2",
 ];
 
 const COMPLETED_MILESTONES = [
@@ -37,6 +38,11 @@ const COMPLETED_MILESTONES = [
   "remaining_hardening",
   "comment_endpoint_hardening",
   "proposal_branch_race_reconciliation",
+  "source_pr_comment",
+  "release_version_guard",
+  "runner_admission_diagnostics",
+  "external_review_hardening",
+  "automation_test_build_contract",
 ];
 
 const COMPLETED_LIFECYCLE_PREFIXES = [

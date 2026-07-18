@@ -46,6 +46,7 @@ const COMPLETED_MILESTONES = [
   "stable_v1_tooling",
   "standalone_cli_package",
   "package_policy_sync",
+  "workspace_package_policy_diagnostics",
 ];
 
 const COMPLETED_LIFECYCLE_PREFIXES = [

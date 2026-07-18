@@ -37,7 +37,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
   docs/adr/0042-add-opt-in-contributor-gallery.md,
   docs/adr/0043-include-automation-contributors-by-default.md,
   docs/adr/0046-recover-transient-proposal-pull-request-failures.md,
-  docs/adr/0047-add-provider-result-quality-regression-corpus.md
+  docs/adr/0047-add-provider-result-quality-regression-corpus.md,
+  docs/adr/0056-publish-a-standalone-cli-package.md
 
 ## Required Decisions
 
@@ -59,9 +60,9 @@ This repository type owns workspace boundaries, package ownership, dependency po
   must also follow the dependency graph below so package manifests and `tsconfig` build order do
   not drift apart.
 - Monorepo release or rollout policy: source-only merges may continue after local and hosted
-  validation, and ADR 0031 allows the root Action tag after release gates pass. Public package
-  publication remains blocked by `docs/ops/release.md`; release-readiness keeps root and workspace
-  package manifests private at `0.0.0` while that package blocker is active.
+  validation, and ADR 0031 allows the root Action tag after release gates pass. ADR 0056 accepts
+  only the bundled `distribution/npm/clarissimi` CLI as an npm publication surface. Root and
+  workspace package manifests remain private at `0.0.0`.
 - Monorepo compatibility and migration policy: schema versions must be explicit and migration work
   must be documented before changing accepted public data shapes.
 
@@ -77,6 +78,13 @@ This repository type owns workspace boundaries, package ownership, dependency po
 | `packages/renderers` | Implemented | JSONL, derived contributor JSON, Markdown, static-data rendering, draft review JSON rendering, maintainer-only analytics documents, output path constants                                                                                                                                                                                                                                                                                                              | Evidence collection, provider calls, approval policy, filesystem writes, CLI orchestration, Action orchestration                                                      |
 | `packages/cli`       | Implemented | Local command descriptor and parsing, fixture-first orchestration, agent-assisted draft staging, approval, serialized and staged import, config file loading, ledger validation, rebuild command I/O, static shell completion generation                                                                                                                                                                                                                               | Domain policy, schema vocabulary, shared config value validation, provider behavior, GitHub API collection, Action runtime                                            |
 | `packages/action`    | Implemented | GitHub Action entrypoint, environment input resolution, event and approved-draft file reading, live collector routing and token injection, bounded dry-run/propose/commit/stage-draft/promote-draft summaries, bounded provider-quality failure presentation, internal output staging into temporary directories, proposal branch and explicit direct-commit writing and publishing behind narrow local git boundaries, proposal pull request creation/update boundary | Live GitHub evidence normalization, provider token handling, writes outside Clarissimi-owned outputs, domain policy, provider behavior                                |
+
+## Distribution Table
+
+| Distribution                  | Status      | Owns                                                                                | Must Not Own                                                               |
+| ----------------------------- | ----------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `distribution/npm/clarissimi` | Pre-release | Public standalone CLI manifest and package-specific installation documentation      | CLI source, domain policy, workspace dependencies, generated bundle output |
+| `.tmp/npm/clarissimi`         | Generated   | Exact locally staged npm tarball inputs rebuilt by the package verification command | Source truth, committed files, credentials, registry state                 |
 
 ## Internal Dependency Graph
 

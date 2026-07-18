@@ -85,6 +85,9 @@ jobs:
       - name: Run CLI file I/O benchmark regression guard
         run: pnpm run benchmark:cli-io
 
+      - name: Verify standalone CLI package
+        run: pnpm run verify:cli-package
+
       - name: Run smoke validation
         run: pnpm run smoke
 

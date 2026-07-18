@@ -27,6 +27,12 @@ paths = ["action-dist/index.js"]
 concurrency = "exclusive_writer"
 description = "Tracked GitHub Action runtime bundle generated from the maintained Action source."
 
+[resources.standalone_cli_package]
+type = "path"
+paths = [".tmp/npm/clarissimi/**"]
+concurrency = "exclusive_writer"
+description = "Ignored standalone CLI npm staging output rebuilt from maintained source files."
+
 [resources.git_state]
 type = "path"
 paths = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
@@ -727,6 +733,167 @@ effects = [
 network = false
 destructive = false
 required_after = ["git_stage_stable_v1_tooling"]
+
+[intents.bundle_standalone_cli_package]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Build the workspace and stage the dependency-free standalone CLI package under the ignored bounded output directory."
+argv = ["pnpm", "run", "bundle:cli-package"]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = [
+  "packages/*/dist/**",
+  "*.tsbuildinfo",
+  "packages/*/*.tsbuildinfo",
+  ".tmp/npm/clarissimi/**",
+]
+effects = [
+  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "*.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/*/*.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = ".tmp/npm/clarissimi/**", lock = "standalone_cli_package", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["standalone_cli_distribution_change"]
+
+[intents.verify_standalone_cli_package]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Build, pack, install, and execute the standalone CLI in an isolated temporary consumer without registry publication."
+argv = ["pnpm", "run", "verify:cli-package"]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = [
+  "packages/*/dist/**",
+  "*.tsbuildinfo",
+  "packages/*/*.tsbuildinfo",
+  ".tmp/npm/clarissimi/**",
+]
+effects = [
+  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "*.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/*/*.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = ".tmp/npm/clarissimi/**", lock = "standalone_cli_package", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = [
+  "standalone_cli_distribution_change",
+  "npm_publish_workflow_change",
+  "before_npm_publication",
+]
+
+[intents.test_standalone_cli_package]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Run focused standalone CLI manifest, tarball-surface, workflow, and release-readiness contract regressions."
+argv = [
+  "node",
+  "--test",
+  "scripts/test/build-standalone-cli-package.test.mjs",
+  "scripts/test/release-readiness.test.mjs",
+]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+required_after = ["standalone_cli_distribution_change", "standalone_cli_distribution_test_change"]
+
+[intents.stage_standalone_cli_package]
+status = "manual_only"
+lifecycle = "oneshot"
+run_policy = "manual_only"
+reason = "npm staging mutates an external registry, requires configured stage-only OIDC, and reserves a package version pending interactive maintainer review."
+agent_action = "do_not_run_report_manual_only"
+description = "Submit the verified standalone CLI to npm staging after every registry, provenance, and exact-SHA gate passes."
+argv = ["npm", "stage", "publish", "--access", "public", "--provenance"]
+cwd = ".tmp/npm/clarissimi"
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "minimal"
+env_allowlist = []
+network = true
+destructive = false
+
+[intents.git_stage_standalone_cli_package]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Stage only the reviewed standalone CLI distribution, release contract, workflow, tests, command contract, and manifest lock."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".github/workflows/ci.yml",
+  ".github/workflows/npm-publish.yml",
+  ".mustflow/config/commands.toml",
+  ".mustflow/config/manifest.lock.toml",
+  "distribution/npm/clarissimi/package.json",
+  "distribution/npm/clarissimi/README.md",
+  "docs/adr/0056-publish-a-standalone-cli-package.md",
+  "docs/adr/README.md",
+  "docs/monorepo/package-ownership.md",
+  "docs/ops/release.md",
+  "package.json",
+  "scripts/build-standalone-cli-package.mjs",
+  "scripts/release-readiness.mjs",
+  "scripts/test/build-standalone-cli-package.test.mjs",
+  "scripts/test/release-readiness.test.mjs",
+  "scripts/verify-standalone-cli-package.mjs",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["standalone_cli_package_validation_complete"]
+
+[intents.git_commit_standalone_cli_package]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Commit the reviewed standalone CLI npm distribution and fail-closed publication preparation."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "feat(release): prepare standalone CLI package",
+  "-m",
+  "Validation: standalone-cli-package, docs, release-readiness, lint, format, smoke, check, contract, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_standalone_cli_package"]
 
 [intents.release_v0_5_2_post_tag_evidence]
 status = "manual_only"

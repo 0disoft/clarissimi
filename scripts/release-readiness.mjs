@@ -5,6 +5,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { validateHistoricalCommandIntentContract } from "./retire-historical-command-intents.mjs";
+import { validateStandaloneCliPackageManifest } from "./build-standalone-cli-package.mjs";
 
 export { validateHistoricalCommandIntentContract } from "./retire-historical-command-intents.mjs";
 
@@ -34,6 +35,10 @@ export const requiredPackageScripts = [
   {
     name: "bundle:action:check",
     includes: ["pnpm run build", "scripts/bundle-action.mjs --check"],
+  },
+  {
+    name: "bundle:cli-package",
+    includes: ["pnpm run build", "scripts/build-standalone-cli-package.mjs"],
   },
   {
     name: "docs",
@@ -89,6 +94,10 @@ export const requiredPackageScripts = [
   {
     name: "retire-historical-command-intents",
     includes: ["scripts/retire-historical-command-intents.mjs"],
+  },
+  {
+    name: "verify:cli-package",
+    includes: ["pnpm run build", "scripts/verify-standalone-cli-package.mjs"],
   },
   {
     name: "live-provider-smoke",
@@ -151,6 +160,63 @@ export const requiredTestGlobs = [
 export const packageReleasePolicy = {
   private: true,
   version: "0.0.0",
+};
+
+export const standaloneCliDistributionContract = {
+  manifestPath: "distribution/npm/clarissimi/package.json",
+  readmePath: "distribution/npm/clarissimi/README.md",
+  adrPath: "docs/adr/0056-publish-a-standalone-cli-package.md",
+  buildScriptPath: "scripts/build-standalone-cli-package.mjs",
+  verifyScriptPath: "scripts/verify-standalone-cli-package.mjs",
+  workflowPath: ".github/workflows/npm-publish.yml",
+  requiredReadmeSnippets: [
+    "The standalone npm package is not published yet.",
+    "npm install --global clarissimi",
+    "never place provider tokens in committed config files",
+  ],
+  requiredAdrSnippets: [
+    "Clarissimi accepts a public, dependency-free npm distribution named `clarissimi`",
+    "Root and `packages/*`",
+    "manifests remain private at `0.0.0`",
+    "npm package versions, Action release versions, and persisted schema versions are independent",
+    "The first publication is a maintainer-operated bootstrap",
+    "Actual publication remains manual-only",
+  ],
+};
+
+export const npmPublishWorkflowContract = {
+  path: ".github/workflows/npm-publish.yml",
+  requiredSnippets: [
+    "workflow_dispatch:",
+    "version:",
+    "sha:",
+    "contents: read",
+    "id-token: write",
+    "runs-on: ubuntu-latest",
+    "environment: npm",
+    "uses: actions/checkout@v7",
+    "ref: ${{ inputs.sha }}",
+    "uses: actions/setup-node@v6",
+    "node-version: 24",
+    "registry-url: https://registry.npmjs.org",
+    "npm install --global npm@11.16.0",
+    "pnpm install --frozen-lockfile",
+    "pnpm run verify:cli-package",
+    "npm view clarissimi name --json",
+    'npm view "clarissimi@${RELEASE_VERSION}" version --json',
+    "working-directory: .tmp/npm/clarissimi",
+    "npm stage publish --access public --provenance",
+  ],
+  forbiddenSnippets: [
+    "push:",
+    "pull_request:",
+    "pull_request_target:",
+    "schedule:",
+    "contents: write",
+    "NPM_TOKEN",
+    "NODE_AUTH_TOKEN",
+    "run: npm publish ",
+  ],
 };
 
 export const rootPackageManagerContract = {
@@ -241,7 +307,7 @@ export const migrationCompatibilityContract = {
 export const releasePolicyDocumentContract = {
   path: "docs/ops/release.md",
   requiredSnippets: [
-    "Clarissimi is not ready for public package publication.",
+    "Clarissimi keeps workspace packages private.",
     "ADR 0031 authorizes immutable root GitHub",
     "ADR 0044 authorizes subsequent immutable `v0.x.y` releases",
     "ADR 0034 authorizes moving major alias `v0`",
@@ -252,12 +318,11 @@ export const releasePolicyDocumentContract = {
     "stable v1 publication remains blocked until the",
     "candidate consumer documents name `v1.0.0`",
     "The current root and workspace packages stay private at `0.0.0`.",
-    "Do not bump package versions,",
-    "create another moving major alias",
+    "ADR 0056 accepts only the",
     "Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,",
     "`pnpm run lint`, `pnpm run format`, `pnpm run migration-check`, `pnpm run smoke`,",
     "`pnpm run check`, `pnpm run contract`, and repository hygiene checks pass.",
-    "- Public package publication: blocked.",
+    "- Standalone CLI package preparation: allowed under ADR 0056",
     "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044",
     "- Moving GitHub Action major alias: `v0` is allowed under ADR 0034",
     "- GitHub Marketplace publication: allowed for the validated root Action under ADR 0045",
@@ -270,7 +335,11 @@ export const releasePolicyDocumentContract = {
     "npm publication remains a separate decision",
     "`scripts/action-release-version.mjs` is the shared allowlist and alias-derivation boundary",
     "The versioned Action tag requires:",
-    "Public package publication remains blocked even when every technical gate above passes.",
+    "Actual standalone CLI publication remains blocked until every registry gate passes.",
+    "## Standalone CLI npm Publication",
+    "pnpm run verify:cli-package",
+    "trusted publishing",
+    "npm stage publish --access public --provenance",
     "## Marketplace Release Procedure",
     "release type `marketplace-action-tag`",
     "Before any tag is created or pushed, the publisher reads `README.md`,",
@@ -305,7 +374,7 @@ export const releasePolicyDocumentContract = {
     "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
     "Release status: immutable `v0.x.y` Action tags are allowed by ADR 0044",
     "free root Action Marketplace publication",
-    "public package publication remains blocked",
+    "workspace-package publication remains blocked",
   ],
 };
 
@@ -1435,6 +1504,7 @@ export const ciWorkflowContract = {
     "pnpm run migration-check",
     "pnpm run benchmark:scale",
     "pnpm run benchmark:cli-io",
+    "pnpm run verify:cli-package",
     "pnpm run smoke",
     "pnpm run check",
     "pnpm run contract",
@@ -1624,6 +1694,7 @@ export async function runReleaseReadiness(options = {}) {
   await runWorkspaceContractCheck(repoRoot);
   await runPackageReleasePolicyCheck(repoRoot);
   await runWorkspacePackageReleasePolicyCheck(repoRoot);
+  await runStandaloneCliDistributionContractCheck(repoRoot);
   await runReleasePolicyDocumentContractCheck(repoRoot);
   await runStableActionReleaseToolingContractCheck(repoRoot);
   await runProductPositioningContractCheck(repoRoot);
@@ -1699,6 +1770,7 @@ export async function runReleaseReadiness(options = {}) {
   await runActionManifestContractCheck(repoRoot);
   await runWorkflowTrustBoundaryContractCheck(repoRoot, workflowFiles);
   await runCiWorkflowContractCheck(repoRoot);
+  await runNpmPublishWorkflowContractCheck(repoRoot);
   await runDogfoodWorkflowContractChecks(repoRoot);
   await runHostedLiveProviderWorkflowContractCheck(repoRoot);
 
@@ -1728,10 +1800,13 @@ export async function runReleaseReadiness(options = {}) {
     "moving Action alias v0 is allowed by ADR 0034 after exact-SHA post-promotion verification",
   );
   console.log(
-    "free root Action Marketplace publication is allowed by ADR 0045; public package publication remains blocked",
+    "free root Action Marketplace publication is allowed by ADR 0045; workspace-package publication remains blocked",
   );
   console.log(
     "stable v1.0.0 tooling is ready under ADR 0055; publication remains blocked pending candidate-version docs and fresh exact-candidate validation",
+  );
+  console.log(
+    "standalone CLI npm packaging is ready under ADR 0056; staging and final 2FA approval remain manual-only pending registry bootstrap and stage-only trusted-publisher configuration",
   );
 }
 
@@ -2410,6 +2485,72 @@ export function validateCiWorkflowContract(text, contract = ciWorkflowContract) 
   return issues;
 }
 
+export function validateNpmPublishWorkflowContract(text, contract = npmPublishWorkflowContract) {
+  const issues = [];
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+  for (const snippet of contract.forbiddenSnippets) {
+    if (text.includes(snippet)) {
+      issues.push(`${contract.path} must not include ${snippet}.`);
+    }
+  }
+  return issues;
+}
+
+export function validateStandaloneCliDistributionContract(
+  files,
+  contract = standaloneCliDistributionContract,
+) {
+  const issues = [];
+  if (files.manifest === undefined) {
+    issues.push(`${contract.manifestPath} must be readable and parseable JSON.`);
+  } else {
+    issues.push(...validateStandaloneCliPackageManifest(files.manifest));
+  }
+
+  for (const [path, text, snippets] of [
+    [contract.readmePath, files.readme, contract.requiredReadmeSnippets],
+    [contract.adrPath, files.adr, contract.requiredAdrSnippets],
+  ]) {
+    if (typeof text !== "string") {
+      issues.push(`${path} must be readable.`);
+      continue;
+    }
+    for (const snippet of snippets) {
+      if (!text.includes(snippet)) {
+        issues.push(`${path} must include ${snippet}.`);
+      }
+    }
+  }
+
+  for (const [path, text, requiredSnippets] of [
+    [
+      contract.buildScriptPath,
+      files.buildScript,
+      ["bundle: true", 'target: "node24"', 'join(".tmp", "npm", "clarissimi")'],
+    ],
+    [
+      contract.verifyScriptPath,
+      files.verifyScript,
+      ["npm", "--ignore-scripts", 'process.execPath, [installedCli, "--help"]'],
+    ],
+  ]) {
+    if (typeof text !== "string") {
+      issues.push(`${path} must be readable.`);
+      continue;
+    }
+    for (const snippet of requiredSnippets) {
+      if (!text.includes(snippet)) {
+        issues.push(`${path} must include ${snippet}.`);
+      }
+    }
+  }
+  return issues;
+}
+
 export function validateActionManifestContract(text, contract = actionManifestContract) {
   const issues = [];
   const brandingBlock = findRequiredYamlMappingBlock(text, contract.path, "branding", issues);
@@ -2577,6 +2718,21 @@ async function runCiWorkflowContractCheck(repoRoot) {
   }
 
   console.log("CI workflow contract passed");
+}
+
+async function runNpmPublishWorkflowContractCheck(repoRoot) {
+  const workflowPath = join(repoRoot, npmPublishWorkflowContract.path);
+  let text;
+  try {
+    text = await readFile(workflowPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${npmPublishWorkflowContract.path}: ${error.message}`);
+  }
+  const issues = validateNpmPublishWorkflowContract(text);
+  if (issues.length > 0) {
+    throw new Error(`npm publish workflow contract failed:\n${issues.join("\n")}`);
+  }
+  console.log("npm publish workflow contract passed");
 }
 
 async function runHostedLiveProviderWorkflowContractCheck(repoRoot) {
@@ -2779,6 +2935,35 @@ async function runPackageReleasePolicyCheck(repoRoot) {
   }
 
   console.log("package release policy passed");
+}
+
+async function runStandaloneCliDistributionContractCheck(repoRoot) {
+  const contract = standaloneCliDistributionContract;
+  let manifest;
+  let readme;
+  let adr;
+  let buildScript;
+  let verifyScript;
+  try {
+    manifest = JSON.parse(await readFile(join(repoRoot, contract.manifestPath), "utf8"));
+    readme = await readFile(join(repoRoot, contract.readmePath), "utf8");
+    adr = await readFile(join(repoRoot, contract.adrPath), "utf8");
+    buildScript = await readFile(join(repoRoot, contract.buildScriptPath), "utf8");
+    verifyScript = await readFile(join(repoRoot, contract.verifyScriptPath), "utf8");
+  } catch (error) {
+    throw new Error(`standalone CLI distribution files are invalid: ${error.message}`);
+  }
+  const issues = validateStandaloneCliDistributionContract({
+    manifest,
+    readme,
+    adr,
+    buildScript,
+    verifyScript,
+  });
+  if (issues.length > 0) {
+    throw new Error(`standalone CLI distribution contract failed:\n${issues.join("\n")}`);
+  }
+  console.log("standalone CLI distribution contract passed");
 }
 
 async function runReleasePolicyDocumentContractCheck(repoRoot) {

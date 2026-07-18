@@ -1,0 +1,37 @@
+{
+  "name": "clarissimi",
+  "version": "0.1.0",
+  "description": "Local-first contributor recognition CLI for auditable maintainer workflows.",
+  "keywords": [
+    "cli",
+    "contributors",
+    "github",
+    "recognition"
+  ],
+  "homepage": "https://github.com/0disoft/clarissimi#readme",
+  "bugs": {
+    "url": "https://github.com/0disoft/clarissimi/issues"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0disoft/clarissimi.git",
+    "directory": "distribution/npm/clarissimi"
+  },
+  "bin": {
+    "clarissimi": "./dist/clarissimi.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

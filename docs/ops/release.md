@@ -8,7 +8,7 @@ Cover release types, versioning, pre-release checklist, deployment flow, post-de
 
 ## Current Release Policy
 
-Clarissimi is not ready for public package publication. ADR 0031 authorizes immutable root GitHub
+Clarissimi keeps workspace packages private. ADR 0031 authorizes immutable root GitHub
 Action releases beginning with `v0.1.0` after every gate in this document passes for the exact tag
 target commit. ADR 0044 authorizes subsequent immutable `v0.x.y` releases within the same root
 Action distribution boundary. ADR 0034 authorizes moving major alias `v0` only after it is tied to one explicitly
@@ -22,9 +22,9 @@ coverage. It does not authorize an immediate tag: stable v1 publication remains 
 candidate consumer documents name `v1.0.0` and the exact candidate completes every hosted,
 post-tag, Marketplace, and external gate in this document.
 
-The current root and workspace packages stay private at `0.0.0`. Do not bump package versions,
-remove `private: true`, publish npm packages, or create another moving major alias. Marketplace
-publication is limited to the root Action release boundary accepted by ADR 0045.
+The current root and workspace packages stay private at `0.0.0`. ADR 0056 accepts only the
+dependency-free `distribution/npm/clarissimi` CLI distribution beginning at `0.1.0`; it does not
+authorize publishing internal workspace packages or couple the CLI version to an Action tag.
 
 ## Release Types
 
@@ -33,13 +33,14 @@ publication is limited to the root Action release boundary accepted by ADR 0045.
   `pnpm run check`, `pnpm run contract`, and repository hygiene checks pass.
 - Dogfood workflow update: allowed when Action examples, permissions, `actionlint`, and root
   `action.yml` parsing pass.
-- Public package publication: blocked.
+- Standalone CLI package preparation: allowed under ADR 0056; actual npm publication is
+  manual-only and remains blocked until the registry and authentication gates below pass.
 - Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044 after all
   pre-release gates pass for the exact tag target commit.
 - Moving GitHub Action major alias: `v0` is allowed under ADR 0034 after the selected immutable
   release passes the alias verification and external consumer gates.
-- GitHub Marketplace publication: allowed for the validated root Action under ADR 0045; npm and
-  workspace-package publication remain blocked.
+- GitHub Marketplace publication: allowed for the validated root Action under ADR 0045;
+  workspace-package publication remains blocked.
 - Stable root Action tag: `v1.0.0` is selected by ADR 0055; v1-capable release tooling is
   implemented, but publication remains blocked until candidate documentation and every exact-SHA,
   post-tag, Marketplace, and alias gate pass.
@@ -100,9 +101,42 @@ The versioned Action tag requires:
 - secret scan shows no committed provider tokens, GitHub tokens, private keys, or environment files
 - rollback instructions cover closing proposal pull requests and deleting proposal branches
 
-Public package publication remains blocked even when every technical gate above passes. It needs a
-separate accepted release decision covering package versions, registry authentication, provenance,
-workspace publication scope, and package rollback.
+Actual standalone CLI publication remains blocked until every registry gate passes. Action release
+validation does not substitute for the npm-specific checks below.
+
+## Standalone CLI npm Publication
+
+ADR 0056 defines `distribution/npm/clarissimi/package.json` as the only public npm manifest. The
+root and every `packages/*` manifest stay private at `0.0.0`. Before any publication:
+
+1. Run `pnpm run verify:cli-package`. It builds the workspace, creates the ignored
+   `.tmp/npm/clarissimi` staging directory, checks the exact tarball contents, installs the tarball
+   with lifecycle scripts disabled into an isolated temporary consumer, and runs `clarissimi
+--help` from that installation.
+2. Recheck that the npm name `clarissimi` is controlled by the maintainer account and that the exact
+   version does not exist. A name search done during development is not sufficient registry proof.
+3. Confirm the requested version exactly matches
+   `distribution/npm/clarissimi/package.json`, the source commit is the reviewed 40-character SHA,
+   hosted CI passed for that SHA, and the worktree contains no uncommitted release changes.
+4. For the first publication only, use maintainer-owned npm authentication and two-factor
+   authentication to bootstrap the package. Do not create or commit a long-lived automation token.
+5. Configure npm trusted publishing for `0disoft/clarissimi`, workflow
+   `.github/workflows/npm-publish.yml`, and the protected `npm` GitHub environment. Grant
+   `npm stage publish` only; do not grant direct `npm publish` permission.
+6. For subsequent releases, dispatch `Stage npm CLI` with the exact version and SHA. The workflow
+   uses a GitHub-hosted runner, `id-token: write`, pinned npm 11.16.0, an exact-SHA checkout, the
+   isolated package verification, and `npm stage publish --access public --provenance` from the
+   staging directory. It deliberately fails when the package does not already exist, so the OIDC
+   workflow cannot masquerade as the first-publish bootstrap.
+7. Inspect or download the staged tarball from npm. Approve it with 2FA only when the expected name,
+   version, files, integrity, provenance, and source commit agree; otherwise reject the stage.
+8. From an empty external repository, install the public version, run `clarissimi --help`, run one
+   fixture-backed dry-run, and record the registry page, provenance link, exact tarball integrity,
+   and consumer result outside the release commit.
+
+Rollback never overwrites or republishes the same npm version. Stop promotion, deprecate a defective
+version when appropriate, publish a corrected patch version, and give affected consumers the exact
+upgrade command. Workspace packages stay private throughout that recovery.
 
 ## Marketplace Release Procedure
 

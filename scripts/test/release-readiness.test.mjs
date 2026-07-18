@@ -39,6 +39,7 @@ import {
   validateLedgerFormatDocumentContract,
   validateLintAndFormatDecisionDocumentContract,
   validateMonorepoValidationDocumentContract,
+  validateNpmPublishWorkflowContract,
   validateObservabilityDocumentContract,
   validateOpsValidationFooterContract,
   validateOperationalContractDocumentContract,
@@ -56,6 +57,7 @@ import {
   validateServiceLevelsDocumentContract,
   validateShellCompletionDocumentContract,
   validateStableActionReleaseToolingContract,
+  validateStandaloneCliDistributionContract,
   validateSecretsDocumentContract,
   validateTrackedGeneratedOutputPaths,
   validateWorkspaceContract,
@@ -66,6 +68,7 @@ import {
   validateWorkflowTrustBoundaryContract,
   validateWriteModeDogfoodEvidence,
 } from "../release-readiness.mjs";
+import { standaloneCliPackageContract } from "../build-standalone-cli-package.mjs";
 
 test("release readiness accepts the current package script registration", () => {
   const packageJson = {
@@ -345,10 +348,7 @@ test("release readiness accepts the Action release policy document contract", ()
 
 test("release readiness rejects release policy document drift", () => {
   const text = createReleasePolicyText()
-    .replace(
-      "Clarissimi is not ready for public package publication.",
-      "Clarissimi can publish packages.",
-    )
+    .replace("Clarissimi keeps workspace packages private.", "Clarissimi can publish packages.")
     .replace("ADR 0031 authorizes immutable root GitHub", "No immutable release decision exists.")
     .replace(
       "ADR 0044 authorizes subsequent immutable `v0.x.y` releases",
@@ -367,7 +367,11 @@ test("release readiness rejects release policy document drift", () => {
     )
     .replace("stable v1 publication remains blocked until the", "stable v1 is immediate")
     .replace("candidate consumer documents name `v1.0.0`", "candidate docs may stay stale")
-    .replace("- Public package publication: blocked.", "- Public package publication: allowed.")
+    .replace("ADR 0056 accepts only the", "No standalone CLI distribution decision exists.")
+    .replace(
+      "- Standalone CLI package preparation: allowed under ADR 0056",
+      "- Standalone CLI package preparation: ungoverned.",
+    )
     .replace(
       "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044",
       "- Versioned GitHub Action tag: moving latest.",
@@ -406,6 +410,14 @@ test("release readiness rejects release policy document drift", () => {
       "`scripts/action-release-version.mjs` is the shared allowlist and alias-derivation boundary",
       "release versions are duplicated",
     )
+    .replace(
+      "Actual standalone CLI publication remains blocked until every registry gate passes.",
+      "Standalone CLI publication skips registry gates.",
+    )
+    .replace("## Standalone CLI npm Publication", "## Ungated npm Publication")
+    .replace("pnpm run verify:cli-package", "pnpm run build")
+    .replace("trusted publishing", "long-lived token publishing")
+    .replace("npm stage publish --access public --provenance", "npm publish")
     .replace("## Marketplace Release Procedure", "## Uncontrolled Marketplace Publication")
     .replace("release type `marketplace-action-tag`", "")
     .replace("Before any tag is created or pushed, the publisher reads `README.md`,", "")
@@ -447,6 +459,7 @@ test("release readiness rejects release policy document drift", () => {
       "pnpm run promote-action-major-alias -- --release-version v1.0.0 --sha <candidate-sha>",
       "",
     )
+    .replace("workspace-package publication remains blocked", "workspace packages may publish")
     .replace("## Major Alias Promotion", "## Unverified Alias Promotion")
     .replace(
       "`pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
@@ -454,7 +467,7 @@ test("release readiness rejects release policy document drift", () => {
     );
 
   assert.deepEqual(validateReleasePolicyDocumentContract(text), [
-    "docs/ops/release.md must include Clarissimi is not ready for public package publication..",
+    "docs/ops/release.md must include Clarissimi keeps workspace packages private..",
     "docs/ops/release.md must include ADR 0031 authorizes immutable root GitHub.",
     "docs/ops/release.md must include ADR 0044 authorizes subsequent immutable `v0.x.y` releases.",
     "docs/ops/release.md must include ADR 0034 authorizes moving major alias `v0`.",
@@ -464,7 +477,8 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include external-consumer, and alias tools now accept both authorized v0 and v1 lines.",
     "docs/ops/release.md must include stable v1 publication remains blocked until the.",
     "docs/ops/release.md must include candidate consumer documents name `v1.0.0`.",
-    "docs/ops/release.md must include - Public package publication: blocked..",
+    "docs/ops/release.md must include ADR 0056 accepts only the.",
+    "docs/ops/release.md must include - Standalone CLI package preparation: allowed under ADR 0056.",
     "docs/ops/release.md must include - Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044.",
     "docs/ops/release.md must include - Moving GitHub Action major alias: `v0` is allowed under ADR 0034.",
     "docs/ops/release.md must include - GitHub Marketplace publication: allowed for the validated root Action under ADR 0045.",
@@ -476,6 +490,11 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include The v1 release leaves existing `v0.x.y` tags and alias `v0` unchanged..",
     "docs/ops/release.md must include npm publication remains a separate decision.",
     "docs/ops/release.md must include `scripts/action-release-version.mjs` is the shared allowlist and alias-derivation boundary.",
+    "docs/ops/release.md must include Actual standalone CLI publication remains blocked until every registry gate passes..",
+    "docs/ops/release.md must include ## Standalone CLI npm Publication.",
+    "docs/ops/release.md must include pnpm run verify:cli-package.",
+    "docs/ops/release.md must include trusted publishing.",
+    "docs/ops/release.md must include npm stage publish --access public --provenance.",
     "docs/ops/release.md must include ## Marketplace Release Procedure.",
     "docs/ops/release.md must include release type `marketplace-action-tag`.",
     "docs/ops/release.md must include Before any tag is created or pushed, the publisher reads `README.md`,.",
@@ -497,6 +516,7 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include ## Stable v1 Release Procedure.",
     "docs/ops/release.md must include pnpm run publish-action-release -- --version v1.0.0 --sha <candidate-sha> --release-kind stable.",
     "docs/ops/release.md must include pnpm run promote-action-major-alias -- --release-version v1.0.0 --sha <candidate-sha>.",
+    "docs/ops/release.md must include workspace-package publication remains blocked.",
   ]);
 });
 
@@ -2108,15 +2128,75 @@ test("release readiness rejects CI workflow command drift", () => {
     .replace("pnpm run lint", "pnpm run typecheck")
     .replace("pnpm run contract", "pnpm run check")
     .replace("pnpm run benchmark:scale", "pnpm run build")
-    .replace("pnpm run benchmark:cli-io", "pnpm run build");
+    .replace("pnpm run benchmark:cli-io", "pnpm run build")
+    .replace("pnpm run verify:cli-package", "pnpm run build");
 
   assert.deepEqual(validateCiWorkflowContract(text), [
     ".github/workflows/ci.yml must run pnpm run release-readiness.",
     ".github/workflows/ci.yml must run pnpm run lint.",
     ".github/workflows/ci.yml must run pnpm run benchmark:scale.",
     ".github/workflows/ci.yml must run pnpm run benchmark:cli-io.",
+    ".github/workflows/ci.yml must run pnpm run verify:cli-package.",
     ".github/workflows/ci.yml must run pnpm run contract.",
   ]);
+});
+
+test("release readiness accepts the npm trusted-publishing workflow contract", () => {
+  assert.deepEqual(validateNpmPublishWorkflowContract(createNpmPublishWorkflowText()), []);
+});
+
+test("release readiness rejects token fallback and automatic npm publication triggers", () => {
+  const text = createNpmPublishWorkflowText()
+    .replace("workflow_dispatch:", "push:")
+    .concat("\nNODE_AUTH_TOKEN: unsafe-fallback\nrun: npm publish .tmp/npm/clarissimi\n");
+
+  assert.deepEqual(validateNpmPublishWorkflowContract(text), [
+    ".github/workflows/npm-publish.yml must include workflow_dispatch:.",
+    ".github/workflows/npm-publish.yml must not include push:.",
+    ".github/workflows/npm-publish.yml must not include NODE_AUTH_TOKEN.",
+    ".github/workflows/npm-publish.yml must not include run: npm publish .",
+  ]);
+});
+
+test("release readiness accepts the standalone CLI distribution contract", () => {
+  assert.deepEqual(
+    validateStandaloneCliDistributionContract({
+      manifest: { ...standaloneCliPackageContract },
+      readme: [
+        "The standalone npm package is not published yet.",
+        "npm install --global clarissimi",
+        "never place provider tokens in committed config files",
+      ].join("\n"),
+      adr: [
+        "Clarissimi accepts a public, dependency-free npm distribution named `clarissimi`",
+        "Root and `packages/*`",
+        "manifests remain private at `0.0.0`",
+        "npm package versions, Action release versions, and persisted schema versions are independent",
+        "The first publication is a maintainer-operated bootstrap",
+        "Actual publication remains manual-only",
+      ].join("\n"),
+      buildScript: 'bundle: true\ntarget: "node24"\njoin(".tmp", "npm", "clarissimi")',
+      verifyScript: '"npm"\n"--ignore-scripts"\nprocess.execPath, [installedCli, "--help"]',
+    }),
+    [],
+  );
+});
+
+test("release readiness rejects a dependency-bearing standalone CLI manifest", () => {
+  const issues = validateStandaloneCliDistributionContract({
+    manifest: {
+      ...standaloneCliPackageContract,
+      dependencies: { "@clarissimi/core": "workspace:*" },
+    },
+    readme: "",
+    adr: "",
+    buildScript: "",
+    verifyScript: "",
+  });
+
+  assert.ok(
+    issues.includes("dependencies must be omitted from the dependency-free standalone package."),
+  );
 });
 
 test("release readiness rejects CI workflow trigger and permission drift", () => {
@@ -2346,7 +2426,7 @@ function createRootPackageManagerPackageJson() {
 
 function createReleasePolicyText() {
   return [
-    "Clarissimi is not ready for public package publication.",
+    "Clarissimi keeps workspace packages private.",
     "ADR 0031 authorizes immutable root GitHub",
     "ADR 0044 authorizes subsequent immutable `v0.x.y` releases",
     "ADR 0034 authorizes moving major alias `v0`",
@@ -2357,14 +2437,13 @@ function createReleasePolicyText() {
     "stable v1 publication remains blocked until the",
     "candidate consumer documents name `v1.0.0`",
     "The current root and workspace packages stay private at `0.0.0`.",
-    "Do not bump package versions,",
-    "create another moving major alias",
+    "ADR 0056 accepts only the",
     "",
     "Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,",
     "`pnpm run lint`, `pnpm run format`, `pnpm run migration-check`, `pnpm run smoke`,",
     "`pnpm run check`, `pnpm run contract`, and repository hygiene checks pass.",
     "",
-    "- Public package publication: blocked.",
+    "- Standalone CLI package preparation: allowed under ADR 0056",
     "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044",
     "- Moving GitHub Action major alias: `v0` is allowed under ADR 0034",
     "- GitHub Marketplace publication: allowed for the validated root Action under ADR 0045",
@@ -2378,7 +2457,11 @@ function createReleasePolicyText() {
     "`scripts/action-release-version.mjs` is the shared allowlist and alias-derivation boundary",
     "",
     "The versioned Action tag requires:",
-    "Public package publication remains blocked even when every technical gate above passes.",
+    "Actual standalone CLI publication remains blocked until every registry gate passes.",
+    "## Standalone CLI npm Publication",
+    "pnpm run verify:cli-package",
+    "trusted publishing",
+    "npm stage publish --access public --provenance",
     "## Marketplace Release Procedure",
     "release type `marketplace-action-tag`",
     "Before any tag is created or pushed, the publisher reads `README.md`,",
@@ -2416,7 +2499,7 @@ function createReleasePolicyText() {
     "",
     "- Release status: immutable `v0.x.y` Action tags are allowed by ADR 0044",
     "free root Action Marketplace publication",
-    "public package publication remains blocked",
+    "workspace-package publication remains blocked",
     "",
   ].join("\n");
 }
@@ -3507,9 +3590,42 @@ function createCiWorkflowText() {
     "      - run: pnpm run migration-check",
     "      - run: pnpm run benchmark:scale",
     "      - run: pnpm run benchmark:cli-io",
+    "      - run: pnpm run verify:cli-package",
     "      - run: pnpm run smoke",
     "      - run: pnpm run check",
     "      - run: pnpm run contract",
+  ].join("\n");
+}
+
+function createNpmPublishWorkflowText() {
+  return [
+    "on:",
+    "  workflow_dispatch:",
+    "    inputs:",
+    "      version:",
+    "      sha:",
+    "permissions:",
+    "  contents: read",
+    "  id-token: write",
+    "jobs:",
+    "  publish:",
+    "    runs-on: ubuntu-latest",
+    "    environment: npm",
+    "    steps:",
+    "      - uses: actions/checkout@v7",
+    "        with:",
+    "          ref: ${{ inputs.sha }}",
+    "      - uses: actions/setup-node@v6",
+    "        with:",
+    "          node-version: 24",
+    "          registry-url: https://registry.npmjs.org",
+    "      - run: pnpm install --frozen-lockfile",
+    "      - run: npm install --global npm@11.16.0",
+    "      - run: pnpm run verify:cli-package",
+    "      - run: npm view clarissimi name --json",
+    '      - run: npm view "clarissimi@${RELEASE_VERSION}" version --json',
+    "      - working-directory: .tmp/npm/clarissimi",
+    "        run: npm stage publish --access public --provenance",
   ].join("\n");
 }
 

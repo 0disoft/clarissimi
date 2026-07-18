@@ -11,6 +11,7 @@
     "build": "tsc -b",
     "bundle:action": "pnpm run build && node scripts/bundle-action.mjs",
     "bundle:action:check": "pnpm run build && node scripts/bundle-action.mjs --check",
+    "bundle:cli-package": "pnpm run build && node scripts/build-standalone-cli-package.mjs",
     "format": "oxfmt --check",
     "lint": "oxlint . --deny-warnings --ignore-pattern=action-dist/**",
     "typecheck": "tsc -b --pretty false",
@@ -35,6 +36,7 @@
     "release-candidate-evidence-issue": "node scripts/release-candidate-evidence-issue.mjs",
     "release-readiness": "node scripts/release-readiness.mjs",
     "retire-historical-command-intents": "node scripts/retire-historical-command-intents.mjs",
+    "verify:cli-package": "pnpm run build && node scripts/verify-standalone-cli-package.mjs",
     "docs": "node scripts/validate-docs.mjs",
     "check": "pnpm run typecheck && pnpm run test"
   },

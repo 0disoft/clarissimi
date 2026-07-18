@@ -78,6 +78,8 @@
 - Trigger: early ledger shape changes without versioning
 - Impact: existing repository recognition history becomes hard to read
 - Mitigation: schema version every ledger entry; migration command before stable 1.0; contract tests
+- Current control: ADR 0037 provides the manifest-backed migration gate, and ADR 0055 requires every
+  persisted version registered at `v1.0.0` to remain readable throughout the v1 Action line
 
 ## R10: Maintainer UX Fatigue
 

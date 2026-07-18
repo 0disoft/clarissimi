@@ -354,6 +354,14 @@ test("release readiness rejects release policy document drift", () => {
     )
     .replace("ADR 0034 authorizes moving major alias `v0`", "No alias release decision exists.")
     .replace("ADR 0045 authorizes free GitHub Marketplace", "No Marketplace decision exists.")
+    .replace(
+      "ADR 0055 defines `v1.0.0` as the first stable root Action candidate",
+      "No stable Action boundary exists.",
+    )
+    .replace(
+      "stable v1 publication remains blocked until the release, Marketplace, release-result, and alias",
+      "stable v1 publication is immediate",
+    )
     .replace("- Public package publication: blocked.", "- Public package publication: allowed.")
     .replace(
       "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044",
@@ -367,6 +375,28 @@ test("release readiness rejects release policy document drift", () => {
       "- GitHub Marketplace publication: allowed for the validated root Action under ADR 0045",
       "- GitHub Marketplace publication: blocked.",
     )
+    .replace("## Stable v1 Compatibility Contract", "## Unspecified Stable Contract")
+    .replace(
+      "- Stable root Action tag: `v1.0.0` is selected by ADR 0055 but remains blocked",
+      "- Stable root Action tag: publish immediately.",
+    )
+    .replace(
+      "`clarissimi.assessment/v1` is a persisted data-schema identifier, not the Action release major.",
+      "Action and data versions are the same namespace.",
+    )
+    .replace(
+      "Every persisted version registered when `v1.0.0` ships remains readable throughout the v1 Action",
+      "Historical data may be dropped during v1.",
+    )
+    .replace(
+      "Immutable `v1.x.y` tags never move. Alias `v1` uses exact-SHA verification",
+      "Stable tags and aliases may move freely.",
+    )
+    .replace(
+      "The v1 release leaves existing `v0.x.y` tags and alias `v0` unchanged.",
+      "The v1 release deletes v0 refs.",
+    )
+    .replace("npm publication remains a separate decision", "npm publication is bundled")
     .replace("## Marketplace Release Procedure", "## Uncontrolled Marketplace Publication")
     .replace("release type `marketplace-action-tag`", "")
     .replace("Before any tag is created or pushed, the publisher reads `README.md`,", "")
@@ -408,10 +438,19 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include ADR 0044 authorizes subsequent immutable `v0.x.y` releases.",
     "docs/ops/release.md must include ADR 0034 authorizes moving major alias `v0`.",
     "docs/ops/release.md must include ADR 0045 authorizes free GitHub Marketplace.",
+    "docs/ops/release.md must include ADR 0055 defines `v1.0.0` as the first stable root Action candidate.",
+    "docs/ops/release.md must include stable v1 publication remains blocked until the release, Marketplace, release-result, and alias.",
     "docs/ops/release.md must include - Public package publication: blocked..",
     "docs/ops/release.md must include - Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044.",
     "docs/ops/release.md must include - Moving GitHub Action major alias: `v0` is allowed under ADR 0034.",
     "docs/ops/release.md must include - GitHub Marketplace publication: allowed for the validated root Action under ADR 0045.",
+    "docs/ops/release.md must include - Stable root Action tag: `v1.0.0` is selected by ADR 0055 but remains blocked.",
+    "docs/ops/release.md must include ## Stable v1 Compatibility Contract.",
+    "docs/ops/release.md must include `clarissimi.assessment/v1` is a persisted data-schema identifier, not the Action release major..",
+    "docs/ops/release.md must include Every persisted version registered when `v1.0.0` ships remains readable throughout the v1 Action.",
+    "docs/ops/release.md must include Immutable `v1.x.y` tags never move. Alias `v1` uses exact-SHA verification.",
+    "docs/ops/release.md must include The v1 release leaves existing `v0.x.y` tags and alias `v0` unchanged..",
+    "docs/ops/release.md must include npm publication remains a separate decision.",
     "docs/ops/release.md must include ## Marketplace Release Procedure.",
     "docs/ops/release.md must include release type `marketplace-action-tag`.",
     "docs/ops/release.md must include Before any tag is created or pushed, the publisher reads `README.md`,.",
@@ -2256,6 +2295,8 @@ function createReleasePolicyText() {
     "ADR 0044 authorizes subsequent immutable `v0.x.y` releases",
     "ADR 0034 authorizes moving major alias `v0`",
     "ADR 0045 authorizes free GitHub Marketplace",
+    "ADR 0055 defines `v1.0.0` as the first stable root Action candidate",
+    "stable v1 publication remains blocked until the release, Marketplace, release-result, and alias",
     "The current root and workspace packages stay private at `0.0.0`.",
     "Do not bump package versions,",
     "create another moving major alias",
@@ -2268,6 +2309,13 @@ function createReleasePolicyText() {
     "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044",
     "- Moving GitHub Action major alias: `v0` is allowed under ADR 0034",
     "- GitHub Marketplace publication: allowed for the validated root Action under ADR 0045",
+    "- Stable root Action tag: `v1.0.0` is selected by ADR 0055 but remains blocked",
+    "## Stable v1 Compatibility Contract",
+    "`clarissimi.assessment/v1` is a persisted data-schema identifier, not the Action release major.",
+    "Every persisted version registered when `v1.0.0` ships remains readable throughout the v1 Action",
+    "Immutable `v1.x.y` tags never move. Alias `v1` uses exact-SHA verification",
+    "The v1 release leaves existing `v0.x.y` tags and alias `v0` unchanged.",
+    "npm publication remains a separate decision",
     "",
     "The versioned Action tag requires:",
     "Public package publication remains blocked even when every technical gate above passes.",

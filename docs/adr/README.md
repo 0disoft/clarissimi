@@ -94,6 +94,9 @@ engine.
   request status comment without duplicate notification noise
 - `0054-reconcile-equivalent-proposal-branch-races.md`: accept only an identical, same-base
   concurrent proposal branch winner after a compare-and-swap lease loss
+- `0055-define-stable-v1-action-compatibility-boundary.md`: define `v1.0.0` as the first stable root
+  Action candidate, keep persisted schema versions independent, and gate `v1` publication and
+  alias promotion on parameterized release tooling plus exact-SHA consumer validation
 
 ## Review Blockers
 

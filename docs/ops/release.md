@@ -15,6 +15,12 @@ Action distribution boundary. ADR 0034 authorizes moving major alias `v0` only a
 selected, already validated immutable `v0.x.y` release. ADR 0045 authorizes free GitHub Marketplace
 publication beginning with non-prerelease release `v0.3.0`.
 
+ADR 0055 defines `v1.0.0` as the first stable root Action candidate and keeps Action release
+versions independent from persisted schema versions. It does not authorize an immediate tag:
+stable v1 publication remains blocked until the release, Marketplace, release-result, and alias
+tools accept the v1 line, their v0 and v1 regressions pass, and the exact candidate completes every
+hosted and external gate in this document.
+
 The current root and workspace packages stay private at `0.0.0`. Do not bump package versions,
 remove `private: true`, publish npm packages, or create another moving major alias. Marketplace
 publication is limited to the root Action release boundary accepted by ADR 0045.
@@ -33,6 +39,28 @@ publication is limited to the root Action release boundary accepted by ADR 0045.
   release passes the alias verification and external consumer gates.
 - GitHub Marketplace publication: allowed for the validated root Action under ADR 0045; npm and
   workspace-package publication remain blocked.
+- Stable root Action tag: `v1.0.0` is selected by ADR 0055 but remains blocked until v1-capable
+  release tooling and every exact-SHA, post-tag, Marketplace, and alias gate pass.
+
+## Stable v1 Compatibility Contract
+
+- The stable boundary covers the root GitHub Action, not direct imports from private workspace
+  packages.
+- `clarissimi.assessment/v1` is a persisted data-schema identifier, not the Action release major.
+  It remains the current schema unless an actual shape change supplies an adjacent deterministic
+  migration and compatibility fixture.
+- Every persisted version registered when `v1.0.0` ships remains readable throughout the v1 Action
+  line.
+- Compatible v1 releases may add optional capability but may not remove or rename Action inputs or
+  outputs, require a formerly optional input, increase default write authority, invalidate a
+  registered ledger, or weaken security and maintainer-approval boundaries.
+- Immutable `v1.x.y` tags never move. Alias `v1` uses exact-SHA verification, compare-and-swap
+  promotion, external dry-run and full-write smoke, cleanup, and rollback before consumers are
+  directed to it.
+- The v1 release leaves existing `v0.x.y` tags and alias `v0` unchanged. No fixed v0 support
+  duration is promised.
+- npm publication remains a separate decision with its own versioning, provenance, authentication,
+  workspace scope, and rollback contract.
 
 ## Pre-Release Gates
 
@@ -422,7 +450,8 @@ reviewing that output, then rerun the read-only orphan audit.
 - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`
 - Release status: immutable `v0.x.y` Action tags are allowed by ADR 0044, moving major alias `v0`
   is allowed by ADR 0034 after exact-SHA verification, and free root Action Marketplace publication
-  is allowed by ADR 0045; public package publication remains blocked
+  is allowed by ADR 0045; ADR 0055 defines but does not yet authorize publication of stable
+  `v1.0.0`, and public package publication remains blocked
 - Recent hosted CI validation evidence: `CI` workflow run `29052254866` passed on
   `2026-07-09T21:42:23Z` for validated source commit
   `eaf22e44f5ef87391a16cf5a6597395826f05b7d` on `main` and validated `docs`,

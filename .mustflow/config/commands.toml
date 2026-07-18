@@ -113,6 +113,22 @@ network = false
 destructive = false
 required_after = ["behavior_change", "test_change", "schema_change"]
 
+[intents.test_release_readiness]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Run the focused release-readiness contract regression suite without rebuilding unrelated packages."
+argv = ["node", "--test", "scripts/test/release-readiness.test.mjs"]
+cwd = "."
+timeout_seconds = 300
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+network = false
+destructive = false
+required_after = ["release_policy_change", "release_readiness_contract_change"]
+
 [intents.benchmark_scale]
 status = "configured"
 lifecycle = "oneshot"
@@ -638,26 +654,24 @@ network = false
 destructive = false
 required_after = ["git_stage_historical_command_retirement"]
 
-[intents.git_stage_cli_io_benchmark]
+[intents.git_stage_stable_v1_contract]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
-description = "Stage only the reviewed CLI file-I/O benchmark, CI wiring, tests, documentation, command contract, and manifest lock."
+description = "Stage only the reviewed stable v1 decision, synchronized release and migration contracts, tests, command contract, and manifest lock."
 argv = [
   "git",
   "add",
   "--",
-  ".github/workflows/ci.yml",
   ".mustflow/config/commands.toml",
   ".mustflow/config/manifest.lock.toml",
-  "docs/engineering/03-performance-budget.md",
-  "docs/ops/ci.md",
+  "docs/adr/README.md",
+  "docs/adr/0055-define-stable-v1-action-compatibility-boundary.md",
+  "docs/ops/release.md",
+  "docs/product/03-risk-register.md",
   "docs/product/04-implementation-tracker.md",
-  "package.json",
-  "scripts/benchmark-cli-io.mjs",
   "scripts/release-readiness.mjs",
-  "scripts/test/benchmark-cli-io.test.mjs",
   "scripts/test/release-readiness.test.mjs",
 ]
 cwd = "."
@@ -670,21 +684,21 @@ effects = [
 ]
 network = false
 destructive = false
-required_after = ["cli_io_benchmark_validation_complete"]
+required_after = ["stable_v1_contract_validation_complete"]
 
-[intents.git_commit_cli_io_benchmark]
+[intents.git_commit_stable_v1_contract]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
-description = "Commit the reviewed real CLI file-I/O benchmark and hosted CI regression guard."
+description = "Commit the reviewed stable v1 Action compatibility boundary and fail-closed contract coverage."
 argv = [
   "git",
   "commit",
   "-m",
-  "perf(cli): benchmark real rebuild and import I/O",
+  "feat(release): define stable v1 compatibility boundary",
   "-m",
-  "Validation: cli-io-benchmark, test, docs, release-readiness, lint, format, smoke, check, contract, mustflow",
+  "Validation: docs, migration-check, release-readiness, test, format, mustflow",
 ]
 cwd = "."
 timeout_seconds = 120
@@ -696,7 +710,7 @@ effects = [
 ]
 network = false
 destructive = false
-required_after = ["git_stage_cli_io_benchmark"]
+required_after = ["git_stage_stable_v1_contract"]
 
 [intents.release_v0_5_2_post_tag_evidence]
 status = "manual_only"

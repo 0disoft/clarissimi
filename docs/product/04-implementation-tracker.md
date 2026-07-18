@@ -1377,6 +1377,27 @@ Completed scope:
 - keep results explicitly scoped to the sampled operating system, filesystem, storage device,
   antivirus state, machine load, and Node runtime
 
+### 39. Stable v1 Action Compatibility Boundary
+
+Source: `docs/adr/0055-define-stable-v1-action-compatibility-boundary.md`,
+`docs/ops/release.md`
+
+Status: Decision accepted; v1 publication remains blocked pending parameterized release tooling and
+fresh exact-candidate hosted and external validation.
+
+Completed scope:
+
+- select `v1.0.0` as the first stable root Action candidate without coupling it to npm publication
+- keep Action release versions independent from `clarissimi.assessment/v1` and reject a fake
+  migration performed only to align version numbers
+- require every persisted version registered at stable publication to remain readable throughout
+  the v1 Action line
+- define additive-only v1 Action compatibility, immutable tags, compare-and-swap alias promotion,
+  and exact-SHA rollback boundaries
+- preserve all existing v0 tags and alias state while avoiding an invented fixed v0 support period
+- keep the actual v1 tag, Marketplace update, and moving alias blocked until release tooling supports
+  both v0 and v1 and fresh external consumer validation becomes available
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

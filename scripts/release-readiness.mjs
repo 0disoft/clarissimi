@@ -196,6 +196,16 @@ export const migrationCompatibilityContract = {
       ],
     },
     {
+      path: "docs/adr/0055-define-stable-v1-action-compatibility-boundary.md",
+      requiredSnippets: [
+        "Action release versions and persisted schema versions are independent namespaces.",
+        "`clarissimi.assessment/v1` remains the current ledger record schema for `v1.0.0`",
+        "Every persisted assessment version registered in `fixtures/migrations/manifest.json`",
+        "must remain readable and deterministically migratable throughout the `v1`",
+        "migration is created without a real schema change",
+      ],
+    },
+    {
       path: "scripts/migration-check.mjs",
       requiredSnippets: [
         "ASSESSMENT_SCHEMA_VERSION",
@@ -236,6 +246,8 @@ export const releasePolicyDocumentContract = {
     "ADR 0044 authorizes subsequent immutable `v0.x.y` releases",
     "ADR 0034 authorizes moving major alias `v0`",
     "ADR 0045 authorizes free GitHub Marketplace",
+    "ADR 0055 defines `v1.0.0` as the first stable root Action candidate",
+    "stable v1 publication remains blocked until the release, Marketplace, release-result, and alias",
     "The current root and workspace packages stay private at `0.0.0`.",
     "Do not bump package versions,",
     "create another moving major alias",
@@ -246,6 +258,13 @@ export const releasePolicyDocumentContract = {
     "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044",
     "- Moving GitHub Action major alias: `v0` is allowed under ADR 0034",
     "- GitHub Marketplace publication: allowed for the validated root Action under ADR 0045",
+    "- Stable root Action tag: `v1.0.0` is selected by ADR 0055 but remains blocked",
+    "## Stable v1 Compatibility Contract",
+    "`clarissimi.assessment/v1` is a persisted data-schema identifier, not the Action release major.",
+    "Every persisted version registered when `v1.0.0` ships remains readable throughout the v1 Action",
+    "Immutable `v1.x.y` tags never move. Alias `v1` uses exact-SHA verification",
+    "The v1 release leaves existing `v0.x.y` tags and alias `v0` unchanged.",
+    "npm publication remains a separate decision",
     "The versioned Action tag requires:",
     "Public package publication remains blocked even when every technical gate above passes.",
     "## Marketplace Release Procedure",
@@ -1605,6 +1624,9 @@ export async function runReleaseReadiness(options = {}) {
   );
   console.log(
     "free root Action Marketplace publication is allowed by ADR 0045; public package publication remains blocked",
+  );
+  console.log(
+    "stable v1.0.0 is selected by ADR 0055 but remains blocked pending v1-capable release tooling and fresh exact-candidate validation",
   );
 }
 

@@ -318,8 +318,8 @@ Release maintainers who want automated provider mode can run `pnpm run live-prov
 `CLARISSIMI_PROVIDER_TOKEN` and `CLARISSIMI_PROVIDER_MODEL` to perform an explicit credentialed
 provider smoke. Set `CLARISSIMI_PROVIDER_THINKING=disabled` only for compatible providers that need
 that request option to return strict JSON. This command is not part of normal correctness checks and
-is not required for the agent-assisted import workflow. Public package publication and versioned
-Action tags also require the hosted manual live-provider smoke workflow described in
+is not required for the agent-assisted import workflow. Versioned Action tags also require the
+hosted manual live-provider smoke workflow described in
 `docs/ops/release.md`; after configuring the repository secret, maintainers can run
 `pnpm run hosted-live-provider-smoke -- --model <provider-model>`.
 

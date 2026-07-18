@@ -118,7 +118,7 @@ test("release candidate evidence issue prints a validated evidence body", async 
   );
   assert.equal(harness.logs.join("\n").includes("publishing immutable tag `v0.1.0`"), true);
   assert.equal(
-    harness.logs.join("\n").includes("public package publication remains blocked"),
+    harness.logs.join("\n").includes("standalone CLI publication is separately gated by ADR 0056"),
     true,
   );
   assert.equal(harness.logs.join("\n").includes("provider-token-value"), false);

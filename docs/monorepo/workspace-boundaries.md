@@ -38,7 +38,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
   `pnpm run release-readiness`, `pnpm run lint`, `pnpm run smoke`, `pnpm run check`, and
   `pnpm run contract`.
 - Monorepo release or rollout policy: versioned root Action tags may be created under ADR 0031 after
-  `docs/ops/release.md` gates pass; public package publication remains blocked.
+  `docs/ops/release.md` gates pass. Root and workspace packages remain private; ADR 0056 separately
+  gates the bundled standalone CLI distribution.
 - Monorepo compatibility and migration policy: schema versions and ledger shape changes require an
   ADR or product decision plus validation and rollback guidance.
 

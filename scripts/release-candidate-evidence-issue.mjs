@@ -675,7 +675,7 @@ function renderIssueBody(options) {
     `- Validation correlation id: ${options.evidenceId === undefined ? "not used" : `\`${options.evidenceId}\``}`,
     `- Release type: ${releaseType}`,
     `- Release decision: ${releaseDecision}`,
-    "- Package status: root and workspace packages remain private at `0.0.0`; public package publication remains blocked.",
+    "- Package status: root and workspace packages remain private at `0.0.0`; standalone CLI publication is separately gated by ADR 0056.",
     options.releaseType === "marketplace-action-tag"
       ? `- Marketplace status: authorized by ${marketplaceDecision} for this validated root Action release; interactive publication and public listing verification remain pending.`
       : options.releaseType === "major-alias"

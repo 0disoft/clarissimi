@@ -47,7 +47,7 @@ engine.
 - `0029-add-explicit-action-config-path.md`: add explicit Action config-file loading
 - `0030-add-action-summary-artifact.md`: add a workspace-bounded Action JSON summary artifact
 - `0031-first-public-action-release.md`: distribute the first public Action at immutable tag
-  `v0.1.0` while package publication remains blocked
+  `v0.1.0` while root and workspace package publication remains blocked
 - `0032-bundle-action-runtime.md`: keep the composite security boundary while executing a checked,
   committed JavaScript bundle without consumer-time dependency installation or compilation
 - `0033-promote-approved-drafts.md`: turn an explicitly approved draft inbox file into a normal

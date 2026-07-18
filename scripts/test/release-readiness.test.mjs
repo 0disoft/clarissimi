@@ -1437,9 +1437,14 @@ test("release readiness rejects ops validation footer drift", () => {
     "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
     "- Required validation names: `docs`, `smoke`, `check`, `contract`",
   );
+  texts["docs/ops/config-and-env.md"] = texts["docs/ops/config-and-env.md"].replace(
+    "standalone CLI publication follows the manual ADR 0056 gates.",
+    "public package publication remains blocked.",
+  );
   delete texts["docs/ops/rollback.md"];
 
   assert.deepEqual(validateOpsValidationFooterContract(texts), [
+    "docs/ops/config-and-env.md must include standalone CLI publication follows the manual ADR 0056 gates..",
     "docs/ops/incident-response.md must include - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`.",
     "docs/ops/rollback.md must be readable for ops validation footer contract.",
   ]);
@@ -3236,14 +3241,21 @@ function createOpsValidationFooterTexts() {
     "## Validation",
     "",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
+    "- Release status: workspace packages remain private, and standalone CLI publication follows the manual ADR 0056 gates.",
     "",
   ].join("\n");
 
   return {
+    "docs/ops/00-operational-contract.md": footer,
+    "docs/ops/backup-and-restore.md": footer,
+    "docs/ops/ci.md": footer,
     "docs/ops/config-and-env.md": footer,
     "docs/ops/disaster-recovery.md": footer,
     "docs/ops/incident-response.md": footer,
+    "docs/ops/observability.md": footer,
     "docs/ops/rollback.md": footer,
+    "docs/ops/secrets.md": footer,
+    "docs/ops/service-levels.md": footer,
   };
 }
 

@@ -660,6 +660,76 @@ network = false
 destructive = false
 required_after = ["git_stage_historical_command_retirement"]
 
+[intents.git_stage_package_policy_sync]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Stage only the reviewed current package-publication wording, release-result output, regression tests, command contract, and manifest lock."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  ".mustflow/config/manifest.lock.toml",
+  "README.md",
+  "docs/adr/README.md",
+  "docs/monorepo/README.md",
+  "docs/monorepo/workspace-boundaries.md",
+  "docs/ops/00-operational-contract.md",
+  "docs/ops/backup-and-restore.md",
+  "docs/ops/ci.md",
+  "docs/ops/config-and-env.md",
+  "docs/ops/disaster-recovery.md",
+  "docs/ops/incident-response.md",
+  "docs/ops/observability.md",
+  "docs/ops/release.md",
+  "docs/ops/rollback.md",
+  "docs/ops/secrets.md",
+  "docs/ops/service-levels.md",
+  "scripts/release-candidate-evidence-issue.mjs",
+  "scripts/release-readiness.mjs",
+  "scripts/test/release-candidate-evidence-issue.test.mjs",
+  "scripts/test/release-readiness.test.mjs",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["package_policy_sync_validation_complete"]
+
+[intents.git_commit_package_policy_sync]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Commit the reviewed distinction between private workspace packages and the separately gated standalone CLI distribution."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "docs(release): distinguish CLI distribution boundary",
+  "-m",
+  "Validation: release-result, docs, release-readiness, lint, format, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_package_policy_sync"]
+
 [intents.bundle_standalone_cli_package]
 status = "configured"
 lifecycle = "oneshot"

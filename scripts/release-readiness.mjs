@@ -1073,13 +1073,20 @@ export const actionPermissionsDocumentContract = {
 
 export const opsValidationFooterContract = {
   documents: [
+    "docs/ops/00-operational-contract.md",
+    "docs/ops/backup-and-restore.md",
+    "docs/ops/ci.md",
     "docs/ops/config-and-env.md",
     "docs/ops/disaster-recovery.md",
     "docs/ops/incident-response.md",
+    "docs/ops/observability.md",
     "docs/ops/rollback.md",
+    "docs/ops/secrets.md",
+    "docs/ops/service-levels.md",
   ],
   requiredSnippets: [
     "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
+    "standalone CLI publication follows the manual ADR 0056 gates.",
   ],
 };
 

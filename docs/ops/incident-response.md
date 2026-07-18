@@ -43,8 +43,8 @@ Post-incident follow-up:
 ## Validation
 
 - Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`
-- Release status: versioned Action tags are allowed by ADR 0031 after release gates pass; public
-  package publication remains blocked by `docs/ops/release.md`.
+- Release status: versioned Action tags are allowed by ADR 0031 after release gates pass; workspace
+  packages remain private, and standalone CLI publication follows the manual ADR 0056 gates.
 - Recent hosted live-provider evidence is recorded in `docs/ops/release.md`; refresh it with
   `pnpm run hosted-live-provider-smoke -- --model <provider-model>` for the exact
   release-candidate commit before publication or versioned Action tags.

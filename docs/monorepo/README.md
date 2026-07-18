@@ -22,8 +22,9 @@ This repository type owns workspace boundaries, package ownership, dependency po
 - Monorepo validation evidence: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,
   `pnpm run smoke`, `pnpm run check`, and `pnpm run contract` cover implemented packages before
   source-only merges.
-- Monorepo release or rollout policy: no public package publication before `docs/ops/release.md`
-  pre-release gates are satisfied.
+- Monorepo release or rollout policy: root and workspace packages remain private. The bundled
+  standalone CLI is the only npm distribution and follows the separate ADR 0056 gates in
+  `docs/ops/release.md`.
 - Monorepo compatibility and migration policy: schema changes must preserve or explicitly migrate
   accepted schema versions.
 

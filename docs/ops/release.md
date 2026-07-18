@@ -514,7 +514,7 @@ reviewing that output, then rerun the read-only orphan audit.
 - Release status: immutable `v0.x.y` Action tags are allowed by ADR 0044, moving major alias `v0`
   is allowed by ADR 0034 after exact-SHA verification, and free root Action Marketplace publication
   is allowed by ADR 0045; ADR 0055 defines but does not yet authorize publication of stable
-  `v1.0.0`, and public package publication remains blocked
+  `v1.0.0`; workspace packages remain private, and standalone CLI publication follows ADR 0056
 - Recent hosted CI validation evidence: `CI` workflow run `29052254866` passed on
   `2026-07-09T21:42:23Z` for validated source commit
   `eaf22e44f5ef87391a16cf5a6597395826f05b7d` on `main` and validated `docs`,

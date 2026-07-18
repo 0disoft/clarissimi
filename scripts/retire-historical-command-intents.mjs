@@ -45,6 +45,7 @@ const COMPLETED_MILESTONES = [
   "automation_test_build_contract",
   "stable_v1_tooling",
   "standalone_cli_package",
+  "package_policy_sync",
 ];
 
 const COMPLETED_LIFECYCLE_PREFIXES = [

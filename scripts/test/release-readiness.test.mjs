@@ -2175,6 +2175,12 @@ test("release readiness accepts the standalone CLI distribution contract", () =>
         "The first publication is a maintainer-operated bootstrap",
         "Actual publication remains manual-only",
       ].join("\n"),
+      tracker: [
+        "### 40. Standalone CLI npm Distribution",
+        "Workspace-package publication remains blocked.",
+        "`npm stage publish` only",
+        "requiring a maintainer to inspect and approve the staged version with 2FA",
+      ].join("\n"),
       buildScript: 'bundle: true\ntarget: "node24"\njoin(".tmp", "npm", "clarissimi")',
       verifyScript: '"npm"\n"--ignore-scripts"\nprocess.execPath, [installedCli, "--help"]',
     }),
@@ -2190,6 +2196,7 @@ test("release readiness rejects a dependency-bearing standalone CLI manifest", (
     },
     readme: "",
     adr: "",
+    tracker: "",
     buildScript: "",
     verifyScript: "",
   });

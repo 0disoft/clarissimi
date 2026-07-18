@@ -166,6 +166,7 @@ export const standaloneCliDistributionContract = {
   manifestPath: "distribution/npm/clarissimi/package.json",
   readmePath: "distribution/npm/clarissimi/README.md",
   adrPath: "docs/adr/0056-publish-a-standalone-cli-package.md",
+  trackerPath: "docs/product/04-implementation-tracker.md",
   buildScriptPath: "scripts/build-standalone-cli-package.mjs",
   verifyScriptPath: "scripts/verify-standalone-cli-package.mjs",
   workflowPath: ".github/workflows/npm-publish.yml",
@@ -181,6 +182,12 @@ export const standaloneCliDistributionContract = {
     "npm package versions, Action release versions, and persisted schema versions are independent",
     "The first publication is a maintainer-operated bootstrap",
     "Actual publication remains manual-only",
+  ],
+  requiredTrackerSnippets: [
+    "### 40. Standalone CLI npm Distribution",
+    "Workspace-package publication remains blocked.",
+    "`npm stage publish` only",
+    "requiring a maintainer to inspect and approve the staged version with 2FA",
   ],
 };
 
@@ -2514,6 +2521,7 @@ export function validateStandaloneCliDistributionContract(
   for (const [path, text, snippets] of [
     [contract.readmePath, files.readme, contract.requiredReadmeSnippets],
     [contract.adrPath, files.adr, contract.requiredAdrSnippets],
+    [contract.trackerPath, files.tracker, contract.requiredTrackerSnippets],
   ]) {
     if (typeof text !== "string") {
       issues.push(`${path} must be readable.`);
@@ -2942,12 +2950,14 @@ async function runStandaloneCliDistributionContractCheck(repoRoot) {
   let manifest;
   let readme;
   let adr;
+  let tracker;
   let buildScript;
   let verifyScript;
   try {
     manifest = JSON.parse(await readFile(join(repoRoot, contract.manifestPath), "utf8"));
     readme = await readFile(join(repoRoot, contract.readmePath), "utf8");
     adr = await readFile(join(repoRoot, contract.adrPath), "utf8");
+    tracker = await readFile(join(repoRoot, contract.trackerPath), "utf8");
     buildScript = await readFile(join(repoRoot, contract.buildScriptPath), "utf8");
     verifyScript = await readFile(join(repoRoot, contract.verifyScriptPath), "utf8");
   } catch (error) {
@@ -2957,6 +2967,7 @@ async function runStandaloneCliDistributionContractCheck(repoRoot) {
     manifest,
     readme,
     adr,
+    tracker,
     buildScript,
     verifyScript,
   });

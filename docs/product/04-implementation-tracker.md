@@ -305,8 +305,9 @@ Validation:
 
 Source: `README.md`, `docs/product/01-roadmap.md`
 
-Status: Completed for current implementation alignment. Public package publication remains blocked
-by `docs/ops/release.md` pre-release gates.
+Status: Completed for current implementation alignment. Workspace-package publication remains
+blocked; standalone CLI publication preparation is implemented and its registry mutations remain
+manual-only under `docs/ops/release.md`.
 
 Goal: keep public documentation aligned with the implementation state.
 
@@ -315,7 +316,8 @@ Completed deliverables:
 - README status stays accurate
 - installation and dry-run examples match the root Action contract
 - propose mode docs are added only when implementation exists
-- release or versioning policy blocks package publication until release gates are satisfied
+- release and versioning policy keeps root and workspace packages private while independently
+  gating the standalone CLI distribution
 - manual-only fixture propose dogfood workflow is available and passed run `29027800039`, updating
   `https://github.com/0disoft/clarissimi/pull/1`
 - hosted CI workflow exists for push, pull request, and manual validation
@@ -427,10 +429,10 @@ Completed deliverables:
 - release-readiness verifies that the root `packageManager` remains pinned to the package manager
   version used by hosted CI through Corepack
 - release-readiness verifies that root and workspace package manifests remain private at `0.0.0`
-  while public package publication is blocked
+  while the separately versioned standalone CLI distribution follows its own manifest contract
 - release-readiness verifies that `docs/ops/release.md` keeps immutable Action tags fixed under ADR
   0031, permits moving major alias `v0` under ADR 0034, and permits root Action Marketplace
-  publication under ADR 0045 while package publication and package version changes remain blocked
+  publication under ADR 0045 while workspace-package publication and version changes remain blocked
 - release-readiness verifies that `docs/ops/release.md` names public product-positioning guardrails
   and intentionally fail-closed validation placeholders in its release gate coverage
 - release-readiness verifies that workspace package manifests keep their `dist` entrypoints,
@@ -513,7 +515,7 @@ Completed deliverables:
   previews the external release evidence issue without reading provider token values; it requires
   both external run display titles to identify the exact candidate SHA or release tag, requires all
   full-write runner and cleanup steps to succeed, and records release type, immutable tag, ADR 0031,
-  and the package blocker
+  and the workspace-package blocker plus the separately gated standalone CLI boundary
 
 Release follow-up:
 
@@ -525,8 +527,9 @@ Release follow-up:
 - public repository `0disoft/clarissimi-example` consumes `0disoft/clarissimi@v0` without secrets,
   passed its read-only workflow, and merged synthetic recognition proposal PR `#1` through the
   normal pull-request boundary with the compact contributor summary table
-- Public package publication remains blocked. ADR 0045 separately authorized root Action
-  Marketplace publication without changing package versions or npm availability.
+- Workspace-package publication remains blocked. ADR 0045 separately authorized root Action
+  Marketplace publication, while ADR 0056 now permits only the dependency-free standalone CLI npm
+  distribution after its registry and provenance gates pass.
 
 ### 10. Agent-Assisted Draft Import
 
@@ -956,7 +959,8 @@ Completed deliverables:
 - Marketplace categories `Code review` and `Utilities`
 - interactive developer-agreement, publication toggle, and public listing verification
 - post-tag external consumer evidence and separate compare-and-swap `v0` promotion
-- npm and workspace-package publication remain blocked
+- workspace-package publication remains blocked; the separately versioned standalone CLI follows
+  ADR 0056 and does not change the Action Marketplace boundary
 
 Current publication record:
 
@@ -1402,6 +1406,38 @@ Completed scope:
 - retain v0 regression coverage and add stable-v1 rejection of draft or prerelease release metadata
 - keep the actual v1 tag, Marketplace update, and moving alias blocked until candidate-version
   documentation and fresh external consumer validation become available
+
+### 40. Standalone CLI npm Distribution
+
+Source: `docs/adr/0056-publish-a-standalone-cli-package.md`,
+`distribution/npm/clarissimi/package.json`, `docs/ops/release.md`
+
+Status: Distribution preparation completed on `main`; first registry bootstrap, stage-only trusted
+publisher configuration, staged review, 2FA approval, and public external-consumer verification
+remain manual release gates.
+
+Completed scope:
+
+- keep root and all `packages/*` manifests private at `0.0.0` instead of exposing internal
+  workspace boundaries as public npm dependencies
+- define independent `clarissimi@0.1.0` CLI, root Action, and persisted schema version namespaces
+- bundle the compiled Node.js 24 CLI plus internal runtime modules into one dependency-free ESM
+  executable under ignored `.tmp/npm/clarissimi`
+- keep the public tarball to exactly `package.json`, `README.md`, `LICENSE`, and
+  `dist/clarissimi.js`, with no lifecycle scripts, source, tests, source maps, or workspace metadata
+- pack and install the tarball into an isolated temporary consumer with scripts disabled, then run
+  the installed CLI help contract on Windows and hosted Ubuntu
+- preserve the Node shebang and avoid shell-mediated npm execution on Windows by invoking the npm
+  CLI through the current Node runtime
+- add a manual-dispatch, exact-SHA, GitHub-hosted OIDC workflow with no npm token fallback
+- configure the automated path for `npm stage publish` only, leaving direct publication unavailable
+  and requiring a maintainer to inspect and approve the staged version with 2FA
+- fail before staging when the package has not completed its first manual bootstrap or the requested
+  immutable version already exists
+- validate workflow triggers, permissions, exact checkout, runtime and npm pins, package verification,
+  registry preflight, stage-only command, and direct-publish rejection through release-readiness
+- pass hosted CI run `29638373698` at commit
+  `539cf4aa51b1b0ff1f11cfc7a866899fceed81cf`, including the standalone tarball consumer test
 
 ## Deferred Work
 

@@ -850,6 +850,7 @@ argv = [
   "docs/adr/README.md",
   "docs/monorepo/package-ownership.md",
   "docs/ops/release.md",
+  "docs/product/04-implementation-tracker.md",
   "package.json",
   "scripts/build-standalone-cli-package.mjs",
   "scripts/release-readiness.mjs",
@@ -874,14 +875,14 @@ status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
-description = "Commit the reviewed standalone CLI npm distribution and fail-closed publication preparation."
+description = "Commit the reviewed standalone CLI tracker synchronization and its fail-closed contract guard."
 argv = [
   "git",
   "commit",
   "-m",
-  "feat(release): prepare standalone CLI package",
+  "docs(release): sync standalone CLI tracker",
   "-m",
-  "Validation: standalone-cli-package, docs, release-readiness, lint, format, smoke, check, contract, mustflow",
+  "Validation: standalone-cli-package, docs, release-readiness, lint, format, mustflow",
 ]
 cwd = "."
 timeout_seconds = 120

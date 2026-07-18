@@ -82,6 +82,9 @@ jobs:
       - name: Run scale benchmark regression guard
         run: pnpm run benchmark:scale
 
+      - name: Run CLI file I/O benchmark regression guard
+        run: pnpm run benchmark:cli-io
+
       - name: Run smoke validation
         run: pnpm run smoke
 

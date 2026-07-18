@@ -149,6 +149,42 @@ network = false
 destructive = false
 required_after = ["performance_investigation_requested"]
 
+[intents.benchmark_cli_io]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Build Clarissimi and run deterministic real-CLI rebuild and atomic import file-I/O regression guards."
+argv = ["pnpm", "run", "benchmark:cli-io"]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+effects = [
+  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["cli_rebuild_io_change", "cli_import_atomic_io_change", "cli_io_benchmark_change"]
+
+[intents.benchmark_cli_io_sample]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Build Clarissimi and emit three environment-specific real CLI file-I/O benchmark samples."
+argv = ["pnpm", "run", "benchmark:cli-io:sample"]
+cwd = "."
+timeout_seconds = 1200
+stdin = "closed"
+success_exit_codes = [0]
+writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+effects = [
+  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["cli_io_performance_investigation_requested"]
+
 [intents.test_renderer_output_optimization]
 status = "configured"
 lifecycle = "oneshot"
@@ -178,6 +214,32 @@ preconditions = [
 network = false
 destructive = false
 required_after = ["renderer_output_optimization_change", "renderer_output_optimization_test_change"]
+
+[intents.test_cli_io_benchmark]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Run focused real subprocess, filesystem integrity, residue, failure, and argument regressions for the CLI I/O benchmark."
+argv = ["node", "--test", "scripts/test/benchmark-cli-io.test.mjs"]
+cwd = "."
+timeout_seconds = 180
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+preconditions = [
+  { kind = "artifact_freshness", artifact = "packages/cli/dist/bin/clarissimi.js", sources = [
+    "packages/cli/src/**",
+    "packages/core/src/**",
+    "packages/renderers/src/**",
+    "packages/schemas/src/**",
+    "packages/cli/tsconfig.json",
+    "tsconfig.json",
+  ], satisfy_intent = "build" },
+]
+network = false
+destructive = false
+required_after = ["cli_io_benchmark_change", "cli_io_benchmark_test_change"]
 
 [intents.test_automation_contributors]
 status = "configured"
@@ -576,28 +638,27 @@ network = false
 destructive = false
 required_after = ["git_stage_historical_command_retirement"]
 
-[intents.git_stage_renderer_output_optimization]
+[intents.git_stage_cli_io_benchmark]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
-description = "Stage only the reviewed renderer hot-path optimization, Action bundle, tests, documentation, command contract, and manifest lock."
+description = "Stage only the reviewed CLI file-I/O benchmark, CI wiring, tests, documentation, command contract, and manifest lock."
 argv = [
   "git",
   "add",
   "--",
+  ".github/workflows/ci.yml",
   ".mustflow/config/commands.toml",
   ".mustflow/config/manifest.lock.toml",
-  "action-dist/index.js",
   "docs/engineering/03-performance-budget.md",
+  "docs/ops/ci.md",
   "docs/product/04-implementation-tracker.md",
-  "packages/renderers/src/contributors.ts",
-  "packages/renderers/src/index.ts",
-  "packages/renderers/src/ledger.ts",
-  "packages/renderers/src/markdown.ts",
-  "packages/renderers/src/outputs.ts",
-  "packages/renderers/src/static-data.ts",
-  "packages/renderers/test/renderers.test.mjs",
+  "package.json",
+  "scripts/benchmark-cli-io.mjs",
+  "scripts/release-readiness.mjs",
+  "scripts/test/benchmark-cli-io.test.mjs",
+  "scripts/test/release-readiness.test.mjs",
 ]
 cwd = "."
 timeout_seconds = 60
@@ -609,21 +670,21 @@ effects = [
 ]
 network = false
 destructive = false
-required_after = ["renderer_output_optimization_validation_complete"]
+required_after = ["cli_io_benchmark_validation_complete"]
 
-[intents.git_commit_renderer_output_optimization]
+[intents.git_commit_cli_io_benchmark]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
-description = "Commit the reviewed renderer hot-path optimization with byte-parity and validation regressions."
+description = "Commit the reviewed real CLI file-I/O benchmark and hosted CI regression guard."
 argv = [
   "git",
   "commit",
   "-m",
-  "perf(renderers): reuse validated recognition state",
+  "perf(cli): benchmark real rebuild and import I/O",
   "-m",
-  "Validation: renderer-output-optimization, benchmark-scale, bundle, test, docs, release-readiness, lint, format, smoke, check, contract, mustflow",
+  "Validation: cli-io-benchmark, test, docs, release-readiness, lint, format, smoke, check, contract, mustflow",
 ]
 cwd = "."
 timeout_seconds = 120
@@ -635,7 +696,7 @@ effects = [
 ]
 network = false
 destructive = false
-required_after = ["git_stage_renderer_output_optimization"]
+required_after = ["git_stage_cli_io_benchmark"]
 
 [intents.release_v0_5_2_post_tag_evidence]
 status = "manual_only"
@@ -1237,6 +1298,35 @@ preconditions = [
   ], satisfy_intent = "build" },
 ]
 required_after = ["action_provider_failure_summary_change"]
+
+[intents.test_action_propose_runner]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Build the Action package and run isolated proposal branch, local remote, pull request, and direct commit runner regressions."
+argv = ["node", "--test", "packages/action/test/propose-runner.test.mjs"]
+cwd = "."
+timeout_seconds = 300
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+preconditions = [
+  { kind = "artifact_freshness", artifact = "packages/action/dist/index.js", sources = [
+    "packages/action/src/**",
+    "packages/core/src/**",
+    "packages/github/src/**",
+    "packages/providers/src/**",
+    "packages/redaction/src/**",
+    "packages/renderers/src/**",
+    "packages/schemas/src/**",
+    "packages/action/tsconfig.json",
+    "tsconfig.json",
+  ], satisfy_intent = "build" },
+]
+network = false
+destructive = false
+required_after = ["action_propose_runner_failure", "action_propose_runner_change"]
 
 [intents.test_provider_result_dirty_corpus]
 status = "configured"

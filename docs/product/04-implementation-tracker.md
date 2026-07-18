@@ -1358,6 +1358,25 @@ Completed scope:
 - keep filesystem writes, provider calls, GitHub calls, credentials, and generated benchmark
   artifacts outside the benchmark contract
 
+### 38. CLI File I/O Scale Regression Contract
+
+Source: `docs/engineering/03-performance-budget.md`, `scripts/benchmark-cli-io.mjs`
+
+Status: Implemented on `main` as a credential-free local and hosted CI regression guard.
+
+Completed scope:
+
+- run compiled CLI subprocesses in a fresh temporary repository for every sample
+- cover both `rebuild` file reads and four-output writes and `import-draft` lock ownership plus
+  atomic four-output commit at 1,000 and 10,000 existing records
+- exclude fixture setup and post-command verification from the timed interval
+- compare every written byte with the in-memory renderer contract and reject stale lock or
+  `.clarissimi-tmp` residue
+- expose a one-sample CI check with generous stuck-process and catastrophic-I/O ceilings and a
+  separate three-sample local report
+- keep results explicitly scoped to the sampled operating system, filesystem, storage device,
+  antivirus state, machine load, and Node runtime
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

@@ -12,6 +12,14 @@ const defaultRepoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 export const requiredPackageScripts = [
   {
+    name: "benchmark:cli-io",
+    includes: ["pnpm run build", "scripts/benchmark-cli-io.mjs --check"],
+  },
+  {
+    name: "benchmark:cli-io:sample",
+    includes: ["pnpm run build", "scripts/benchmark-cli-io.mjs --samples 3"],
+  },
+  {
     name: "benchmark:scale",
     includes: ["pnpm run build", "scripts/benchmark-scale.mjs --check"],
   },
@@ -629,8 +637,9 @@ export const ciOperationalDocumentContract = {
   requiredSnippets: [
     "The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and",
     "manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,",
-    "`lint`, `format`, `migration-check`, `benchmark:scale`, `smoke`, `check`, and `contract` with",
+    "`lint`, `format`, `migration-check`, `benchmark:scale`, `benchmark:cli-io`, `smoke`, `check`, and",
     "`pnpm run benchmark:scale`: builds the workspace, runs deterministic 1,000- and 10,000-record",
+    "`pnpm run benchmark:cli-io`: runs compiled `rebuild` and `import-draft` commands against fresh",
     "`pnpm run hosted-ci-validation`",
     "uses `gh run list` to find the `CI` workflow run",
     "The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`",
@@ -903,6 +912,11 @@ export const performanceBenchmarkDocumentContract = {
     "regression guards for catastrophic growth, not product latency promises",
     "`pnpm run benchmark:scale:sample`",
     "Do not copy a sampled time into a release claim",
+    "## CLI File I/O Benchmark",
+    "`pnpm run benchmark:cli-io`",
+    "atomically committing all four repository outputs",
+    "they are not filesystem SLAs",
+    "`pnpm run benchmark:cli-io:sample`",
   ],
 };
 
@@ -1297,6 +1311,7 @@ export const ciWorkflowContract = {
     "pnpm run format",
     "pnpm run migration-check",
     "pnpm run benchmark:scale",
+    "pnpm run benchmark:cli-io",
     "pnpm run smoke",
     "pnpm run check",
     "pnpm run contract",

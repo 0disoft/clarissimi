@@ -66,6 +66,11 @@ The current local CI parity commands are:
   samples rather than product latency promises.
 - `pnpm run benchmark:scale:sample`: runs the same deterministic workloads three times and emits a
   local JSON report for investigation; it is not a merge gate.
+- `pnpm run benchmark:cli-io`: runs compiled `rebuild` and `import-draft` commands against fresh
+  1,000- and 10,000-record temporary repositories, validates all written output bytes, rejects lock
+  or temporary-file residue, and enforces generous stuck-process and catastrophic-I/O ceilings.
+- `pnpm run benchmark:cli-io:sample`: repeats those real subprocess and filesystem workloads three
+  times for a machine-specific local report; it is not a merge gate.
 - `pnpm run check`: runs typecheck and the package test suite.
 - `pnpm run contract`: runs typecheck and tests as the current contract gate.
 
@@ -81,8 +86,8 @@ smoke cover that artifact instead.
 
 The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and
 manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,
-`lint`, `format`, `migration-check`, `benchmark:scale`, `smoke`, `check`, and `contract` with
-Node.js 24 and the package-manager version declared by `package.json`.
+`lint`, `format`, `migration-check`, `benchmark:scale`, `benchmark:cli-io`, `smoke`, `check`, and
+`contract` with Node.js 24 and the package-manager version declared by `package.json`.
 
 Before public package publication or a versioned Action tag, release maintainers should run:
 

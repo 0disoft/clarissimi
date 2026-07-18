@@ -46,6 +46,26 @@ runtime, operating system, and architecture as JSON. Those numbers describe only
 load that produced that invocation. Do not copy a sampled time into a release claim or tighten a
 CI ceiling without repeated measurements on controlled hardware.
 
+## CLI File I/O Benchmark
+
+`pnpm run benchmark:cli-io` runs the compiled CLI in a fresh temporary repository for each sample
+at the same 1,000- and 10,000-record sizes. It measures two real command boundaries:
+
+- `rebuild` includes Node subprocess startup, ledger file reading, validation and rendering, and
+  writing all four repository outputs.
+- `import-draft` includes Node subprocess startup, ledger and draft reading, file-lock ownership,
+  appending one approved record, and atomically committing all four repository outputs.
+
+Fixture creation, post-command file reads, and output verification are outside the timed interval.
+After every sample, the benchmark compares all output bytes with the in-memory renderer contract
+and rejects leftover `.lock` or `.clarissimi-tmp` files. The one-sample CI check uses generous total
+runaway ceilings of 30,000 ms for 1,000 records and 180,000 ms for 10,000 records. These values
+catch stuck subprocesses or catastrophic file-I/O regressions; they are not filesystem SLAs.
+
+`pnpm run benchmark:cli-io:sample` runs three samples per command for local investigation. Results
+remain specific to the operating system, filesystem, storage device, antivirus state, machine
+load, and Node runtime that produced them.
+
 Hot paths:
 
 - `clarissimi recognize`
@@ -74,3 +94,5 @@ Hot paths:
   story.
 - A change removes the 1,000- and 10,000-record integrity checks or treats environment-specific
   timings as universal performance claims.
+- A change leaves rebuild or import temporary files behind, or reports CLI timing without proving
+  the written files still match the renderer contract.

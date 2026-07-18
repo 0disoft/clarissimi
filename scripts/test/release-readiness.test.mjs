@@ -884,12 +884,16 @@ test("release readiness accepts the CI operational document contract", () => {
 test("release readiness rejects CI operational document drift", () => {
   const text = createCiOperationalDocumentText()
     .replace(
-      "`lint`, `format`, `migration-check`, `benchmark:scale`, `smoke`, `check`, and `contract` with",
+      "`lint`, `format`, `migration-check`, `benchmark:scale`, `benchmark:cli-io`, `smoke`, `check`, and",
       "`smoke`, `check`, and `contract` with Node.js 24",
     )
     .replace(
       "`pnpm run benchmark:scale`: builds the workspace, runs deterministic 1,000- and 10,000-record",
       "The benchmark is optional",
+    )
+    .replace(
+      "`pnpm run benchmark:cli-io`: runs compiled `rebuild` and `import-draft` commands against fresh",
+      "The CLI benchmark is optional",
     )
     .replace(
       "The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`",
@@ -908,8 +912,9 @@ test("release readiness rejects CI operational document drift", () => {
     .replace("uses `gh run list` to find the `CI` workflow run", "uses the GitHub UI");
 
   assert.deepEqual(validateCiOperationalDocumentContract(withoutHostedCiValidation), [
-    "docs/ops/ci.md must include `lint`, `format`, `migration-check`, `benchmark:scale`, `smoke`, `check`, and `contract` with.",
+    "docs/ops/ci.md must include `lint`, `format`, `migration-check`, `benchmark:scale`, `benchmark:cli-io`, `smoke`, `check`, and.",
     "docs/ops/ci.md must include `pnpm run benchmark:scale`: builds the workspace, runs deterministic 1,000- and 10,000-record.",
+    "docs/ops/ci.md must include `pnpm run benchmark:cli-io`: runs compiled `rebuild` and `import-draft` commands against fresh.",
     "docs/ops/ci.md must include `pnpm run hosted-ci-validation`.",
     "docs/ops/ci.md must include uses `gh run list` to find the `CI` workflow run.",
     "docs/ops/ci.md must include The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`.",
@@ -1340,6 +1345,11 @@ test("release readiness protects the deterministic scale benchmark document cont
     "regression guards for catastrophic growth, not product latency promises",
     "`pnpm run benchmark:scale:sample`",
     "Do not copy a sampled time into a release claim",
+    "## CLI File I/O Benchmark",
+    "`pnpm run benchmark:cli-io`",
+    "atomically committing all four repository outputs",
+    "they are not filesystem SLAs",
+    "`pnpm run benchmark:cli-io:sample`",
   ].join("\n");
 
   assert.deepEqual(validatePerformanceBenchmarkDocumentContract(text), []);
@@ -1349,6 +1359,14 @@ test("release readiness protects the deterministic scale benchmark document cont
     ),
     [
       "docs/engineering/03-performance-budget.md must include 1,000 and 10,000 approved contribution records.",
+    ],
+  );
+  assert.deepEqual(
+    validatePerformanceBenchmarkDocumentContract(
+      text.replace("atomically committing all four repository outputs", "writing output files"),
+    ),
+    [
+      "docs/engineering/03-performance-budget.md must include atomically committing all four repository outputs.",
     ],
   );
 });
@@ -1994,12 +2012,14 @@ test("release readiness rejects CI workflow command drift", () => {
     .replace("pnpm run release-readiness", "pnpm run docs")
     .replace("pnpm run lint", "pnpm run typecheck")
     .replace("pnpm run contract", "pnpm run check")
-    .replace("pnpm run benchmark:scale", "pnpm run build");
+    .replace("pnpm run benchmark:scale", "pnpm run build")
+    .replace("pnpm run benchmark:cli-io", "pnpm run build");
 
   assert.deepEqual(validateCiWorkflowContract(text), [
     ".github/workflows/ci.yml must run pnpm run release-readiness.",
     ".github/workflows/ci.yml must run pnpm run lint.",
     ".github/workflows/ci.yml must run pnpm run benchmark:scale.",
+    ".github/workflows/ci.yml must run pnpm run benchmark:cli-io.",
     ".github/workflows/ci.yml must run pnpm run contract.",
   ]);
 });
@@ -2664,12 +2684,16 @@ function createCiOperationalDocumentText() {
   return [
     "The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and",
     "manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,",
-    "`lint`, `format`, `migration-check`, `benchmark:scale`, `smoke`, `check`, and `contract` with",
+    "`lint`, `format`, `migration-check`, `benchmark:scale`, `benchmark:cli-io`, `smoke`, `check`, and",
+    "`contract` with",
     "Node.js 24 and the package-manager version declared",
     "by `package.json`.",
     "",
     "`pnpm run benchmark:scale`: builds the workspace, runs deterministic 1,000- and 10,000-record",
     "ledger rebuild, redaction, and Markdown workloads.",
+    "",
+    "`pnpm run benchmark:cli-io`: runs compiled `rebuild` and `import-draft` commands against fresh",
+    "temporary repositories.",
     "",
     "`pnpm run hosted-ci-validation` uses `gh run list` to find the `CI` workflow run",
     "for the selected commit and `gh run watch` while it is still running.",
@@ -3359,6 +3383,7 @@ function createCiWorkflowText() {
     "      - run: pnpm run format",
     "      - run: pnpm run migration-check",
     "      - run: pnpm run benchmark:scale",
+    "      - run: pnpm run benchmark:cli-io",
     "      - run: pnpm run smoke",
     "      - run: pnpm run check",
     "      - run: pnpm run contract",

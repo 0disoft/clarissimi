@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "benchmark:cli-io": "pnpm run build && node scripts/benchmark-cli-io.mjs --check",
+    "benchmark:cli-io:sample": "pnpm run build && node scripts/benchmark-cli-io.mjs --samples 3",
     "benchmark:scale": "pnpm run build && node scripts/benchmark-scale.mjs --check",
     "benchmark:scale:sample": "pnpm run build && node scripts/benchmark-scale.mjs --samples 3",
     "build": "tsc -b",

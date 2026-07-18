@@ -390,10 +390,10 @@ Release-only hosted checks are:
 
 - `pnpm run hosted-ci-validation`
 - `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`
-- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>`
-- `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`
-- `pnpm run verify-marketplace-release -- --version <v0.x.y>`
-- `pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>`
+- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <v0|v1> --expected-sha <commit-sha>`
+- `pnpm run verify-action-major-tag -- --release-version <v0.x.y|v1.x.y> --sha <commit-sha>`
+- `pnpm run verify-marketplace-release -- --version <v0.x.y|v1.x.y>`
+- `pnpm run promote-action-major-alias -- --release-version <v0.x.y|v1.x.y> --sha <commit-sha>`
 - `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`
 - `pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --external-run <run-id> --external-write-run <run-id> --provider-model <provider-model>`
 

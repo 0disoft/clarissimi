@@ -21,6 +21,17 @@ test("accepts the expected Marketplace latest version and rendered Action refere
   assert.equal(runtime.fetches.length, 1);
 });
 
+test("accepts a stable v1 Marketplace latest version", async () => {
+  const runtime = fakeRuntime({
+    body: marketplaceHtml("v1.0.0", "0disoft/clarissimi@v1.0.0"),
+  });
+
+  const exitCode = await runVerifyMarketplaceRelease(["--version", "v1.0.0"], runtime);
+
+  assert.equal(exitCode, 0);
+  assert.equal(JSON.parse(runtime.logs.at(-1)).latestVersion, "v1.0.0");
+});
+
 test("rejects a stale Marketplace latest version with the exact release edit handoff", async () => {
   const runtime = fakeRuntime({
     body: marketplaceHtml("v0.3.0", "0disoft/clarissimi@v0.2.0"),
@@ -72,7 +83,10 @@ test("fails closed when Marketplace does not return a parseable HTML listing", a
   assert.match(wrongContentType.errors.at(-1), /expected text\/html/);
 
   assert.equal(await runVerifyMarketplaceRelease(["--version", "v0.3.1"], missingLatest), 1);
-  assert.match(missingLatest.errors.at(-1), /did not expose a Latest v0\.x\.y release/);
+  assert.match(
+    missingLatest.errors.at(-1),
+    /did not expose an authorized Latest v0\.x\.y or v1\.x\.y release/,
+  );
 });
 
 function marketplaceHtml(version, actionReference) {

@@ -1382,8 +1382,8 @@ Completed scope:
 Source: `docs/adr/0055-define-stable-v1-action-compatibility-boundary.md`,
 `docs/ops/release.md`
 
-Status: Decision accepted; v1 publication remains blocked pending parameterized release tooling and
-fresh exact-candidate hosted and external validation.
+Status: Decision and parameterized release tooling completed; v1 publication remains blocked
+pending candidate-version documentation plus fresh exact-candidate hosted and external validation.
 
 Completed scope:
 
@@ -1395,8 +1395,13 @@ Completed scope:
 - define additive-only v1 Action compatibility, immutable tags, compare-and-swap alias promotion,
   and exact-SHA rollback boundaries
 - preserve all existing v0 tags and alias state while avoiding an invented fixed v0 support period
-- keep the actual v1 tag, Marketplace update, and moving alias blocked until release tooling supports
-  both v0 and v1 and fresh external consumer validation becomes available
+- centralize the authorized `v0` and `v1` immutable-version parser and derive matching major aliases
+  instead of duplicating release regexes
+- support v1 across immutable publication, Marketplace verification, validation-record rendering,
+  external consumer dispatch, exact-SHA alias verification, compare-and-swap promotion, and rollback
+- retain v0 regression coverage and add stable-v1 rejection of draft or prerelease release metadata
+- keep the actual v1 tag, Marketplace update, and moving alias blocked until candidate-version
+  documentation and fresh external consumer validation become available
 
 ## Deferred Work
 

@@ -77,7 +77,7 @@ test("hosted external consumer smoke defaults to the current HEAD SHA", async ()
   assert.equal(dispatch.args.includes(`clarissimi-ref=${exampleSha}`), true);
 });
 
-test("hosted external consumer smoke accepts v0 only with an expected SHA", async () => {
+test("hosted external consumer smoke accepts moving major aliases only with an expected SHA", async () => {
   const harness = createHarness({
     runs: [
       {
@@ -111,6 +111,29 @@ test("hosted external consumer smoke accepts v0 only with an expected SHA", asyn
     true,
   );
   assert.equal(missingSha.commands.length, 0);
+
+  const v1Harness = createHarness({
+    runs: [
+      {
+        databaseId: 45678,
+        createdAt: "2026-07-10T00:00:10.000Z",
+        headBranch: "main",
+        headSha: "integration-lab-sha",
+        status: "queued",
+        conclusion: "",
+      },
+    ],
+  });
+  assert.equal(
+    await runHostedExternalConsumerSmoke(
+      ["--clarissimi-ref", "v1", "--expected-sha", exampleSha],
+      v1Harness.runtime,
+    ),
+    0,
+  );
+  const v1Dispatch = v1Harness.commands.find((entry) => entry.args[0] === "workflow");
+  assert.equal(v1Dispatch.args.includes("clarissimi-ref=v1"), true);
+  assert.equal(v1Dispatch.args.includes(`expected-sha=${exampleSha}`), true);
 });
 
 test("hosted external consumer smoke rejects unsupported mutable or malformed inputs before dispatch", async () => {
@@ -137,7 +160,7 @@ test("hosted external consumer smoke rejects unsupported mutable or malformed in
   assert.equal(mutableRefExitCode, 2);
   assert.equal(
     mutableRef.errors.includes(
-      "--clarissimi-ref must be an immutable semantic version tag, 40-character commit SHA, or v0.",
+      "--clarissimi-ref must be an immutable semantic version tag, 40-character commit SHA, v0, or v1.",
     ),
     true,
   );

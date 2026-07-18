@@ -200,6 +200,43 @@ test("major alias evidence pins v0 to the expected SHA on both external workflow
   );
 });
 
+test("major alias evidence pins v1 to the expected SHA on both external workflows", async () => {
+  const runtime = fakeRuntime({ externalRef: "v1" });
+  assert.equal(
+    await runReleaseCandidateEvidenceOrchestrator(
+      [
+        "--provider-model",
+        "gpt-4.1-mini",
+        "--sha",
+        sha,
+        "--release-type",
+        "major-alias",
+        "--release-version",
+        "v1.0.0",
+        "--external-ref",
+        "v1",
+      ],
+      runtime,
+    ),
+    0,
+  );
+
+  const dispatches = runtime.calls.filter(
+    (call) => call.command === "gh" && call.args[0] === "workflow" && call.args[1] === "run",
+  );
+  const externalDispatches = dispatches.filter(
+    (call) =>
+      call.args.includes("clarissimi.yml") || call.args.includes("clarissimi-full-write-smoke.yml"),
+  );
+  assert.equal(
+    externalDispatches.every(
+      (call) =>
+        call.args.includes("clarissimi-ref=v1") && call.args.includes(`expected-sha=${sha}`),
+    ),
+    true,
+  );
+});
+
 test("runs orphan audit after a full-write failure", async () => {
   const runtime = fakeRuntime({ failWatchId: 104 });
   assert.equal(

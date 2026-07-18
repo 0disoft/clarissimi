@@ -31,6 +31,26 @@ test("verify action major tag accepts matching alias, immutable tag, and release
   );
 });
 
+test("verify action major tag derives v1 and requires a stable release", async () => {
+  const harness = createHarness({
+    version: "v1.0.0",
+    release: { isPrerelease: false },
+  });
+  const exitCode = await runVerifyActionMajorTag(
+    ["--release-version", "v1.0.0", "--sha", expectedSha],
+    harness.runtime,
+  );
+
+  assert.equal(exitCode, 0);
+  assert.equal(
+    harness.logs.includes(
+      `Action major alias v1 verified at ${expectedSha} through immutable tag v1.0.0: ` +
+        "https://github.com/0disoft/clarissimi/releases/tag/v1.0.0",
+    ),
+    true,
+  );
+});
+
 test("verify action major tag rejects unsupported aliases and malformed inputs", async () => {
   const badAlias = createHarness();
   assert.equal(
@@ -40,10 +60,7 @@ test("verify action major tag rejects unsupported aliases and malformed inputs",
     ),
     2,
   );
-  assert.equal(
-    badAlias.errors.includes("--alias must be v0 under the current release policy."),
-    true,
-  );
+  assert.equal(badAlias.errors.includes("--alias must be v0 for v0.1.1."), true);
   assert.equal(badAlias.commands.length, 0);
 
   const badVersion = createHarness();
@@ -55,7 +72,9 @@ test("verify action major tag rejects unsupported aliases and malformed inputs",
     2,
   );
   assert.equal(
-    badVersion.errors.includes("--release-version must be an immutable v0.x.y tag."),
+    badVersion.errors.includes(
+      "--release-version must be an authorized immutable v0.x.y or v1.x.y tag.",
+    ),
     true,
   );
   assert.equal(badVersion.commands.length, 0);
@@ -98,17 +117,35 @@ test("verify action major tag rejects missing or draft release metadata", async 
   assert.equal(harness.errors.includes("GitHub Release v0.1.1 must not be a draft."), true);
 });
 
+test("verify action major tag rejects a prerelease on the stable v1 line", async () => {
+  const harness = createHarness({ version: "v1.0.0" });
+  const exitCode = await runVerifyActionMajorTag(
+    ["--release-version", "v1.0.0", "--sha", expectedSha],
+    harness.runtime,
+  );
+
+  assert.equal(exitCode, 1);
+  assert.equal(
+    harness.errors.includes(
+      "GitHub Release v1.0.0 must not be a prerelease on the stable v1 line.",
+    ),
+    true,
+  );
+});
+
 function createHarness(options = {}) {
   const commands = [];
   const logs = [];
   const errors = [];
+  const version = options.version ?? "v0.1.1";
+  const alias = version.startsWith("v1.") ? "v1" : "v0";
   const aliasSha = options.aliasSha ?? expectedSha;
   const versionTagObject = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
   const release = {
-    tagName: "v0.1.1",
+    tagName: version,
     isDraft: false,
     isPrerelease: true,
-    url: "https://github.com/0disoft/clarissimi/releases/tag/v0.1.1",
+    url: `https://github.com/0disoft/clarissimi/releases/tag/${version}`,
     ...options.release,
   };
 
@@ -127,9 +164,9 @@ function createHarness(options = {}) {
         if (command === "git" && args[0] === "ls-remote") {
           return success(
             [
-              `${aliasSha}\trefs/tags/v0`,
-              `${versionTagObject}\trefs/tags/v0.1.1`,
-              `${expectedSha}\trefs/tags/v0.1.1^{}`,
+              `${aliasSha}\trefs/tags/${alias}`,
+              `${versionTagObject}\trefs/tags/${version}`,
+              `${expectedSha}\trefs/tags/${version}^{}`,
               "",
             ].join("\n"),
           );

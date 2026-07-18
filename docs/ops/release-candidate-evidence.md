@@ -21,10 +21,14 @@ preview and does not create an issue. It still dispatches hosted workflows and t
 temporarily creates synthetic pull requests and branches before cleanup.
 
 After reviewing the preview, add `--create-issue` to create the evidence issue. For a versioned
-Action tag, also pass `--release-type versioned-action-tag --release-version <v0.x.y>`. Before the
+Action tag, also pass
+`--release-type versioned-action-tag --release-version <v0.x.y|v1.x.y>`. Before the
 tag exists, the orchestrator uses the candidate SHA as the immutable external consumer ref and
 records both the intended release version and tested SHA in the evidence issue. An explicit
-`--external-ref <v0.x.y>` remains available when revalidating an already-created immutable tag. If
+`--external-ref <v0.x.y|v1.x.y>` remains available when revalidating an already-created immutable
+tag. Stable v1 candidates use `--release-version v1.0.0`; moving-alias validation additionally uses
+`--release-type major-alias --external-ref v1`, and every major alias requires the exact expected
+SHA. If
 the full-write smoke fails after dispatch, the orchestrator still runs the orphan audit before
 returning failure.
 

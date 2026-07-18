@@ -51,6 +51,30 @@ test("publishes an immutable stable release for Marketplace distribution", async
   assert.equal(JSON.parse(runtime.logs.at(-1)).releaseKind, "stable");
 });
 
+test("publishes the first stable v1 release without a prerelease flag", async () => {
+  const runtime = fakeRuntime({ version: "v1.0.0", releaseKind: "stable" });
+  const exitCode = await runPublishActionRelease(
+    ["--version", "v1.0.0", "--sha", sha, "--release-kind", "stable"],
+    runtime,
+  );
+
+  assert.equal(exitCode, 0);
+  const createRelease = runtime.calls.find(
+    (call) => call.command === "gh" && call.args[0] === "release" && call.args[1] === "create",
+  );
+  assert.ok(createRelease);
+  assert.equal(createRelease.args.includes("--prerelease"), false);
+});
+
+test("rejects prerelease publication on the stable v1 line before mutation", async () => {
+  const runtime = fakeRuntime({ version: "v1.0.0" });
+  const exitCode = await runPublishActionRelease(["--version", "v1.0.0", "--sha", sha], runtime);
+
+  assert.equal(exitCode, 2);
+  assert.match(runtime.errors.at(-2), /stable v1 releases require --release-kind stable/);
+  assert.equal(runtime.calls.length, 0);
+});
+
 test("rejects unsupported release kinds before publication", async () => {
   const runtime = fakeRuntime();
   const exitCode = await runPublishActionRelease(

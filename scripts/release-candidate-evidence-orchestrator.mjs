@@ -2,6 +2,11 @@ import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { pathToFileURL } from "node:url";
 
+import {
+  isAuthorizedActionMajorAlias,
+  parseAuthorizedActionReleaseVersion,
+} from "./action-release-version.mjs";
+
 const defaults = {
   repo: "0disoft/clarissimi",
   branch: "main",
@@ -11,7 +16,7 @@ const defaults = {
 
 const usageText = [
   "Usage:",
-  "  pnpm run release-candidate-evidence-orchestrator -- --provider-model <model> [--sha <commit-sha>] [--external-ref <tag-or-sha|v0>] [--release-type <source-only|versioned-action-tag|marketplace-action-tag|major-alias>] [--release-version <v0.x.y>] [--create-issue]",
+  "  pnpm run release-candidate-evidence-orchestrator -- --provider-model <model> [--sha <commit-sha>] [--external-ref <tag-or-sha|v0|v1>] [--release-type <source-only|versioned-action-tag|marketplace-action-tag|major-alias>] [--release-version <v0.x.y|v1.x.y>] [--create-issue]",
   "",
   "The default is an issue preview. Hosted workflows still run, including the full-write smoke and orphan audit.",
   "Use --create-issue only after reviewing the generated evidence body.",
@@ -92,7 +97,7 @@ async function run(argv, runtime) {
       "clarissimi-ref",
       externalRef,
       "expected-sha",
-      externalRef === "v0" ? sha : undefined,
+      isAuthorizedActionMajorAlias(externalRef) ? sha : undefined,
       "evidence-id",
       evidenceId,
     ],
@@ -112,7 +117,7 @@ async function run(argv, runtime) {
         "clarissimi-ref",
         externalRef,
         "expected-sha",
-        externalRef === "v0" ? sha : undefined,
+        isAuthorizedActionMajorAlias(externalRef) ? sha : undefined,
         "evidence-id",
         evidenceId,
       ],
@@ -316,15 +321,21 @@ function validateArgs(args, runtime) {
     );
   if (
     ["versioned-action-tag", "marketplace-action-tag", "major-alias"].includes(releaseType) &&
-    !/^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(args.releaseVersion ?? "")
+    parseAuthorizedActionReleaseVersion(args.releaseVersion) === undefined
   ) {
     return usageFailure(
       runtime,
-      "versioned and Marketplace Action evidence requires --release-version <v0.x.y>.",
+      "versioned and Marketplace Action evidence requires --release-version <v0.x.y|v1.x.y>.",
     );
   }
-  if (releaseType === "major-alias" && args.externalRef !== "v0")
-    return usageFailure(runtime, "major-alias evidence requires --external-ref v0.");
+  if (releaseType === "major-alias") {
+    const expectedAlias = parseAuthorizedActionReleaseVersion(args.releaseVersion)?.alias;
+    if (args.externalRef !== expectedAlias)
+      return usageFailure(
+        runtime,
+        `major-alias evidence requires --external-ref ${expectedAlias}.`,
+      );
+  }
   if (args.providerEndpoint !== undefined && !isHttps(args.providerEndpoint))
     return usageFailure(runtime, "--provider-endpoint must be an https URL.");
   if (args.providerThinking !== undefined && args.providerThinking !== "disabled")

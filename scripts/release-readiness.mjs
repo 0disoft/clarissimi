@@ -247,7 +247,10 @@ export const releasePolicyDocumentContract = {
     "ADR 0034 authorizes moving major alias `v0`",
     "ADR 0045 authorizes free GitHub Marketplace",
     "ADR 0055 defines `v1.0.0` as the first stable root Action candidate",
-    "stable v1 publication remains blocked until the release, Marketplace, release-result, and alias",
+    "release, Marketplace, validation-record,",
+    "external-consumer, and alias tools now accept both authorized v0 and v1 lines",
+    "stable v1 publication remains blocked until the",
+    "candidate consumer documents name `v1.0.0`",
     "The current root and workspace packages stay private at `0.0.0`.",
     "Do not bump package versions,",
     "create another moving major alias",
@@ -258,13 +261,14 @@ export const releasePolicyDocumentContract = {
     "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044",
     "- Moving GitHub Action major alias: `v0` is allowed under ADR 0034",
     "- GitHub Marketplace publication: allowed for the validated root Action under ADR 0045",
-    "- Stable root Action tag: `v1.0.0` is selected by ADR 0055 but remains blocked",
+    "- Stable root Action tag: `v1.0.0` is selected by ADR 0055; v1-capable release tooling is",
     "## Stable v1 Compatibility Contract",
     "`clarissimi.assessment/v1` is a persisted data-schema identifier, not the Action release major.",
     "Every persisted version registered when `v1.0.0` ships remains readable throughout the v1 Action",
     "Immutable `v1.x.y` tags never move. Alias `v1` uses exact-SHA verification",
     "The v1 release leaves existing `v0.x.y` tags and alias `v0` unchanged.",
     "npm publication remains a separate decision",
+    "`scripts/action-release-version.mjs` is the shared allowlist and alias-derivation boundary",
     "The versioned Action tag requires:",
     "Public package publication remains blocked even when every technical gate above passes.",
     "## Marketplace Release Procedure",
@@ -278,8 +282,7 @@ export const releasePolicyDocumentContract = {
     "## First Action Release Procedure",
     "release type `versioned-action-tag`",
     "## Major Alias Promotion",
-    "`pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
-    "pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>",
+    "pnpm run promote-action-major-alias -- --release-version <v0.x.y|v1.x.y> --sha <commit-sha>",
     "publish a corrective patch tag such as `v0.1.1`",
     "`pnpm run hosted-ci-validation`",
     "`pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
@@ -289,7 +292,10 @@ export const releasePolicyDocumentContract = {
     "the orphan audit is not dispatched because no full-write or",
     "the release gate still fails",
     "the orphan audit still runs",
-    "pnpm run publish-action-release -- --version <v0.x.y> --sha <candidate-sha>",
+    "pnpm run publish-action-release -- --version <v0.x.y|v1.x.y> --sha <candidate-sha>",
+    "## Stable v1 Release Procedure",
+    "pnpm run publish-action-release -- --version v1.0.0 --sha <candidate-sha> --release-kind stable",
+    "pnpm run promote-action-major-alias -- --release-version v1.0.0 --sha <candidate-sha>",
     "`pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`",
     "release PR, release issue, or GitHub release notes",
     "Do not make an evidence-only commit after final candidate validation",
@@ -300,6 +306,101 @@ export const releasePolicyDocumentContract = {
     "Release status: immutable `v0.x.y` Action tags are allowed by ADR 0044",
     "free root Action Marketplace publication",
     "public package publication remains blocked",
+  ],
+};
+
+export const stableActionReleaseToolingContract = {
+  documents: [
+    {
+      path: "scripts/action-release-version.mjs",
+      requiredSnippets: [
+        "AUTHORIZED_ACTION_RELEASE_MAJORS",
+        "parseAuthorizedActionReleaseVersion",
+        "isAuthorizedActionMajorAlias",
+        "findAuthorizedActionReleaseReferences",
+        "findLatestAuthorizedActionReleaseVersion",
+      ],
+    },
+    {
+      path: "scripts/publish-action-release.mjs",
+      requiredSnippets: [
+        "parseAuthorizedActionReleaseVersion",
+        "findAuthorizedActionReleaseReferences",
+        "stable v1 releases require --release-kind stable",
+      ],
+    },
+    {
+      path: "scripts/verify-action-major-tag.mjs",
+      requiredSnippets: [
+        "parseAuthorizedActionReleaseVersion",
+        "--alias must be ${releaseVersion.alias}",
+        "must not be a prerelease on the stable v1 line",
+      ],
+    },
+    {
+      path: "scripts/promote-action-major-alias.mjs",
+      requiredSnippets: [
+        "parseAuthorizedActionReleaseVersion",
+        "--alias must be ${releaseVersion.alias}",
+        "must not be a prerelease on the stable v1 line",
+      ],
+    },
+    {
+      path: "scripts/verify-marketplace-release.mjs",
+      requiredSnippets: [
+        "findLatestAuthorizedActionReleaseVersion",
+        "isAuthorizedActionReleaseVersion",
+        "authorized Latest v0.x.y or v1.x.y release",
+      ],
+    },
+    {
+      path: "scripts/release-candidate-evidence-orchestrator.mjs",
+      requiredSnippets: [
+        "isAuthorizedActionMajorAlias",
+        "parseAuthorizedActionReleaseVersion",
+        "major-alias evidence requires --external-ref ${expectedAlias}",
+      ],
+    },
+    {
+      path: "scripts/release-candidate-evidence-issue.mjs",
+      requiredSnippets: [
+        "isAuthorizedActionMajorAlias",
+        "parseAuthorizedActionReleaseVersion",
+        "publishing immutable stable tag",
+        "moving Action alias",
+        "${majorAlias}",
+      ],
+    },
+    {
+      path: "scripts/hosted-external-consumer-smoke.mjs",
+      requiredSnippets: [
+        "isAuthorizedActionMajorAlias",
+        "40-character commit SHA, v0, or v1",
+        "--expected-sha is required when --clarissimi-ref is ${clarissimiRef}",
+      ],
+    },
+    {
+      path: "scripts/test/action-release-version.test.mjs",
+      requiredSnippets: [
+        "accepts only authorized immutable v0 and v1 tags",
+        "derives and matches the moving major alias",
+      ],
+    },
+    {
+      path: "docs/ops/release-candidate-evidence.md",
+      requiredSnippets: [
+        "--release-version <v0.x.y|v1.x.y>",
+        "--release-type major-alias --external-ref v1",
+      ],
+    },
+    {
+      path: "docs/github-action/action-contract.md",
+      requiredSnippets: [
+        "ADR 0055 defines the stable `v1` line.",
+        "require a non-draft and non-prerelease GitHub Release",
+        "independent from the persisted `clarissimi.assessment/v1` schema identifier",
+      ],
+    },
   ],
 };
 
@@ -375,10 +476,10 @@ export const readmeValidationContract = {
     "- `pnpm run live-provider-smoke`",
     "- `pnpm run hosted-ci-validation`",
     "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
-    "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>`",
-    "- `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
-    "- `pnpm run verify-marketplace-release -- --version <v0.x.y>`",
-    "- `pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>`",
+    "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <v0|v1> --expected-sha <commit-sha>`",
+    "- `pnpm run verify-action-major-tag -- --release-version <v0.x.y|v1.x.y> --sha <commit-sha>`",
+    "- `pnpm run verify-marketplace-release -- --version <v0.x.y|v1.x.y>`",
+    "- `pnpm run promote-action-major-alias -- --release-version <v0.x.y|v1.x.y> --sha <commit-sha>`",
     "- `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
     "Release-only credentialed checks are:",
     "- `pnpm run hosted-live-provider-smoke -- --model <provider-model>`",
@@ -821,6 +922,9 @@ export const actionContractDocumentContract = {
     "Secret values must be read from GitHub Actions secrets or environment variables, not action inputs.",
     "Required merged pull request event fields are parsed through the same runtime fixture validator",
     "GitHub API base URLs must use HTTPS and must not include URL credentials, a query, or a fragment.",
+    "ADR 0055 defines the stable `v1` line.",
+    "require a non-draft and non-prerelease GitHub Release",
+    "independent from the persisted `clarissimi.assessment/v1` schema identifier",
     "Unsupported `INPUT_MODE` values must fail",
     "`config-path` is explicit and optional. The Action does not automatically discover repository config",
     "`markdown-summary` controls presentation only.",
@@ -1521,6 +1625,7 @@ export async function runReleaseReadiness(options = {}) {
   await runPackageReleasePolicyCheck(repoRoot);
   await runWorkspacePackageReleasePolicyCheck(repoRoot);
   await runReleasePolicyDocumentContractCheck(repoRoot);
+  await runStableActionReleaseToolingContractCheck(repoRoot);
   await runProductPositioningContractCheck(repoRoot);
   await runReadmeValidationContractCheck(repoRoot);
   await runDocsValidationScriptContractCheck(repoRoot);
@@ -1626,7 +1731,7 @@ export async function runReleaseReadiness(options = {}) {
     "free root Action Marketplace publication is allowed by ADR 0045; public package publication remains blocked",
   );
   console.log(
-    "stable v1.0.0 is selected by ADR 0055 but remains blocked pending v1-capable release tooling and fresh exact-candidate validation",
+    "stable v1.0.0 tooling is ready under ADR 0055; publication remains blocked pending candidate-version docs and fresh exact-candidate validation",
   );
 }
 
@@ -1814,6 +1919,28 @@ export function validateReleasePolicyDocumentContract(
   for (const snippet of contract.requiredSnippets) {
     if (!text.includes(snippet)) {
       issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateStableActionReleaseToolingContract(
+  textsByPath,
+  contract = stableActionReleaseToolingContract,
+) {
+  const issues = [];
+
+  for (const document of contract.documents) {
+    const text = textsByPath[document.path];
+    if (typeof text !== "string") {
+      issues.push(`${document.path} must be readable for stable Action release tooling contract.`);
+      continue;
+    }
+    for (const snippet of document.requiredSnippets) {
+      if (!text.includes(snippet)) {
+        issues.push(`${document.path} must include ${snippet}.`);
+      }
     }
   }
 
@@ -2669,6 +2796,24 @@ async function runReleasePolicyDocumentContractCheck(repoRoot) {
   }
 
   console.log("release policy document contract passed");
+}
+
+async function runStableActionReleaseToolingContractCheck(repoRoot) {
+  const textsByPath = {};
+  for (const document of stableActionReleaseToolingContract.documents) {
+    try {
+      textsByPath[document.path] = await readFile(join(repoRoot, document.path), "utf8");
+    } catch (error) {
+      throw new Error(`Unable to read ${document.path}: ${error.message}`);
+    }
+  }
+
+  const issues = validateStableActionReleaseToolingContract(textsByPath);
+  if (issues.length > 0) {
+    throw new Error(`stable Action release tooling contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("stable Action release tooling contract passed");
 }
 
 async function runProductPositioningContractCheck(repoRoot) {

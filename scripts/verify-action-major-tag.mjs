@@ -1,14 +1,15 @@
 import { spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
+import { parseAuthorizedActionReleaseVersion } from "./action-release-version.mjs";
+
 const defaults = {
-  alias: "v0",
   repo: "0disoft/clarissimi",
 };
 
 const usageText = [
   "Usage:",
-  "  pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha> [--alias v0] [--repo <owner/name>]",
+  "  pnpm run verify-action-major-tag -- --release-version <v0.x.y|v1.x.y> --sha <commit-sha> [--alias <v0|v1>] [--repo <owner/name>]",
   "",
   "Example:",
   "  pnpm run verify-action-major-tag -- --release-version v0.1.1 --sha 0123456789abcdef0123456789abcdef01234567",
@@ -37,16 +38,23 @@ async function run(argv, runtime) {
     return 0;
   }
 
-  const alias = args.alias ?? defaults.alias;
+  const releaseVersion = parseAuthorizedActionReleaseVersion(args.releaseVersion);
+  if (releaseVersion === undefined) {
+    return usageFailure(
+      runtime,
+      "--release-version must be an authorized immutable v0.x.y or v1.x.y tag.",
+    );
+  }
+  const alias = args.alias ?? releaseVersion.alias;
   const repo = args.repo ?? defaults.repo;
   if (!isGitHubRepositoryName(repo)) {
     return usageFailure(runtime, "--repo must use owner/name format.");
   }
-  if (alias !== "v0") {
-    return usageFailure(runtime, "--alias must be v0 under the current release policy.");
-  }
-  if (!isV0ReleaseVersion(args.releaseVersion)) {
-    return usageFailure(runtime, "--release-version must be an immutable v0.x.y tag.");
+  if (alias !== releaseVersion.alias) {
+    return usageFailure(
+      runtime,
+      `--alias must be ${releaseVersion.alias} for ${releaseVersion.version}.`,
+    );
   }
   if (!isCommitSha(args.sha)) {
     return usageFailure(runtime, "--sha must be a 40-character commit SHA.");
@@ -64,6 +72,11 @@ async function run(argv, runtime) {
   }
   if (release.isDraft !== false) {
     throw new Error(`GitHub Release ${args.releaseVersion} must not be a draft.`);
+  }
+  if (releaseVersion.major === 1 && release.isPrerelease !== false) {
+    throw new Error(
+      `GitHub Release ${args.releaseVersion} must not be a prerelease on the stable v1 line.`,
+    );
   }
   if (typeof release.url !== "string" || !release.url.startsWith("https://github.com/")) {
     throw new Error(`GitHub Release ${args.releaseVersion} is missing a valid URL.`);
@@ -121,10 +134,6 @@ function usageFailure(runtime, message) {
 
 function isGitHubRepositoryName(value) {
   return typeof value === "string" && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value);
-}
-
-function isV0ReleaseVersion(value) {
-  return typeof value === "string" && /^v0\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$/.test(value);
 }
 
 function isCommitSha(value) {

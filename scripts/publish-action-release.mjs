@@ -2,6 +2,11 @@ import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
+import {
+  findAuthorizedActionReleaseReferences,
+  parseAuthorizedActionReleaseVersion,
+} from "./action-release-version.mjs";
+
 const defaults = {
   repo: "0disoft/clarissimi",
   branch: "main",
@@ -10,7 +15,7 @@ const defaults = {
 
 const usageText = [
   "Usage:",
-  "  pnpm run publish-action-release -- --version <v0.x.y> [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch>] [--notes-template <path>] [--release-kind <prerelease|stable>]",
+  "  pnpm run publish-action-release -- --version <v0.x.y|v1.x.y> [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch>] [--notes-template <path>] [--release-kind <prerelease|stable>]",
   "",
   "Publishes an immutable annotated tag and GitHub release only after finding one matching release evidence issue.",
 ].join("\n");
@@ -42,11 +47,17 @@ async function run(argv, runtime) {
   const branch = args.branch ?? defaults.branch;
   const releaseKind = args.releaseKind ?? defaults.releaseKind;
   if (!isRepo(repo)) return usageFailure(runtime, "--repo must use owner/name format.");
-  if (!isVersion(args.version))
-    return usageFailure(runtime, "--version requires an immutable v0.x.y tag.");
+  const releaseVersion = parseAuthorizedActionReleaseVersion(args.version);
+  if (releaseVersion === undefined)
+    return usageFailure(
+      runtime,
+      "--version requires an authorized immutable v0.x.y or v1.x.y tag.",
+    );
   if (branch.trim() === "") return usageFailure(runtime, "--branch requires a non-empty value.");
   if (!["prerelease", "stable"].includes(releaseKind))
     return usageFailure(runtime, "--release-kind supports prerelease or stable.");
+  if (releaseVersion.major === 1 && releaseKind !== "stable")
+    return usageFailure(runtime, "stable v1 releases require --release-kind stable.");
   if (args.sha !== undefined && !isSha(args.sha))
     return usageFailure(runtime, "--sha must be a 40-character commit SHA.");
 
@@ -183,11 +194,7 @@ async function validateCandidateReleaseReferences(runtime, options) {
       throw new Error(`Candidate ${contract.path} must contain ${expected} before publication.`);
     }
 
-    const immutableVersions = new Set(
-      [...text.matchAll(new RegExp(`${escapeRegExp(options.repo)}@(v0\\.\\d+\\.\\d+)`, "g"))].map(
-        (match) => match[1],
-      ),
-    );
+    const immutableVersions = new Set(findAuthorizedActionReleaseReferences(text, options.repo));
     const staleVersions = [...immutableVersions]
       .filter((version) => version !== options.version)
       .sort();
@@ -348,16 +355,8 @@ function isRepo(value) {
   return typeof value === "string" && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value);
 }
 
-function isVersion(value) {
-  return typeof value === "string" && /^v0\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$/.test(value);
-}
-
 function isSha(value) {
   return typeof value === "string" && /^[0-9a-f]{40}$/i.test(value.trim());
-}
-
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function parseJson(value, label) {

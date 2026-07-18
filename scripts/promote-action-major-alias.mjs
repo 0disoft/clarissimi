@@ -1,8 +1,9 @@
 import { spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
+import { parseAuthorizedActionReleaseVersion } from "./action-release-version.mjs";
+
 const defaults = {
-  alias: "v0",
   repo: "0disoft/clarissimi",
   externalRepo: "0disoft/integration-lab",
   providerModel: "gpt-4.1-mini",
@@ -10,9 +11,9 @@ const defaults = {
 
 const usageText = [
   "Usage:",
-  "  pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha> [--alias v0] [--repo <owner/name>] [--external-repo <owner/name>] [--provider-model <model>]",
+  "  pnpm run promote-action-major-alias -- --release-version <v0.x.y|v1.x.y> --sha <commit-sha> [--alias <v0|v1>] [--repo <owner/name>] [--external-repo <owner/name>] [--provider-model <model>]",
   "",
-  "Moves v0 with a compare-and-swap lease, verifies the alias, runs hosted evidence, and rolls back on failure.",
+  "Moves the matching Action major alias with a compare-and-swap lease, verifies it, runs hosted evidence, and rolls back on failure.",
 ].join("\n");
 
 export async function runPromoteActionMajorAlias(argv, runtime = defaultRuntime()) {
@@ -32,13 +33,21 @@ async function run(argv, runtime) {
     return 0;
   }
 
-  const alias = args.alias ?? defaults.alias;
+  const releaseVersion = parseAuthorizedActionReleaseVersion(args.releaseVersion);
+  if (releaseVersion === undefined)
+    return usageFailure(
+      runtime,
+      "--release-version requires an authorized immutable v0.x.y or v1.x.y tag.",
+    );
+  const alias = args.alias ?? releaseVersion.alias;
   const repo = args.repo ?? defaults.repo;
   const externalRepo = args.externalRepo ?? defaults.externalRepo;
   const providerModel = args.providerModel ?? defaults.providerModel;
-  if (alias !== "v0") return usageFailure(runtime, "--alias must be v0 under ADR 0034.");
-  if (!isVersion(args.releaseVersion))
-    return usageFailure(runtime, "--release-version requires an immutable v0.x.y tag.");
+  if (alias !== releaseVersion.alias)
+    return usageFailure(
+      runtime,
+      `--alias must be ${releaseVersion.alias} for ${releaseVersion.version}.`,
+    );
   if (!isSha(args.sha)) return usageFailure(runtime, "--sha must be a 40-character commit SHA.");
   if (!isRepo(repo) || !isRepo(externalRepo))
     return usageFailure(runtime, "--repo and --external-repo must use owner/name format.");
@@ -58,7 +67,7 @@ async function run(argv, runtime) {
         `found ${immutable?.commitSha ?? "missing"}.`,
     );
   }
-  await validateRelease(runtime, repo, args.releaseVersion);
+  await validateRelease(runtime, repo, releaseVersion);
   await preflightWorkflows(runtime, repo, externalRepo, args.releaseVersion);
 
   const previous = await readRemoteTag(runtime, remoteUrl, alias);
@@ -125,11 +134,12 @@ async function run(argv, runtime) {
   return 0;
 }
 
-async function validateRelease(runtime, repo, version) {
+async function validateRelease(runtime, repo, releaseVersion) {
+  const version = releaseVersion.version;
   const output = await commandText(
     runtime,
     "gh",
-    ["release", "view", version, "--repo", repo, "--json", "tagName,isDraft,url"],
+    ["release", "view", version, "--repo", repo, "--json", "tagName,isDraft,isPrerelease,url"],
     `read GitHub Release ${version}`,
   );
   const release = parseJson(output, "gh release view");
@@ -140,6 +150,9 @@ async function validateRelease(runtime, repo, version) {
     !release.url.startsWith("https://github.com/")
   ) {
     throw new Error(`GitHub Release ${version} is missing or does not satisfy ADR 0034.`);
+  }
+  if (releaseVersion.major === 1 && release.isPrerelease !== false) {
+    throw new Error(`GitHub Release ${version} must not be a prerelease on the stable v1 line.`);
   }
 }
 
@@ -292,9 +305,6 @@ function parseArgs(argv, runtime) {
 
 function isRepo(value) {
   return typeof value === "string" && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value);
-}
-function isVersion(value) {
-  return typeof value === "string" && /^v0\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$/.test(value);
 }
 function isSha(value) {
   return typeof value === "string" && /^[0-9a-f]{40}$/i.test(value);

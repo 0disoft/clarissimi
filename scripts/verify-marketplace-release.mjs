@@ -1,6 +1,11 @@
 import { get } from "node:https";
 import { pathToFileURL } from "node:url";
 
+import {
+  findLatestAuthorizedActionReleaseVersion,
+  isAuthorizedActionReleaseVersion,
+} from "./action-release-version.mjs";
+
 const defaults = {
   repo: "0disoft/clarissimi",
   slug: "clarissimi",
@@ -10,7 +15,7 @@ const defaults = {
 
 const usageText = [
   "Usage:",
-  "  pnpm run verify-marketplace-release -- --version <v0.x.y> [--repo <owner/name>] [--slug <marketplace-slug>]",
+  "  pnpm run verify-marketplace-release -- --version <v0.x.y|v1.x.y> [--repo <owner/name>] [--slug <marketplace-slug>]",
   "",
   "Verifies that the public GitHub Marketplace page marks the expected immutable release as Latest and renders its matching Action reference.",
 ].join("\n");
@@ -34,8 +39,11 @@ async function run(argv, runtime) {
 
   const repo = args.repo ?? defaults.repo;
   const slug = args.slug ?? defaults.slug;
-  if (!isVersion(args.version))
-    return usageFailure(runtime, "--version requires an immutable v0.x.y tag.");
+  if (!isAuthorizedActionReleaseVersion(args.version))
+    return usageFailure(
+      runtime,
+      "--version requires an authorized immutable v0.x.y or v1.x.y tag.",
+    );
   if (!isRepo(repo)) return usageFailure(runtime, "--repo must use owner/name format.");
   if (!isSlug(slug))
     return usageFailure(
@@ -58,10 +66,10 @@ async function run(argv, runtime) {
   }
 
   const pageText = htmlToText(response.body);
-  const latestVersion = findLatestVersion(pageText);
+  const latestVersion = findLatestAuthorizedActionReleaseVersion(pageText);
   if (latestVersion === undefined) {
     throw new Error(
-      `Marketplace listing did not expose a Latest v0.x.y release. Check ${listingUrl} and update ${releaseEditUrl}.`,
+      `Marketplace listing did not expose an authorized Latest v0.x.y or v1.x.y release. Check ${listingUrl} and update ${releaseEditUrl}.`,
     );
   }
   if (latestVersion !== args.version) {
@@ -158,20 +166,12 @@ function safeCodePoint(codePoint, fallback) {
   }
 }
 
-function findLatestVersion(pageText) {
-  return pageText.match(/\b(v0\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*))\s+Latest\b/)?.[1];
-}
-
 function isRepo(value) {
   return typeof value === "string" && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value);
 }
 
 function isSlug(value) {
   return typeof value === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
-}
-
-function isVersion(value) {
-  return typeof value === "string" && /^v0\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$/.test(value);
 }
 
 function usageFailure(runtime, message) {

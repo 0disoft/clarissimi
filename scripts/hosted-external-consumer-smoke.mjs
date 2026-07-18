@@ -1,6 +1,8 @@
 import { spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
+import { isAuthorizedActionMajorAlias } from "./action-release-version.mjs";
+
 const defaults = {
   repo: "0disoft/integration-lab",
   workflow: "clarissimi.yml",
@@ -9,7 +11,7 @@ const defaults = {
 
 const usageText = [
   "Usage:",
-  "  pnpm run hosted-external-consumer-smoke -- [--clarissimi-ref <immutable-tag-or-sha|v0>] [--expected-sha <commit-sha>] [--evidence-id <32-hex>] [--repo <owner/name>] [--workflow <workflow-file>] [--workflow-ref <git-ref>]",
+  "  pnpm run hosted-external-consumer-smoke -- [--clarissimi-ref <immutable-tag-or-sha|v0|v1>] [--expected-sha <commit-sha>] [--evidence-id <32-hex>] [--repo <owner/name>] [--workflow <workflow-file>] [--workflow-ref <git-ref>]",
   "",
   "Examples:",
   "  pnpm run hosted-external-consumer-smoke",
@@ -17,7 +19,7 @@ const usageText = [
   "  pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha 0123456789abcdef0123456789abcdef01234567",
   "",
   "When --clarissimi-ref is omitted, the script tests the current Clarissimi HEAD SHA.",
-  "The moving v0 alias is accepted only with --expected-sha so the consumer checkout can prove its target.",
+  "A moving major alias is accepted only with --expected-sha so the consumer checkout can prove its target.",
 ].join("\n");
 
 export async function runHostedExternalConsumerSmoke(argv, runtime = defaultRuntime()) {
@@ -59,10 +61,10 @@ async function run(argv, runtime) {
     return usageFailure(runtime, "--workflow-ref requires a non-empty value.");
   }
 
-  if (!isImmutableClarissimiRef(clarissimiRef) && clarissimiRef !== "v0") {
+  if (!isImmutableClarissimiRef(clarissimiRef) && !isAuthorizedActionMajorAlias(clarissimiRef)) {
     return usageFailure(
       runtime,
-      "--clarissimi-ref must be an immutable semantic version tag, 40-character commit SHA, or v0.",
+      "--clarissimi-ref must be an immutable semantic version tag, 40-character commit SHA, v0, or v1.",
     );
   }
 
@@ -70,8 +72,11 @@ async function run(argv, runtime) {
     return usageFailure(runtime, "--expected-sha must be a 40-character commit SHA.");
   }
 
-  if (clarissimiRef === "v0" && expectedSha === undefined) {
-    return usageFailure(runtime, "--expected-sha is required when --clarissimi-ref is v0.");
+  if (isAuthorizedActionMajorAlias(clarissimiRef) && expectedSha === undefined) {
+    return usageFailure(
+      runtime,
+      `--expected-sha is required when --clarissimi-ref is ${clarissimiRef}.`,
+    );
   }
   if (args.evidenceId !== undefined && !isEvidenceId(args.evidenceId)) {
     return usageFailure(runtime, "--evidence-id must be 32 lowercase hexadecimal characters.");

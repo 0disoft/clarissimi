@@ -172,6 +172,54 @@ test("versioned evidence accepts the pre-tag candidate SHA as the external ref",
   );
 });
 
+test("stable v1 evidence records ADR 0055 and non-prerelease publication", async () => {
+  const harness = createHarness({
+    headSha: exampleSha,
+    runs: {
+      12345: createRun({ databaseId: 12345, workflowName: "CI" }),
+      67890: createRun({
+        databaseId: 67890,
+        workflowName: "Clarissimi live provider smoke",
+        event: "workflow_dispatch",
+      }),
+      24680: createExternalRun(exampleSha),
+      13579: createExternalWriteRun(exampleSha),
+    },
+  });
+
+  const exitCode = await runReleaseCandidateEvidenceIssue(
+    [
+      "--sha",
+      exampleSha,
+      "--release-type",
+      "versioned-action-tag",
+      "--release-version",
+      "v1.0.0",
+      "--external-ref",
+      exampleSha,
+      "--ci-run",
+      "12345",
+      "--live-run",
+      "67890",
+      "--external-run",
+      "24680",
+      "--external-write-run",
+      "13579",
+      "--provider-model",
+      "gpt-4.1-mini",
+      "--print",
+    ],
+    harness.runtime,
+  );
+
+  const output = harness.logs.join("\n");
+  assert.equal(exitCode, 0);
+  assert.match(output, /versioned Action tag `v1\.0\.0` under ADR 0055/);
+  assert.match(output, /publishing immutable stable tag `v1\.0\.0`/);
+  assert.match(output, /non-prerelease GitHub Release/);
+  assert.match(output, /Moving alias `v1` remains a separate ADR 0055 step/);
+});
+
 test("Marketplace evidence records ADR 0045 and the interactive publication boundary", async () => {
   const harness = createHarness({
     headSha: exampleSha,
@@ -274,6 +322,56 @@ test("major alias evidence records v0 with the exact expected SHA", async () => 
   assert.match(body, /Marketplace status: not changed by alias promotion/);
   assert.match(body, /public listing must be verified independently/);
   assert.doesNotMatch(body, /Marketplace publication remains blocked/);
+});
+
+test("major alias evidence records v1 with the exact expected SHA", async () => {
+  const harness = createHarness({
+    headSha: exampleSha,
+    runs: {
+      12345: createRun({ databaseId: 12345, workflowName: "CI" }),
+      67890: createRun({
+        databaseId: 67890,
+        workflowName: "Clarissimi live provider smoke",
+        event: "workflow_dispatch",
+        headBranch: "v1.0.0",
+      }),
+      24680: createExternalRun("v1"),
+      13579: createExternalWriteRun("v1"),
+    },
+  });
+
+  const exitCode = await runReleaseCandidateEvidenceIssue(
+    [
+      "--sha",
+      exampleSha,
+      "--release-type",
+      "major-alias",
+      "--release-version",
+      "v1.0.0",
+      "--external-ref",
+      "v1",
+      "--live-ref",
+      "v1.0.0",
+      "--ci-run",
+      "12345",
+      "--live-run",
+      "67890",
+      "--external-run",
+      "24680",
+      "--external-write-run",
+      "13579",
+      "--provider-model",
+      "gpt-4.1-mini",
+      "--print",
+    ],
+    harness.runtime,
+  );
+
+  const body = harness.logs.join("\n");
+  assert.equal(exitCode, 0);
+  assert.match(body, /moving Action alias `v1` to `v1\.0\.0` under ADR 0055/);
+  assert.match(body, new RegExp(`--clarissimi-ref v1 --expected-sha ${exampleSha}`));
+  assert.match(body, /validation results support keeping moving alias `v1`/);
 });
 
 test("release candidate evidence issue resolves HEAD and creates an issue with body on stdin", async () => {
@@ -615,7 +713,7 @@ test("release candidate evidence issue rejects invalid inputs before calling git
       "--release-type",
       "versioned-action-tag",
       "--release-version",
-      "v1.0.0",
+      "v2.0.0",
     ],
     invalidReleaseVersion.runtime,
   );
@@ -623,7 +721,7 @@ test("release candidate evidence issue rejects invalid inputs before calling git
   assert.equal(invalidReleaseVersionExitCode, 2);
   assert.equal(
     invalidReleaseVersion.errors.includes(
-      "--release-version requires a v0.x.y tag authorized by ADR 0044.",
+      "--release-version requires an authorized immutable v0.x.y or v1.x.y tag.",
     ),
     true,
   );

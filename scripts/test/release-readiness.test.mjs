@@ -11,6 +11,7 @@ import {
   requiredPackageScripts,
   requiredTestGlobs,
   shellCompletionDocumentContract,
+  stableActionReleaseToolingContract,
   validateAgentAssistedDraftsDocumentContract,
   validateActionContractDocumentContract,
   validateActionInputsOutputsDocumentContract,
@@ -54,6 +55,7 @@ import {
   validateSmokePackCandidateContract,
   validateServiceLevelsDocumentContract,
   validateShellCompletionDocumentContract,
+  validateStableActionReleaseToolingContract,
   validateSecretsDocumentContract,
   validateTrackedGeneratedOutputPaths,
   validateWorkspaceContract,
@@ -358,10 +360,13 @@ test("release readiness rejects release policy document drift", () => {
       "ADR 0055 defines `v1.0.0` as the first stable root Action candidate",
       "No stable Action boundary exists.",
     )
+    .replace("release, Marketplace, validation-record,", "release tooling is absent")
     .replace(
-      "stable v1 publication remains blocked until the release, Marketplace, release-result, and alias",
-      "stable v1 publication is immediate",
+      "external-consumer, and alias tools now accept both authorized v0 and v1 lines",
+      "only v0 tools exist",
     )
+    .replace("stable v1 publication remains blocked until the", "stable v1 is immediate")
+    .replace("candidate consumer documents name `v1.0.0`", "candidate docs may stay stale")
     .replace("- Public package publication: blocked.", "- Public package publication: allowed.")
     .replace(
       "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044",
@@ -377,7 +382,7 @@ test("release readiness rejects release policy document drift", () => {
     )
     .replace("## Stable v1 Compatibility Contract", "## Unspecified Stable Contract")
     .replace(
-      "- Stable root Action tag: `v1.0.0` is selected by ADR 0055 but remains blocked",
+      "- Stable root Action tag: `v1.0.0` is selected by ADR 0055; v1-capable release tooling is",
       "- Stable root Action tag: publish immediately.",
     )
     .replace(
@@ -397,6 +402,10 @@ test("release readiness rejects release policy document drift", () => {
       "The v1 release deletes v0 refs.",
     )
     .replace("npm publication remains a separate decision", "npm publication is bundled")
+    .replace(
+      "`scripts/action-release-version.mjs` is the shared allowlist and alias-derivation boundary",
+      "release versions are duplicated",
+    )
     .replace("## Marketplace Release Procedure", "## Uncontrolled Marketplace Publication")
     .replace("release type `marketplace-action-tag`", "")
     .replace("Before any tag is created or pushed, the publisher reads `README.md`,", "")
@@ -421,9 +430,21 @@ test("release readiness rejects release policy document drift", () => {
     .replace("the orphan audit is not dispatched because no full-write or", "")
     .replace("the release gate still fails", "the release gate passes")
     .replace("the orphan audit still runs", "the orphan audit is skipped")
-    .replace("pnpm run publish-action-release -- --version <v0.x.y> --sha <candidate-sha>", "")
     .replace(
-      "pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>",
+      "pnpm run publish-action-release -- --version <v0.x.y|v1.x.y> --sha <candidate-sha>",
+      "",
+    )
+    .replace(
+      "pnpm run promote-action-major-alias -- --release-version <v0.x.y|v1.x.y> --sha <commit-sha>",
+      "",
+    )
+    .replace("## Stable v1 Release Procedure", "## Ungated v1 Release")
+    .replace(
+      "pnpm run publish-action-release -- --version v1.0.0 --sha <candidate-sha> --release-kind stable",
+      "",
+    )
+    .replace(
+      "pnpm run promote-action-major-alias -- --release-version v1.0.0 --sha <candidate-sha>",
       "",
     )
     .replace("## Major Alias Promotion", "## Unverified Alias Promotion")
@@ -439,18 +460,22 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include ADR 0034 authorizes moving major alias `v0`.",
     "docs/ops/release.md must include ADR 0045 authorizes free GitHub Marketplace.",
     "docs/ops/release.md must include ADR 0055 defines `v1.0.0` as the first stable root Action candidate.",
-    "docs/ops/release.md must include stable v1 publication remains blocked until the release, Marketplace, release-result, and alias.",
+    "docs/ops/release.md must include release, Marketplace, validation-record,.",
+    "docs/ops/release.md must include external-consumer, and alias tools now accept both authorized v0 and v1 lines.",
+    "docs/ops/release.md must include stable v1 publication remains blocked until the.",
+    "docs/ops/release.md must include candidate consumer documents name `v1.0.0`.",
     "docs/ops/release.md must include - Public package publication: blocked..",
     "docs/ops/release.md must include - Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044.",
     "docs/ops/release.md must include - Moving GitHub Action major alias: `v0` is allowed under ADR 0034.",
     "docs/ops/release.md must include - GitHub Marketplace publication: allowed for the validated root Action under ADR 0045.",
-    "docs/ops/release.md must include - Stable root Action tag: `v1.0.0` is selected by ADR 0055 but remains blocked.",
+    "docs/ops/release.md must include - Stable root Action tag: `v1.0.0` is selected by ADR 0055; v1-capable release tooling is.",
     "docs/ops/release.md must include ## Stable v1 Compatibility Contract.",
     "docs/ops/release.md must include `clarissimi.assessment/v1` is a persisted data-schema identifier, not the Action release major..",
     "docs/ops/release.md must include Every persisted version registered when `v1.0.0` ships remains readable throughout the v1 Action.",
     "docs/ops/release.md must include Immutable `v1.x.y` tags never move. Alias `v1` uses exact-SHA verification.",
     "docs/ops/release.md must include The v1 release leaves existing `v0.x.y` tags and alias `v0` unchanged..",
     "docs/ops/release.md must include npm publication remains a separate decision.",
+    "docs/ops/release.md must include `scripts/action-release-version.mjs` is the shared allowlist and alias-derivation boundary.",
     "docs/ops/release.md must include ## Marketplace Release Procedure.",
     "docs/ops/release.md must include release type `marketplace-action-tag`.",
     "docs/ops/release.md must include Before any tag is created or pushed, the publisher reads `README.md`,.",
@@ -460,8 +485,7 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include pnpm run verify-marketplace-release -- --version <v0.x.y>.",
     "docs/ops/release.md must include Marketplace rollback: clear the Marketplace setting without deleting or moving the immutable tag..",
     "docs/ops/release.md must include ## Major Alias Promotion.",
-    "docs/ops/release.md must include `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`.",
-    "docs/ops/release.md must include pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>.",
+    "docs/ops/release.md must include pnpm run promote-action-major-alias -- --release-version <v0.x.y|v1.x.y> --sha <commit-sha>.",
     "docs/ops/release.md must include `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`.",
     "docs/ops/release.md must include `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`.",
     "docs/ops/release.md must include all jobs report.",
@@ -469,7 +493,30 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include the orphan audit is not dispatched because no full-write or.",
     "docs/ops/release.md must include the release gate still fails.",
     "docs/ops/release.md must include the orphan audit still runs.",
-    "docs/ops/release.md must include pnpm run publish-action-release -- --version <v0.x.y> --sha <candidate-sha>.",
+    "docs/ops/release.md must include pnpm run publish-action-release -- --version <v0.x.y|v1.x.y> --sha <candidate-sha>.",
+    "docs/ops/release.md must include ## Stable v1 Release Procedure.",
+    "docs/ops/release.md must include pnpm run publish-action-release -- --version v1.0.0 --sha <candidate-sha> --release-kind stable.",
+    "docs/ops/release.md must include pnpm run promote-action-major-alias -- --release-version v1.0.0 --sha <candidate-sha>.",
+  ]);
+});
+
+test("release readiness accepts stable v0 and v1 release tooling synchronization", () => {
+  assert.deepEqual(
+    validateStableActionReleaseToolingContract(createStableActionReleaseToolingTexts()),
+    [],
+  );
+});
+
+test("release readiness rejects stable Action release tooling drift", () => {
+  const texts = createStableActionReleaseToolingTexts();
+  const first = stableActionReleaseToolingContract.documents[0];
+  delete texts[first.path];
+  const second = stableActionReleaseToolingContract.documents[1];
+  texts[second.path] = texts[second.path].replace(second.requiredSnippets[0], "");
+
+  assert.deepEqual(validateStableActionReleaseToolingContract(texts), [
+    `${first.path} must be readable for stable Action release tooling contract.`,
+    `${second.path} must include ${second.requiredSnippets[0]}.`,
   ]);
 });
 
@@ -554,16 +601,16 @@ test("release readiness rejects README validation drift", () => {
     .replace("- `pnpm run hosted-ci-validation`", "")
     .replace("- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`", "")
     .replace(
-      "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>`",
+      "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <v0|v1> --expected-sha <commit-sha>`",
       "",
     )
     .replace(
-      "- `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
+      "- `pnpm run verify-action-major-tag -- --release-version <v0.x.y|v1.x.y> --sha <commit-sha>`",
       "",
     )
-    .replace("- `pnpm run verify-marketplace-release -- --version <v0.x.y>`", "")
+    .replace("- `pnpm run verify-marketplace-release -- --version <v0.x.y|v1.x.y>`", "")
     .replace(
-      "- `pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>`",
+      "- `pnpm run promote-action-major-alias -- --release-version <v0.x.y|v1.x.y> --sha <commit-sha>`",
       "",
     )
     .replace(
@@ -593,10 +640,10 @@ test("release readiness rejects README validation drift", () => {
     "README.md must include - `pnpm run live-provider-smoke`.",
     "README.md must include - `pnpm run hosted-ci-validation`.",
     "README.md must include - `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`.",
-    "README.md must include - `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>`.",
-    "README.md must include - `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`.",
-    "README.md must include - `pnpm run verify-marketplace-release -- --version <v0.x.y>`.",
-    "README.md must include - `pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>`.",
+    "README.md must include - `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <v0|v1> --expected-sha <commit-sha>`.",
+    "README.md must include - `pnpm run verify-action-major-tag -- --release-version <v0.x.y|v1.x.y> --sha <commit-sha>`.",
+    "README.md must include - `pnpm run verify-marketplace-release -- --version <v0.x.y|v1.x.y>`.",
+    "README.md must include - `pnpm run promote-action-major-alias -- --release-version <v0.x.y|v1.x.y> --sha <commit-sha>`.",
     "README.md must include - `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`.",
     "README.md must include Release-only credentialed checks are:.",
     "README.md must include `format` runs the repository-wide Oxfmt baseline accepted by ADR 0036.",
@@ -1239,6 +1286,12 @@ test("release readiness rejects Action contract document drift", () => {
       "GitHub API base URLs must use HTTPS and must not include URL credentials, a query, or a fragment.",
       "GitHub API base URLs accept any protocol.",
     )
+    .replace("ADR 0055 defines the stable `v1` line.", "No stable v1 contract exists.")
+    .replace("require a non-draft and non-prerelease GitHub Release", "allow draft prereleases")
+    .replace(
+      "independent from the persisted `clarissimi.assessment/v1` schema identifier",
+      "coupled to the persisted schema version",
+    )
     .replace(
       "Unsupported `INPUT_MODE` values must fail",
       "Unsupported `INPUT_MODE` values are ignored",
@@ -1281,6 +1334,9 @@ test("release readiness rejects Action contract document drift", () => {
     "docs/github-action/action-contract.md must include Secret values must be read from GitHub Actions secrets or environment variables, not action inputs..",
     "docs/github-action/action-contract.md must include Required merged pull request event fields are parsed through the same runtime fixture validator.",
     "docs/github-action/action-contract.md must include GitHub API base URLs must use HTTPS and must not include URL credentials, a query, or a fragment..",
+    "docs/github-action/action-contract.md must include ADR 0055 defines the stable `v1` line..",
+    "docs/github-action/action-contract.md must include require a non-draft and non-prerelease GitHub Release.",
+    "docs/github-action/action-contract.md must include independent from the persisted `clarissimi.assessment/v1` schema identifier.",
     "docs/github-action/action-contract.md must include Unsupported `INPUT_MODE` values must fail.",
     "docs/github-action/action-contract.md must include Invalid summary paths fail before provider.",
     "docs/github-action/action-contract.md must include Normal provider drafts remain non-public and fail closed.",
@@ -2296,7 +2352,10 @@ function createReleasePolicyText() {
     "ADR 0034 authorizes moving major alias `v0`",
     "ADR 0045 authorizes free GitHub Marketplace",
     "ADR 0055 defines `v1.0.0` as the first stable root Action candidate",
-    "stable v1 publication remains blocked until the release, Marketplace, release-result, and alias",
+    "release, Marketplace, validation-record,",
+    "external-consumer, and alias tools now accept both authorized v0 and v1 lines",
+    "stable v1 publication remains blocked until the",
+    "candidate consumer documents name `v1.0.0`",
     "The current root and workspace packages stay private at `0.0.0`.",
     "Do not bump package versions,",
     "create another moving major alias",
@@ -2309,13 +2368,14 @@ function createReleasePolicyText() {
     "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044",
     "- Moving GitHub Action major alias: `v0` is allowed under ADR 0034",
     "- GitHub Marketplace publication: allowed for the validated root Action under ADR 0045",
-    "- Stable root Action tag: `v1.0.0` is selected by ADR 0055 but remains blocked",
+    "- Stable root Action tag: `v1.0.0` is selected by ADR 0055; v1-capable release tooling is",
     "## Stable v1 Compatibility Contract",
     "`clarissimi.assessment/v1` is a persisted data-schema identifier, not the Action release major.",
     "Every persisted version registered when `v1.0.0` ships remains readable throughout the v1 Action",
     "Immutable `v1.x.y` tags never move. Alias `v1` uses exact-SHA verification",
     "The v1 release leaves existing `v0.x.y` tags and alias `v0` unchanged.",
     "npm publication remains a separate decision",
+    "`scripts/action-release-version.mjs` is the shared allowlist and alias-derivation boundary",
     "",
     "The versioned Action tag requires:",
     "Public package publication remains blocked even when every technical gate above passes.",
@@ -2331,7 +2391,7 @@ function createReleasePolicyText() {
     "release type `versioned-action-tag`",
     "## Major Alias Promotion",
     "`pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
-    "pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>",
+    "pnpm run promote-action-major-alias -- --release-version <v0.x.y|v1.x.y> --sha <commit-sha>",
     "publish a corrective patch tag such as `v0.1.1`",
     "`pnpm run hosted-ci-validation`",
     "`pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
@@ -2341,7 +2401,10 @@ function createReleasePolicyText() {
     "the orphan audit is not dispatched because no full-write or",
     "the release gate still fails",
     "the orphan audit still runs",
-    "pnpm run publish-action-release -- --version <v0.x.y> --sha <candidate-sha>",
+    "pnpm run publish-action-release -- --version <v0.x.y|v1.x.y> --sha <candidate-sha>",
+    "## Stable v1 Release Procedure",
+    "pnpm run publish-action-release -- --version v1.0.0 --sha <candidate-sha> --release-kind stable",
+    "pnpm run promote-action-major-alias -- --release-version v1.0.0 --sha <candidate-sha>",
     "`pnpm run release-evidence-cleanup -- --run-id <full-write-run-id>`",
     "release PR, release issue, or GitHub release notes",
     "Do not make an evidence-only commit after final candidate validation",
@@ -2356,6 +2419,15 @@ function createReleasePolicyText() {
     "public package publication remains blocked",
     "",
   ].join("\n");
+}
+
+function createStableActionReleaseToolingTexts() {
+  return Object.fromEntries(
+    stableActionReleaseToolingContract.documents.map((document) => [
+      document.path,
+      document.requiredSnippets.join("\n"),
+    ]),
+  );
 }
 
 function createProductPositioningTexts() {
@@ -2426,10 +2498,10 @@ function createReadmeValidationText() {
     "",
     "- `pnpm run hosted-ci-validation`",
     "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <tag-or-sha>`",
-    "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref v0 --expected-sha <commit-sha>`",
-    "- `pnpm run verify-action-major-tag -- --release-version <v0.x.y> --sha <commit-sha>`",
-    "- `pnpm run verify-marketplace-release -- --version <v0.x.y>`",
-    "- `pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>`",
+    "- `pnpm run hosted-external-consumer-smoke -- --clarissimi-ref <v0|v1> --expected-sha <commit-sha>`",
+    "- `pnpm run verify-action-major-tag -- --release-version <v0.x.y|v1.x.y> --sha <commit-sha>`",
+    "- `pnpm run verify-marketplace-release -- --version <v0.x.y|v1.x.y>`",
+    "- `pnpm run promote-action-major-alias -- --release-version <v0.x.y|v1.x.y> --sha <commit-sha>`",
     "- `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`",
     "",
     "Release-only credentialed checks are:",
@@ -2958,6 +3030,9 @@ function createActionContractDocumentText() {
     "Secret values must be read from GitHub Actions secrets or environment variables, not action inputs.",
     "Required merged pull request event fields are parsed through the same runtime fixture validator",
     "GitHub API base URLs must use HTTPS and must not include URL credentials, a query, or a fragment.",
+    "ADR 0055 defines the stable `v1` line.",
+    "Release tools require a non-draft and non-prerelease GitHub Release and keep the Action major",
+    "independent from the persisted `clarissimi.assessment/v1` schema identifier.",
     "Unsupported `INPUT_MODE` values must fail as usage errors before collection, provider, staging,",
     "branch, or pull request work begins.",
     "",

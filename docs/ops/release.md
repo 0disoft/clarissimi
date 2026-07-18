@@ -16,10 +16,11 @@ selected, already validated immutable `v0.x.y` release. ADR 0045 authorizes free
 publication beginning with non-prerelease release `v0.3.0`.
 
 ADR 0055 defines `v1.0.0` as the first stable root Action candidate and keeps Action release
-versions independent from persisted schema versions. It does not authorize an immediate tag:
-stable v1 publication remains blocked until the release, Marketplace, release-result, and alias
-tools accept the v1 line, their v0 and v1 regressions pass, and the exact candidate completes every
-hosted and external gate in this document.
+versions independent from persisted schema versions. The release, Marketplace, validation-record,
+external-consumer, and alias tools now accept both authorized v0 and v1 lines with regression
+coverage. It does not authorize an immediate tag: stable v1 publication remains blocked until the
+candidate consumer documents name `v1.0.0` and the exact candidate completes every hosted,
+post-tag, Marketplace, and external gate in this document.
 
 The current root and workspace packages stay private at `0.0.0`. Do not bump package versions,
 remove `private: true`, publish npm packages, or create another moving major alias. Marketplace
@@ -39,8 +40,9 @@ publication is limited to the root Action release boundary accepted by ADR 0045.
   release passes the alias verification and external consumer gates.
 - GitHub Marketplace publication: allowed for the validated root Action under ADR 0045; npm and
   workspace-package publication remain blocked.
-- Stable root Action tag: `v1.0.0` is selected by ADR 0055 but remains blocked until v1-capable
-  release tooling and every exact-SHA, post-tag, Marketplace, and alias gate pass.
+- Stable root Action tag: `v1.0.0` is selected by ADR 0055; v1-capable release tooling is
+  implemented, but publication remains blocked until candidate documentation and every exact-SHA,
+  post-tag, Marketplace, and alias gate pass.
 
 ## Stable v1 Compatibility Contract
 
@@ -61,6 +63,8 @@ publication is limited to the root Action release boundary accepted by ADR 0045.
   duration is promised.
 - npm publication remains a separate decision with its own versioning, provenance, authentication,
   workspace scope, and rollback contract.
+- `scripts/action-release-version.mjs` is the shared allowlist and alias-derivation boundary for v0
+  and v1 release tools. An unsupported future major fails before network or Git mutation.
 
 ## Pre-Release Gates
 
@@ -259,7 +263,7 @@ After the versioned evidence issue exists for the exact candidate SHA, publish t
 immutable tag and GitHub release with the repository-owned publisher:
 
 ```powershell
-pnpm run publish-action-release -- --version <v0.x.y> --sha <candidate-sha>
+pnpm run publish-action-release -- --version <v0.x.y|v1.x.y> --sha <candidate-sha>
 ```
 
 The publisher requires a clean worktree, one exact matching release evidence issue, and a remote
@@ -269,13 +273,38 @@ the completed evidence issue.
 If tag publication succeeds but release creation fails, rerun the same command; it accepts only the
 same immutable tag target and continues the missing release step.
 
+## Stable v1 Release Procedure
+
+1. Update root onboarding, the Action guide, and `SECURITY.md` at the final candidate SHA so their
+   immutable consumer reference is `0disoft/clarissimi@v1.0.0` and no stale immutable reference
+   remains.
+2. Run every local and exact-SHA hosted gate, then collect versioned Action validation results with
+   release version `v1.0.0` and the candidate SHA as the pre-tag external ref.
+3. Publish `v1.0.0` only as a stable, non-prerelease release:
+
+   ```powershell
+   pnpm run publish-action-release -- --version v1.0.0 --sha <candidate-sha> --release-kind stable
+   ```
+
+4. Repeat live-provider, external dry-run, full-write, cleanup, orphan-audit, and Marketplace checks
+   against the immutable `v1.0.0` tag.
+5. Promote alias `v1` only after those results pass:
+
+   ```powershell
+   pnpm run promote-action-major-alias -- --release-version v1.0.0 --sha <candidate-sha>
+   ```
+
+The tools derive `v1` from the release major, reject an explicit mismatched alias, and roll a newly
+created alias back to absence if post-promotion verification fails. They do not move or delete
+`v0`, any immutable tag, or persisted ledger data.
+
 ## Major Alias Promotion
 
 Promote `v0` only after the selected immutable version tag and non-draft GitHub Release exist and
 all versioned-release evidence is complete:
 
 ```powershell
-pnpm run promote-action-major-alias -- --release-version <v0.x.y> --sha <commit-sha>
+pnpm run promote-action-major-alias -- --release-version <v0.x.y|v1.x.y> --sha <commit-sha>
 ```
 
 The repository-owned promoter performs the following steps as one fail-closed operation:

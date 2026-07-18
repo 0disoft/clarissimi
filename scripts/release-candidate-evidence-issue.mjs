@@ -1,6 +1,11 @@
 import { spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
+import {
+  isAuthorizedActionMajorAlias,
+  parseAuthorizedActionReleaseVersion,
+} from "./action-release-version.mjs";
+
 const defaults = {
   repo: "0disoft/clarissimi",
   branch: "main",
@@ -28,7 +33,7 @@ const defaults = {
 
 const usageText = [
   "Usage:",
-  "  pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --external-run <run-id> --external-write-run <run-id> --provider-model <model> [--evidence-id <32-hex>] [--external-ref <immutable-tag-or-sha|v0>] [--live-ref <branch-or-tag>] [--external-repo <owner/name>] [--release-type <source-only|versioned-action-tag|marketplace-action-tag|major-alias>] [--release-version <v0.x.y>] [--provider-endpoint <chat-completions-url>] [--provider-thinking <mode>] [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch-name>] [--title <issue-title>] [--print]",
+  "  pnpm run release-candidate-evidence-issue -- --ci-run <run-id> --live-run <run-id> --external-run <run-id> --external-write-run <run-id> --provider-model <model> [--evidence-id <32-hex>] [--external-ref <immutable-tag-or-sha|v0|v1>] [--live-ref <branch-or-tag>] [--external-repo <owner/name>] [--release-type <source-only|versioned-action-tag|marketplace-action-tag|major-alias>] [--release-version <v0.x.y|v1.x.y>] [--provider-endpoint <chat-completions-url>] [--provider-thinking <mode>] [--sha <commit-sha>] [--repo <owner/name>] [--branch <branch-name>] [--title <issue-title>] [--print]",
   "",
   "Examples:",
   "  pnpm run release-candidate-evidence-issue -- --ci-run 12345 --live-run 67890 --external-run 24680 --external-write-run 13579 --provider-model gpt-4.1-mini",
@@ -113,9 +118,12 @@ async function run(argv, runtime) {
 
   if (
     ["versioned-action-tag", "marketplace-action-tag", "major-alias"].includes(releaseType) &&
-    !isVersionTag(args.releaseVersion)
+    parseAuthorizedActionReleaseVersion(args.releaseVersion) === undefined
   ) {
-    return usageFailure(runtime, "--release-version requires a v0.x.y tag authorized by ADR 0044.");
+    return usageFailure(
+      runtime,
+      "--release-version requires an authorized immutable v0.x.y or v1.x.y tag.",
+    );
   }
 
   if (releaseType === "source-only" && args.releaseVersion !== undefined) {
@@ -150,10 +158,10 @@ async function run(argv, runtime) {
     (["versioned-action-tag", "marketplace-action-tag"].includes(releaseType)
       ? args.releaseVersion
       : sha);
-  if (!isImmutableClarissimiRef(externalRef) && externalRef !== "v0") {
+  if (!isImmutableClarissimiRef(externalRef) && !isAuthorizedActionMajorAlias(externalRef)) {
     return usageFailure(
       runtime,
-      "--external-ref must be a semantic version tag, 40-character commit SHA, or v0.",
+      "--external-ref must be a semantic version tag, 40-character commit SHA, v0, or v1.",
     );
   }
   if (releaseType === "source-only" && externalRef !== sha) {
@@ -169,8 +177,14 @@ async function run(argv, runtime) {
       "versioned Action evidence requires --external-ref to equal --release-version or --sha.",
     );
   }
-  if (releaseType === "major-alias" && externalRef !== "v0") {
-    return usageFailure(runtime, "major alias evidence requires --external-ref v0.");
+  if (releaseType === "major-alias") {
+    const expectedAlias = parseAuthorizedActionReleaseVersion(args.releaseVersion)?.alias;
+    if (externalRef !== expectedAlias) {
+      return usageFailure(
+        runtime,
+        `major alias evidence requires --external-ref ${expectedAlias}.`,
+      );
+    }
   }
   const liveRef = args.liveRef ?? branch;
   if (liveRef.trim() === "") {
@@ -220,7 +234,7 @@ async function run(argv, runtime) {
     (["versioned-action-tag", "marketplace-action-tag"].includes(releaseType)
       ? `Release candidate evidence for ${args.releaseVersion} at ${sha.slice(0, 7)}`
       : releaseType === "major-alias"
-        ? `Major alias evidence for v0 to ${args.releaseVersion} at ${sha.slice(0, 7)}`
+        ? `Major alias evidence for ${externalRef} to ${args.releaseVersion} at ${sha.slice(0, 7)}`
         : `Release candidate evidence for ${sha.slice(0, 7)}`);
   const body = renderIssueBody({
     repo,
@@ -351,10 +365,6 @@ function isCommitSha(value) {
 
 function isEvidenceId(value) {
   return typeof value === "string" && /^[0-9a-f]{32}$/.test(value);
-}
-
-function isVersionTag(value) {
-  return typeof value === "string" && /^v0\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$/.test(value);
 }
 
 function isImmutableClarissimiRef(value) {
@@ -587,9 +597,16 @@ function validateExternalWriteRun(run, options) {
 }
 
 function renderIssueBody(options) {
-  const versionedReleaseDecision = options.releaseVersion?.startsWith("v0.1.")
-    ? "ADR 0031"
-    : "ADR 0044";
+  const releaseVersion = parseAuthorizedActionReleaseVersion(options.releaseVersion);
+  const stableV1 = releaseVersion?.major === 1;
+  const majorAlias = releaseVersion?.alias;
+  const versionedReleaseDecision = stableV1
+    ? "ADR 0055"
+    : options.releaseVersion?.startsWith("v0.1.")
+      ? "ADR 0031"
+      : "ADR 0044";
+  const marketplaceDecision = stableV1 ? "ADR 0055 using the ADR 0045 procedure" : "ADR 0045";
+  const aliasDecision = stableV1 ? "ADR 0055" : "ADR 0034";
   const liveProviderCommand = [
     "pnpm run hosted-live-provider-smoke --",
     `--model ${options.providerModel}`,
@@ -603,7 +620,7 @@ function renderIssueBody(options) {
   const externalConsumerCommand = [
     "pnpm run hosted-external-consumer-smoke --",
     `--clarissimi-ref ${options.externalRef}`,
-    options.externalRef === "v0" ? `--expected-sha ${options.sha}` : undefined,
+    isAuthorizedActionMajorAlias(options.externalRef) ? `--expected-sha ${options.sha}` : undefined,
     options.evidenceId === undefined ? undefined : `--evidence-id ${options.evidenceId}`,
     options.externalRepo === defaults.externalRepo ? undefined : `--repo ${options.externalRepo}`,
   ]
@@ -613,34 +630,38 @@ function renderIssueBody(options) {
     `gh workflow run clarissimi-full-write-smoke.yml --repo ${options.externalRepo}`,
     `--ref ${defaults.externalBranch}`,
     `-f clarissimi-ref=${options.externalRef}`,
-    options.externalRef === "v0" ? `-f expected-sha=${options.sha}` : undefined,
+    isAuthorizedActionMajorAlias(options.externalRef)
+      ? `-f expected-sha=${options.sha}`
+      : undefined,
     options.evidenceId === undefined ? undefined : `-f evidence-id=${options.evidenceId}`,
   ]
     .filter(Boolean)
     .join(" ");
   const releaseType =
     options.releaseType === "marketplace-action-tag"
-      ? `GitHub Marketplace Action tag \`${options.releaseVersion}\` under ADR 0045`
+      ? `GitHub Marketplace Action tag \`${options.releaseVersion}\` under ${marketplaceDecision}`
       : options.releaseType === "versioned-action-tag"
         ? `versioned Action tag \`${options.releaseVersion}\` under ${versionedReleaseDecision}`
         : options.releaseType === "major-alias"
-          ? `moving Action alias \`v0\` to \`${options.releaseVersion}\` under ADR 0034`
+          ? `moving Action alias \`${majorAlias}\` to \`${options.releaseVersion}\` under ${aliasDecision}`
           : "source-only merge evidence";
   const releaseDecision =
     options.releaseType === "marketplace-action-tag"
-      ? "ADR 0045"
+      ? marketplaceDecision
       : options.releaseType === "versioned-action-tag"
         ? versionedReleaseDecision
         : options.releaseType === "major-alias"
-          ? "ADR 0034"
+          ? aliasDecision
           : "`docs/ops/release.md` source-only merge policy";
   const releasePolicyConclusion =
     options.releaseType === "marketplace-action-tag"
-      ? `These validation results support publishing immutable tag \`${options.releaseVersion}\` at \`${options.sha}\` as a non-prerelease GitHub Release, then enabling its GitHub Marketplace listing under ADR 0045. Moving alias \`v0\` remains a separate ADR 0034 step after post-tag and Marketplace verification.`
+      ? `These validation results support publishing immutable tag \`${options.releaseVersion}\` at \`${options.sha}\` as a non-prerelease GitHub Release, then enabling its GitHub Marketplace listing under ${marketplaceDecision}. Moving alias \`${majorAlias}\` remains a separate ${aliasDecision} step after post-tag and Marketplace verification.`
       : options.releaseType === "versioned-action-tag"
-        ? `These validation results support publishing immutable tag \`${options.releaseVersion}\` at \`${options.sha}\` and creating its GitHub pre-release. Moving alias \`v0\` remains a separate ADR 0034 step after post-tag verification.`
+        ? stableV1
+          ? `These validation results support publishing immutable stable tag \`${options.releaseVersion}\` at \`${options.sha}\` as a non-prerelease GitHub Release. Moving alias \`${majorAlias}\` remains a separate ${aliasDecision} step after post-tag and Marketplace verification.`
+          : `These validation results support publishing immutable tag \`${options.releaseVersion}\` at \`${options.sha}\` and creating its GitHub pre-release. Moving alias \`${majorAlias}\` remains a separate ${aliasDecision} step after post-tag verification.`
         : options.releaseType === "major-alias"
-          ? `These validation results support keeping moving alias \`v0\` at immutable release \`${options.releaseVersion}\` commit \`${options.sha}\`. Consumers that require reproducibility should pin the immutable tag or commit SHA.`
+          ? `These validation results support keeping moving alias \`${majorAlias}\` at immutable release \`${options.releaseVersion}\` commit \`${options.sha}\`. Consumers that require reproducibility should pin the immutable tag or commit SHA.`
           : "These validation results support a source-only merge. A versioned Action tag requires the release type and version to be recorded explicitly.";
 
   return [
@@ -656,7 +677,7 @@ function renderIssueBody(options) {
     `- Release decision: ${releaseDecision}`,
     "- Package status: root and workspace packages remain private at `0.0.0`; public package publication remains blocked.",
     options.releaseType === "marketplace-action-tag"
-      ? "- Marketplace status: authorized by ADR 0045 for this validated root Action release; interactive publication and public listing verification remain pending."
+      ? `- Marketplace status: authorized by ${marketplaceDecision} for this validated root Action release; interactive publication and public listing verification remain pending.`
       : options.releaseType === "major-alias"
         ? "- Marketplace status: not changed by alias promotion; ADR 0045 authorizes root Action Marketplace publication separately, and the public listing must be verified independently."
         : "- Marketplace status: not established by these results; ADR 0045 governs root Action Marketplace publication separately.",

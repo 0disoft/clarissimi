@@ -92,11 +92,29 @@ test("revalidates an alias already at the target without rewriting it", async ()
   );
 });
 
-function args() {
-  return ["--release-version", "v0.2.0", "--sha", targetSha];
+test("creates v1 from an immutable stable v1 release", async () => {
+  const harness = createHarness({ version: "v1.0.0" });
+  const exitCode = await runPromoteActionMajorAlias(args({ version: "v1.0.0" }), harness.runtime);
+
+  assert.equal(exitCode, 0);
+  assert.equal(harness.aliasSha, targetSha);
+  assert.equal(
+    harness.calls.some(
+      ({ args: commandArgs }) =>
+        commandArgs.includes("--force-with-lease=refs/tags/v1:") &&
+        commandArgs.includes(`${targetSha}:refs/tags/v1`),
+    ),
+    true,
+  );
+});
+
+function args(options = {}) {
+  return ["--release-version", options.version ?? "v0.2.0", "--sha", targetSha];
 }
 
 function createHarness(options = {}) {
+  const version = options.version ?? "v0.2.0";
+  const alias = version.startsWith("v1.") ? "v1" : "v0";
   let aliasSha = options.aliasSha;
   const calls = [];
   const logs = [];
@@ -111,19 +129,20 @@ function createHarness(options = {}) {
       if (command === "git" && commandArgs[0] === "cat-file") return ok();
       if (command === "git" && commandArgs[0] === "ls-remote") {
         const tag = commandArgs.at(-2).replace("refs/tags/", "");
-        if (tag === "v0.2.0") {
+        if (tag === version) {
           return ok(
-            `bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\trefs/tags/v0.2.0\n${targetSha}\trefs/tags/v0.2.0^{}`,
+            `bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\trefs/tags/${version}\n${targetSha}\trefs/tags/${version}^{}`,
           );
         }
-        return aliasSha === undefined ? ok() : ok(`${aliasSha}\trefs/tags/v0`);
+        return aliasSha === undefined ? ok() : ok(`${aliasSha}\trefs/tags/${alias}`);
       }
       if (command === "gh" && commandArgs[0] === "release") {
         return ok(
           JSON.stringify({
-            tagName: "v0.2.0",
+            tagName: version,
             isDraft: false,
-            url: "https://github.com/0disoft/clarissimi/releases/tag/v0.2.0",
+            isPrerelease: false,
+            url: `https://github.com/0disoft/clarissimi/releases/tag/${version}`,
           }),
         );
       }

@@ -82,6 +82,11 @@ ADR 0034 permits moving major alias `v0` only when it resolves to the exact comm
 immutable `v0.x.y` release. Immutable version tags never move. Consumers that need deterministic
 dependency review should pin the immutable patch tag or commit SHA instead of the major alias.
 
+ADR 0055 defines the stable `v1` line. The release tools derive alias `v1` from an immutable
+`v1.x.y` tag, require a non-draft and non-prerelease GitHub Release, and reuse the exact-SHA,
+compare-and-swap, external consumer, cleanup, and rollback boundaries of `v0`. The stable Action
+major is independent from the persisted `clarissimi.assessment/v1` schema identifier.
+
 The future expanded action contract should include:
 
 - pull request number or event-derived target

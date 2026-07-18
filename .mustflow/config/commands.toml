@@ -654,25 +654,41 @@ network = false
 destructive = false
 required_after = ["git_stage_historical_command_retirement"]
 
-[intents.git_stage_stable_v1_contract]
+[intents.git_stage_stable_v1_tooling]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
-description = "Stage only the reviewed stable v1 decision, synchronized release and migration contracts, tests, command contract, and manifest lock."
+description = "Stage only the reviewed stable v1 release tooling, synchronized operational contracts, regression tests, command contract, and manifest lock."
 argv = [
   "git",
   "add",
   "--",
   ".mustflow/config/commands.toml",
   ".mustflow/config/manifest.lock.toml",
-  "docs/adr/README.md",
-  "docs/adr/0055-define-stable-v1-action-compatibility-boundary.md",
+  "README.md",
+  "docs/github-action/action-contract.md",
+  "docs/ops/release-candidate-evidence.md",
   "docs/ops/release.md",
-  "docs/product/03-risk-register.md",
   "docs/product/04-implementation-tracker.md",
+  "scripts/action-release-version.mjs",
+  "scripts/hosted-external-consumer-smoke.mjs",
+  "scripts/promote-action-major-alias.mjs",
+  "scripts/publish-action-release.mjs",
+  "scripts/release-candidate-evidence-issue.mjs",
+  "scripts/release-candidate-evidence-orchestrator.mjs",
   "scripts/release-readiness.mjs",
+  "scripts/test/action-release-version.test.mjs",
+  "scripts/test/hosted-external-consumer-smoke.test.mjs",
+  "scripts/test/promote-action-major-alias.test.mjs",
+  "scripts/test/publish-action-release.test.mjs",
+  "scripts/test/release-candidate-evidence-issue.test.mjs",
+  "scripts/test/release-candidate-evidence-orchestrator.test.mjs",
   "scripts/test/release-readiness.test.mjs",
+  "scripts/test/verify-action-major-tag.test.mjs",
+  "scripts/test/verify-marketplace-release.test.mjs",
+  "scripts/verify-action-major-tag.mjs",
+  "scripts/verify-marketplace-release.mjs",
 ]
 cwd = "."
 timeout_seconds = 60
@@ -684,21 +700,21 @@ effects = [
 ]
 network = false
 destructive = false
-required_after = ["stable_v1_contract_validation_complete"]
+required_after = ["stable_v1_tooling_validation_complete"]
 
-[intents.git_commit_stable_v1_contract]
+[intents.git_commit_stable_v1_tooling]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
-description = "Commit the reviewed stable v1 Action compatibility boundary and fail-closed contract coverage."
+description = "Commit the reviewed v0/v1 Action release tooling and fail-closed stable release contract coverage."
 argv = [
   "git",
   "commit",
   "-m",
-  "feat(release): define stable v1 compatibility boundary",
+  "feat(release): support stable v1 release tooling",
   "-m",
-  "Validation: docs, migration-check, release-readiness, test, format, mustflow",
+  "Validation: release-publication, major-alias, Marketplace, docs, release-readiness, test, lint, format, check, contract, mustflow",
 ]
 cwd = "."
 timeout_seconds = 120
@@ -710,7 +726,7 @@ effects = [
 ]
 network = false
 destructive = false
-required_after = ["git_stage_stable_v1_contract"]
+required_after = ["git_stage_stable_v1_tooling"]
 
 [intents.release_v0_5_2_post_tag_evidence]
 status = "manual_only"
@@ -886,10 +902,14 @@ description = "Run focused Clarissimi release evidence and immutable publication
 argv = [
   "node",
   "--test",
+  "scripts/test/action-release-version.test.mjs",
+  "scripts/test/hosted-external-consumer-smoke.test.mjs",
   "scripts/test/release-candidate-evidence-issue.test.mjs",
   "scripts/test/release-candidate-evidence-orchestrator.test.mjs",
   "scripts/test/publish-action-release.test.mjs",
   "scripts/test/promote-action-major-alias.test.mjs",
+  "scripts/test/verify-action-major-tag.test.mjs",
+  "scripts/test/verify-marketplace-release.test.mjs",
 ]
 cwd = "."
 timeout_seconds = 300
@@ -909,6 +929,8 @@ description = "Run focused CAS promotion, alias verification, and hosted evidenc
 argv = [
   "node",
   "--test",
+  "scripts/test/action-release-version.test.mjs",
+  "scripts/test/hosted-external-consumer-smoke.test.mjs",
   "scripts/test/promote-action-major-alias.test.mjs",
   "scripts/test/verify-action-major-tag.test.mjs",
   "scripts/test/release-candidate-evidence-orchestrator.test.mjs",
@@ -964,6 +986,7 @@ description = "Run focused Marketplace release metadata, evidence, publisher, an
 argv = [
   "node",
   "--test",
+  "scripts/test/action-release-version.test.mjs",
   "scripts/test/release-candidate-evidence-issue.test.mjs",
   "scripts/test/release-candidate-evidence-orchestrator.test.mjs",
   "scripts/test/publish-action-release.test.mjs",

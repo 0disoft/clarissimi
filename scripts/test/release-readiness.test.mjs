@@ -5,6 +5,7 @@ import {
   dogfoodWorkflowContracts,
   findHighRiskSecretLines,
   formatterContract,
+  implementationTrackerContract,
   migrationCompatibilityContract,
   packageOwnershipContract,
   packageReleasePolicy,
@@ -36,6 +37,7 @@ import {
   validateHostedLiveProviderWorkflowContract,
   validateHostedCiEvidence,
   validateIncidentResponseDocumentContract,
+  validateImplementationTrackerContract,
   validateLedgerFormatDocumentContract,
   validateLintAndFormatDecisionDocumentContract,
   validateMonorepoValidationDocumentContract,
@@ -344,6 +346,25 @@ test("release readiness reports workspace package release policy drift with mani
 
 test("release readiness accepts the Action release policy document contract", () => {
   assert.deepEqual(validateReleasePolicyDocumentContract(createReleasePolicyText()), []);
+});
+
+test("release readiness accepts the current implementation tracker state", () => {
+  assert.deepEqual(validateImplementationTrackerContract(createImplementationTrackerText()), []);
+});
+
+test("release readiness rejects stale implementation tracker state", () => {
+  const text = [
+    ...implementationTrackerContract.requiredSnippets.slice(1),
+    ...implementationTrackerContract.forbiddenSnippets,
+  ].join("\n");
+
+  assert.deepEqual(validateImplementationTrackerContract(text), [
+    "docs/product/04-implementation-tracker.md must include README documents opt-in `comment-mode: upsert`.",
+    "docs/product/04-implementation-tracker.md must not include README keeps comment updates marked as not implemented.",
+    "docs/product/04-implementation-tracker.md must not include does not imply `oxfmt` is already wired.",
+    "docs/product/04-implementation-tracker.md must not include Status: Corrective `v0.5.2` preparation.",
+    "docs/product/04-implementation-tracker.md must not include corrective `v0.5.2` must synchronize.",
+  ]);
 });
 
 test("release readiness rejects release policy document drift", () => {
@@ -2483,6 +2504,11 @@ function createReleasePolicyText() {
     "pnpm run publish-action-release -- --version v0.3.0 --sha <candidate-sha> --release-kind stable",
     "primary category `Code review` and secondary category `Utilities`",
     "pnpm run verify-marketplace-release -- --version <v0.x.y>",
+    "https://github.com/0disoft/clarissimi/releases/tag/v0.5.2",
+    "24a0ff299fecfa6cb70fd8f425945b2f13e284c9",
+    "https://github.com/0disoft/clarissimi/issues/20",
+    "the listing identifies `v0.5.2` as `Latest` and renders `0disoft/clarissimi@v0.5.2`",
+    "moving alias `v0` remains at the last fully verified immutable release, `v0.5.0`",
     "Marketplace rollback: clear the Marketplace setting without deleting or moving the immutable tag.",
     "## First Action Release Procedure",
     "release type `versioned-action-tag`",
@@ -2516,6 +2542,10 @@ function createReleasePolicyText() {
     "workspace-package publication remains blocked",
     "",
   ].join("\n");
+}
+
+function createImplementationTrackerText() {
+  return implementationTrackerContract.requiredSnippets.join("\n");
 }
 
 function createStableActionReleaseToolingTexts() {

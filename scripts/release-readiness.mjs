@@ -354,6 +354,11 @@ export const releasePolicyDocumentContract = {
     "pnpm run publish-action-release -- --version v0.3.0 --sha <candidate-sha> --release-kind stable",
     "primary category `Code review` and secondary category `Utilities`",
     "pnpm run verify-marketplace-release -- --version <v0.x.y>",
+    "https://github.com/0disoft/clarissimi/releases/tag/v0.5.2",
+    "24a0ff299fecfa6cb70fd8f425945b2f13e284c9",
+    "https://github.com/0disoft/clarissimi/issues/20",
+    "the listing identifies `v0.5.2` as `Latest` and renders `0disoft/clarissimi@v0.5.2`",
+    "moving alias `v0` remains at the last fully verified immutable release, `v0.5.0`",
     "Marketplace rollback: clear the Marketplace setting without deleting or moving the immutable tag.",
     "## First Action Release Procedure",
     "release type `versioned-action-tag`",
@@ -382,6 +387,25 @@ export const releasePolicyDocumentContract = {
     "Release status: immutable `v0.x.y` Action tags are allowed by ADR 0044",
     "free root Action Marketplace publication",
     "workspace-package publication remains blocked",
+  ],
+};
+
+export const implementationTrackerContract = {
+  path: "docs/product/04-implementation-tracker.md",
+  requiredSnippets: [
+    "README documents opt-in `comment-mode: upsert`",
+    "`oxfmt` as the current repository formatter",
+    "through corrective `v0.5.2` Marketplace publication and public verification",
+    "https://github.com/0disoft/clarissimi/releases/tag/v0.5.2",
+    "24a0ff299fecfa6cb70fd8f425945b2f13e284c9",
+    "moving `v0` release and SHA: `v0.5.0`",
+    "the separate `v0` compare-and-swap gate remains pending",
+  ],
+  forbiddenSnippets: [
+    "README keeps comment updates marked as not implemented",
+    "does not imply `oxfmt` is already wired",
+    "Status: Corrective `v0.5.2` preparation",
+    "corrective `v0.5.2` must synchronize",
   ],
 };
 
@@ -1714,6 +1738,7 @@ export async function runReleaseReadiness(options = {}) {
   await runWorkspacePackageReleasePolicyCheck(repoRoot);
   await runStandaloneCliDistributionContractCheck(repoRoot);
   await runReleasePolicyDocumentContractCheck(repoRoot);
+  await runImplementationTrackerContractCheck(repoRoot);
   await runStableActionReleaseToolingContractCheck(repoRoot);
   await runProductPositioningContractCheck(repoRoot);
   await runReadmeValidationContractCheck(repoRoot);
@@ -2012,6 +2037,26 @@ export function validateReleasePolicyDocumentContract(
   for (const snippet of contract.requiredSnippets) {
     if (!text.includes(snippet)) {
       issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateImplementationTrackerContract(
+  text,
+  contract = implementationTrackerContract,
+) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
+    }
+  }
+  for (const snippet of contract.forbiddenSnippets) {
+    if (text.includes(snippet)) {
+      issues.push(`${contract.path} must not include ${snippet}.`);
     }
   }
 
@@ -3003,6 +3048,23 @@ async function runReleasePolicyDocumentContractCheck(repoRoot) {
   }
 
   console.log("release policy document contract passed");
+}
+
+async function runImplementationTrackerContractCheck(repoRoot) {
+  const trackerPath = join(repoRoot, implementationTrackerContract.path);
+  let text;
+  try {
+    text = await readFile(trackerPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read ${implementationTrackerContract.path}: ${error.message}`);
+  }
+
+  const issues = validateImplementationTrackerContract(text);
+  if (issues.length > 0) {
+    throw new Error(`implementation tracker contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("implementation tracker contract passed");
 }
 
 async function runStableActionReleaseToolingContractCheck(repoRoot) {

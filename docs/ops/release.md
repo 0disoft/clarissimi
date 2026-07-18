@@ -181,12 +181,12 @@ and release checkbox state.
 Current publication record:
 
 - public listing: <https://github.com/marketplace/actions/clarissimi>
-- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.5.1>
-- exact release SHA: `a11039149ebffb82cf1accb2c559365c2376cad4`
-- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/19>
-- the listing identifies `v0.5.1` as `Latest` but still renders
-  `0disoft/clarissimi@v0.5.0`; the Marketplace gate therefore failed closed
-- `v0` remains at the last fully verified immutable release and was not moved to `v0.5.1`
+- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.5.2>
+- exact release SHA: `24a0ff299fecfa6cb70fd8f425945b2f13e284c9`
+- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/20>
+- the listing identifies `v0.5.2` as `Latest` and renders `0disoft/clarissimi@v0.5.2`
+- moving alias `v0` remains at the last fully verified immutable release, `v0.5.0`; it was not
+  moved to `v0.5.1` or `v0.5.2`
 
 After the completion record is committed, retire every version-fixed publish, promote, verification,
 Git staging, commit, push, and hosted-CI intent for that completed release. Historical exact-tag
@@ -219,9 +219,10 @@ unchanged.
 
 Corrective Marketplace release `v0.5.2` republishes the same Action runtime with synchronized
 README, Action guide, security policy, and validation contracts naming `v0.5.2`. It changes no
-Action runtime, inputs, outputs, permissions, defaults, or package-publication boundary. It must
-repeat exact-SHA candidate validation, stable publication, exact-tag external validation,
-Marketplace verification, and separate compare-and-swap `v0` promotion.
+Action runtime, inputs, outputs, permissions, defaults, or package-publication boundary. Immutable
+publication and Marketplace verification completed at
+`24a0ff299fecfa6cb70fd8f425945b2f13e284c9`. The separate compare-and-swap `v0` promotion remains
+gated and the moving alias continues to resolve to `v0.5.0`.
 
 The first post-tag full-write run `29324962538` had one Ubuntu job fail while GitHub returned its
 `Unicorn!` timeout HTML during draft PR creation. macOS and Windows passed, cleanup ran, and orphan

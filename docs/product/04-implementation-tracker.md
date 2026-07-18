@@ -361,10 +361,10 @@ Completed deliverables:
   `release-readiness`, `lint`, `smoke`, `check`, and `contract`
 - release-readiness validates that README validation guidance names the source-only merge gate,
   release-only live provider smoke commands, and fail-closed `format` and `migration-check`
-- release-readiness validates that README keeps comment updates marked as not implemented and
-  documents explicit direct commit safety boundaries
+- release-readiness validates that README documents opt-in `comment-mode: upsert` and explicit
+  direct commit safety boundaries
 - release-readiness validates that README validation guidance keeps `oxlint` as the current lint
-  gate and does not imply `oxfmt` is already wired as the repository formatter
+  gate and `oxfmt` as the current repository formatter
 - release-readiness validates the fixture dogfood workflow permission, mode, fixture, and output
   assertion contracts before reporting static release gates as passed
 - release-readiness validates that current write-mode dogfood evidence remains recorded in
@@ -943,8 +943,8 @@ Validation completed:
 
 Source: `docs/adr/0045-publish-action-to-github-marketplace.md`, `docs/ops/release.md`
 
-Status: Completed through source pull request status `v0.5.0` Marketplace publication, public
-verification, and `v0` promotion.
+Status: Completed through corrective `v0.5.2` Marketplace publication and public verification;
+moving `v0` remains at the fully validated `v0.5.0` release.
 
 Goal: make the validated root Action discoverable in GitHub Marketplace without publishing npm
 packages or weakening the immutable tag and maintainer-approval boundaries.
@@ -955,7 +955,8 @@ Completed deliverables:
 - first non-prerelease `v0.3.0` GitHub Marketplace Release, corrective immutable `v0.3.1`,
   onboarding-focused immutable `v0.3.2`, runtime-hardening immutable `v0.3.3`, and
   provider-quality immutable `v0.3.4`, Action-diagnostics immutable `v0.3.5`, and shell-completion
-  and trust-hardening immutable `v0.4.0`, and source pull request status immutable `v0.5.0`
+  and trust-hardening immutable `v0.4.0`, source pull request status immutable `v0.5.0`, concurrent
+  hardening immutable `v0.5.1`, and corrective documentation immutable `v0.5.2`
 - Marketplace categories `Code review` and `Utilities`
 - interactive developer-agreement, publication toggle, and public listing verification
 - post-tag external consumer evidence and separate compare-and-swap `v0` promotion
@@ -965,9 +966,10 @@ Completed deliverables:
 Current publication record:
 
 - public Marketplace listing: <https://github.com/marketplace/actions/clarissimi>
-- immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.5.0>
-- exact release and `v0` SHA: `f9322e10e9bd96880ef332c341c42b7e918173c4`
-- compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/18>
+- latest immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.5.2>
+- exact latest release SHA: `24a0ff299fecfa6cb70fd8f425945b2f13e284c9`
+- latest compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/20>
+- moving `v0` release and SHA: `v0.5.0` at `f9322e10e9bd96880ef332c341c42b7e918173c4`
 - candidate hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29488976370>
 - successful post-tag full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29489384556>
 - promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29489876636>
@@ -1246,8 +1248,8 @@ Source: `docs/adr/0041-restrict-provider-endpoint-trust.md`,
 `docs/adr/0053-add-opt-in-source-pr-comment-updates.md`,
 `docs/adr/0054-reconcile-equivalent-proposal-branch-races.md`, `docs/ops/release.md`
 
-Status: Corrective `v0.5.2` preparation after the immutable `v0.5.1` Marketplace README gate
-failed; moving `v0` remains gated.
+Status: Corrective `v0.5.2` publication and Marketplace verification completed after the immutable
+`v0.5.1` README gate failed; moving `v0` remains gated at `v0.5.0`.
 
 Goal: publish the compatible source-comment, proposal-branch, and provider-endpoint race fixes
 without changing Action inputs, permissions, defaults, or package-publication boundaries.
@@ -1270,8 +1272,9 @@ Release results and corrective gates:
   orphan-audit validation passed at `a11039149ebffb82cf1accb2c559365c2376cad4`
 - immutable `v0.5.1` publication succeeded, but Marketplace verification found its rendered README
   still naming `v0.5.0`; moving `v0` was not attempted
-- corrective `v0.5.2` must synchronize consumer documentation and repeat candidate, publication,
-  exact-tag, Marketplace, and separate `v0` compare-and-swap gates
+- corrective `v0.5.2` synchronized consumer documentation and completed immutable publication plus
+  Marketplace verification at `24a0ff299fecfa6cb70fd8f425945b2f13e284c9`
+- the separate `v0` compare-and-swap gate remains pending; the moving alias stays at `v0.5.0`
 
 ### 34. Candidate Release Reference Guard
 

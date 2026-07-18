@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, sep } from "node:path";
+import { dirname, join, relative, sep, win32 } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
@@ -90,7 +90,13 @@ export async function resolveNpmInvocation(options = {}) {
     return { command: "npm", prefixArgs: [] };
   }
 
-  const npmCliPath = join(dirname(nodePath), "node_modules", "npm", "bin", "npm-cli.js");
+  const npmCliPath = win32.join(
+    win32.dirname(nodePath),
+    "node_modules",
+    "npm",
+    "bin",
+    "npm-cli.js",
+  );
   try {
     await canAccess(npmCliPath);
   } catch (error) {

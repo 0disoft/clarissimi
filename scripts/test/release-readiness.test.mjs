@@ -323,8 +323,8 @@ test("release readiness rejects accidental public package release drift", () => 
   packageJson.version = "0.1.0";
 
   assert.deepEqual(validatePackageReleasePolicy(packageJson), [
-    "package.json private must remain true while public package publication is blocked.",
-    "package.json version must remain 0.0.0 while public package publication is blocked.",
+    "package.json private must remain true while workspace-package publication is blocked.",
+    "package.json version must remain 0.0.0 while workspace-package publication is blocked.",
   ]);
 });
 
@@ -336,8 +336,8 @@ test("release readiness reports workspace package release policy drift with mani
   assert.deepEqual(
     validatePackageReleasePolicy(packageJson, packageReleasePolicy, "packages/cli/package.json"),
     [
-      "packages/cli/package.json private must remain true while public package publication is blocked.",
-      "packages/cli/package.json version must remain 0.0.0 while public package publication is blocked.",
+      "packages/cli/package.json private must remain true while workspace-package publication is blocked.",
+      "packages/cli/package.json version must remain 0.0.0 while workspace-package publication is blocked.",
     ],
   );
 });

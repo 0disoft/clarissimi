@@ -3805,13 +3805,13 @@ export function validatePackageReleasePolicy(
 
   if (packageJson?.private !== policy.private) {
     issues.push(
-      `${manifestPath} private must remain ${String(policy.private)} while public package publication is blocked.`,
+      `${manifestPath} private must remain ${String(policy.private)} while workspace-package publication is blocked.`,
     );
   }
 
   if (packageJson?.version !== policy.version) {
     issues.push(
-      `${manifestPath} version must remain ${policy.version} while public package publication is blocked.`,
+      `${manifestPath} version must remain ${policy.version} while workspace-package publication is blocked.`,
     );
   }
 

@@ -660,61 +660,6 @@ network = false
 destructive = false
 required_after = ["git_stage_historical_command_retirement"]
 
-[intents.git_stage_implementation_tracker_state_sync]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Stage only the reviewed published Action state synchronization, release-readiness guard, command contract, and manifest lock."
-argv = [
-  "git",
-  "add",
-  "--",
-  ".mustflow/config/commands.toml",
-  ".mustflow/config/manifest.lock.toml",
-  "docs/ops/release.md",
-  "docs/product/04-implementation-tracker.md",
-  "scripts/release-readiness.mjs",
-  "scripts/test/release-readiness.test.mjs",
-]
-cwd = "."
-timeout_seconds = 60
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["implementation_tracker_state_sync_validation_complete"]
-
-[intents.git_commit_implementation_tracker_state_sync]
-status = "configured"
-lifecycle = "oneshot"
-run_policy = "agent_allowed"
-approval_actions = ["git_commit"]
-description = "Commit the reviewed synchronization of published Action state and guarded implementation tracking."
-argv = [
-  "git",
-  "commit",
-  "-m",
-  "docs(release): sync published action state",
-  "-m",
-  "Validation: docs, release-readiness, format, mustflow",
-]
-cwd = "."
-timeout_seconds = 120
-stdin = "closed"
-success_exit_codes = [0]
-writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
-effects = [
-  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
-]
-network = false
-destructive = false
-required_after = ["git_stage_implementation_tracker_state_sync"]
-
 [intents.bundle_standalone_cli_package]
 status = "configured"
 lifecycle = "oneshot"

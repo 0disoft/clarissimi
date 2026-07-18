@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import * as rendererExports from "../dist/index.js";
 import {
   CONTRIBUTIONS_JSONL_PATH,
   RENDERED_OUTPUT_PATHS,
@@ -12,9 +13,11 @@ import {
   draftReviewPathForAssessment,
   parseContributionsJsonl,
   renderContributionsJsonl,
+  renderContributorsJson,
   renderContributorsMarkdown,
   renderDraftReviewJson,
   renderRecognitionOutputs,
+  renderStaticContributionsJson,
 } from "../dist/index.js";
 
 const source = {
@@ -713,4 +716,77 @@ test("renders all repository output targets consistently", () => {
   assert.equal(outputs.contributorsMarkdown.includes("Added regression coverage"), true);
   assert.equal(outputs.contributorsMarkdown.includes("| Contributor | Total | Types |"), true);
   assert.equal(outputs.staticDataJson.includes("clarissimi.static-contributions/v1"), true);
+});
+
+test("combined output validates once and matches individual renderer bytes", () => {
+  const records = [
+    assessment(),
+    assessment({
+      contributor: {
+        platform: "github",
+        id: "200",
+        login: "dependabot[bot]",
+        profileUrl: "https://github.com/apps/dependabot",
+        kind: "bot",
+      },
+      source: { ...source, pullRequestNumber: 43 },
+    }),
+  ];
+  let validationTraversals = 0;
+  const observedRecords = new Proxy(records, {
+    get(target, property, receiver) {
+      if (property === "map") {
+        validationTraversals += 1;
+      }
+      return Reflect.get(target, property, receiver);
+    },
+  });
+  const options = { summary: "table", includeAutomationContributors: false };
+  const combined = renderRecognitionOutputs(observedRecords, options);
+
+  assert.equal(validationTraversals, 1);
+  assert.deepEqual(combined, {
+    contributionsJsonl: renderContributionsJsonl(records),
+    contributorsJson: renderContributorsJson(records, options),
+    contributorsMarkdown: renderContributorsMarkdown(records, options),
+    staticDataJson: renderStaticContributionsJson(records, options),
+  });
+});
+
+test("combined output internals stay outside the package export surface", () => {
+  for (const name of [
+    "buildContributorsJsonDocumentFromProfiles",
+    "buildStaticContributionsDocumentFromPublicRecords",
+    "deriveContributorProfilesFromPublicRecords",
+    "renderContributorProfilesMarkdown",
+    "renderContributorsJsonFromProfiles",
+    "renderPublicContributionRecordsJsonl",
+    "renderStaticContributionsJsonFromPublicRecords",
+  ]) {
+    assert.equal(name in rendererExports, false, `${name} must remain package-internal`);
+  }
+});
+
+test("combined output preserves public validation failures", () => {
+  const draft = assessment({ maintainerApprovalStatus: "draft" });
+  let combinedError;
+  let ledgerError;
+
+  assert.throws(
+    () => renderRecognitionOutputs([draft]),
+    (error) => {
+      combinedError = error;
+      return error instanceof RendererValidationError;
+    },
+  );
+  assert.throws(
+    () => renderContributionsJsonl([draft]),
+    (error) => {
+      ledgerError = error;
+      return error instanceof RendererValidationError;
+    },
+  );
+
+  assert.equal(combinedError.message, ledgerError.message);
+  assert.deepEqual(combinedError.issues, ledgerError.issues);
 });

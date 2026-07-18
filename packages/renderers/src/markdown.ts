@@ -23,8 +23,15 @@ export function renderContributorsMarkdown(
   values: readonly unknown[],
   options: ContributorsMarkdownOptions = {},
 ): string {
-  const title = normalizeTitle(options.title);
   const profiles = deriveContributorProfiles(values, options);
+  return renderContributorProfilesMarkdown(profiles, options);
+}
+
+export function renderContributorProfilesMarkdown(
+  profiles: readonly ContributorRecognitionProfile[],
+  options: ContributorsMarkdownOptions = {},
+): string {
+  const title = normalizeTitle(options.title);
   const lines: string[] = [
     `# ${title}`,
     "",

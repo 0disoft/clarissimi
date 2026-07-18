@@ -14,6 +14,12 @@ export function deriveContributorProfiles(
   options: ContributorDisplayOptions = {},
 ): readonly ContributorRecognitionProfile[] {
   const records = filterDisplayedRecords(toPublicContributionRecords(values), options);
+  return deriveContributorProfilesFromPublicRecords(records);
+}
+
+export function deriveContributorProfilesFromPublicRecords(
+  records: readonly PublicContributionRecord[],
+): readonly ContributorRecognitionProfile[] {
   const grouped = new Map<string, PublicContributionRecord[]>();
 
   records.forEach((record) => {
@@ -34,9 +40,15 @@ export function buildContributorsJsonDocument(
   values: readonly unknown[],
   options: ContributorDisplayOptions = {},
 ): ContributorsJsonDocument {
+  return buildContributorsJsonDocumentFromProfiles(deriveContributorProfiles(values, options));
+}
+
+export function buildContributorsJsonDocumentFromProfiles(
+  profiles: readonly ContributorRecognitionProfile[],
+): ContributorsJsonDocument {
   return {
     schemaVersion: CONTRIBUTORS_JSON_SCHEMA_VERSION,
-    contributors: deriveContributorProfiles(values, options),
+    contributors: profiles,
   };
 }
 
@@ -44,7 +56,13 @@ export function renderContributorsJson(
   values: readonly unknown[],
   options: ContributorDisplayOptions = {},
 ): string {
-  return renderPrettyJson(buildContributorsJsonDocument(values, options));
+  return renderContributorsJsonFromProfiles(deriveContributorProfiles(values, options));
+}
+
+export function renderContributorsJsonFromProfiles(
+  profiles: readonly ContributorRecognitionProfile[],
+): string {
+  return renderPrettyJson(buildContributorsJsonDocumentFromProfiles(profiles));
 }
 
 export interface ContributorDisplayOptions {

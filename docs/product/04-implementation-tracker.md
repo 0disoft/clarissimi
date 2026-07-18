@@ -1347,6 +1347,10 @@ Completed scope:
   hot paths independently
 - validate record, contributor, redaction occurrence, output byte, and SHA-256 digest integrity so
   skipped work cannot report a passing fast result
+- validate combined renderer input once and reuse filtered records plus contributor profiles across
+  every derived output without exposing the trusted internal primitives from the package index
+- preserve byte-for-byte parity with the individual public renderers and preserve the same public
+  validation error contract for rejected assessments
 - expose a one-sample CI check with generous runaway ceilings and a separate three-sample local
   JSON report
 - document that sampled wall-clock values are environment-specific observations and that CI

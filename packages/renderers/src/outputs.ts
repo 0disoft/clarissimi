@@ -5,11 +5,15 @@ import {
   STATIC_DATA_JSON_PATH,
   type RenderedRecognitionOutputs,
 } from "./types.js";
-import { renderContributorsJson } from "./contributors.js";
-import { renderContributionsJsonl } from "./ledger.js";
-import { renderContributorsMarkdown } from "./markdown.js";
+import {
+  deriveContributorProfilesFromPublicRecords,
+  filterDisplayedRecords,
+  renderContributorsJsonFromProfiles,
+} from "./contributors.js";
+import { renderPublicContributionRecordsJsonl, toPublicContributionRecords } from "./ledger.js";
+import { renderContributorProfilesMarkdown } from "./markdown.js";
 import type { ContributorsMarkdownOptions } from "./markdown.js";
-import { renderStaticContributionsJson } from "./static-data.js";
+import { renderStaticContributionsJsonFromPublicRecords } from "./static-data.js";
 
 export const RENDERED_OUTPUT_PATHS = {
   contributionsJsonl: CONTRIBUTIONS_JSONL_PATH,
@@ -22,10 +26,14 @@ export function renderRecognitionOutputs(
   values: readonly unknown[],
   markdownOptions: ContributorsMarkdownOptions = {},
 ): RenderedRecognitionOutputs {
+  const records = toPublicContributionRecords(values);
+  const displayedRecords = filterDisplayedRecords(records, markdownOptions);
+  const profiles = deriveContributorProfilesFromPublicRecords(displayedRecords);
+
   return {
-    contributionsJsonl: renderContributionsJsonl(values),
-    contributorsJson: renderContributorsJson(values, markdownOptions),
-    contributorsMarkdown: renderContributorsMarkdown(values, markdownOptions),
-    staticDataJson: renderStaticContributionsJson(values, markdownOptions),
+    contributionsJsonl: renderPublicContributionRecordsJsonl(records),
+    contributorsJson: renderContributorsJsonFromProfiles(profiles),
+    contributorsMarkdown: renderContributorProfilesMarkdown(profiles, markdownOptions),
+    staticDataJson: renderStaticContributionsJsonFromPublicRecords(displayedRecords, profiles),
   };
 }

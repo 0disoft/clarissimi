@@ -3023,8 +3023,7 @@ function assertUniqueContributionRecords(records) {
     seen.set(key, index);
   });
 }
-function renderContributionsJsonl(values) {
-  const records = toPublicContributionRecords(values);
+function renderPublicContributionRecordsJsonl(records) {
   if (records.length === 0) {
     return "";
   }
@@ -3187,8 +3186,7 @@ function sanitizePathPart(value) {
 }
 
 // packages/renderers/dist/contributors.js
-function deriveContributorProfiles(values, options = {}) {
-  const records = filterDisplayedRecords(toPublicContributionRecords(values), options);
+function deriveContributorProfilesFromPublicRecords(records) {
   const grouped = /* @__PURE__ */ new Map();
   records.forEach((record) => {
     const key = contributorKey(record);
@@ -3201,14 +3199,14 @@ function deriveContributorProfiles(values, options = {}) {
   });
   return Array.from(grouped.values()).map(toContributorProfile).sort(compareContributorProfiles);
 }
-function buildContributorsJsonDocument(values, options = {}) {
+function buildContributorsJsonDocumentFromProfiles(profiles) {
   return {
     schemaVersion: CONTRIBUTORS_JSON_SCHEMA_VERSION,
-    contributors: deriveContributorProfiles(values, options)
+    contributors: profiles
   };
 }
-function renderContributorsJson(values, options = {}) {
-  return renderPrettyJson(buildContributorsJsonDocument(values, options));
+function renderContributorsJsonFromProfiles(profiles) {
+  return renderPrettyJson(buildContributorsJsonDocumentFromProfiles(profiles));
 }
 function filterDisplayedRecords(records, options = {}) {
   if (options.includeAutomationContributors !== false) {
@@ -3261,9 +3259,8 @@ function uniqueSorted(values) {
 var SENSITIVE_URL_PARAMETER_PATTERN = /(?:^|[_-])(?:access[_-]?token|auth[_-]?token|token|secret|password|api[_-]?key|private[_-]?key)(?:$|[=_-])/i;
 var GALLERY_AVATAR_SIZE = 64;
 var GALLERY_ROW_SIZE = 12;
-function renderContributorsMarkdown(values, options = {}) {
+function renderContributorProfilesMarkdown(profiles, options = {}) {
   const title = normalizeTitle(options.title);
-  const profiles = deriveContributorProfiles(values, options);
   const lines = [
     `# ${title}`,
     "",
@@ -3415,16 +3412,15 @@ function escapeHtmlAttribute(value) {
 }
 
 // packages/renderers/dist/static-data.js
-function buildStaticContributionsDocument(values, options = {}) {
-  const records = filterDisplayedRecords(toPublicContributionRecords(values), options);
+function buildStaticContributionsDocumentFromPublicRecords(records, profiles) {
   return {
     schemaVersion: STATIC_DATA_SCHEMA_VERSION,
     contributions: records.map(toStaticContributionRecord),
-    contributors: deriveContributorProfiles(records)
+    contributors: profiles
   };
 }
-function renderStaticContributionsJson(values, options = {}) {
-  return renderPrettyJson(buildStaticContributionsDocument(values, options));
+function renderStaticContributionsJsonFromPublicRecords(records, profiles) {
+  return renderPrettyJson(buildStaticContributionsDocumentFromPublicRecords(records, profiles));
 }
 function toStaticContributionRecord(record) {
   return {
@@ -3449,11 +3445,14 @@ var RENDERED_OUTPUT_PATHS = {
   staticDataJson: STATIC_DATA_JSON_PATH
 };
 function renderRecognitionOutputs(values, markdownOptions = {}) {
+  const records = toPublicContributionRecords(values);
+  const displayedRecords = filterDisplayedRecords(records, markdownOptions);
+  const profiles = deriveContributorProfilesFromPublicRecords(displayedRecords);
   return {
-    contributionsJsonl: renderContributionsJsonl(values),
-    contributorsJson: renderContributorsJson(values, markdownOptions),
-    contributorsMarkdown: renderContributorsMarkdown(values, markdownOptions),
-    staticDataJson: renderStaticContributionsJson(values, markdownOptions)
+    contributionsJsonl: renderPublicContributionRecordsJsonl(records),
+    contributorsJson: renderContributorsJsonFromProfiles(profiles),
+    contributorsMarkdown: renderContributorProfilesMarkdown(profiles, markdownOptions),
+    staticDataJson: renderStaticContributionsJsonFromPublicRecords(displayedRecords, profiles)
   };
 }
 

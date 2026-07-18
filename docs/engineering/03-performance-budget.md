@@ -17,6 +17,8 @@ Current MVP budgets:
 - Provider preparation accepts at most 256 evidence items and 512 KiB of serialized UTF-8 evidence.
 - The complete OpenAI-compatible provider request body accepts at most 1 MiB of UTF-8 data.
 - Renderers should rebuild derived outputs from the canonical ledger in memory for the MVP.
+- Combined recognition output generation should validate public records once, filter display records
+  once, and reuse one contributor-profile aggregation across JSON, Markdown, and static output.
 - Proposal branches should stage only Clarissimi-owned output files.
 - Monthly ledger partitions are deferred until real repository volume justifies the extra lookup
   and migration complexity.
@@ -27,7 +29,8 @@ Current MVP budgets:
 deterministic ledgers containing 1,000 and 10,000 approved contribution records:
 
 - CLI-equivalent ledger rebuild: parse JSONL, reject duplicate identities, and regenerate the
-  canonical ledger, contributor JSON, contributor Markdown table, and static JSON.
+  canonical ledger, contributor JSON, contributor Markdown table, and static JSON from one
+  validated record set and one contributor-profile aggregation.
 - JSON redaction: traverse one structured item per contribution and redact one public test email
   address per item.
 - Contributor Markdown rendering: aggregate ten contributions per contributor, including human,

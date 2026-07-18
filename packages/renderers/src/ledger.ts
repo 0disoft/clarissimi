@@ -74,6 +74,12 @@ export function assertUniqueContributionRecords(
 
 export function renderContributionsJsonl(values: readonly unknown[]): string {
   const records = toPublicContributionRecords(values);
+  return renderPublicContributionRecordsJsonl(records);
+}
+
+export function renderPublicContributionRecordsJsonl(
+  records: readonly PublicContributionRecord[],
+): string {
   if (records.length === 0) {
     return "";
   }

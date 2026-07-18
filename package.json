@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "benchmark:scale": "pnpm run build && node scripts/benchmark-scale.mjs --check",
+    "benchmark:scale:sample": "pnpm run build && node scripts/benchmark-scale.mjs --samples 3",
     "build": "tsc -b",
     "bundle:action": "pnpm run build && node scripts/bundle-action.mjs",
     "bundle:action:check": "pnpm run build && node scripts/bundle-action.mjs --check",

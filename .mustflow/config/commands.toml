@@ -113,6 +113,42 @@ network = false
 destructive = false
 required_after = ["behavior_change", "test_change", "schema_change"]
 
+[intents.benchmark_scale]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Build Clarissimi and run the deterministic 1,000- and 10,000-record scale regression guard."
+argv = ["pnpm", "run", "benchmark:scale"]
+cwd = "."
+timeout_seconds = 300
+stdin = "closed"
+success_exit_codes = [0]
+writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+effects = [
+  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["renderer_hot_path_change", "redaction_hot_path_change", "scale_benchmark_change"]
+
+[intents.benchmark_scale_sample]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Build Clarissimi and emit three environment-specific scale benchmark samples for local investigation."
+argv = ["pnpm", "run", "benchmark:scale:sample"]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+effects = [
+  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["performance_investigation_requested"]
+
 [intents.test_automation_contributors]
 status = "configured"
 lifecycle = "oneshot"
@@ -509,6 +545,66 @@ effects = [
 network = false
 destructive = false
 required_after = ["git_stage_historical_command_retirement"]
+
+[intents.git_stage_scale_benchmark]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Stage only the reviewed deterministic scale benchmark, CI contract, documentation, tests, and mustflow lock."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".github/workflows/ci.yml",
+  ".mustflow/config/commands.toml",
+  ".mustflow/config/manifest.lock.toml",
+  "docs/engineering/03-performance-budget.md",
+  "docs/ops/ci.md",
+  "docs/product/04-implementation-tracker.md",
+  "package.json",
+  "scripts/benchmark-scale.mjs",
+  "scripts/release-readiness.mjs",
+  "scripts/test/benchmark-scale.test.mjs",
+  "scripts/test/release-readiness.test.mjs",
+]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["scale_benchmark_validation_complete"]
+
+[intents.git_commit_scale_benchmark]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Commit the reviewed deterministic scale benchmark and CI regression contract."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "perf(bench): add scale regression contract",
+  "-m",
+  "Validation: benchmark-scale, test, docs, release-readiness, lint, format, smoke, check, contract, mustflow",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_scale_benchmark"]
 
 [intents.release_v0_5_2_post_tag_evidence]
 status = "manual_only"

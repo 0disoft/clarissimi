@@ -79,6 +79,9 @@ jobs:
       - name: Run migration compatibility validation
         run: pnpm run migration-check
 
+      - name: Run scale benchmark regression guard
+        run: pnpm run benchmark:scale
+
       - name: Run smoke validation
         run: pnpm run smoke
 

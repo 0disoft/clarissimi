@@ -1333,6 +1333,27 @@ Completed scope:
   reconciliation, single-file ledger, and existing Action bundle CI gates because current ADRs and
   tests already own those boundaries
 
+### 37. Deterministic Scale Regression Contract
+
+Source: `docs/engineering/03-performance-budget.md`, `scripts/benchmark-scale.mjs`
+
+Status: Implemented on `main` as a credential-free local and hosted CI regression guard.
+
+Completed scope:
+
+- generate deterministic 1,000- and 10,000-record approved ledgers with ten contributions per
+  contributor and human, bot, and AI-agent identities
+- measure the CLI-equivalent in-memory rebuild, structured redaction, and contributor Markdown
+  hot paths independently
+- validate record, contributor, redaction occurrence, output byte, and SHA-256 digest integrity so
+  skipped work cannot report a passing fast result
+- expose a one-sample CI check with generous runaway ceilings and a separate three-sample local
+  JSON report
+- document that sampled wall-clock values are environment-specific observations and that CI
+  ceilings are catastrophic-regression guards rather than latency promises
+- keep filesystem writes, provider calls, GitHub calls, credentials, and generated benchmark
+  artifacts outside the benchmark contract
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

@@ -12,6 +12,14 @@ const defaultRepoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 export const requiredPackageScripts = [
   {
+    name: "benchmark:scale",
+    includes: ["pnpm run build", "scripts/benchmark-scale.mjs --check"],
+  },
+  {
+    name: "benchmark:scale:sample",
+    includes: ["pnpm run build", "scripts/benchmark-scale.mjs --samples 3"],
+  },
+  {
     name: "bundle:action",
     includes: ["pnpm run build", "scripts/bundle-action.mjs"],
   },
@@ -621,7 +629,8 @@ export const ciOperationalDocumentContract = {
   requiredSnippets: [
     "The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and",
     "manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,",
-    "`lint`, `format`, `migration-check`, `smoke`, `check`, and `contract` with Node.js 24",
+    "`lint`, `format`, `migration-check`, `benchmark:scale`, `smoke`, `check`, and `contract` with",
+    "`pnpm run benchmark:scale`: builds the workspace, runs deterministic 1,000- and 10,000-record",
     "`pnpm run hosted-ci-validation`",
     "uses `gh run list` to find the `CI` workflow run",
     "The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`",
@@ -882,6 +891,18 @@ export const engineeringValidationDocumentContract = {
   requiredSnippets: [
     "Merge-blocking validation: `pnpm run docs`, `pnpm run release-readiness`, `pnpm run lint`,",
     "`pnpm run smoke`, `pnpm run check`, `pnpm run contract`",
+  ],
+};
+
+export const performanceBenchmarkDocumentContract = {
+  path: "docs/engineering/03-performance-budget.md",
+  requiredSnippets: [
+    "## Deterministic Scale Benchmark",
+    "`pnpm run benchmark:scale`",
+    "1,000 and 10,000 approved contribution records",
+    "regression guards for catastrophic growth, not product latency promises",
+    "`pnpm run benchmark:scale:sample`",
+    "Do not copy a sampled time into a release claim",
   ],
 };
 
@@ -1275,6 +1296,7 @@ export const ciWorkflowContract = {
     "pnpm run lint",
     "pnpm run format",
     "pnpm run migration-check",
+    "pnpm run benchmark:scale",
     "pnpm run smoke",
     "pnpm run check",
     "pnpm run contract",
@@ -1488,6 +1510,7 @@ export async function runReleaseReadiness(options = {}) {
   await runActionPermissionsDocumentContractCheck(repoRoot);
   await runOpsValidationFooterContractCheck(repoRoot);
   await runEngineeringValidationDocumentContractCheck(repoRoot);
+  await runPerformanceBenchmarkDocumentContractCheck(repoRoot);
   await runMonorepoValidationDocumentContractCheck(repoRoot);
   await runTsconfigBuildGraphCheck(repoRoot);
   await runPackageOwnershipContractCheck(repoRoot);
@@ -2149,6 +2172,21 @@ export function validateEngineeringValidationDocumentContract(
       if (!text.includes(snippet)) {
         issues.push(`${documentPath} must include ${snippet}.`);
       }
+    }
+  }
+
+  return issues;
+}
+
+export function validatePerformanceBenchmarkDocumentContract(
+  text,
+  contract = performanceBenchmarkDocumentContract,
+) {
+  const issues = [];
+
+  for (const snippet of contract.requiredSnippets) {
+    if (!text.includes(snippet)) {
+      issues.push(`${contract.path} must include ${snippet}.`);
     }
   }
 
@@ -2994,6 +3032,24 @@ async function runEngineeringValidationDocumentContractCheck(repoRoot) {
   }
 
   console.log("engineering validation document contract passed");
+}
+
+async function runPerformanceBenchmarkDocumentContractCheck(repoRoot) {
+  let text;
+  try {
+    text = await readFile(join(repoRoot, performanceBenchmarkDocumentContract.path), "utf8");
+  } catch (error) {
+    throw new Error(
+      `Unable to read ${performanceBenchmarkDocumentContract.path}: ${error.message}`,
+    );
+  }
+
+  const issues = validatePerformanceBenchmarkDocumentContract(text);
+  if (issues.length > 0) {
+    throw new Error(`performance benchmark document contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("performance benchmark document contract passed");
 }
 
 async function runMonorepoValidationDocumentContractCheck(repoRoot) {

@@ -21,6 +21,28 @@ Current MVP budgets:
 - Monthly ledger partitions are deferred until real repository volume justifies the extra lookup
   and migration complexity.
 
+## Deterministic Scale Benchmark
+
+`pnpm run benchmark:scale` builds the workspace and checks three in-memory hot paths against
+deterministic ledgers containing 1,000 and 10,000 approved contribution records:
+
+- CLI-equivalent ledger rebuild: parse JSONL, reject duplicate identities, and regenerate the
+  canonical ledger, contributor JSON, contributor Markdown table, and static JSON.
+- JSON redaction: traverse one structured item per contribution and redact one public test email
+  address per item.
+- Contributor Markdown rendering: aggregate ten contributions per contributor, including human,
+  bot, and AI-agent identities, then render the summary table and contributor sections.
+
+The check records output sizes and SHA-256 digests so an empty or skipped workload cannot look
+fast. It runs one wall-clock sample per workload and enforces only generous runaway ceilings:
+15,000 ms for the 1,000-record suite and 90,000 ms for the 10,000-record suite. These ceilings are
+regression guards for catastrophic growth, not product latency promises.
+
+`pnpm run benchmark:scale:sample` runs three samples and reports each sample, median, maximum,
+runtime, operating system, and architecture as JSON. Those numbers describe only the machine and
+load that produced that invocation. Do not copy a sampled time into a release claim or tighten a
+CI ceiling without repeated measurements on controlled hardware.
+
 Hot paths:
 
 - `clarissimi recognize`
@@ -47,3 +69,5 @@ Hot paths:
 - A change adds repeated repository writes or default-branch mutation in write-mode paths.
 - A change introduces partitioning, caching, or background work without a migration and invalidation
   story.
+- A change removes the 1,000- and 10,000-record integrity checks or treats environment-specific
+  timings as universal performance claims.

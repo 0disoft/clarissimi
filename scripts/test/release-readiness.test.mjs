@@ -649,7 +649,8 @@ test("release readiness rejects README validation drift", () => {
     .replace(
       "`migration-check` builds the schema package and validates the committed persisted-schema",
       "`migration-check` is optional",
-    );
+    )
+    .replace("the npm package has not been published", "the npm package is already public");
 
   assert.deepEqual(validateReadmeValidationContract(text), [
     "README.md must include updates that comment on reruns instead of posting duplicates.",
@@ -669,6 +670,7 @@ test("release readiness rejects README validation drift", () => {
     "README.md must include `format` runs the repository-wide Oxfmt baseline accepted by ADR 0036.",
     "README.md must include `oxlint` remains the JavaScript and TypeScript lint gate.",
     "README.md must include `migration-check` builds the schema package and validates the committed persisted-schema.",
+    "README.md must include the npm package has not been published.",
   ]);
 });
 
@@ -2609,6 +2611,10 @@ function createReadmeValidationText() {
     "`migration-check` builds the schema package and validates the committed persisted-schema",
     "compatibility manifest, accepted historical fixtures, executable deterministic migration chains,",
     "current-schema validation, and the unknown-version fail-closed fixture accepted by ADR 0037.",
+    "The standalone `clarissimi` CLI packaging is ready, but",
+    "the npm package has not been published.",
+    "Root and workspace packages remain private; publication",
+    "follows the manual ADR 0056 registry and two-factor-authentication gates.",
     'Use `markdownSummary: "gallery"` or `--markdown-summary gallery` instead.',
     "Approved bot and AI-agent contribution records are included by default.",
     "`--exclude-automation-contributors`",

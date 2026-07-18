@@ -249,7 +249,9 @@ The current public Action release is `0disoft/clarissimi@v0.5.2`. Consumers may 
 tag or use `0disoft/clarissimi@v0` to follow maintainer-approved `0.x` Action releases. Earlier
 releases remain immutable, and `main` is never a consumer release channel. Clarissimi is also
 available in the [GitHub Marketplace](https://github.com/marketplace/actions/clarissimi) under the
-`Code review` and `Utilities` categories. npm packages remain intentionally unavailable.
+`Code review` and `Utilities` categories. The standalone `clarissimi` CLI packaging is ready, but
+the npm package has not been published. Root and workspace packages remain private; publication
+follows the manual ADR 0056 registry and two-factor-authentication gates.
 
 See [`0disoft/clarissimi-example`](https://github.com/0disoft/clarissimi-example) for a public,
 synthetic consumer repository with a read-only `v0` workflow, a manual recognition proposal, and

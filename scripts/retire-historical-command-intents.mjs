@@ -43,6 +43,8 @@ const COMPLETED_MILESTONES = [
   "runner_admission_diagnostics",
   "external_review_hardening",
   "automation_test_build_contract",
+  "stable_v1_tooling",
+  "standalone_cli_package",
 ];
 
 const COMPLETED_LIFECYCLE_PREFIXES = [

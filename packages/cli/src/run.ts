@@ -21,13 +21,10 @@ import {
   renderStaticContributionsJson,
   toDraftReviewRecord,
 } from "@clarissimi/renderers";
-import { FakeProviderAssessmentError, OpenAiCompatibleProviderError } from "@clarissimi/providers";
 import {
   isConfigMarkdownSummary,
   validateContributionAssessment,
-  type ContributionAssessment,
   type ConfigMarkdownSummary,
-  type EvidenceRef,
   type ValidationIssue,
 } from "@clarissimi/schemas";
 
@@ -57,6 +54,15 @@ import {
   writeTextFile,
   type CliIo,
 } from "./io.js";
+import {
+  classifyRecognitionFailure,
+  isJsonRequested,
+  resolveCommandName,
+  sanitizeAssessmentForCliOutput,
+  writeFailure,
+  writeOutput,
+  writeUsageFailure,
+} from "./output.js";
 import { resolveRecognitionProvider } from "./provider.js";
 
 export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExitCode> {
@@ -647,77 +653,6 @@ async function runAnalytics(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   }
 }
 
-function writeOutput(io: CliIo, args: ParsedArgs, value: Record<string, unknown>): void {
-  if (getBooleanFlag(args, "json")) {
-    io.stdout(`${JSON.stringify(value, null, 2)}\n`);
-    return;
-  }
-
-  io.stdout(`${value.message ?? "Command completed."}\n`);
-}
-
-function classifyRecognitionFailure(error: unknown): CliExitCode {
-  if (error instanceof CliConfigError) {
-    return CLI_EXIT_CODES.invalidConfig;
-  }
-  if (error instanceof RendererValidationError) {
-    return CLI_EXIT_CODES.policyRejection;
-  }
-  if (
-    error instanceof FakeProviderAssessmentError ||
-    (error instanceof OpenAiCompatibleProviderError && error.code === "invalid_assessment")
-  ) {
-    return CLI_EXIT_CODES.schemaValidationFailure;
-  }
-  return CLI_EXIT_CODES.providerFailure;
-}
-
-function writeUsageFailure(
-  io: CliIo,
-  args: ParsedArgs | undefined,
-  argv: readonly string[],
-  message: string,
-): CliExitCode {
-  const normalizedMessage = message.trimEnd();
-  if (isJsonRequested(args, argv)) {
-    io.stdout(
-      `${JSON.stringify(
-        { ok: false, command: resolveCommandName(args, argv), message: normalizedMessage },
-        null,
-        2,
-      )}\n`,
-    );
-  } else {
-    io.stderr(`${normalizedMessage}\n`);
-  }
-
-  return CLI_EXIT_CODES.usage;
-}
-
-function isJsonRequested(args: ParsedArgs | undefined, argv: readonly string[]): boolean {
-  return args?.flags.get("json") === true || (args === undefined && argv.includes("--json"));
-}
-
-function resolveCommandName(args: ParsedArgs | undefined, argv: readonly string[]): string {
-  if (args !== undefined) {
-    return args.command ?? "clarissimi";
-  }
-
-  const first = argv[0];
-  return first !== undefined && !first.startsWith("--") ? first : "clarissimi";
-}
-
-function writeFailure(io: CliIo, args: ParsedArgs, command: string, error: unknown): void {
-  const message = error instanceof Error ? error.message : String(error);
-
-  if (getBooleanFlag(args, "json")) {
-    io.stdout(`${JSON.stringify({ ok: false, command, message }, null, 2)}\n`);
-    return;
-  }
-
-  io.stderr(`${message}\n`);
-}
-
 function rejectUnexpectedPositionals(args: ParsedArgs, command: string): string | undefined {
   if (args.positionals.length === 0) {
     return undefined;
@@ -805,20 +740,4 @@ function assignOptional<T extends object, K extends keyof T>(
   if (value !== undefined) {
     target[key] = value;
   }
-}
-
-type SanitizedContributionAssessment = Omit<ContributionAssessment, "evidenceRefs"> & {
-  readonly evidenceRefs: readonly Omit<EvidenceRef, "excerpt">[];
-};
-
-function sanitizeAssessmentForCliOutput(
-  assessment: ContributionAssessment,
-): SanitizedContributionAssessment {
-  return {
-    ...assessment,
-    evidenceRefs: assessment.evidenceRefs.map((ref) => {
-      const { excerpt: _excerpt, ...safeRef } = ref;
-      return safeRef;
-    }),
-  };
 }

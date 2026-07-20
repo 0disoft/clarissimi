@@ -137,6 +137,87 @@ test("Marketplace evidence defaults external consumers to the pre-tag candidate 
   );
 });
 
+test("historical Marketplace evidence pins the live-provider workflow to the immutable tag", async () => {
+  const runtime = fakeRuntime({ externalRef: "v0.3.0" });
+  assert.equal(
+    await runReleaseCandidateEvidenceOrchestrator(
+      [
+        "--provider-model",
+        "gpt-4.1-mini",
+        "--sha",
+        sha,
+        "--release-type",
+        "marketplace-action-tag",
+        "--release-version",
+        "v0.3.0",
+        "--external-ref",
+        "v0.3.0",
+        "--live-ref",
+        "v0.3.0",
+      ],
+      runtime,
+    ),
+    0,
+  );
+
+  const liveDispatch = runtime.calls.find(
+    (call) =>
+      call.command === "gh" &&
+      call.args[0] === "workflow" &&
+      call.args[1] === "run" &&
+      call.args.includes("clarissimi-live-provider-smoke.yml"),
+  );
+  assert.deepEqual(
+    liveDispatch.args.slice(
+      liveDispatch.args.indexOf("--ref"),
+      liveDispatch.args.indexOf("--ref") + 2,
+    ),
+    ["--ref", "v0.3.0"],
+  );
+
+  const evidence = runtime.calls.find((call) => call.command === "pnpm");
+  assert.deepEqual(
+    evidence.args.slice(
+      evidence.args.indexOf("--live-ref"),
+      evidence.args.indexOf("--live-ref") + 2,
+    ),
+    ["--live-ref", "v0.3.0"],
+  );
+});
+
+test("rejects a live-provider ref that resolves away from the requested SHA before dispatch", async () => {
+  const mismatchedSha = "abcdefabcdefabcdefabcdefabcdefabcdefabcd";
+  const runtime = fakeRuntime({ resolvedLiveSha: mismatchedSha });
+  assert.equal(
+    await runReleaseCandidateEvidenceOrchestrator(
+      ["--provider-model", "gpt-4.1-mini", "--sha", sha, "--live-ref", "release-candidate"],
+      runtime,
+    ),
+    1,
+  );
+  assert.equal(
+    runtime.calls.some(
+      (call) => call.command === "gh" && call.args[0] === "workflow" && call.args[1] === "run",
+    ),
+    false,
+  );
+  assert.match(runtime.errors.at(-1), /Live-provider ref release-candidate resolves to/);
+  assert.match(runtime.errors.at(-1), /No workflow was dispatched/);
+});
+
+test("rejects a malformed live-provider ref before calling GitHub", async () => {
+  const runtime = fakeRuntime();
+  assert.equal(
+    await runReleaseCandidateEvidenceOrchestrator(
+      ["--provider-model", "gpt-4.1-mini", "--sha", sha, "--live-ref", "bad ref"],
+      runtime,
+    ),
+    2,
+  );
+  assert.equal(runtime.calls.length, 0);
+  assert.match(runtime.errors.at(-1), /--live-ref must be a valid branch, tag, or commit SHA/);
+});
+
 test("major alias evidence pins v0 to the expected SHA on both external workflows", async () => {
   const runtime = fakeRuntime({ externalRef: "v0" });
   assert.equal(
@@ -443,7 +524,15 @@ function fakeRuntime(options = {}) {
           ]),
         );
       }
-      if (command === "gh" && args[0] === "api") return ok(options.resolvedSha ?? sha);
+      if (command === "gh" && args[0] === "api") {
+        const encodedRef = args[1]?.split("/commits/")[1];
+        const ref = encodedRef === undefined ? undefined : decodeURIComponent(encodedRef);
+        return ok(
+          ref === "release-candidate"
+            ? (options.resolvedLiveSha ?? sha)
+            : (options.resolvedSha ?? sha),
+        );
+      }
       if (command === "gh" && args[0] === "workflow" && args[1] === "view") {
         return args.includes(options.missingWorkflow)
           ? { exitCode: 1, stdout: "", stderr: "workflow not found" }

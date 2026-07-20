@@ -777,6 +777,8 @@ argv = [
   "24a0ff299fecfa6cb70fd8f425945b2f13e284c9",
   "--external-ref",
   "v0.5.2",
+  "--live-ref",
+  "v0.5.2",
 ]
 cwd = "."
 timeout_seconds = 3600
@@ -846,8 +848,17 @@ status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
-description = "Stage only the reviewed exact-version v0.5.2 alias-promotion command contract and manifest lock."
-argv = ["git", "add", "--", ".mustflow/config/commands.toml", ".mustflow/config/manifest.lock.toml"]
+description = "Stage only the reviewed historical-ref validation fix, regression, release guidance, exact-version command contract, and manifest lock."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  ".mustflow/config/manifest.lock.toml",
+  "scripts/release-candidate-evidence-orchestrator.mjs",
+  "scripts/test/release-candidate-evidence-orchestrator.test.mjs",
+  "docs/ops/release.md",
+]
 cwd = "."
 timeout_seconds = 60
 stdin = "closed"
@@ -865,14 +876,14 @@ status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
-description = "Commit the corrected exact-version v0.5.2 alias-promotion command contract."
+description = "Commit the historical release-validation ref pin and corrected exact-version v0.5.2 alias-promotion command contract."
 argv = [
   "git",
   "commit",
   "-m",
-  "fix(release): pin v0.5.2 alias candidate SHA",
+  "fix(release): pin historical validation refs",
   "-m",
-  "Validation: mustflow, release-readiness, format, major-alias promotion regressions",
+  "Validation: mustflow, docs, release-readiness, lint, format, check, release publication regressions",
 ]
 cwd = "."
 timeout_seconds = 120

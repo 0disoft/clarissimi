@@ -490,6 +490,12 @@ Maintainers can collect the complete hosted evidence set and render the issue bo
 `pnpm run release-candidate-evidence-orchestrator -- --provider-model <provider-model>`. This
 defaults to an issue preview; `--create-issue` is required for GitHub issue creation. Preview mode
 still dispatches the credentialed, external dry-run, full-write, and orphan-audit workflows.
+When revalidating a previously published immutable tag after `main` has advanced, pin all three
+revision inputs to one commit: `--sha <commit-sha> --external-ref <v0.x.y> --live-ref <v0.x.y>`.
+The orchestrator resolves both refs before dispatch and rejects either one when it does not identify
+the requested SHA. Omitting `--live-ref` intentionally preserves the current-candidate default of
+running the live-provider workflow from `main`; major-alias validation defaults it to the selected
+immutable release tag.
 When a watched run fails, the orchestrator distinguishes workflow execution failures from GitHub
 Actions runner admission failures. It reports an admission failure only when all jobs report
 `runner_id` as zero or unassigned, every job has zero steps, and a check-run annotation names an

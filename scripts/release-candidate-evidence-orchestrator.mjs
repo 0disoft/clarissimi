@@ -16,7 +16,7 @@ const defaults = {
 
 const usageText = [
   "Usage:",
-  "  pnpm run release-candidate-evidence-orchestrator -- --provider-model <model> [--sha <commit-sha>] [--external-ref <tag-or-sha|v0|v1>] [--release-type <source-only|versioned-action-tag|marketplace-action-tag|major-alias>] [--release-version <v0.x.y|v1.x.y>] [--create-issue]",
+  "  pnpm run release-candidate-evidence-orchestrator -- --provider-model <model> [--sha <commit-sha>] [--external-ref <tag-or-sha|v0|v1>] [--live-ref <branch|tag|sha>] [--release-type <source-only|versioned-action-tag|marketplace-action-tag|major-alias>] [--release-version <v0.x.y|v1.x.y>] [--create-issue]",
   "",
   "The default is an issue preview. Hosted workflows still run, including the full-write smoke and orphan audit.",
   "Use --create-issue only after reviewing the generated evidence body.",
@@ -47,12 +47,14 @@ async function run(argv, runtime) {
   const sha =
     args.sha ?? (await commandText(runtime, "git", ["rev-parse", "HEAD"], "resolve current HEAD"));
   const externalRef = args.externalRef ?? sha;
-  const liveRef = releaseType === "major-alias" ? args.releaseVersion : branch;
+  const liveRef = args.liveRef ?? (releaseType === "major-alias" ? args.releaseVersion : branch);
   const evidenceId = runtime.randomEvidenceId();
 
   if (!isRepo(repo) || !isRepo(externalRepo))
     return usageFailure(runtime, "--repo and --external-repo must use owner/name format.");
   if (!isSha(sha)) return usageFailure(runtime, "--sha must be a 40-character commit SHA.");
+  if (!isGitRef(liveRef))
+    return usageFailure(runtime, "--live-ref must be a valid branch, tag, or commit SHA.");
   if (releaseType === "source-only" && externalRef.toLowerCase() !== sha.toLowerCase()) {
     return usageFailure(runtime, "source-only evidence requires --external-ref to equal --sha.");
   }
@@ -208,20 +210,26 @@ async function run(argv, runtime) {
 }
 
 async function preflight(runtime, options) {
-  const resolvedSha = await commandText(
+  const resolvedCandidateSha = await resolveRefSha(
     runtime,
-    "gh",
-    [
-      "api",
-      `repos/${options.repo}/commits/${encodeURIComponent(options.externalRef)}`,
-      "--jq",
-      ".sha",
-    ],
-    `resolve candidate ref ${options.externalRef}`,
+    options.repo,
+    options.externalRef,
+    "candidate",
   );
-  if (resolvedSha.toLowerCase() !== options.sha.toLowerCase()) {
+  if (resolvedCandidateSha.toLowerCase() !== options.sha.toLowerCase()) {
     throw new Error(
-      `Candidate ref ${options.externalRef} resolves to ${resolvedSha}, expected ${options.sha}. ` +
+      `Candidate ref ${options.externalRef} resolves to ${resolvedCandidateSha}, expected ${options.sha}. ` +
+        "No workflow was dispatched.",
+    );
+  }
+
+  const resolvedLiveSha =
+    options.liveRef === options.externalRef
+      ? resolvedCandidateSha
+      : await resolveRefSha(runtime, options.repo, options.liveRef, "live-provider");
+  if (resolvedLiveSha.toLowerCase() !== options.sha.toLowerCase()) {
+    throw new Error(
+      `Live-provider ref ${options.liveRef} resolves to ${resolvedLiveSha}, expected ${options.sha}. ` +
         "No workflow was dispatched.",
     );
   }
@@ -267,6 +275,15 @@ async function preflight(runtime, options) {
   );
 }
 
+async function resolveRefSha(runtime, repo, ref, label) {
+  return commandText(
+    runtime,
+    "gh",
+    ["api", `repos/${repo}/commits/${encodeURIComponent(ref)}`, "--jq", ".sha"],
+    `resolve ${label} ref ${ref}`,
+  );
+}
+
 function parseArgs(argv, runtime) {
   const parsed = {};
   const booleanOptions = new Map([["create-issue", "createIssue"]]);
@@ -275,6 +292,7 @@ function parseArgs(argv, runtime) {
     ["branch", "branch"],
     ["external-repo", "externalRepo"],
     ["external-ref", "externalRef"],
+    ["live-ref", "liveRef"],
     ["release-type", "releaseType"],
     ["release-version", "releaseVersion"],
     ["sha", "sha"],
@@ -554,6 +572,34 @@ function isRepo(value) {
 }
 function isSha(value) {
   return /^[a-fA-F0-9]{40}$/.test(value);
+}
+function isGitRef(value) {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= 255 &&
+    !/^[-/.]/.test(value) &&
+    !/[/.]$/.test(value) &&
+    !hasForbiddenGitRefCharacter(value) &&
+    !value.includes("..") &&
+    !value.includes("@{") &&
+    !value.includes("//") &&
+    !value.split("/").some((component) => component.endsWith(".lock"))
+  );
+}
+function hasForbiddenGitRefCharacter(value) {
+  for (const character of value) {
+    const codePoint = character.codePointAt(0);
+    if (
+      codePoint === undefined ||
+      codePoint <= 0x20 ||
+      codePoint === 0x7f ||
+      "~^:?*[\\".includes(character)
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 function isEvidenceId(value) {
   return /^[0-9a-f]{32}$/.test(value);

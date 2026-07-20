@@ -12,6 +12,13 @@ export type CliConfig = ClarissimiConfig;
 
 const defaultConfigPaths = ["clarissimi.config.ts", ".clarissimi/config.json"] as const;
 
+export class CliConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CliConfigError";
+  }
+}
+
 export interface ConfigValidationResult {
   readonly ok: true;
   readonly path?: string;
@@ -22,34 +29,43 @@ export async function validateConfigFile(
   cwd: string,
   requestedPath?: string,
 ): Promise<ConfigValidationResult> {
-  const path = requestedPath ?? (await resolveDefaultConfigPath(cwd));
-  if (path === undefined) {
+  try {
+    const path = requestedPath ?? (await resolveDefaultConfigPath(cwd));
+    if (path === undefined) {
+      return {
+        ok: true,
+        config: {},
+      };
+    }
+
+    const resolvedPath = resolveFromCwd(cwd, path);
+
+    if (!(await fileExists(resolvedPath))) {
+      return {
+        ok: true,
+        config: {},
+      };
+    }
+
+    const parsed = await loadConfigValue(path, resolvedPath);
+    const result = validateClarissimiConfig(parsed);
+    if (!result.ok) {
+      throw new CliConfigError(formatConfigValidationIssue(result.issues[0]));
+    }
+
     return {
       ok: true,
-      config: {},
+      path,
+      config: result.value,
     };
+  } catch (error) {
+    if (error instanceof CliConfigError) {
+      throw error;
+    }
+    throw new CliConfigError(
+      error instanceof Error ? error.message : "Clarissimi config could not be loaded.",
+    );
   }
-
-  const resolvedPath = resolveFromCwd(cwd, path);
-
-  if (!(await fileExists(resolvedPath))) {
-    return {
-      ok: true,
-      config: {},
-    };
-  }
-
-  const parsed = await loadConfigValue(path, resolvedPath);
-  const result = validateClarissimiConfig(parsed);
-  if (!result.ok) {
-    throw new Error(formatConfigValidationIssue(result.issues[0]));
-  }
-
-  return {
-    ok: true,
-    path,
-    config: result.value,
-  };
 }
 
 async function resolveDefaultConfigPath(cwd: string): Promise<string | undefined> {

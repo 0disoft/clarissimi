@@ -24,6 +24,8 @@ import {
 import {
   createFakeContributionDraftProvider,
   createOpenAiCompatibleContributionDraftProvider,
+  FakeProviderAssessmentError,
+  OpenAiCompatibleProviderError,
   type ContributionDraftProvider,
 } from "@clarissimi/providers";
 import {
@@ -53,7 +55,7 @@ import {
   renderCliHelp,
 } from "./command-spec.js";
 import { renderShellCompletion } from "./completion.js";
-import { validateConfigFile, type CliConfig } from "./config.js";
+import { CliConfigError, validateConfigFile, type CliConfig } from "./config.js";
 import { CLI_EXIT_CODES, type CliExitCode } from "./exit-codes.js";
 import { recognizeFixture, recognizeGitHubFixture } from "./fixture.js";
 import {
@@ -291,9 +293,7 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
     }
 
     writeFailure(io, args, "recognize", error);
-    return error instanceof RendererValidationError
-      ? CLI_EXIT_CODES.policyRejection
-      : CLI_EXIT_CODES.providerFailure;
+    return classifyRecognitionFailure(error);
   }
 }
 
@@ -485,6 +485,9 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
     }
 
     writeFailure(io, args, "import-draft", error);
+    if (error instanceof CliConfigError) {
+      return CLI_EXIT_CODES.invalidConfig;
+    }
     return error instanceof RendererValidationError
       ? CLI_EXIT_CODES.policyRejection
       : CLI_EXIT_CODES.writeFailure;
@@ -603,6 +606,9 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
     }
 
     writeFailure(io, args, "rebuild", error);
+    if (error instanceof CliConfigError) {
+      return CLI_EXIT_CODES.invalidConfig;
+    }
     return error instanceof RendererValidationError
       ? CLI_EXIT_CODES.invalidLedger
       : CLI_EXIT_CODES.writeFailure;
@@ -658,6 +664,22 @@ function writeOutput(io: CliIo, args: ParsedArgs, value: Record<string, unknown>
   }
 
   io.stdout(`${value.message ?? "Command completed."}\n`);
+}
+
+function classifyRecognitionFailure(error: unknown): CliExitCode {
+  if (error instanceof CliConfigError) {
+    return CLI_EXIT_CODES.invalidConfig;
+  }
+  if (error instanceof RendererValidationError) {
+    return CLI_EXIT_CODES.policyRejection;
+  }
+  if (
+    error instanceof FakeProviderAssessmentError ||
+    (error instanceof OpenAiCompatibleProviderError && error.code === "invalid_assessment")
+  ) {
+    return CLI_EXIT_CODES.schemaValidationFailure;
+  }
+  return CLI_EXIT_CODES.providerFailure;
 }
 
 function writeUsageFailure(

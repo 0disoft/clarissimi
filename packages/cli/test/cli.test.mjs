@@ -433,6 +433,30 @@ test("validate-config rejects invalid provider endpoint values", async () => {
   });
 });
 
+test("config-consuming commands preserve the invalid-config exit code", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "fixture.json");
+    const draftPath = join(dir, "draft.json");
+    const configPath = join(dir, ".clarissimi", "config.json");
+    await mkdir(join(dir, ".clarissimi"), { recursive: true });
+    await writeFile(fixturePath, JSON.stringify(fixture()), "utf8");
+    await writeFile(draftPath, JSON.stringify(assessment()), "utf8");
+    await writeFile(configPath, JSON.stringify({ provider: "unsupported" }), "utf8");
+
+    const cases = [
+      ["recognize", "--fixture", fixturePath, "--config", configPath, "--json"],
+      ["import-draft", "--draft", draftPath, "--config", configPath, "--json"],
+      ["rebuild", "--config", configPath, "--json"],
+    ];
+    for (const argv of cases) {
+      const result = await run(argv, dir);
+      assert.equal(result.exitCode, 2, `${argv[0]}: ${result.stdout}${result.stderr}`);
+      assert.match(JSON.parse(result.stdout).message, /Config field provider/);
+      assert.equal(result.stderr, "");
+    }
+  });
+});
+
 test("validate-ledger validates approved JSONL records", async () => {
   await withTempDir(async (dir) => {
     const ledger = join(dir, "ledger.jsonl");
@@ -1328,6 +1352,51 @@ test("recognize can use the OpenAI-compatible provider when explicitly selected"
     assert.equal(requests[0].url, "http://127.0.0.1:11434/v1/chat/completions");
     assert.deepEqual(requests[0].body.thinking, { type: "disabled" });
     assert.equal(JSON.stringify(requests[0].body).includes("person@example.com"), false);
+  });
+});
+
+test("recognize reports provider assessment schema failures with exit code 5", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "fixture.json");
+    await writeFile(fixturePath, JSON.stringify(fixture()), "utf8");
+
+    const result = await run(
+      [
+        "recognize",
+        "--fixture",
+        fixturePath,
+        "--provider",
+        "openai-compatible",
+        "--provider-model",
+        "clarissimi-test-model",
+        "--provider-endpoint",
+        "http://127.0.0.1:11434/v1/chat/completions",
+        "--provider-endpoint-trust",
+        "private-network",
+        "--json",
+      ],
+      dir,
+      {
+        env: { CLARISSIMI_PROVIDER_TOKEN: "unit-token" },
+        fetch: async () =>
+          jsonResponse({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    contributionType: "test",
+                    affectedArea: "parser regression coverage",
+                  }),
+                },
+              },
+            ],
+          }),
+      },
+    );
+
+    assert.equal(result.exitCode, 5);
+    assert.match(JSON.parse(result.stdout).message, /invalid contribution assessment/);
+    assert.equal(result.stderr, "");
   });
 });
 

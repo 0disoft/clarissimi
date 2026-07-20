@@ -3760,8 +3760,8 @@ function assertClarissimiOutputPath(path) {
 }
 
 // packages/action/dist/run.js
-import { appendFile, lstat as lstat2, mkdir as mkdir3, readFile as readFile3, realpath as realpath2, writeFile as writeFile3 } from "node:fs/promises";
-import { basename, dirname as dirname3, isAbsolute as isAbsolute3, join as join3, relative as relative2, resolve } from "node:path";
+import { lstat as lstat2, readFile as readFile3, realpath as realpath2 } from "node:fs/promises";
+import { basename, isAbsolute as isAbsolute3, join as join3, relative as relative2, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 
@@ -4622,13 +4622,191 @@ function isRecord7(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// packages/action/dist/run.js
+// packages/action/dist/errors.js
 var ActionUsageError = class extends Error {
   constructor(message) {
     super(message);
     this.name = "ActionUsageError";
   }
 };
+
+// packages/action/dist/environment.js
+function readEnvInput(value) {
+  if (value === void 0 || value.trim().length === 0) {
+    return void 0;
+  }
+  return value;
+}
+function requireEnvInput(value, name) {
+  const normalized = readEnvInput(value);
+  if (normalized === void 0) {
+    throw new ActionUsageError(`${name} is required for write modes.`);
+  }
+  return normalized;
+}
+
+// packages/action/dist/provider.js
+function resolveActionProvider(env, runtime, config) {
+  const providerId = readEnvInput(env.INPUT_PROVIDER) ?? config.provider ?? "fake";
+  if (!isConfigProvider(providerId)) {
+    throw new ActionUsageError(`Unsupported provider: ${providerId}.`);
+  }
+  if (providerId === "fake") {
+    return createFakeContributionDraftProvider();
+  }
+  if (providerId === "openai-compatible") {
+    const options = {
+      model: requireProviderEnvInput(readEnvInput(env.INPUT_PROVIDER_MODEL) ?? config.providerModel, "INPUT_PROVIDER_MODEL or config providerModel"),
+      token: requireProviderEnvInput(env.CLARISSIMI_PROVIDER_TOKEN, "CLARISSIMI_PROVIDER_TOKEN")
+    };
+    assignOptional6(options, "endpoint", readEnvInput(env.INPUT_PROVIDER_ENDPOINT) ?? config.providerEndpoint);
+    assignOptional6(options, "endpointTrust", parseProviderEndpointTrust(readEnvInput(env.INPUT_PROVIDER_ENDPOINT_TRUST) ?? config.providerEndpointTrust));
+    assignOptional6(options, "thinking", parseProviderThinking(readEnvInput(env.INPUT_PROVIDER_THINKING) ?? config.providerThinking));
+    assignOptional6(options, "fetch", runtime.fetch);
+    return createOpenAiCompatibleContributionDraftProvider(options);
+  }
+  throw new ActionUsageError(`Unsupported provider: ${providerId}.`);
+}
+function requireProviderEnvInput(value, name) {
+  const normalized = readEnvInput(value);
+  if (normalized === void 0) {
+    throw new ActionUsageError(`${name} is required for the openai-compatible provider.`);
+  }
+  return normalized;
+}
+function parseProviderThinking(value) {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (!isConfigProviderThinking(value)) {
+    throw new ActionUsageError("INPUT_PROVIDER_THINKING supports only disabled.");
+  }
+  return value;
+}
+function parseProviderEndpointTrust(value) {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (!isConfigProviderEndpointTrust(value)) {
+    throw new ActionUsageError("INPUT_PROVIDER_ENDPOINT_TRUST supports only public or private-network.");
+  }
+  return value;
+}
+function assignOptional6(target, key, value) {
+  if (value !== void 0) {
+    target[key] = value;
+  }
+}
+
+// packages/action/dist/output.js
+import { appendFile, mkdir as mkdir3, writeFile as writeFile3 } from "node:fs/promises";
+import { dirname as dirname3 } from "node:path";
+async function writeGitHubOutputs(outputPath, summary, summaryJsonPath) {
+  if (outputPath === void 0 || outputPath.trim().length === 0) {
+    return;
+  }
+  const lines = [
+    `draft-count=${summary.draftCount}`,
+    `proposed-entry-count=${summary.proposedEntryCount}`,
+    `skipped-entry-count=${summary.skippedEntryCount}`,
+    `mode=${summary.mode}`,
+    `input-source=${summary.inputSource}`,
+    `approval-status=${summary.approvalStatus ?? ""}`,
+    `redaction-match-count=${summary.redactionMatchCount}`
+  ];
+  if (summaryJsonPath !== void 0) {
+    lines.push(`summary-json-path=${summaryJsonPath}`);
+  }
+  if (summary.mode === "propose" || summary.mode === "stage-draft" || summary.mode === "promote-draft") {
+    lines.push(`staged-file-count=${summary.stagedFileCount}`, `proposal-branch=${summary.proposalBranch}`, `proposal-commit-sha=${summary.proposalCommitSha}`, `proposal-pull-request-number=${summary.proposalPullRequestNumber}`, `proposal-pull-request-url=${summary.proposalPullRequestUrl}`, `proposal-pull-request-action=${summary.proposalPullRequestAction}`, `source-comment-action=${summary.sourceCommentAction ?? ""}`, `source-comment-url=${summary.sourceCommentUrl ?? ""}`);
+  }
+  if (summary.mode === "commit") {
+    lines.push(`staged-file-count=${summary.stagedFileCount}`, `direct-commit-branch=${summary.directCommitBranch}`, `direct-commit-base-sha=${summary.directCommitBaseSha}`, `direct-commit-sha=${summary.directCommitSha}`, `direct-commit-created=${summary.directCommitCreated}`, `direct-commit-pushed=${summary.directCommitPushed}`);
+  }
+  if (summary.mode === "gate") {
+    lines.push(`gate-mode=${summary.gateMode}`, `gate-passed=${summary.gatePassed}`, `gate-decision=${summary.gateDecision ?? ""}`, `gate-reason=${summary.gateReason}`);
+  }
+  await appendFile(outputPath, `${lines.join("\n")}
+`, "utf8");
+}
+async function writeActionSummaryJson(summaryJsonPath, summary) {
+  if (summaryJsonPath === void 0) {
+    return;
+  }
+  await mkdir3(dirname3(summaryJsonPath), { recursive: true });
+  await writeFile3(summaryJsonPath, `${JSON.stringify(summary, null, 2)}
+`, "utf8");
+}
+async function writeGitHubStepSummary(summaryPath, summary) {
+  if (summaryPath === void 0 || summaryPath.trim().length === 0) {
+    return;
+  }
+  const rows = [
+    ["Mode", summary.mode],
+    ["Input source", summary.inputSource],
+    ["Drafts", String(summary.draftCount)],
+    ["Proposed entries", String(summary.proposedEntryCount)],
+    ["Skipped entries", String(summary.skippedEntryCount)],
+    ["Approval status", summary.approvalStatus ?? "none"],
+    ["Redaction matches", String(summary.redactionMatchCount)]
+  ];
+  if (summary.mode === "propose" || summary.mode === "stage-draft" || summary.mode === "promote-draft") {
+    rows.push(["Staged files", String(summary.stagedFileCount)], ["Proposal branch", summary.proposalBranch], ["Proposal pull request", summary.proposalPullRequestUrl], ["Proposal PR action", summary.proposalPullRequestAction]);
+    if (summary.sourceCommentAction !== void 0 && summary.sourceCommentUrl !== void 0) {
+      rows.push(["Source comment action", summary.sourceCommentAction], ["Source comment", summary.sourceCommentUrl]);
+    }
+  }
+  if (summary.mode === "commit") {
+    rows.push(["Staged files", String(summary.stagedFileCount)], ["Target branch", summary.directCommitBranch], ["Commit SHA", summary.directCommitSha], ["Commit created", String(summary.directCommitCreated)], ["Commit pushed", String(summary.directCommitPushed)]);
+  }
+  if (summary.mode === "gate") {
+    rows.push(["Gate mode", summary.gateMode], ["Gate passed", String(summary.gatePassed)], ["Gate decision", summary.gateDecision ?? "none"], ["Gate reason", summary.gateReason]);
+  }
+  if (summary.mode === "dry-run" && summary.skippedReason !== void 0) {
+    rows.push(["Skipped reason", summary.skippedReason]);
+  }
+  const markdown = [
+    `## Clarissimi ${summary.mode} summary`,
+    "",
+    "| Field | Value |",
+    "| --- | --- |",
+    ...rows.map(([field, value]) => `| ${escapeMarkdownTableCell(field)} | ${escapeMarkdownTableCell(value)} |`),
+    ""
+  ].join("\n");
+  await appendFile(summaryPath, markdown, "utf8");
+}
+var MAX_PROVIDER_FAILURE_ISSUES = 8;
+var MAX_PROVIDER_FAILURE_FIELD_LENGTH = 120;
+async function writeGitHubProviderFailureStepSummary(summaryPath, error) {
+  if (summaryPath === void 0 || summaryPath.trim().length === 0 || error.code !== "invalid_assessment" || error.issues === void 0 || error.issues.length === 0) {
+    return;
+  }
+  const issues = error.issues.slice(0, MAX_PROVIDER_FAILURE_ISSUES);
+  const markdown = [
+    "## Clarissimi provider result rejected",
+    "",
+    "The provider output failed Clarissimi's result-quality contract. Raw provider content is intentionally omitted.",
+    "",
+    "| Rule | Path |",
+    "| --- | --- |",
+    ...issues.map((issue) => `| ${escapeMarkdownTableCell(boundedProviderFailureField(issue.code))} | ${escapeMarkdownTableCell(boundedProviderFailureField(issue.path))} |`),
+    ...error.issues.length > issues.length ? [`| additional_issues_omitted | ${error.issues.length - issues.length} |`] : [],
+    ""
+  ].join("\n");
+  await appendFile(summaryPath, markdown, "utf8");
+}
+function boundedProviderFailureField(value) {
+  const normalized = value.replaceAll("\r", " ").replaceAll("\n", " ").trim();
+  if (normalized.length <= MAX_PROVIDER_FAILURE_FIELD_LENGTH) {
+    return normalized;
+  }
+  return `${normalized.slice(0, MAX_PROVIDER_FAILURE_FIELD_LENGTH - 1)}\u2026`;
+}
+function escapeMarkdownTableCell(value) {
+  return value.replaceAll("|", "\\|").replaceAll("\n", " ");
+}
+
+// packages/action/dist/run.js
 async function runActionDryRun(input) {
   const mode = input.mode ?? "dry-run";
   if (mode !== "dry-run") {
@@ -4688,14 +4866,14 @@ async function runActionPropose(input) {
     repositoryDir: input.repositoryDir,
     branch
   };
-  assignOptional6(publishInput, "remoteName", input.remoteName);
+  assignOptional7(publishInput, "remoteName", input.remoteName);
   const publishedBranch = await publishProposalBranch(publishInput);
   const pullRequestInput = {
     client: input.pullRequestClient,
     manifest: staging.manifest,
     branch
   };
-  assignOptional6(pullRequestInput, "targetRepository", input.targetRepository);
+  assignOptional7(pullRequestInput, "targetRepository", input.targetRepository);
   const pullRequest = await createOrUpdateProposalPullRequest(pullRequestInput);
   const sourceComment = await maybeUpsertProposalSourceComment(input, staging.manifest, pullRequest.pullRequest, "recognition");
   return {
@@ -4740,13 +4918,13 @@ async function runActionCommit(input) {
     manifest: staging.manifest,
     targetBranch: input.targetBranch
   };
-  assignOptional6(commitInput, "expectedHeadSha", input.expectedHeadSha);
+  assignOptional7(commitInput, "expectedHeadSha", input.expectedHeadSha);
   const commit = await createDirectCommit(commitInput);
   const publishInput = {
     repositoryDir: input.repositoryDir,
     commit
   };
-  assignOptional6(publishInput, "remoteName", input.remoteName);
+  assignOptional7(publishInput, "remoteName", input.remoteName);
   const published = await publishDirectCommit(publishInput);
   return {
     ok: true,
@@ -4788,7 +4966,7 @@ async function runActionStageDraft(input) {
     repositoryDir: input.repositoryDir,
     branch
   };
-  assignOptional6(publishInput, "remoteName", input.remoteName);
+  assignOptional7(publishInput, "remoteName", input.remoteName);
   const publishedBranch = await publishProposalBranch(publishInput);
   const pullRequestInput = {
     client: input.pullRequestClient,
@@ -4796,7 +4974,7 @@ async function runActionStageDraft(input) {
     branch,
     maintainerApprovalNote: "This pull request stages an unapproved Clarissimi draft. Review and edit the draft, then approve and import it before public recognition."
   };
-  assignOptional6(pullRequestInput, "targetRepository", input.targetRepository);
+  assignOptional7(pullRequestInput, "targetRepository", input.targetRepository);
   const pullRequest = await createOrUpdateProposalPullRequest(pullRequestInput);
   const sourceComment = await maybeUpsertProposalSourceComment(input, staging.manifest, pullRequest.pullRequest, "draft-review");
   return {
@@ -4843,7 +5021,7 @@ async function runActionPromoteDraft(input) {
     repositoryDir: input.repositoryDir,
     branch
   };
-  assignOptional6(publishInput, "remoteName", input.remoteName);
+  assignOptional7(publishInput, "remoteName", input.remoteName);
   const publishedBranch = await publishProposalBranch(publishInput);
   const pullRequestInput = {
     client: input.pullRequestClient,
@@ -4851,7 +5029,7 @@ async function runActionPromoteDraft(input) {
     branch,
     maintainerApprovalNote: "This recognition proposal was rendered from an explicitly approved Clarissimi draft. Maintainers still own the final merge decision."
   };
-  assignOptional6(pullRequestInput, "targetRepository", input.targetRepository);
+  assignOptional7(pullRequestInput, "targetRepository", input.targetRepository);
   const pullRequest = await createOrUpdateProposalPullRequest(pullRequestInput);
   const sourceComment = await maybeUpsertProposalSourceComment(input, staging.manifest, pullRequest.pullRequest, "recognition");
   return {
@@ -4936,12 +5114,12 @@ async function runActionFromEnvironment(env, io, runtime = {}) {
       if (githubFixturePath !== void 0) {
         throw new ActionUsageError("gate accepts event-path instead of github-fixture.");
       }
-      assignOptional6(input, "eventPath", explicitEventPath ?? fallbackEventPath);
+      assignOptional7(input, "eventPath", explicitEventPath ?? fallbackEventPath);
     } else {
-      assignOptional6(input, "eventPath", explicitEventPath ?? fallbackEventPath);
-      assignOptional6(input, "githubFixturePath", githubFixturePath);
-      assignOptional6(input, "liveGitHubClient", runtime.liveGitHubClient);
-      assignOptional6(input, "provider", runtime.provider ?? resolveActionProvider(env, runtime, config));
+      assignOptional7(input, "eventPath", explicitEventPath ?? fallbackEventPath);
+      assignOptional7(input, "githubFixturePath", githubFixturePath);
+      assignOptional7(input, "liveGitHubClient", runtime.liveGitHubClient);
+      assignOptional7(input, "provider", runtime.provider ?? resolveActionProvider(env, runtime, config));
     }
     const summary = await runActionMode(input, env, runtime);
     await writeActionSummaryJson(summaryJsonPath, summary);
@@ -5038,8 +5216,8 @@ function buildActionReviewGateInput(input, env, runtime) {
   const clientOptions = {
     token: requireEnvInput(env.GITHUB_TOKEN, "GITHUB_TOKEN")
   };
-  assignOptional6(clientOptions, "apiUrl", readEnvInput(env.GITHUB_API_URL));
-  assignOptional6(clientOptions, "fetch", runtime.fetch);
+  assignOptional7(clientOptions, "apiUrl", readEnvInput(env.GITHUB_API_URL));
+  assignOptional7(clientOptions, "fetch", runtime.fetch);
   return {
     eventPath,
     gateMode: gateModeValue,
@@ -5051,8 +5229,8 @@ function buildActionCommitInput(input, env, runtime) {
   const clientOptions = {
     token: env.GITHUB_TOKEN
   };
-  assignOptional6(clientOptions, "apiUrl", readEnvInput(env.GITHUB_API_URL));
-  assignOptional6(clientOptions, "fetch", runtime.fetch);
+  assignOptional7(clientOptions, "apiUrl", readEnvInput(env.GITHUB_API_URL));
+  assignOptional7(clientOptions, "fetch", runtime.fetch);
   const commitInput = {
     ...input,
     mode: "commit",
@@ -5061,8 +5239,8 @@ function buildActionCommitInput(input, env, runtime) {
     targetBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
     liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(clientOptions)
   };
-  assignOptional6(commitInput, "expectedHeadSha", readEnvInput(env.GITHUB_SHA));
-  assignOptional6(commitInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
+  assignOptional7(commitInput, "expectedHeadSha", readEnvInput(env.GITHUB_SHA));
+  assignOptional7(commitInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
   return commitInput;
 }
 function normalizeActionMode(value) {
@@ -5081,8 +5259,8 @@ function buildActionWriteInput(input, env, runtime, mode) {
   const clientOptions = {
     token: requireEnvInput(env.GITHUB_TOKEN, "GITHUB_TOKEN")
   };
-  assignOptional6(clientOptions, "apiUrl", readEnvInput(env.GITHUB_API_URL));
-  assignOptional6(clientOptions, "fetch", runtime.fetch);
+  assignOptional7(clientOptions, "apiUrl", readEnvInput(env.GITHUB_API_URL));
+  assignOptional7(clientOptions, "fetch", runtime.fetch);
   const defaultGitHubClient = createGitHubPullRequestClient(clientOptions);
   const pullRequestClient = runtime.pullRequestClient ?? defaultGitHubClient;
   const sourceCommentClient = runtime.sourceCommentClient ?? defaultGitHubClient;
@@ -5100,8 +5278,8 @@ function buildActionWriteInput(input, env, runtime, mode) {
       sourceCommentClient,
       liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(liveGitHubClientOptions2)
     };
-    assignOptional6(proposeInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
-    assignOptional6(proposeInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
+    assignOptional7(proposeInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
+    assignOptional7(proposeInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
     return proposeInput;
   }
   if (mode === "promote-draft") {
@@ -5115,10 +5293,10 @@ function buildActionWriteInput(input, env, runtime, mode) {
       commentMode,
       sourceCommentClient
     };
-    assignOptional6(promoteDraftInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
-    assignOptional6(promoteDraftInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
-    assignOptional6(promoteDraftInput, "markdownSummary", input.markdownSummary);
-    assignOptional6(promoteDraftInput, "includeAutomationContributors", input.includeAutomationContributors);
+    assignOptional7(promoteDraftInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
+    assignOptional7(promoteDraftInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
+    assignOptional7(promoteDraftInput, "markdownSummary", input.markdownSummary);
+    assignOptional7(promoteDraftInput, "includeAutomationContributors", input.includeAutomationContributors);
     return promoteDraftInput;
   }
   const liveGitHubClientOptions = buildLiveGitHubClientOptions(clientOptions, runtime);
@@ -5133,16 +5311,16 @@ function buildActionWriteInput(input, env, runtime, mode) {
     sourceCommentClient,
     liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(liveGitHubClientOptions)
   };
-  assignOptional6(stageDraftInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
-  assignOptional6(stageDraftInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
+  assignOptional7(stageDraftInput, "remoteName", readEnvInput(env.INPUT_REMOTE_NAME));
+  assignOptional7(stageDraftInput, "targetRepository", readEnvInput(env.GITHUB_REPOSITORY));
   return stageDraftInput;
 }
 function buildLiveGitHubClientOptions(clientOptions, runtime) {
   const options = {
     token: clientOptions.token
   };
-  assignOptional6(options, "apiUrl", clientOptions.apiUrl);
-  assignOptional6(options, "fetch", runtime.fetch);
+  assignOptional7(options, "apiUrl", clientOptions.apiUrl);
+  assignOptional7(options, "fetch", runtime.fetch);
   return options;
 }
 function resolvePromoteDraftPath(env) {
@@ -5268,26 +5446,6 @@ function applyFixtureApproval(draft, status) {
     maintainerApprovalStatus: status
   };
 }
-function readEnvInput(value) {
-  if (value === void 0 || value.trim().length === 0) {
-    return void 0;
-  }
-  return value;
-}
-function requireEnvInput(value, name) {
-  const normalized = readEnvInput(value);
-  if (normalized === void 0) {
-    throw new ActionUsageError(`${name} is required for write modes.`);
-  }
-  return normalized;
-}
-function requireProviderEnvInput(value, name) {
-  const normalized = readEnvInput(value);
-  if (normalized === void 0) {
-    throw new ActionUsageError(`${name} is required for the openai-compatible provider.`);
-  }
-  return normalized;
-}
 async function loadActionConfigFromEnvironment(env) {
   const configPath = readEnvInput(env.INPUT_CONFIG_PATH);
   if (configPath === void 0) {
@@ -5343,45 +5501,6 @@ function formatActionConfigValidationIssue(issue) {
   }
   return issue.message;
 }
-function resolveActionProvider(env, runtime, config) {
-  const providerId = readEnvInput(env.INPUT_PROVIDER) ?? config.provider ?? "fake";
-  if (!isConfigProvider(providerId)) {
-    throw new ActionUsageError(`Unsupported provider: ${providerId}.`);
-  }
-  if (providerId === "fake") {
-    return createFakeContributionDraftProvider();
-  }
-  if (providerId === "openai-compatible") {
-    const options = {
-      model: requireProviderEnvInput(readEnvInput(env.INPUT_PROVIDER_MODEL) ?? config.providerModel, "INPUT_PROVIDER_MODEL or config providerModel"),
-      token: requireProviderEnvInput(env.CLARISSIMI_PROVIDER_TOKEN, "CLARISSIMI_PROVIDER_TOKEN")
-    };
-    assignOptional6(options, "endpoint", readEnvInput(env.INPUT_PROVIDER_ENDPOINT) ?? config.providerEndpoint);
-    assignOptional6(options, "endpointTrust", parseProviderEndpointTrust(readEnvInput(env.INPUT_PROVIDER_ENDPOINT_TRUST) ?? config.providerEndpointTrust));
-    assignOptional6(options, "thinking", parseProviderThinking(readEnvInput(env.INPUT_PROVIDER_THINKING) ?? config.providerThinking));
-    assignOptional6(options, "fetch", runtime.fetch);
-    return createOpenAiCompatibleContributionDraftProvider(options);
-  }
-  throw new ActionUsageError(`Unsupported provider: ${providerId}.`);
-}
-function parseProviderThinking(value) {
-  if (value === void 0) {
-    return void 0;
-  }
-  if (!isConfigProviderThinking(value)) {
-    throw new ActionUsageError("INPUT_PROVIDER_THINKING supports only disabled.");
-  }
-  return value;
-}
-function parseProviderEndpointTrust(value) {
-  if (value === void 0) {
-    return void 0;
-  }
-  if (!isConfigProviderEndpointTrust(value)) {
-    throw new ActionUsageError("INPUT_PROVIDER_ENDPOINT_TRUST supports only public or private-network.");
-  }
-  return value;
-}
 function resolveActionMarkdownSummary(env, config) {
   const value = readEnvInput(env.INPUT_MARKDOWN_SUMMARY) ?? config.markdownSummary ?? "none";
   if (!isConfigMarkdownSummary(value)) {
@@ -5402,114 +5521,10 @@ function resolveActionIncludeAutomationContributors(env, config) {
   }
   throw new ActionUsageError("INPUT_INCLUDE_AUTOMATION_CONTRIBUTORS supports only true or false.");
 }
-async function writeGitHubOutputs(outputPath, summary, summaryJsonPath) {
-  if (outputPath === void 0 || outputPath.trim().length === 0) {
-    return;
-  }
-  const lines = [
-    `draft-count=${summary.draftCount}`,
-    `proposed-entry-count=${summary.proposedEntryCount}`,
-    `skipped-entry-count=${summary.skippedEntryCount}`,
-    `mode=${summary.mode}`,
-    `input-source=${summary.inputSource}`,
-    `approval-status=${summary.approvalStatus ?? ""}`,
-    `redaction-match-count=${summary.redactionMatchCount}`
-  ];
-  if (summaryJsonPath !== void 0) {
-    lines.push(`summary-json-path=${summaryJsonPath}`);
-  }
-  if (summary.mode === "propose" || summary.mode === "stage-draft" || summary.mode === "promote-draft") {
-    lines.push(`staged-file-count=${summary.stagedFileCount}`, `proposal-branch=${summary.proposalBranch}`, `proposal-commit-sha=${summary.proposalCommitSha}`, `proposal-pull-request-number=${summary.proposalPullRequestNumber}`, `proposal-pull-request-url=${summary.proposalPullRequestUrl}`, `proposal-pull-request-action=${summary.proposalPullRequestAction}`, `source-comment-action=${summary.sourceCommentAction ?? ""}`, `source-comment-url=${summary.sourceCommentUrl ?? ""}`);
-  }
-  if (summary.mode === "commit") {
-    lines.push(`staged-file-count=${summary.stagedFileCount}`, `direct-commit-branch=${summary.directCommitBranch}`, `direct-commit-base-sha=${summary.directCommitBaseSha}`, `direct-commit-sha=${summary.directCommitSha}`, `direct-commit-created=${summary.directCommitCreated}`, `direct-commit-pushed=${summary.directCommitPushed}`);
-  }
-  if (summary.mode === "gate") {
-    lines.push(`gate-mode=${summary.gateMode}`, `gate-passed=${summary.gatePassed}`, `gate-decision=${summary.gateDecision ?? ""}`, `gate-reason=${summary.gateReason}`);
-  }
-  await appendFile(outputPath, `${lines.join("\n")}
-`, "utf8");
-}
-async function writeActionSummaryJson(summaryJsonPath, summary) {
-  if (summaryJsonPath === void 0) {
-    return;
-  }
-  await mkdir3(dirname3(summaryJsonPath), { recursive: true });
-  await writeFile3(summaryJsonPath, `${JSON.stringify(summary, null, 2)}
-`, "utf8");
-}
-async function writeGitHubStepSummary(summaryPath, summary) {
-  if (summaryPath === void 0 || summaryPath.trim().length === 0) {
-    return;
-  }
-  const rows = [
-    ["Mode", summary.mode],
-    ["Input source", summary.inputSource],
-    ["Drafts", String(summary.draftCount)],
-    ["Proposed entries", String(summary.proposedEntryCount)],
-    ["Skipped entries", String(summary.skippedEntryCount)],
-    ["Approval status", summary.approvalStatus ?? "none"],
-    ["Redaction matches", String(summary.redactionMatchCount)]
-  ];
-  if (summary.mode === "propose" || summary.mode === "stage-draft" || summary.mode === "promote-draft") {
-    rows.push(["Staged files", String(summary.stagedFileCount)], ["Proposal branch", summary.proposalBranch], ["Proposal pull request", summary.proposalPullRequestUrl], ["Proposal PR action", summary.proposalPullRequestAction]);
-    if (summary.sourceCommentAction !== void 0 && summary.sourceCommentUrl !== void 0) {
-      rows.push(["Source comment action", summary.sourceCommentAction], ["Source comment", summary.sourceCommentUrl]);
-    }
-  }
-  if (summary.mode === "commit") {
-    rows.push(["Staged files", String(summary.stagedFileCount)], ["Target branch", summary.directCommitBranch], ["Commit SHA", summary.directCommitSha], ["Commit created", String(summary.directCommitCreated)], ["Commit pushed", String(summary.directCommitPushed)]);
-  }
-  if (summary.mode === "gate") {
-    rows.push(["Gate mode", summary.gateMode], ["Gate passed", String(summary.gatePassed)], ["Gate decision", summary.gateDecision ?? "none"], ["Gate reason", summary.gateReason]);
-  }
-  if (summary.mode === "dry-run" && summary.skippedReason !== void 0) {
-    rows.push(["Skipped reason", summary.skippedReason]);
-  }
-  const markdown = [
-    `## Clarissimi ${summary.mode} summary`,
-    "",
-    "| Field | Value |",
-    "| --- | --- |",
-    ...rows.map(([field, value]) => `| ${escapeMarkdownTableCell(field)} | ${escapeMarkdownTableCell(value)} |`),
-    ""
-  ].join("\n");
-  await appendFile(summaryPath, markdown, "utf8");
-}
-var MAX_PROVIDER_FAILURE_ISSUES = 8;
-var MAX_PROVIDER_FAILURE_FIELD_LENGTH = 120;
-async function writeGitHubProviderFailureStepSummary(summaryPath, error) {
-  if (summaryPath === void 0 || summaryPath.trim().length === 0 || error.code !== "invalid_assessment" || error.issues === void 0 || error.issues.length === 0) {
-    return;
-  }
-  const issues = error.issues.slice(0, MAX_PROVIDER_FAILURE_ISSUES);
-  const markdown = [
-    "## Clarissimi provider result rejected",
-    "",
-    "The provider output failed Clarissimi's result-quality contract. Raw provider content is intentionally omitted.",
-    "",
-    "| Rule | Path |",
-    "| --- | --- |",
-    ...issues.map((issue) => `| ${escapeMarkdownTableCell(boundedProviderFailureField(issue.code))} | ${escapeMarkdownTableCell(boundedProviderFailureField(issue.path))} |`),
-    ...error.issues.length > issues.length ? [`| additional_issues_omitted | ${error.issues.length - issues.length} |`] : [],
-    ""
-  ].join("\n");
-  await appendFile(summaryPath, markdown, "utf8");
-}
-function boundedProviderFailureField(value) {
-  const normalized = value.replaceAll("\r", " ").replaceAll("\n", " ").trim();
-  if (normalized.length <= MAX_PROVIDER_FAILURE_FIELD_LENGTH) {
-    return normalized;
-  }
-  return `${normalized.slice(0, MAX_PROVIDER_FAILURE_FIELD_LENGTH - 1)}\u2026`;
-}
-function escapeMarkdownTableCell(value) {
-  return value.replaceAll("|", "\\|").replaceAll("\n", " ");
-}
 function isRecord8(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function assignOptional6(target, key, value) {
+function assignOptional7(target, key, value) {
   if (value !== void 0) {
     target[key] = value;
   }

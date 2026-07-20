@@ -13,20 +13,14 @@ import {
 } from "@clarissimi/github";
 import {
   createFakeContributionDraftProvider,
-  createOpenAiCompatibleContributionDraftProvider,
   OpenAiCompatibleProviderError,
   type ContributionDraftProvider,
 } from "@clarissimi/providers";
 import {
-  isConfigProvider,
-  isConfigProviderEndpointTrust,
-  isConfigProviderThinking,
   isConfigMarkdownSummary,
   isApprovalStatus,
   type ApprovalStatus,
   type ClarissimiConfig,
-  type ConfigProviderThinking,
-  type ConfigProviderEndpointTrust,
   type ContributionAssessment,
   type ValidationIssue,
   validateClarissimiConfig,
@@ -36,6 +30,8 @@ import {
 import { publishProposalBranch } from "./branch-publisher.js";
 import { writeProposalBranch } from "./branch-writer.js";
 import { createDirectCommit, publishDirectCommit } from "./direct-commit.js";
+import { readEnvInput, requireEnvInput } from "./environment.js";
+import { ActionUsageError } from "./errors.js";
 import { resolveGitHubEventPayload } from "./event.js";
 import { createGitHubPullRequestClient } from "./github-client.js";
 import {
@@ -57,6 +53,7 @@ import {
   type ProposalOutputStagingManifest,
 } from "./staging.js";
 import { sanitizeAssessmentForActionSummary } from "./summary.js";
+import { resolveActionProvider } from "./provider.js";
 import type {
   ActionMode,
   ActionCommitInput,
@@ -73,12 +70,7 @@ import type {
 } from "./types.js";
 import { isActionMode } from "./types.js";
 
-export class ActionUsageError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ActionUsageError";
-  }
-}
+export { ActionUsageError } from "./errors.js";
 
 export async function runActionDryRun(input: ActionDryRunInput): Promise<ActionDryRunSummary> {
   const mode = input.mode ?? "dry-run";
@@ -966,32 +958,6 @@ function applyFixtureApproval(
   };
 }
 
-function readEnvInput(value: string | undefined): string | undefined {
-  if (value === undefined || value.trim().length === 0) {
-    return undefined;
-  }
-
-  return value;
-}
-
-function requireEnvInput(value: string | undefined, name: string): string {
-  const normalized = readEnvInput(value);
-  if (normalized === undefined) {
-    throw new ActionUsageError(`${name} is required for write modes.`);
-  }
-
-  return normalized;
-}
-
-function requireProviderEnvInput(value: string | undefined, name: string): string {
-  const normalized = readEnvInput(value);
-  if (normalized === undefined) {
-    throw new ActionUsageError(`${name} is required for the openai-compatible provider.`);
-  }
-
-  return normalized;
-}
-
 async function loadActionConfigFromEnvironment(env: NodeJS.ProcessEnv): Promise<ClarissimiConfig> {
   const configPath = readEnvInput(env.INPUT_CONFIG_PATH);
   if (configPath === undefined) {
@@ -1063,80 +1029,6 @@ function formatActionConfigValidationIssue(issue: ValidationIssue | undefined): 
   }
 
   return issue.message;
-}
-
-function resolveActionProvider(
-  env: NodeJS.ProcessEnv,
-  runtime: ActionEnvironmentRuntime,
-  config: ClarissimiConfig,
-): ContributionDraftProvider {
-  const providerId = readEnvInput(env.INPUT_PROVIDER) ?? config.provider ?? "fake";
-  if (!isConfigProvider(providerId)) {
-    throw new ActionUsageError(`Unsupported provider: ${providerId}.`);
-  }
-
-  if (providerId === "fake") {
-    return createFakeContributionDraftProvider();
-  }
-
-  if (providerId === "openai-compatible") {
-    const options: Parameters<typeof createOpenAiCompatibleContributionDraftProvider>[0] = {
-      model: requireProviderEnvInput(
-        readEnvInput(env.INPUT_PROVIDER_MODEL) ?? config.providerModel,
-        "INPUT_PROVIDER_MODEL or config providerModel",
-      ),
-      token: requireProviderEnvInput(env.CLARISSIMI_PROVIDER_TOKEN, "CLARISSIMI_PROVIDER_TOKEN"),
-    };
-    assignOptional(
-      options,
-      "endpoint",
-      readEnvInput(env.INPUT_PROVIDER_ENDPOINT) ?? config.providerEndpoint,
-    );
-    assignOptional(
-      options,
-      "endpointTrust",
-      parseProviderEndpointTrust(
-        readEnvInput(env.INPUT_PROVIDER_ENDPOINT_TRUST) ?? config.providerEndpointTrust,
-      ),
-    );
-    assignOptional(
-      options,
-      "thinking",
-      parseProviderThinking(readEnvInput(env.INPUT_PROVIDER_THINKING) ?? config.providerThinking),
-    );
-    assignOptional(options, "fetch", runtime.fetch);
-    return createOpenAiCompatibleContributionDraftProvider(options);
-  }
-
-  throw new ActionUsageError(`Unsupported provider: ${providerId}.`);
-}
-
-function parseProviderThinking(value: string | undefined): ConfigProviderThinking | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  if (!isConfigProviderThinking(value)) {
-    throw new ActionUsageError("INPUT_PROVIDER_THINKING supports only disabled.");
-  }
-
-  return value;
-}
-
-function parseProviderEndpointTrust(
-  value: string | undefined,
-): ConfigProviderEndpointTrust | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  if (!isConfigProviderEndpointTrust(value)) {
-    throw new ActionUsageError(
-      "INPUT_PROVIDER_ENDPOINT_TRUST supports only public or private-network.",
-    );
-  }
-
-  return value;
 }
 
 function resolveActionMarkdownSummary(

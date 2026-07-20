@@ -756,6 +756,179 @@ env_allowlist = []
 network = true
 destructive = false
 
+[intents.release_validate_pending_alias]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["release"]
+description = "Revalidate immutable v0.5.2 with hosted live-provider, external dry-run, full-write, cleanup, and orphan-audit workflows before alias promotion."
+argv = [
+  "pnpm",
+  "run",
+  "release-candidate-evidence-orchestrator",
+  "--",
+  "--provider-model",
+  "gpt-4.1-mini",
+  "--release-type",
+  "marketplace-action-tag",
+  "--release-version",
+  "v0.5.2",
+  "--external-ref",
+  "v0.5.2",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["hosted_ci_success", "published_v0_5_2", "user_authorized_release"]
+
+[intents.verify_marketplace_pending_alias]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Verify that the public Marketplace listing still marks v0.5.2 as Latest and renders the matching immutable Action reference before alias promotion."
+argv = ["pnpm", "run", "verify-marketplace-release", "--", "--version", "v0.5.2"]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["release_validate_pending_alias", "marketplace_publication"]
+
+[intents.promote_pending_alias]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["release", "destructive_command"]
+description = "Promote moving alias v0 to immutable Marketplace release v0.5.2 with compare-and-swap rollback and hosted post-promotion validation."
+argv = [
+  "pnpm",
+  "run",
+  "promote-action-major-alias",
+  "--",
+  "--release-version",
+  "v0.5.2",
+  "--sha",
+  "24a0ff299fecfa6cb70fd8f425945b2f13e284c9",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = true
+required_after = [
+  "release_validate_pending_alias",
+  "verify_marketplace_pending_alias",
+  "hosted_ci_success",
+  "user_authorized_release",
+]
+
+[intents.git_stage_pending_alias_authorization]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Stage only the reviewed exact-version v0.5.2 alias-promotion command contract and manifest lock."
+argv = ["git", "add", "--", ".mustflow/config/commands.toml", ".mustflow/config/manifest.lock.toml"]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["pending_alias_authorization_validation_complete"]
+
+[intents.git_commit_pending_alias_authorization]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Commit the exact-version v0.5.2 alias-promotion command contract."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "chore(release): authorize v0.5.2 alias promotion",
+  "-m",
+  "Validation: mustflow, release-readiness, format, major-alias promotion regressions",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_pending_alias_authorization"]
+
+[intents.git_stage_pending_alias_result]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Stage only the reviewed v0.5.2 alias-promotion validation record and implementation tracker result."
+argv = ["git", "add", "--", "docs/ops/release.md", "docs/product/04-implementation-tracker.md"]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["promote_pending_alias", "pending_alias_result_validation_complete"]
+
+[intents.git_commit_pending_alias_result]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Commit the completed v0.5.2 alias-promotion validation record."
+argv = [
+  "git",
+  "commit",
+  "-m",
+  "docs(release): record v0.5.2 alias promotion",
+  "-m",
+  "Validation: docs, release-readiness, format, major-alias verification",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_pending_alias_result"]
+
 [intents.release_v0_5_2_post_tag_evidence]
 status = "manual_only"
 lifecycle = "oneshot"

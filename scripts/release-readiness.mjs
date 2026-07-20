@@ -358,7 +358,7 @@ export const releasePolicyDocumentContract = {
     "24a0ff299fecfa6cb70fd8f425945b2f13e284c9",
     "https://github.com/0disoft/clarissimi/issues/20",
     "the listing identifies `v0.5.2` as `Latest` and renders `0disoft/clarissimi@v0.5.2`",
-    "moving alias `v0` remains at the last fully verified immutable release, `v0.5.0`",
+    "moving alias `v0` resolves to `v0.5.2`",
     "Marketplace rollback: clear the Marketplace setting without deleting or moving the immutable tag.",
     "## First Action Release Procedure",
     "release type `versioned-action-tag`",
@@ -395,11 +395,11 @@ export const implementationTrackerContract = {
   requiredSnippets: [
     "README documents opt-in `comment-mode: upsert`",
     "`oxfmt` as the current repository formatter",
-    "through corrective `v0.5.2` Marketplace publication and public verification",
+    "exact-tag revalidation, and moving-`v0` promotion",
     "https://github.com/0disoft/clarissimi/releases/tag/v0.5.2",
     "24a0ff299fecfa6cb70fd8f425945b2f13e284c9",
-    "moving `v0` release and SHA: `v0.5.0`",
-    "the separate `v0` compare-and-swap gate remains pending",
+    "moving `v0` release and SHA: `v0.5.2`",
+    "the separate `v0` compare-and-swap promotion and repeated post-promotion validation passed",
   ],
   forbiddenSnippets: [
     "README keeps comment updates marked as not implemented",

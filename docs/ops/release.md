@@ -185,8 +185,8 @@ Current publication record:
 - exact release SHA: `24a0ff299fecfa6cb70fd8f425945b2f13e284c9`
 - compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/20>
 - the listing identifies `v0.5.2` as `Latest` and renders `0disoft/clarissimi@v0.5.2`
-- moving alias `v0` remains at the last fully verified immutable release, `v0.5.0`; it was not
-  moved to `v0.5.1` or `v0.5.2`
+- moving alias `v0` resolves to `v0.5.2` at
+  `24a0ff299fecfa6cb70fd8f425945b2f13e284c9`
 
 After the completion record is committed, retire every version-fixed publish, promote, verification,
 Git staging, commit, push, and hosted-CI intent for that completed release. Historical exact-tag
@@ -221,8 +221,9 @@ Corrective Marketplace release `v0.5.2` republishes the same Action runtime with
 README, Action guide, security policy, and validation contracts naming `v0.5.2`. It changes no
 Action runtime, inputs, outputs, permissions, defaults, or package-publication boundary. Immutable
 publication and Marketplace verification completed at
-`24a0ff299fecfa6cb70fd8f425945b2f13e284c9`. The separate compare-and-swap `v0` promotion remains
-gated and the moving alias continues to resolve to `v0.5.0`.
+`24a0ff299fecfa6cb70fd8f425945b2f13e284c9`. Exact-tag revalidation and the separate
+compare-and-swap `v0` promotion then passed, so the moving alias now resolves to `v0.5.2` at the
+same commit.
 
 The first post-tag full-write run `29324962538` had one Ubuntu job fail while GitHub returned its
 `Unicorn!` timeout HTML during draft PR creation. macOS and Windows passed, cleanup ran, and orphan
@@ -231,6 +232,19 @@ on all three runners; the failed attempt is retained as a transient GitHub API r
 not erased or counted as the final release result.
 
 Current promotion validation record:
+
+- `v0.5.2` exact-tag hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29557974573>
+- `v0.5.2` exact-tag live provider: <https://github.com/0disoft/clarissimi/actions/runs/29739420082>
+- `v0.5.2` exact-tag dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29739454754>
+- `v0.5.2` exact-tag full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29739488470>
+- `v0.5.2` exact-tag orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29739568356>
+- `v0.5.2` promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29739256731>
+- live provider through `v0`: <https://github.com/0disoft/clarissimi/actions/runs/29739690727>
+- external `v0` dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29739720874>
+- external `v0` full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29739754233>
+- external `v0` orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29739803102>
+
+Previous `v0.5.0` promotion validation record:
 
 - `v0.5.0` candidate hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29488976370>
 - `v0.5.0` candidate live provider: <https://github.com/0disoft/clarissimi/actions/runs/29489078798>
@@ -241,7 +255,7 @@ Current promotion validation record:
 - `v0.5.0` exact-tag dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29489350435>
 - `v0.5.0` exact-tag full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29489384556>
 - `v0.5.0` exact-tag orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29489456245>
-- promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29489876636>
+- `v0.5.0` promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29489876636>
 - live provider through `v0.5.0`: <https://github.com/0disoft/clarissimi/actions/runs/29489977500>
 - external `v0` dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29490006463>
 - external `v0` full-write matrix and cleanup: <https://github.com/0disoft/integration-lab/actions/runs/29490039021>

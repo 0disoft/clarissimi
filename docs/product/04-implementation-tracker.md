@@ -943,8 +943,8 @@ Validation completed:
 
 Source: `docs/adr/0045-publish-action-to-github-marketplace.md`, `docs/ops/release.md`
 
-Status: Completed through corrective `v0.5.2` Marketplace publication and public verification;
-moving `v0` remains at the fully validated `v0.5.0` release.
+Status: Completed through corrective `v0.5.2` Marketplace publication, public verification,
+exact-tag revalidation, and moving-`v0` promotion.
 
 Goal: make the validated root Action discoverable in GitHub Marketplace without publishing npm
 packages or weakening the immutable tag and maintainer-approval boundaries.
@@ -969,13 +969,13 @@ Current publication record:
 - latest immutable release: <https://github.com/0disoft/clarissimi/releases/tag/v0.5.2>
 - exact latest release SHA: `24a0ff299fecfa6cb70fd8f425945b2f13e284c9`
 - latest compatibility-named release record issue: <https://github.com/0disoft/clarissimi/issues/20>
-- moving `v0` release and SHA: `v0.5.0` at `f9322e10e9bd96880ef332c341c42b7e918173c4`
-- candidate hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29488976370>
-- successful post-tag full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29489384556>
-- promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29489876636>
-- `v0` external dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29490006463>
-- `v0` full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29490039021>
-- `v0` orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29490102887>
+- moving `v0` release and SHA: `v0.5.2` at `24a0ff299fecfa6cb70fd8f425945b2f13e284c9`
+- exact-tag hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29557974573>
+- successful exact-tag full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29739488470>
+- promotion-contract hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29739256731>
+- `v0` external dry-run matrix: <https://github.com/0disoft/integration-lab/actions/runs/29739720874>
+- `v0` full-write matrix: <https://github.com/0disoft/integration-lab/actions/runs/29739754233>
+- `v0` orphan audit: <https://github.com/0disoft/integration-lab/actions/runs/29739803102>
 
 Corrective follow-up completed:
 
@@ -1248,8 +1248,8 @@ Source: `docs/adr/0041-restrict-provider-endpoint-trust.md`,
 `docs/adr/0053-add-opt-in-source-pr-comment-updates.md`,
 `docs/adr/0054-reconcile-equivalent-proposal-branch-races.md`, `docs/ops/release.md`
 
-Status: Corrective `v0.5.2` publication and Marketplace verification completed after the immutable
-`v0.5.1` README gate failed; moving `v0` remains gated at `v0.5.0`.
+Status: Corrective `v0.5.2` publication, Marketplace verification, exact-tag revalidation, and
+moving-`v0` promotion completed after the immutable `v0.5.1` README gate failed.
 
 Goal: publish the compatible source-comment, proposal-branch, and provider-endpoint race fixes
 without changing Action inputs, permissions, defaults, or package-publication boundaries.
@@ -1274,7 +1274,10 @@ Release results and corrective gates:
   still naming `v0.5.0`; moving `v0` was not attempted
 - corrective `v0.5.2` synchronized consumer documentation and completed immutable publication plus
   Marketplace verification at `24a0ff299fecfa6cb70fd8f425945b2f13e284c9`
-- the separate `v0` compare-and-swap gate remains pending; the moving alias stays at `v0.5.0`
+- exact-tag live-provider, external dry-run, full-write, cleanup, and orphan-audit revalidation
+  passed before alias mutation
+- the separate `v0` compare-and-swap promotion and repeated post-promotion validation passed; the
+  moving alias now resolves to `v0.5.2` at the same exact SHA
 
 ### 34. Candidate Release Reference Guard
 

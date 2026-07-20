@@ -8,9 +8,12 @@ import {
   CONFIG_MARKDOWN_SUMMARIES,
   CONFIG_PROVIDERS,
   CONTRIBUTOR_KINDS,
+  REVIEW_DECISION_SCHEMA_VERSION,
+  REVIEW_GATE_MODES,
   hasPublicRankingLanguage,
   validateClarissimiConfig,
   validateContributionAssessment,
+  validateReviewDecision,
 } from "../dist/index.js";
 
 const validAssessment = {
@@ -384,6 +387,45 @@ test("exports Clarissimi config vocabulary", () => {
   assert.equal(CONFIG_MODES.includes("propose"), true);
   assert.deepEqual(CONFIG_MARKDOWN_SUMMARIES, ["none", "table", "gallery"]);
   assert.deepEqual(CONTRIBUTOR_KINDS, ["human", "bot", "ai_agent"]);
+});
+
+test("validates SHA-bound maintainer review decisions", () => {
+  const result = validateReviewDecision({
+    schemaVersion: REVIEW_DECISION_SCHEMA_VERSION,
+    repository: "example/project",
+    pullRequestNumber: 42,
+    headSha: "a".repeat(40),
+    decision: "approved",
+    reason: "The merged change has bounded regression coverage.",
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(REVIEW_GATE_MODES, ["advisory", "required"]);
+});
+
+test("rejects malformed or unbounded review decisions", () => {
+  const result = validateReviewDecision({
+    schemaVersion: REVIEW_DECISION_SCHEMA_VERSION,
+    repository: "example/project",
+    pullRequestNumber: 42,
+    headSha: "short",
+    decision: "ranked",
+    reason: "x".repeat(1_001),
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(
+    result.issues.some((issue) => issue.path === "$.headSha"),
+    true,
+  );
+  assert.equal(
+    result.issues.some((issue) => issue.path === "$.decision"),
+    true,
+  );
+  assert.equal(
+    result.issues.some((issue) => issue.code === "string_too_long"),
+    true,
+  );
 });
 
 test("accepts explicit human, bot, and AI-agent contributor kinds", () => {

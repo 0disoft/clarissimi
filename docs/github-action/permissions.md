@@ -17,6 +17,7 @@ Workflow examples must use explicit `permissions`. A workflow must not use `writ
 | `stage-draft`   | `write`    | `write`         | `read`   | Draft proposal branch only       | Yes                |
 | `promote-draft` | `write`    | `write`         | `read`   | Recognition proposal branch only | Yes                |
 | `commit`        | `write`    | `read`          | `read`   | Current branch                   | No                 |
+| `gate`          | `read`     | `read`          | `read`   | No                               | No                 |
 
 Any permission not listed in a workflow should remain unset, which GitHub treats as `none` when
 the workflow uses an explicit `permissions` block.
@@ -37,6 +38,16 @@ repository files.
 
 The root `action.yml` dry-run example should stay read-only. Do not document `pull_request_target`
 as the default event.
+
+## Gate Mode
+
+Gate mode uses `contents: read`, `pull-requests: read`, and `issues: read`. It reads the pull request
+event and a bounded issue-comment listing. It never checks out the pull request head, calls a model
+provider, writes repository files, or creates comments, branches, commits, or pull requests.
+
+An opt-in gate workflow may use `pull_request_target` so fork pull requests receive a stable check,
+but it must not checkout or execute the untrusted head. Consumers should keep the same gate job name
+in advisory and required modes so a required ruleset check does not remain pending.
 
 ## Propose Mode
 
@@ -110,8 +121,8 @@ recognition proposal state. Direct commit mode intentionally does not support co
 
 ## Event Safety
 
-Avoid default `pull_request_target` examples. Do not checkout or execute untrusted pull request head
-code.
+Avoid default `pull_request_target` examples. The only accepted exception is the opt-in read-only
+gate. Do not checkout or execute untrusted pull request head code.
 
 `propose`, `commit`, and `stage-draft` modes should run after safe post-merge events, explicit manual
 dispatch, or another event that does not require running untrusted pull request head code.

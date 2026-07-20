@@ -10,6 +10,7 @@
 - Default mode: `docs/adr/0008-propose-mode-default.md`
 - Direct commit mode: `docs/adr/0038-add-explicit-direct-commit-mode.md`
 - Draft review mode: `docs/adr/0023-add-action-draft-inbox-proposal-mode.md`
+- Pre-merge gate mode: `docs/adr/0057-add-pre-merge-review-gate.md`
 
 ## Current Inputs
 
@@ -22,7 +23,8 @@
   and then `true`; `false` hides approved bot and AI-agent identities from derived displays only
 - `comment-mode`: `none` or `upsert`, default `none`; `upsert` creates or updates one managed status
   comment on the merged source pull request after a proposal succeeds
-- `mode`: `dry-run`, `propose`, `commit`, `stage-draft`, or `promote-draft`, default `propose`
+- `mode`: `gate`, `dry-run`, `propose`, `commit`, `stage-draft`, or `promote-draft`, default `propose`
+- `gate-mode`: `advisory` or `required`, default `advisory`; used only by `gate`
 - `draft-path`: approved `.clarissimi/drafts/*.json` path required by `promote-draft`
 - `base-branch`: base branch for proposal pull requests
 - `remote-name`: Git remote used to publish proposal branches
@@ -42,19 +44,21 @@
 - `min-confidence`: minimum draft confidence for policy consideration
 
 Provider API keys and GitHub tokens are not plain inputs. They must come from secrets or the
-workflow environment. The current Action reads `GITHUB_TOKEN` in `propose`, `commit`, `stage-draft`,
-and `promote-draft` modes for live collection and repository publication. It reads
+workflow environment. The current Action reads `GITHUB_TOKEN` in `gate`, `propose`, `commit`,
+`stage-draft`, and `promote-draft` modes for bounded comment collection, live collection, and
+repository publication. It reads
 `CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.
 
 The current package supports `INPUT_EVENT_PATH`, `GITHUB_EVENT_PATH`, `INPUT_GITHUB_FIXTURE`,
-`INPUT_CONFIG_PATH`, `INPUT_DRAFT_PATH`, `INPUT_MODE`, `INPUT_COMMENT_MODE`, `INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`, `INPUT_STAGING_DIR`,
+`INPUT_CONFIG_PATH`, `INPUT_DRAFT_PATH`, `INPUT_MODE`, `INPUT_GATE_MODE`, `INPUT_COMMENT_MODE`,
+`INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`, `INPUT_STAGING_DIR`,
 `INPUT_SUMMARY_PATH`, `INPUT_PROVIDER`, `INPUT_PROVIDER_MODEL`, `INPUT_PROVIDER_ENDPOINT`, and
 `INPUT_PROVIDER_ENDPOINT_TRUST`, `INPUT_PROVIDER_THINKING`. It also supports
 `INPUT_MARKDOWN_SUMMARY` for derived Markdown layout.
 
 The root `action.yml` currently exposes `event-path`, `github-fixture`, `draft-path`, `mode`,
-`base-branch`, `remote-name`, `staging-dir`, `summary-path`, `config-path`, `provider`, `provider-model`,
-`provider-endpoint`, `provider-endpoint-trust`, and `provider-thinking`.
+`gate-mode`, `base-branch`, `remote-name`, `staging-dir`, `summary-path`, `config-path`, `provider`,
+`provider-model`, `provider-endpoint`, `provider-endpoint-trust`, and `provider-thinking`.
 `markdown-summary` is also exposed.
 `comment-mode` is explicit-only and supports `upsert` only in `propose`, `stage-draft`, and
 `promote-draft`. Dry-run and direct commit reject it before mutation. The default `none` performs no
@@ -70,6 +74,8 @@ summary artifact contains the same sanitized JSON summary as stdout.
 An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`
 fallback. An explicit `event-path` and `github-fixture` must not be provided together.
 In `dry-run`, event payloads are mapped from the local event file without live GitHub API calls.
+In `gate`, the pull request event identifies the repository, pull request number, and current head
+SHA. `github-fixture` is rejected because a fixture cannot establish the live revision being gated.
 In `propose`, `commit`, and `stage-draft`, event payloads route to the live GitHub collector when no explicit
 fixture is provided.
 In `promote-draft`, event, fixture, config, and provider inputs are ignored or rejected as
@@ -99,6 +105,10 @@ inapplicable; the approved draft file is the only assessment input. The independ
 - `direct-commit-sha`
 - `direct-commit-created`
 - `direct-commit-pushed`
+- `gate-mode`
+- `gate-passed`
+- `gate-decision`
+- `gate-reason`
 
 The proposal fields are populated after successful `propose`, `stage-draft`, and `promote-draft`
 runs. Dry-run leaves proposal fields empty.

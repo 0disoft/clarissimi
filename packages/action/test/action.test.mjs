@@ -258,6 +258,88 @@ test("environment runner accepts GITHUB_EVENT_PATH", async () => {
   assert.equal(JSON.parse(stdout).inputSource, "github_event_path");
 });
 
+test("environment runner gates an explicit INPUT_EVENT_PATH and writes gate outputs", async () => {
+  await withTempDir(async (dir) => {
+    const headSha = "a".repeat(40);
+    const eventPath = join(dir, "pull-request-event.json");
+    const outputPath = join(dir, "github-output.txt");
+    await writeFile(
+      eventPath,
+      JSON.stringify(pullRequestEvent({ head: { sha: headSha } })),
+      "utf8",
+    );
+    let stdout = "";
+    let stderr = "";
+
+    const exitCode = await runActionFromEnvironment(
+      {
+        GITHUB_OUTPUT: outputPath,
+        GITHUB_TOKEN: "unit-token",
+        INPUT_EVENT_PATH: eventPath,
+        INPUT_GATE_MODE: "required",
+        INPUT_MODE: "gate",
+      },
+      {
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        },
+      },
+      {
+        sourceCommentClient: {
+          async listPullRequestComments() {
+            return {
+              complete: true,
+              comments: [
+                {
+                  id: 1,
+                  url: "https://github.com/sample/project/pull/42#issuecomment-1",
+                  body: [
+                    "<!-- clarissimi:review-decision:v1",
+                    JSON.stringify({
+                      schemaVersion: "clarissimi.review-decision/v1",
+                      repository: "sample/project",
+                      pullRequestNumber: 42,
+                      headSha,
+                      decision: "approved",
+                      reason: "Maintainer reviewed the current revision.",
+                    }),
+                    "-->",
+                    "",
+                    "Clarissimi decision: approved.",
+                  ].join("\n"),
+                  authorLogin: "maintainer",
+                  authorType: "User",
+                  authorAssociation: "OWNER",
+                },
+              ],
+            };
+          },
+          async createPullRequestComment() {
+            throw new Error("not used");
+          },
+          async updatePullRequestComment() {
+            throw new Error("not used");
+          },
+          async deletePullRequestComment() {
+            throw new Error("not used");
+          },
+        },
+      },
+    );
+
+    assert.equal(exitCode, 0);
+    assert.equal(stderr, "");
+    assert.equal(JSON.parse(stdout).gateDecision, "approved");
+    const outputs = await readFile(outputPath, "utf8");
+    assert.match(outputs, /^gate-mode=required$/m);
+    assert.match(outputs, /^gate-passed=true$/m);
+    assert.match(outputs, /^gate-decision=approved$/m);
+  });
+});
+
 test("environment runner can use the OpenAI-compatible provider when explicitly selected", async () => {
   await withTempDir(async (dir) => {
     const fixturePath = join(dir, "github-fixture.json");

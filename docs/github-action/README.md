@@ -45,8 +45,9 @@ The public [`clarissimi-example`](https://github.com/0disoft/clarissimi-example)
 copyable read-only workflow, the manual least-privilege proposal workflow, and a merged synthetic
 recognition result with the contributor summary table.
 
-The current `action.yml` defaults to `propose` mode and also supports explicit read-only `dry-run`
-plus write modes `commit` and `stage-draft`. The current `v0.5.2` release executes the committed
+The current `action.yml` defaults to `propose` mode and also supports explicit read-only `gate` and
+`dry-run` plus write modes `commit` and `stage-draft`. Gate mode is present on the development
+branch and must not be consumed until its next immutable release is published. The current `v0.5.2` release executes the committed
 `action-dist/index.js` bundle without consumer-time package installation or TypeScript compilation. `v0.1.0` remains
 immutable and retains its published source-build behavior. Dry-run mode emits a bounded summary and does not read provider credentials, use
 GitHub write tokens, create branches, open pull requests, or update repository files. Propose mode
@@ -97,6 +98,60 @@ secrets stay excluded.
 Detailed outputs and failure behavior are defined in `docs/github-action/action-contract.md`. The
 implemented propose-mode sequencing is recorded in
 `docs/github-action/propose-implementation-plan.md`.
+
+## Pre-Merge Decision Gate
+
+Gate mode only reads the pull request event and bounded issue comments. It never checks out or
+executes the pull request head, calls a provider, or changes repository state. Start with
+`gate-mode: advisory`; after the team has exercised the flow, switch the same job to `required` and
+make `Clarissimi review decision` a required ruleset check.
+
+Use this workflow after replacing `<immutable-gate-tag>` with the immutable release that first
+contains gate mode:
+
+```yaml
+name: Clarissimi review decision
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  review-decision:
+    name: Clarissimi review decision
+    runs-on: ubuntu-latest
+    steps:
+      - uses: 0disoft/clarissimi@<immutable-gate-tag>
+        with:
+          mode: gate
+          gate-mode: advisory
+```
+
+Do not add `actions/checkout` or execute pull request code in this job. A trusted maintainer records
+one decision comment for the exact current head SHA. The comment may include visible audit text
+after the marker:
+
+```markdown
+<!-- clarissimi:review-decision:v1
+{"schemaVersion":"clarissimi.review-decision/v1","repository":"OWNER/REPOSITORY","pullRequestNumber":42,"headSha":"0123456789abcdef0123456789abcdef01234567","decision":"approved","reason":"Reviewed the current revision and approved recognition processing."}
+-->
+
+Clarissimi decision: approved for the current revision.
+```
+
+Use `decision: skip` when the pull request must merge without recognition, such as a generated
+Clarissimi proposal. Only comments authored by a GitHub user associated as `OWNER`, `MEMBER`, or
+`COLLABORATOR` count. After adding or editing the decision, rerun the existing gate job. A new push
+changes the head SHA and deliberately makes the prior decision stale. Required mode then blocks;
+advisory mode reports the same state but exits successfully.
 
 Example read-only workflow:
 

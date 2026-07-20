@@ -3,9 +3,9 @@
 GitHub Action runner for Clarissimi.
 
 This package owns Action input resolution, event and approved-draft file reading, live collector
-routing, token injection into the GitHub collector client, bounded dry-run, propose, stage-draft,
-and promote-draft summaries, temporary output staging, proposal branch writing and publishing, and
-proposal pull request creation or update.
+routing, token injection into the GitHub collector client, SHA-bound pre-merge review gating,
+bounded gate, dry-run, propose, stage-draft, and promote-draft summaries, temporary output staging,
+proposal branch writing and publishing, and proposal pull request creation or update.
 
 Write-mode public recognition staging reads and validates the checked-out canonical ledger, appends
 the new approved record with contributor/source duplicate protection, and rebuilds derived outputs

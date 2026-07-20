@@ -20,6 +20,7 @@
 - Explicit direct commit mode: `docs/adr/0038-add-explicit-direct-commit-mode.md`
 - Provider quality failure summary: `docs/adr/0048-report-provider-quality-failures-in-action-summary.md`
 - Source pull request comment updates: `docs/adr/0053-add-opt-in-source-pr-comment-updates.md`
+- Pre-merge review gate: `docs/adr/0057-add-pre-merge-review-gate.md`
 
 ## Inputs
 
@@ -29,7 +30,8 @@ inbox proposals. It accepts:
 - `GITHUB_EVENT_PATH`: GitHub event payload path
 - `INPUT_EVENT_PATH`: explicit event payload path override for tests and local runs
 - `INPUT_GITHUB_FIXTURE`: explicit GitHub merged pull request fixture path
-- `INPUT_MODE`: `dry-run`, `propose`, `commit`, `stage-draft`, or `promote-draft`, default `propose`
+- `INPUT_MODE`: `gate`, `dry-run`, `propose`, `commit`, `stage-draft`, or `promote-draft`, default `propose`
+- `INPUT_GATE_MODE`: `advisory` or `required`, default `advisory`; used only by `gate`
 - `INPUT_DRAFT_PATH`: approved `.clarissimi/drafts/*.json` path required by `promote-draft`
 - `INPUT_CONFIG_PATH`: optional explicit path to a Clarissimi config file
 - `INPUT_COMMENT_MODE`: `none` or `upsert`, default `none`; supported only by proposal modes
@@ -133,6 +135,15 @@ fails closed on an incomplete scan or duplicate managed comments, and never over
 owned by a user or another app. Comment content is a bounded proposal pointer, not recognition
 output. The existing `pull-requests: write` permission covers list, create, and update operations;
 `issues: write` is not required.
+
+`gate` is an opt-in pre-merge mode governed by ADR 0057. `INPUT_GATE_MODE` accepts `advisory` or
+`required` and defaults to `advisory`. Gate mode reads a pull request event and at most 1,000 issue
+comments. A trusted decision comment contains one `clarissimi.review-decision/v1` object, is authored
+by a GitHub user associated as `OWNER`, `MEMBER`, or `COLLABORATOR`, and matches the repository, pull
+request number, and current head SHA. Advisory mode reports a missing or invalid decision and exits
+successfully. Required mode fails for missing, stale, malformed, untrusted, duplicate, or
+incompletely scanned decisions. Human-readable text may follow the marker; the JSON marker remains
+the validated source of truth. Gate mode performs no provider or repository mutation work.
 
 Dry-run mode reads provider credentials only when `provider` is explicitly set to
 `openai-compatible`. The default provider is `fake`. The default Action mode is `propose`, which

@@ -282,6 +282,13 @@ maintainer approval. Promotion must not call a provider or infer approval. It cr
 public recognition proposal pull request and leaves the default branch unchanged until a maintainer
 merges that proposal.
 
+The Action may also support an opt-in pre-merge `gate` mode. Gate mode never publishes recognition
+or executes pull request head code. It checks whether one trusted maintainer decision is bound to
+the current repository, pull request number, and head commit SHA. `advisory` reports a missing or
+stale decision without blocking; `required` fails so a ruleset can block merge. Accepted decisions
+are `approved` and `skip`. A new head commit invalidates the prior decision, and duplicate current
+decisions fail closed. Gate mode remains separate from post-merge ledger publication.
+
 Both `propose` and `promote-draft` must preserve the append-only ledger. They parse and validate the
 checked-out canonical JSONL, reject malformed or duplicate existing identities, reject a new
 contributor/source identity that is already present, append the new approved record, and rebuild
@@ -296,7 +303,8 @@ workspace.
 
 Avoid:
 
-- default `pull_request_target`
+- default `pull_request_target`; an opt-in read-only gate may use it only without checking out or
+  executing the untrusted pull request head
 - checking out or executing untrusted PR head code
 - broad token permissions
 

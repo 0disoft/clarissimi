@@ -10,6 +10,9 @@ import {
   CONTRIBUTION_TYPES,
   EVIDENCE_KINDS,
   IMPACT_LEVELS,
+  REVIEW_DECISIONS,
+  REVIEW_DECISION_SCHEMA_VERSION,
+  REVIEW_GATE_MODES,
   type ApprovalStatus,
   type ClarissimiConfig,
   type ContributionAssessment,
@@ -23,6 +26,9 @@ import {
   type EvidenceKind,
   type ValidationIssue,
   type ValidationResult,
+  type ReviewDecision,
+  type ReviewDecisionValue,
+  type ReviewGateMode,
 } from "./types.js";
 
 const RANKING_LANGUAGE_PATTERNS: readonly RegExp[] = [
@@ -125,6 +131,49 @@ export function isImpactLevel(value: string): value is ContributionAssessment["i
 
 export function isApprovalStatus(value: string): value is ApprovalStatus {
   return (APPROVAL_STATUSES as readonly string[]).includes(value);
+}
+
+export function isReviewGateMode(value: string): value is ReviewGateMode {
+  return (REVIEW_GATE_MODES as readonly string[]).includes(value);
+}
+
+export function isReviewDecisionValue(value: string): value is ReviewDecisionValue {
+  return (REVIEW_DECISIONS as readonly string[]).includes(value);
+}
+
+export function validateReviewDecision(value: unknown): ValidationResult<ReviewDecision> {
+  const issues: ValidationIssue[] = [];
+  if (!isRecord(value)) {
+    return invalid([
+      { path: "$", code: "expected_object", message: "Review decision must be an object." },
+    ]);
+  }
+
+  expectLiteral(value.schemaVersion, REVIEW_DECISION_SCHEMA_VERSION, "$.schemaVersion", issues);
+  expectRepositoryName(value.repository, "$.repository", issues);
+  expectPositiveInteger(value.pullRequestNumber, "$.pullRequestNumber", issues);
+  if (typeof value.headSha !== "string" || !/^[a-f0-9]{40}$/i.test(value.headSha)) {
+    pushIssue(
+      issues,
+      "$.headSha",
+      "invalid_commit_sha",
+      "Head SHA must be a 40-character Git commit SHA.",
+    );
+  }
+  expectEnum(value.decision, isReviewDecisionValue, "$.decision", issues);
+  expectNonEmptyString(value.reason, "$.reason", issues);
+  if (typeof value.reason === "string" && value.reason.length > 1_000) {
+    pushIssue(
+      issues,
+      "$.reason",
+      "string_too_long",
+      "Review decision reason must not exceed 1000 characters.",
+    );
+  }
+
+  return issues.length === 0
+    ? { ok: true, value: value as unknown as ReviewDecision, issues: [] }
+    : invalid(issues);
 }
 
 export function isEvidenceKind(value: string): value is EvidenceKind {

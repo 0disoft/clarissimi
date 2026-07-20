@@ -1,4 +1,11 @@
 export const ASSESSMENT_SCHEMA_VERSION = "clarissimi.assessment/v1" as const;
+export const REVIEW_DECISION_SCHEMA_VERSION = "clarissimi.review-decision/v1" as const;
+
+export const REVIEW_GATE_MODES = ["advisory", "required"] as const;
+export type ReviewGateMode = (typeof REVIEW_GATE_MODES)[number];
+
+export const REVIEW_DECISIONS = ["approved", "skip"] as const;
+export type ReviewDecisionValue = (typeof REVIEW_DECISIONS)[number];
 
 export const CONFIG_PROVIDERS = ["fake", "openai-compatible"] as const;
 
@@ -119,6 +126,15 @@ export interface ContributionAssessment {
   readonly confidence: number;
   readonly maintainerApprovalStatus: ApprovalStatus;
   readonly source: RecognitionSource;
+}
+
+export interface ReviewDecision {
+  readonly schemaVersion: typeof REVIEW_DECISION_SCHEMA_VERSION;
+  readonly repository: string;
+  readonly pullRequestNumber: number;
+  readonly headSha: string;
+  readonly decision: ReviewDecisionValue;
+  readonly reason: string;
 }
 
 export interface ValidationIssue {

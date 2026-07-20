@@ -51,6 +51,7 @@ key. See the [Action guide](docs/github-action/README.md) and
 
 | Mode            | Repository effect                                       | Maintainer gate                   |
 | --------------- | ------------------------------------------------------- | --------------------------------- |
+| `gate`          | Writes no repository files                              | Advisory or required SHA decision |
 | `dry-run`       | Writes no repository files                              | Inspect the workflow summary      |
 | `propose`       | Opens or updates a recognition pull request             | Review and merge the pull request |
 | `commit`        | Pushes one normal commit to the selected branch         | Explicit opt-in and branch rules  |
@@ -61,6 +62,11 @@ key. See the [Action guide](docs/github-action/README.md) and
 automation-first repositories; it never force-pushes and still loses to branch protection or a
 concurrent update. Copy the complete least-privilege workflows from the
 [Action guide](docs/github-action/README.md).
+
+`gate` is available on the current development branch and is intended for the next immutable
+Action release. Do not point a consumer at `main`; use the release tag documented in the Action
+guide after it is published. The same stable job can begin in `advisory` mode and later switch to
+`required` without changing the check name used by a GitHub ruleset.
 
 Choose one optional `CONTRIBUTORS.md` summary without replacing the detailed recognition history:
 

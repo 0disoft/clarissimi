@@ -99,6 +99,8 @@ engine.
   alias promotion on parameterized release tooling plus exact-SHA consumer validation
 - `0056-publish-a-standalone-cli-package.md`: publish one dependency-free `clarissimi` CLI bundle
   while keeping workspace packages private and separating npm, Action, and schema versions
+- `0057-add-pre-merge-review-gate.md`: add advisory and required pre-merge decision checks bound to
+  the current pull request head SHA without executing untrusted head code
 
 ## Review Blockers
 

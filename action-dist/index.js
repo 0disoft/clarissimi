@@ -8,7 +8,8 @@ var ACTION_MODES = [
   "propose",
   "commit",
   "stage-draft",
-  "promote-draft"
+  "promote-draft",
+  "gate"
 ];
 function isActionMode(value) {
   return ACTION_MODES.includes(value);
@@ -2036,10 +2037,15 @@ function parseSourcePullRequestComment(value) {
     authorLogin: expectString3(value.user.login, "user.login"),
     authorType: expectString3(value.user.type, "user.type")
   };
+  const authorAssociation = typeof value.author_association === "string" && value.author_association.trim().length > 0 ? value.author_association : void 0;
   if (isRecord3(app) && typeof app.slug === "string" && app.slug.trim().length > 0) {
-    return { ...comment, appSlug: app.slug };
+    return {
+      ...comment,
+      ...authorAssociation === void 0 ? {} : { authorAssociation },
+      appSlug: app.slug
+    };
   }
-  return comment;
+  return { ...comment, ...authorAssociation === void 0 ? {} : { authorAssociation } };
 }
 function normalizeApiUrl2(value) {
   const normalized = value?.trim().replace(/\/+$/g, "");
@@ -2114,6 +2120,570 @@ function expectNumber3(value, field) {
   return value;
 }
 function isRecord3(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// packages/action/dist/review-gate.js
+import { readFile as readFile2 } from "node:fs/promises";
+
+// packages/schemas/dist/types.js
+var ASSESSMENT_SCHEMA_VERSION = "clarissimi.assessment/v1";
+var REVIEW_DECISION_SCHEMA_VERSION = "clarissimi.review-decision/v1";
+var REVIEW_GATE_MODES = ["advisory", "required"];
+var REVIEW_DECISIONS = ["approved", "skip"];
+var CONFIG_PROVIDERS = ["fake", "openai-compatible"];
+var CONFIG_PROVIDER_THINKING_VALUES = ["disabled"];
+var CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES = ["public", "private-network"];
+var CONFIG_MODES = ["dry-run", "propose", "commit"];
+var CONFIG_MARKDOWN_SUMMARIES = ["none", "table", "gallery"];
+var CONTRIBUTOR_KINDS = ["human", "bot", "ai_agent"];
+var CONTRIBUTION_TYPES = [
+  "bug_fix",
+  "bug_report",
+  "reproduction",
+  "test",
+  "performance",
+  "documentation",
+  "security",
+  "accessibility",
+  "api_design",
+  "maintenance",
+  "translation",
+  "release_validation",
+  "example",
+  "other"
+];
+var IMPACT_LEVELS = ["low", "medium", "high"];
+var APPROVAL_STATUSES = [
+  "draft",
+  "auto_approved",
+  "approved",
+  "rejected",
+  "skipped"
+];
+var EVIDENCE_KINDS = [
+  "pull_request",
+  "issue",
+  "review",
+  "comment",
+  "commit",
+  "file",
+  "label",
+  "test",
+  "maintainer_note",
+  "advisory"
+];
+
+// packages/schemas/dist/validation.js
+var RANKING_LANGUAGE_PATTERNS = [
+  /\bleaderboard\b/i,
+  /\btotal\s+score\b/i,
+  /\baverage\s+score\b/i,
+  /\bhigh\s+score\b/i,
+  /\bscore\s+share\b/i,
+  /\bpoint\s+share\b/i,
+  /\bpoints\s+share\b/i,
+  /\bimpact\s+weight\s+share\b/i,
+  /\bcontribution\s+weight\s+share\b/i,
+  /\bshare\s+of\s+(?:the\s+)?(?:(?:last|past)\s+\d+\s+(?:days'?|months'?)\s+|recent\s+|total\s+)?(?:score|points|impact\s+weight|contribution\s+weight)\b/i,
+  /\b\d+(?:\.\d+)?\s*%\s+of\s+(?:the\s+)?(?:(?:last|past)\s+\d+\s+(?:days'?|months'?)|recent|total)?\s*(?:contribution\s+)?(?:score|points|impact\s+weight|contribution\s+weight)\b/i,
+  /\b\d+(?:\.\d+)?\s+percent\s+of\s+(?:the\s+)?(?:(?:last|past)\s+\d+\s+(?:days'?|months'?)|recent|total)?\s*(?:contribution\s+)?(?:score|points|impact\s+weight|contribution\s+weight)\b/i,
+  /최근\s*\d+\s*개월(?:간)?\s*(?:전체\s*)?(?:기여\s*)?(?:점수|가중치)\s*(?:비율|점유율|몫)?/i,
+  /(?:기여\s*)?(?:점수|가중치)\s*(?:비율|점유율)/i,
+  /\bcontribution\s+points\b/i,
+  /\bleaderboard\s+points\b/i,
+  /\bcontributor\s+tier\b/i,
+  /\brank(?:ed|ing)?\b/i,
+  /\btop\s+\d+\s+contributor\b/i,
+  /\b(?:gold|silver|bronze)\s+contributor\b/i,
+  /\bmedium\s+contributor\b/i,
+  /\bmedium\s+quality\b/i,
+  /\blow-quality\s+contributor\b/i
+];
+var PUBLIC_SCORE_FIELD_NAMES = /* @__PURE__ */ new Set([
+  "score",
+  "totalscore",
+  "averagescore",
+  "scoreshare",
+  "pointshare",
+  "pointsshare",
+  "impactweightshare",
+  "contributionweightshare",
+  "recentscoreshare",
+  "recentpointshare",
+  "recentpointsshare",
+  "recentimpactweightshare",
+  "recentcontributionweightshare",
+  "contributionshare",
+  "recentcontributionshare",
+  "rank",
+  "ranking",
+  "leaderboard",
+  "leaderboardposition",
+  "contributortier",
+  "tier",
+  "points"
+]);
+var PUBLIC_SCORE_FIELD_SUFFIXES = [
+  "scoreshare",
+  "pointshare",
+  "pointsshare",
+  "impactweightshare",
+  "contributionweightshare",
+  "contributionshare",
+  "scorepercent",
+  "pointpercent",
+  "pointspercent",
+  "impactweightpercent",
+  "contributionweightpercent",
+  "contributionpercent"
+];
+function isContributionType(value) {
+  return CONTRIBUTION_TYPES.includes(value);
+}
+function isConfigProvider(value) {
+  return CONFIG_PROVIDERS.includes(value);
+}
+function isConfigProviderThinking(value) {
+  return CONFIG_PROVIDER_THINKING_VALUES.includes(value);
+}
+function isConfigProviderEndpointTrust(value) {
+  return CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES.includes(value);
+}
+function isConfigMode(value) {
+  return CONFIG_MODES.includes(value);
+}
+function isConfigMarkdownSummary(value) {
+  return CONFIG_MARKDOWN_SUMMARIES.includes(value);
+}
+function isContributorKind(value) {
+  return CONTRIBUTOR_KINDS.includes(value);
+}
+function isImpactLevel(value) {
+  return IMPACT_LEVELS.includes(value);
+}
+function isApprovalStatus(value) {
+  return APPROVAL_STATUSES.includes(value);
+}
+function isReviewGateMode(value) {
+  return REVIEW_GATE_MODES.includes(value);
+}
+function isReviewDecisionValue(value) {
+  return REVIEW_DECISIONS.includes(value);
+}
+function validateReviewDecision(value) {
+  const issues = [];
+  if (!isRecord4(value)) {
+    return invalid([
+      { path: "$", code: "expected_object", message: "Review decision must be an object." }
+    ]);
+  }
+  expectLiteral(value.schemaVersion, REVIEW_DECISION_SCHEMA_VERSION, "$.schemaVersion", issues);
+  expectRepositoryName(value.repository, "$.repository", issues);
+  expectPositiveInteger(value.pullRequestNumber, "$.pullRequestNumber", issues);
+  if (typeof value.headSha !== "string" || !/^[a-f0-9]{40}$/i.test(value.headSha)) {
+    pushIssue(issues, "$.headSha", "invalid_commit_sha", "Head SHA must be a 40-character Git commit SHA.");
+  }
+  expectEnum(value.decision, isReviewDecisionValue, "$.decision", issues);
+  expectNonEmptyString(value.reason, "$.reason", issues);
+  if (typeof value.reason === "string" && value.reason.length > 1e3) {
+    pushIssue(issues, "$.reason", "string_too_long", "Review decision reason must not exceed 1000 characters.");
+  }
+  return issues.length === 0 ? { ok: true, value, issues: [] } : invalid(issues);
+}
+function isEvidenceKind(value) {
+  return EVIDENCE_KINDS.includes(value);
+}
+function hasPublicRankingLanguage(value) {
+  return RANKING_LANGUAGE_PATTERNS.some((pattern) => pattern.test(value));
+}
+function validateContributionAssessment(value) {
+  const issues = [];
+  if (!isRecord4(value)) {
+    return invalid([
+      {
+        path: "$",
+        code: "expected_object",
+        message: "Assessment must be an object."
+      }
+    ]);
+  }
+  expectLiteral(value.schemaVersion, ASSESSMENT_SCHEMA_VERSION, "$.schemaVersion", issues);
+  rejectPublicScoreFields(value, "$", issues);
+  validateContributor(value.contributor, "$.contributor", issues);
+  expectEnum(value.contributionType, isContributionType, "$.contributionType", issues);
+  expectPublicNarrativeText(value.affectedArea, "$.affectedArea", issues);
+  expectEnum(value.impactLevel, isImpactLevel, "$.impactLevel", issues);
+  expectPublicNarrativeText(value.evidenceSummary, "$.evidenceSummary", issues);
+  validateEvidenceRefs(value.evidenceRefs, "$.evidenceRefs", issues);
+  expectPublicNarrativeText(value.suggestedBadge, "$.suggestedBadge", issues);
+  expectPublicNarrativeText(value.publicRecognitionText, "$.publicRecognitionText", issues);
+  expectConfidence(value.confidence, "$.confidence", issues);
+  expectEnum(value.maintainerApprovalStatus, isApprovalStatus, "$.maintainerApprovalStatus", issues);
+  validateSource(value.source, "$.source", issues);
+  if (issues.length > 0) {
+    return invalid(issues);
+  }
+  return {
+    ok: true,
+    value,
+    issues: []
+  };
+}
+function validateClarissimiConfig(value) {
+  const issues = [];
+  if (!isRecord4(value)) {
+    return invalid([
+      {
+        path: "$",
+        code: "expected_object",
+        message: "Clarissimi config must be a JSON object."
+      }
+    ]);
+  }
+  const provider = expectOptionalEnum(value.provider, isConfigProvider, "$.provider", issues);
+  const providerEndpoint = expectOptionalHttpUrl(value.providerEndpoint, "$.providerEndpoint", issues);
+  const providerEndpointTrust = expectOptionalEnum(value.providerEndpointTrust, isConfigProviderEndpointTrust, "$.providerEndpointTrust", issues);
+  const providerModel = expectOptionalNonEmptyString(value.providerModel, "$.providerModel", issues);
+  const providerThinking = expectOptionalEnum(value.providerThinking, isConfigProviderThinking, "$.providerThinking", issues);
+  const mode = expectOptionalEnum(value.mode, isConfigMode, "$.mode", issues);
+  const markdownSummary = expectOptionalEnum(value.markdownSummary, isConfigMarkdownSummary, "$.markdownSummary", issues);
+  const includeAutomationContributors = expectOptionalBoolean(value.includeAutomationContributors, "$.includeAutomationContributors", issues);
+  if (issues.length > 0) {
+    return invalid(issues);
+  }
+  const config = {};
+  if (provider !== void 0) {
+    config.provider = provider;
+  }
+  if (providerEndpoint !== void 0) {
+    config.providerEndpoint = providerEndpoint;
+  }
+  if (providerEndpointTrust !== void 0) {
+    config.providerEndpointTrust = providerEndpointTrust;
+  }
+  if (providerModel !== void 0) {
+    config.providerModel = providerModel;
+  }
+  if (providerThinking !== void 0) {
+    config.providerThinking = providerThinking;
+  }
+  if (mode !== void 0) {
+    config.mode = mode;
+  }
+  if (markdownSummary !== void 0) {
+    config.markdownSummary = markdownSummary;
+  }
+  if (includeAutomationContributors !== void 0) {
+    config.includeAutomationContributors = includeAutomationContributors;
+  }
+  return {
+    ok: true,
+    value: config,
+    issues: []
+  };
+}
+function validateContributor(value, path, issues) {
+  if (!isRecord4(value)) {
+    pushIssue(issues, path, "expected_object", "Contributor must be an object.");
+    return;
+  }
+  expectLiteral(value.platform, "github", `${path}.platform`, issues);
+  expectNonEmptyString(value.id, `${path}.id`, issues);
+  expectNonEmptyString(value.login, `${path}.login`, issues);
+  expectUrl(value.profileUrl, `${path}.profileUrl`, issues);
+  if (value.kind !== void 0) {
+    expectEnum(value.kind, isContributorKind, `${path}.kind`, issues);
+  }
+}
+function validateEvidenceRefs(value, path, issues) {
+  if (!Array.isArray(value)) {
+    pushIssue(issues, path, "expected_array", "Evidence refs must be an array.");
+    return;
+  }
+  if (value.length === 0) {
+    pushIssue(issues, path, "empty_array", "At least one evidence ref is required.");
+    return;
+  }
+  value.forEach((entry, index) => {
+    const entryPath = `${path}[${index}]`;
+    if (!isRecord4(entry)) {
+      pushIssue(issues, entryPath, "expected_object", "Evidence ref must be an object.");
+      return;
+    }
+    expectEnum(entry.kind, isEvidenceKind, `${entryPath}.kind`, issues);
+    expectNonEmptyString(entry.id, `${entryPath}.id`, issues);
+    if (entry.url !== void 0) {
+      expectUrl(entry.url, `${entryPath}.url`, issues);
+    }
+    if (entry.title !== void 0) {
+      expectNonEmptyString(entry.title, `${entryPath}.title`, issues);
+    }
+    if (entry.excerpt !== void 0) {
+      expectNonEmptyString(entry.excerpt, `${entryPath}.excerpt`, issues);
+    }
+  });
+}
+function validateSource(value, path, issues) {
+  if (!isRecord4(value)) {
+    pushIssue(issues, path, "expected_object", "Source must be an object.");
+    return;
+  }
+  expectRepositoryName(value.repository, `${path}.repository`, issues);
+  expectLiteral(value.event, "merged_pull_request", `${path}.event`, issues);
+  expectPositiveInteger(value.pullRequestNumber, `${path}.pullRequestNumber`, issues);
+  if (value.mergedAt !== void 0) {
+    expectIsoDateTime(value.mergedAt, `${path}.mergedAt`, issues);
+  }
+}
+function expectPublicNarrativeText(value, path, issues) {
+  expectNonEmptyString(value, path, issues);
+  if (typeof value === "string" && hasPublicRankingLanguage(value)) {
+    pushIssue(issues, path, "public_ranking_language", "Public recognition fields must not contain contributor scoring or ranking language.");
+  }
+}
+function expectConfidence(value, path, issues) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    pushIssue(issues, path, "expected_number", "Confidence must be a finite number.");
+    return;
+  }
+  if (value < 0 || value > 1) {
+    pushIssue(issues, path, "out_of_range", "Confidence must be between 0 and 1.");
+  }
+}
+function rejectPublicScoreFields(value, path, issues) {
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => {
+      rejectPublicScoreFields(entry, `${path}[${index}]`, issues);
+    });
+    return;
+  }
+  if (!isRecord4(value)) {
+    return;
+  }
+  for (const [key, nestedValue] of Object.entries(value)) {
+    const fieldPath = `${path}.${key}`;
+    if (isPublicScoreFieldName(key)) {
+      pushIssue(issues, fieldPath, "public_score_field", "Assessment must not contain public score, rank, leaderboard, point, or contributor tier fields.");
+    }
+    rejectPublicScoreFields(nestedValue, fieldPath, issues);
+  }
+}
+function normalizeFieldName(value) {
+  return value.replace(/[^A-Za-z0-9]+/g, "").toLowerCase();
+}
+function isPublicScoreFieldName(value) {
+  const normalized = normalizeFieldName(value);
+  return PUBLIC_SCORE_FIELD_NAMES.has(normalized) || PUBLIC_SCORE_FIELD_SUFFIXES.some((suffix) => normalized.endsWith(suffix));
+}
+function expectEnum(value, guard, path, issues) {
+  if (typeof value !== "string" || !guard(value)) {
+    pushIssue(issues, path, "invalid_enum", "Value is not in the allowed set.");
+  }
+}
+function expectLiteral(value, expected, path, issues) {
+  if (value !== expected) {
+    pushIssue(issues, path, "invalid_literal", `Value must be ${expected}.`);
+  }
+}
+function expectNonEmptyString(value, path, issues) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    pushIssue(issues, path, "empty_string", "Value must be a non-empty string.");
+  }
+}
+function expectOptionalNonEmptyString(value, path, issues) {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (typeof value !== "string" || value.trim().length === 0) {
+    pushIssue(issues, path, "empty_string", "Value must be a non-empty string.");
+    return void 0;
+  }
+  return value;
+}
+function expectOptionalHttpUrl(value, path, issues) {
+  const normalized = expectOptionalNonEmptyString(value, path, issues);
+  if (normalized === void 0) {
+    return void 0;
+  }
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      pushIssue(issues, path, "invalid_url_protocol", "Value must be an HTTP(S) URL.");
+      return void 0;
+    }
+  } catch {
+    pushIssue(issues, path, "invalid_url", "Value must be a valid HTTP(S) URL.");
+    return void 0;
+  }
+  return normalized;
+}
+function expectOptionalEnum(value, guard, path, issues) {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (typeof value !== "string" || !guard(value)) {
+    pushIssue(issues, path, "invalid_enum", "Value is not in the allowed set.");
+    return void 0;
+  }
+  return value;
+}
+function expectOptionalBoolean(value, path, issues) {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (typeof value !== "boolean") {
+    pushIssue(issues, path, "expected_boolean", "Value must be a boolean.");
+    return void 0;
+  }
+  return value;
+}
+function expectUrl(value, path, issues) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    pushIssue(issues, path, "invalid_url", "Value must be a non-empty URL string.");
+    return;
+  }
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== "https:") {
+      pushIssue(issues, path, "invalid_url_protocol", "URL must use https.");
+    }
+  } catch {
+    pushIssue(issues, path, "invalid_url", "Value must be a valid URL.");
+  }
+}
+function expectRepositoryName(value, path, issues) {
+  if (typeof value !== "string" || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value)) {
+    pushIssue(issues, path, "invalid_repository", "Repository must use owner/name format.");
+  }
+}
+function expectPositiveInteger(value, path, issues) {
+  if (!Number.isInteger(value) || typeof value !== "number" || value <= 0) {
+    pushIssue(issues, path, "invalid_integer", "Value must be a positive integer.");
+  }
+}
+function expectIsoDateTime(value, path, issues) {
+  if (typeof value !== "string" || Number.isNaN(Date.parse(value))) {
+    pushIssue(issues, path, "invalid_datetime", "Value must be an ISO-compatible date time.");
+  }
+}
+function isRecord4(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function pushIssue(issues, path, code, message) {
+  issues.push({ path, code, message });
+}
+function invalid(issues) {
+  return {
+    ok: false,
+    issues
+  };
+}
+
+// packages/action/dist/review-gate.js
+var REVIEW_DECISION_MARKER = "<!-- clarissimi:review-decision:v1";
+var REVIEW_DECISION_END = "-->";
+var MAX_REVIEW_COMMENT_LENGTH = 4096;
+var TRUSTED_AUTHOR_ASSOCIATIONS = /* @__PURE__ */ new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
+var ReviewGateError = class extends Error {
+  code;
+  constructor(code, message) {
+    super(message);
+    this.name = "ReviewGateError";
+    this.code = code;
+  }
+};
+function isActionReviewGateMode(value) {
+  return isReviewGateMode(value);
+}
+async function runActionReviewGate(input) {
+  const event = parsePullRequestEvent(JSON.parse(await readFile2(input.eventPath, "utf8")));
+  const listed = await input.commentClient.listPullRequestComments({
+    repository: event.repository,
+    pullRequestNumber: event.pullRequestNumber
+  });
+  if (!listed.complete) {
+    return finishGate(input.gateMode, null, "Clarissimi could not complete the bounded review comment scan.");
+  }
+  const marked = listed.comments.filter((comment) => comment.body.startsWith(REVIEW_DECISION_MARKER));
+  const trusted = marked.filter(isTrustedMaintainerComment);
+  const parsed = trusted.flatMap((comment) => {
+    const decision = parseDecisionComment(comment);
+    return decision === void 0 ? [] : [decision];
+  });
+  const matchingSource = parsed.filter((decision) => decision.repository.toLowerCase() === event.repository.toLowerCase() && decision.pullRequestNumber === event.pullRequestNumber);
+  const current = matchingSource.filter((decision) => decision.headSha.toLowerCase() === event.headSha.toLowerCase());
+  if (current.length > 1) {
+    return finishGate(input.gateMode, null, "More than one trusted decision targets the current PR head SHA.");
+  }
+  if (current[0] !== void 0) {
+    return finishGate(input.gateMode, current[0], `Maintainer decision ${current[0].decision} matches the current PR head SHA.`);
+  }
+  if (matchingSource.length > 0) {
+    return finishGate(input.gateMode, null, "The maintainer decision is stale because the PR head SHA changed.");
+  }
+  if (marked.length > trusted.length) {
+    return finishGate(input.gateMode, null, "Review decision markers from untrusted authors were ignored.");
+  }
+  if (trusted.length > parsed.length) {
+    return finishGate(input.gateMode, null, "A trusted review decision comment is malformed.");
+  }
+  return finishGate(input.gateMode, null, "No trusted maintainer review decision exists for the current PR head SHA.");
+}
+function finishGate(gateMode, decision, reason) {
+  const gatePassed = decision !== null;
+  if (!gatePassed && gateMode === "required") {
+    throw new ReviewGateError("review_decision_required", reason);
+  }
+  return {
+    ok: true,
+    mode: "gate",
+    inputSource: "github_event_path",
+    draftCount: 0,
+    proposedEntryCount: 0,
+    skippedEntryCount: 0,
+    publicOutputsRendered: false,
+    approvalStatus: null,
+    redactionChanged: false,
+    redactionMatchCount: 0,
+    gateMode,
+    gatePassed,
+    gateDecision: decision?.decision ?? null,
+    gateReason: reason
+  };
+}
+function parseDecisionComment(comment) {
+  if (comment.body.length > MAX_REVIEW_COMMENT_LENGTH) {
+    return void 0;
+  }
+  const end = comment.body.indexOf(REVIEW_DECISION_END, REVIEW_DECISION_MARKER.length);
+  if (end < 0) {
+    return void 0;
+  }
+  const payload = comment.body.slice(REVIEW_DECISION_MARKER.length, end).trim();
+  try {
+    const result = validateReviewDecision(JSON.parse(payload));
+    return result.ok ? result.value : void 0;
+  } catch {
+    return void 0;
+  }
+}
+function isTrustedMaintainerComment(comment) {
+  return comment.authorType === "User" && TRUSTED_AUTHOR_ASSOCIATIONS.has(comment.authorAssociation ?? "");
+}
+function parsePullRequestEvent(value) {
+  if (!isRecord5(value) || !isRecord5(value.repository) || !isRecord5(value.pull_request)) {
+    throw new ReviewGateError("invalid_event", "Review gate requires a GitHub pull request event payload.");
+  }
+  const head = value.pull_request.head;
+  const repository = value.repository.full_name;
+  const pullRequestNumber = value.pull_request.number;
+  if (!isRecord5(head) || typeof repository !== "string" || !/^[^/\s]+\/[^/\s]+$/.test(repository) || typeof pullRequestNumber !== "number" || !Number.isInteger(pullRequestNumber) || pullRequestNumber <= 0 || typeof head.sha !== "string" || !/^[a-f0-9]{40}$/i.test(head.sha)) {
+    throw new ReviewGateError("invalid_event", "Review gate pull request event fields are invalid.");
+  }
+  return { repository, pullRequestNumber, headSha: head.sha };
+}
+function isRecord5(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -2503,431 +3073,6 @@ function assignOptional5(target, key, value) {
   }
 }
 
-// packages/schemas/dist/types.js
-var ASSESSMENT_SCHEMA_VERSION = "clarissimi.assessment/v1";
-var CONFIG_PROVIDERS = ["fake", "openai-compatible"];
-var CONFIG_PROVIDER_THINKING_VALUES = ["disabled"];
-var CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES = ["public", "private-network"];
-var CONFIG_MODES = ["dry-run", "propose", "commit"];
-var CONFIG_MARKDOWN_SUMMARIES = ["none", "table", "gallery"];
-var CONTRIBUTOR_KINDS = ["human", "bot", "ai_agent"];
-var CONTRIBUTION_TYPES = [
-  "bug_fix",
-  "bug_report",
-  "reproduction",
-  "test",
-  "performance",
-  "documentation",
-  "security",
-  "accessibility",
-  "api_design",
-  "maintenance",
-  "translation",
-  "release_validation",
-  "example",
-  "other"
-];
-var IMPACT_LEVELS = ["low", "medium", "high"];
-var APPROVAL_STATUSES = [
-  "draft",
-  "auto_approved",
-  "approved",
-  "rejected",
-  "skipped"
-];
-var EVIDENCE_KINDS = [
-  "pull_request",
-  "issue",
-  "review",
-  "comment",
-  "commit",
-  "file",
-  "label",
-  "test",
-  "maintainer_note",
-  "advisory"
-];
-
-// packages/schemas/dist/validation.js
-var RANKING_LANGUAGE_PATTERNS = [
-  /\bleaderboard\b/i,
-  /\btotal\s+score\b/i,
-  /\baverage\s+score\b/i,
-  /\bhigh\s+score\b/i,
-  /\bscore\s+share\b/i,
-  /\bpoint\s+share\b/i,
-  /\bpoints\s+share\b/i,
-  /\bimpact\s+weight\s+share\b/i,
-  /\bcontribution\s+weight\s+share\b/i,
-  /\bshare\s+of\s+(?:the\s+)?(?:(?:last|past)\s+\d+\s+(?:days'?|months'?)\s+|recent\s+|total\s+)?(?:score|points|impact\s+weight|contribution\s+weight)\b/i,
-  /\b\d+(?:\.\d+)?\s*%\s+of\s+(?:the\s+)?(?:(?:last|past)\s+\d+\s+(?:days'?|months'?)|recent|total)?\s*(?:contribution\s+)?(?:score|points|impact\s+weight|contribution\s+weight)\b/i,
-  /\b\d+(?:\.\d+)?\s+percent\s+of\s+(?:the\s+)?(?:(?:last|past)\s+\d+\s+(?:days'?|months'?)|recent|total)?\s*(?:contribution\s+)?(?:score|points|impact\s+weight|contribution\s+weight)\b/i,
-  /최근\s*\d+\s*개월(?:간)?\s*(?:전체\s*)?(?:기여\s*)?(?:점수|가중치)\s*(?:비율|점유율|몫)?/i,
-  /(?:기여\s*)?(?:점수|가중치)\s*(?:비율|점유율)/i,
-  /\bcontribution\s+points\b/i,
-  /\bleaderboard\s+points\b/i,
-  /\bcontributor\s+tier\b/i,
-  /\brank(?:ed|ing)?\b/i,
-  /\btop\s+\d+\s+contributor\b/i,
-  /\b(?:gold|silver|bronze)\s+contributor\b/i,
-  /\bmedium\s+contributor\b/i,
-  /\bmedium\s+quality\b/i,
-  /\blow-quality\s+contributor\b/i
-];
-var PUBLIC_SCORE_FIELD_NAMES = /* @__PURE__ */ new Set([
-  "score",
-  "totalscore",
-  "averagescore",
-  "scoreshare",
-  "pointshare",
-  "pointsshare",
-  "impactweightshare",
-  "contributionweightshare",
-  "recentscoreshare",
-  "recentpointshare",
-  "recentpointsshare",
-  "recentimpactweightshare",
-  "recentcontributionweightshare",
-  "contributionshare",
-  "recentcontributionshare",
-  "rank",
-  "ranking",
-  "leaderboard",
-  "leaderboardposition",
-  "contributortier",
-  "tier",
-  "points"
-]);
-var PUBLIC_SCORE_FIELD_SUFFIXES = [
-  "scoreshare",
-  "pointshare",
-  "pointsshare",
-  "impactweightshare",
-  "contributionweightshare",
-  "contributionshare",
-  "scorepercent",
-  "pointpercent",
-  "pointspercent",
-  "impactweightpercent",
-  "contributionweightpercent",
-  "contributionpercent"
-];
-function isContributionType(value) {
-  return CONTRIBUTION_TYPES.includes(value);
-}
-function isConfigProvider(value) {
-  return CONFIG_PROVIDERS.includes(value);
-}
-function isConfigProviderThinking(value) {
-  return CONFIG_PROVIDER_THINKING_VALUES.includes(value);
-}
-function isConfigProviderEndpointTrust(value) {
-  return CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES.includes(value);
-}
-function isConfigMode(value) {
-  return CONFIG_MODES.includes(value);
-}
-function isConfigMarkdownSummary(value) {
-  return CONFIG_MARKDOWN_SUMMARIES.includes(value);
-}
-function isContributorKind(value) {
-  return CONTRIBUTOR_KINDS.includes(value);
-}
-function isImpactLevel(value) {
-  return IMPACT_LEVELS.includes(value);
-}
-function isApprovalStatus(value) {
-  return APPROVAL_STATUSES.includes(value);
-}
-function isEvidenceKind(value) {
-  return EVIDENCE_KINDS.includes(value);
-}
-function hasPublicRankingLanguage(value) {
-  return RANKING_LANGUAGE_PATTERNS.some((pattern) => pattern.test(value));
-}
-function validateContributionAssessment(value) {
-  const issues = [];
-  if (!isRecord4(value)) {
-    return invalid([
-      {
-        path: "$",
-        code: "expected_object",
-        message: "Assessment must be an object."
-      }
-    ]);
-  }
-  expectLiteral(value.schemaVersion, ASSESSMENT_SCHEMA_VERSION, "$.schemaVersion", issues);
-  rejectPublicScoreFields(value, "$", issues);
-  validateContributor(value.contributor, "$.contributor", issues);
-  expectEnum(value.contributionType, isContributionType, "$.contributionType", issues);
-  expectPublicNarrativeText(value.affectedArea, "$.affectedArea", issues);
-  expectEnum(value.impactLevel, isImpactLevel, "$.impactLevel", issues);
-  expectPublicNarrativeText(value.evidenceSummary, "$.evidenceSummary", issues);
-  validateEvidenceRefs(value.evidenceRefs, "$.evidenceRefs", issues);
-  expectPublicNarrativeText(value.suggestedBadge, "$.suggestedBadge", issues);
-  expectPublicNarrativeText(value.publicRecognitionText, "$.publicRecognitionText", issues);
-  expectConfidence(value.confidence, "$.confidence", issues);
-  expectEnum(value.maintainerApprovalStatus, isApprovalStatus, "$.maintainerApprovalStatus", issues);
-  validateSource(value.source, "$.source", issues);
-  if (issues.length > 0) {
-    return invalid(issues);
-  }
-  return {
-    ok: true,
-    value,
-    issues: []
-  };
-}
-function validateClarissimiConfig(value) {
-  const issues = [];
-  if (!isRecord4(value)) {
-    return invalid([
-      {
-        path: "$",
-        code: "expected_object",
-        message: "Clarissimi config must be a JSON object."
-      }
-    ]);
-  }
-  const provider = expectOptionalEnum(value.provider, isConfigProvider, "$.provider", issues);
-  const providerEndpoint = expectOptionalHttpUrl(value.providerEndpoint, "$.providerEndpoint", issues);
-  const providerEndpointTrust = expectOptionalEnum(value.providerEndpointTrust, isConfigProviderEndpointTrust, "$.providerEndpointTrust", issues);
-  const providerModel = expectOptionalNonEmptyString(value.providerModel, "$.providerModel", issues);
-  const providerThinking = expectOptionalEnum(value.providerThinking, isConfigProviderThinking, "$.providerThinking", issues);
-  const mode = expectOptionalEnum(value.mode, isConfigMode, "$.mode", issues);
-  const markdownSummary = expectOptionalEnum(value.markdownSummary, isConfigMarkdownSummary, "$.markdownSummary", issues);
-  const includeAutomationContributors = expectOptionalBoolean(value.includeAutomationContributors, "$.includeAutomationContributors", issues);
-  if (issues.length > 0) {
-    return invalid(issues);
-  }
-  const config = {};
-  if (provider !== void 0) {
-    config.provider = provider;
-  }
-  if (providerEndpoint !== void 0) {
-    config.providerEndpoint = providerEndpoint;
-  }
-  if (providerEndpointTrust !== void 0) {
-    config.providerEndpointTrust = providerEndpointTrust;
-  }
-  if (providerModel !== void 0) {
-    config.providerModel = providerModel;
-  }
-  if (providerThinking !== void 0) {
-    config.providerThinking = providerThinking;
-  }
-  if (mode !== void 0) {
-    config.mode = mode;
-  }
-  if (markdownSummary !== void 0) {
-    config.markdownSummary = markdownSummary;
-  }
-  if (includeAutomationContributors !== void 0) {
-    config.includeAutomationContributors = includeAutomationContributors;
-  }
-  return {
-    ok: true,
-    value: config,
-    issues: []
-  };
-}
-function validateContributor(value, path, issues) {
-  if (!isRecord4(value)) {
-    pushIssue(issues, path, "expected_object", "Contributor must be an object.");
-    return;
-  }
-  expectLiteral(value.platform, "github", `${path}.platform`, issues);
-  expectNonEmptyString(value.id, `${path}.id`, issues);
-  expectNonEmptyString(value.login, `${path}.login`, issues);
-  expectUrl(value.profileUrl, `${path}.profileUrl`, issues);
-  if (value.kind !== void 0) {
-    expectEnum(value.kind, isContributorKind, `${path}.kind`, issues);
-  }
-}
-function validateEvidenceRefs(value, path, issues) {
-  if (!Array.isArray(value)) {
-    pushIssue(issues, path, "expected_array", "Evidence refs must be an array.");
-    return;
-  }
-  if (value.length === 0) {
-    pushIssue(issues, path, "empty_array", "At least one evidence ref is required.");
-    return;
-  }
-  value.forEach((entry, index) => {
-    const entryPath = `${path}[${index}]`;
-    if (!isRecord4(entry)) {
-      pushIssue(issues, entryPath, "expected_object", "Evidence ref must be an object.");
-      return;
-    }
-    expectEnum(entry.kind, isEvidenceKind, `${entryPath}.kind`, issues);
-    expectNonEmptyString(entry.id, `${entryPath}.id`, issues);
-    if (entry.url !== void 0) {
-      expectUrl(entry.url, `${entryPath}.url`, issues);
-    }
-    if (entry.title !== void 0) {
-      expectNonEmptyString(entry.title, `${entryPath}.title`, issues);
-    }
-    if (entry.excerpt !== void 0) {
-      expectNonEmptyString(entry.excerpt, `${entryPath}.excerpt`, issues);
-    }
-  });
-}
-function validateSource(value, path, issues) {
-  if (!isRecord4(value)) {
-    pushIssue(issues, path, "expected_object", "Source must be an object.");
-    return;
-  }
-  expectRepositoryName(value.repository, `${path}.repository`, issues);
-  expectLiteral(value.event, "merged_pull_request", `${path}.event`, issues);
-  expectPositiveInteger(value.pullRequestNumber, `${path}.pullRequestNumber`, issues);
-  if (value.mergedAt !== void 0) {
-    expectIsoDateTime(value.mergedAt, `${path}.mergedAt`, issues);
-  }
-}
-function expectPublicNarrativeText(value, path, issues) {
-  expectNonEmptyString(value, path, issues);
-  if (typeof value === "string" && hasPublicRankingLanguage(value)) {
-    pushIssue(issues, path, "public_ranking_language", "Public recognition fields must not contain contributor scoring or ranking language.");
-  }
-}
-function expectConfidence(value, path, issues) {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    pushIssue(issues, path, "expected_number", "Confidence must be a finite number.");
-    return;
-  }
-  if (value < 0 || value > 1) {
-    pushIssue(issues, path, "out_of_range", "Confidence must be between 0 and 1.");
-  }
-}
-function rejectPublicScoreFields(value, path, issues) {
-  if (Array.isArray(value)) {
-    value.forEach((entry, index) => {
-      rejectPublicScoreFields(entry, `${path}[${index}]`, issues);
-    });
-    return;
-  }
-  if (!isRecord4(value)) {
-    return;
-  }
-  for (const [key, nestedValue] of Object.entries(value)) {
-    const fieldPath = `${path}.${key}`;
-    if (isPublicScoreFieldName(key)) {
-      pushIssue(issues, fieldPath, "public_score_field", "Assessment must not contain public score, rank, leaderboard, point, or contributor tier fields.");
-    }
-    rejectPublicScoreFields(nestedValue, fieldPath, issues);
-  }
-}
-function normalizeFieldName(value) {
-  return value.replace(/[^A-Za-z0-9]+/g, "").toLowerCase();
-}
-function isPublicScoreFieldName(value) {
-  const normalized = normalizeFieldName(value);
-  return PUBLIC_SCORE_FIELD_NAMES.has(normalized) || PUBLIC_SCORE_FIELD_SUFFIXES.some((suffix) => normalized.endsWith(suffix));
-}
-function expectEnum(value, guard, path, issues) {
-  if (typeof value !== "string" || !guard(value)) {
-    pushIssue(issues, path, "invalid_enum", "Value is not in the allowed set.");
-  }
-}
-function expectLiteral(value, expected, path, issues) {
-  if (value !== expected) {
-    pushIssue(issues, path, "invalid_literal", `Value must be ${expected}.`);
-  }
-}
-function expectNonEmptyString(value, path, issues) {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    pushIssue(issues, path, "empty_string", "Value must be a non-empty string.");
-  }
-}
-function expectOptionalNonEmptyString(value, path, issues) {
-  if (value === void 0) {
-    return void 0;
-  }
-  if (typeof value !== "string" || value.trim().length === 0) {
-    pushIssue(issues, path, "empty_string", "Value must be a non-empty string.");
-    return void 0;
-  }
-  return value;
-}
-function expectOptionalHttpUrl(value, path, issues) {
-  const normalized = expectOptionalNonEmptyString(value, path, issues);
-  if (normalized === void 0) {
-    return void 0;
-  }
-  try {
-    const parsed = new URL(normalized);
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-      pushIssue(issues, path, "invalid_url_protocol", "Value must be an HTTP(S) URL.");
-      return void 0;
-    }
-  } catch {
-    pushIssue(issues, path, "invalid_url", "Value must be a valid HTTP(S) URL.");
-    return void 0;
-  }
-  return normalized;
-}
-function expectOptionalEnum(value, guard, path, issues) {
-  if (value === void 0) {
-    return void 0;
-  }
-  if (typeof value !== "string" || !guard(value)) {
-    pushIssue(issues, path, "invalid_enum", "Value is not in the allowed set.");
-    return void 0;
-  }
-  return value;
-}
-function expectOptionalBoolean(value, path, issues) {
-  if (value === void 0) {
-    return void 0;
-  }
-  if (typeof value !== "boolean") {
-    pushIssue(issues, path, "expected_boolean", "Value must be a boolean.");
-    return void 0;
-  }
-  return value;
-}
-function expectUrl(value, path, issues) {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    pushIssue(issues, path, "invalid_url", "Value must be a non-empty URL string.");
-    return;
-  }
-  try {
-    const parsed = new URL(value);
-    if (parsed.protocol !== "https:") {
-      pushIssue(issues, path, "invalid_url_protocol", "URL must use https.");
-    }
-  } catch {
-    pushIssue(issues, path, "invalid_url", "Value must be a valid URL.");
-  }
-}
-function expectRepositoryName(value, path, issues) {
-  if (typeof value !== "string" || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value)) {
-    pushIssue(issues, path, "invalid_repository", "Repository must use owner/name format.");
-  }
-}
-function expectPositiveInteger(value, path, issues) {
-  if (!Number.isInteger(value) || typeof value !== "number" || value <= 0) {
-    pushIssue(issues, path, "invalid_integer", "Value must be a positive integer.");
-  }
-}
-function expectIsoDateTime(value, path, issues) {
-  if (typeof value !== "string" || Number.isNaN(Date.parse(value))) {
-    pushIssue(issues, path, "invalid_datetime", "Value must be an ISO-compatible date time.");
-  }
-}
-function isRecord4(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function pushIssue(issues, path, code, message) {
-  issues.push({ path, code, message });
-}
-function invalid(issues) {
-  return {
-    ok: false,
-    issues
-  };
-}
-
 // packages/core/dist/approval.js
 function canPublishAssessment(value) {
   const validation = validateContributionAssessment(value);
@@ -3107,7 +3252,7 @@ function sortJsonValue(value) {
   if (Array.isArray(value)) {
     return value.map(sortJsonValue);
   }
-  if (isRecord5(value)) {
+  if (isRecord6(value)) {
     const sorted = {};
     Object.keys(value).sort().forEach((key) => {
       sorted[key] = sortJsonValue(value[key]);
@@ -3116,7 +3261,7 @@ function sortJsonValue(value) {
   }
   return value;
 }
-function isRecord5(value) {
+function isRecord6(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -3615,7 +3760,7 @@ function assertClarissimiOutputPath(path) {
 }
 
 // packages/action/dist/run.js
-import { appendFile, lstat as lstat2, mkdir as mkdir3, readFile as readFile2, realpath as realpath2, writeFile as writeFile3 } from "node:fs/promises";
+import { appendFile, lstat as lstat2, mkdir as mkdir3, readFile as readFile3, realpath as realpath2, writeFile as writeFile3 } from "node:fs/promises";
 import { basename, dirname as dirname3, isAbsolute as isAbsolute3, join as join3, relative as relative2, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
@@ -4333,7 +4478,7 @@ function parseAssessmentDraft(content, input) {
   } catch {
     throw new OpenAiCompatibleProviderError("invalid_json", "OpenAI-compatible provider returned message content that was not JSON.");
   }
-  if (!isRecord6(draft)) {
+  if (!isRecord7(draft)) {
     throw new OpenAiCompatibleProviderError("invalid_json", "OpenAI-compatible provider draft must be a JSON object.");
   }
   const assessment = {
@@ -4362,11 +4507,11 @@ function normalizeJsonObjectContent(content) {
   return fencedJsonMatch?.groups?.json?.trim() ?? trimmed;
 }
 function extractMessageContent(value) {
-  if (!isRecord6(value) || !Array.isArray(value.choices)) {
+  if (!isRecord7(value) || !Array.isArray(value.choices)) {
     throw new OpenAiCompatibleProviderError("invalid_response", "OpenAI-compatible provider response must include choices.");
   }
   const first = value.choices[0];
-  if (!isRecord6(first) || !isRecord6(first.message)) {
+  if (!isRecord7(first) || !isRecord7(first.message)) {
     throw new OpenAiCompatibleProviderError("invalid_response", "OpenAI-compatible provider response must include a message.");
   }
   const content = first.message.content;
@@ -4374,7 +4519,7 @@ function extractMessageContent(value) {
     return content;
   }
   if (Array.isArray(content)) {
-    const text = content.map((part) => isRecord6(part) && typeof part.text === "string" ? part.text : "").join("").trim();
+    const text = content.map((part) => isRecord7(part) && typeof part.text === "string" ? part.text : "").join("").trim();
     if (text.length > 0) {
       return text;
     }
@@ -4473,7 +4618,7 @@ function optionalEnumOption(value, allowed, name) {
   }
   return value;
 }
-function isRecord6(value) {
+function isRecord7(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -4753,7 +4898,7 @@ function validateSourceCommentInput(input) {
 async function readExistingRecognitionRecords(repositoryDir) {
   const ledgerPath = join3(repositoryDir, CONTRIBUTIONS_JSONL_PATH);
   try {
-    return parseContributionsJsonl(await readFile2(ledgerPath, "utf8"));
+    return parseContributionsJsonl(await readFile3(ledgerPath, "utf8"));
   } catch (error) {
     if (isNodeError2(error) && error.code === "ENOENT") {
       return [];
@@ -4772,10 +4917,10 @@ async function runActionFromEnvironment(env, io, runtime = {}) {
     const explicitMode = modeInput === void 0 ? void 0 : normalizeActionMode(modeInput);
     const fallbackEventPath = githubFixturePath === void 0 && explicitMode !== "promote-draft" ? readEnvInput(env.GITHUB_EVENT_PATH) : void 0;
     const summaryJsonPath = await resolveActionSummaryPath(env);
-    const config = explicitMode === "promote-draft" ? {} : await loadActionConfigFromEnvironment(env);
+    const config = explicitMode === "promote-draft" || explicitMode === "gate" ? {} : await loadActionConfigFromEnvironment(env);
     const mode = explicitMode ?? normalizeActionMode(config.mode ?? "propose");
     const commentMode = normalizeSourceCommentMode(readEnvInput(env.INPUT_COMMENT_MODE) ?? "none");
-    if (commentMode === "upsert" && (mode === "dry-run" || mode === "commit")) {
+    if (commentMode === "upsert" && (mode === "dry-run" || mode === "commit" || mode === "gate")) {
       throw new ActionUsageError("INPUT_COMMENT_MODE upsert supports only propose, stage-draft, or promote-draft mode.");
     }
     const input = {
@@ -4787,6 +4932,11 @@ async function runActionFromEnvironment(env, io, runtime = {}) {
       if (explicitEventPath !== void 0 || githubFixturePath !== void 0) {
         throw new ActionUsageError("promote-draft accepts draft-path instead of event-path or github-fixture.");
       }
+    } else if (mode === "gate") {
+      if (githubFixturePath !== void 0) {
+        throw new ActionUsageError("gate accepts event-path instead of github-fixture.");
+      }
+      assignOptional6(input, "eventPath", explicitEventPath ?? fallbackEventPath);
     } else {
       assignOptional6(input, "eventPath", explicitEventPath ?? fallbackEventPath);
       assignOptional6(input, "githubFixturePath", githubFixturePath);
@@ -4856,6 +5006,9 @@ function isPathInside(basePath, targetPath) {
 }
 async function runActionMode(input, env, runtime) {
   const mode = normalizeActionMode(input.mode ?? "dry-run");
+  if (mode === "gate") {
+    return runActionReviewGate(buildActionReviewGateInput(input, env, runtime));
+  }
   if (mode === "propose") {
     return runActionPropose(buildActionWriteInput(input, env, runtime, "propose"));
   }
@@ -4872,6 +5025,26 @@ async function runActionMode(input, env, runtime) {
     ...input,
     mode
   });
+}
+function buildActionReviewGateInput(input, env, runtime) {
+  const eventPath = input.eventPath ?? readEnvInput(env.GITHUB_EVENT_PATH);
+  if (eventPath === void 0) {
+    throw new ActionUsageError("Review gate requires GITHUB_EVENT_PATH or INPUT_EVENT_PATH.");
+  }
+  const gateModeValue = readEnvInput(env.INPUT_GATE_MODE) ?? "advisory";
+  if (!isActionReviewGateMode(gateModeValue)) {
+    throw new ActionUsageError("INPUT_GATE_MODE supports only advisory or required.");
+  }
+  const clientOptions = {
+    token: requireEnvInput(env.GITHUB_TOKEN, "GITHUB_TOKEN")
+  };
+  assignOptional6(clientOptions, "apiUrl", readEnvInput(env.GITHUB_API_URL));
+  assignOptional6(clientOptions, "fetch", runtime.fetch);
+  return {
+    eventPath,
+    gateMode: gateModeValue,
+    commentClient: runtime.sourceCommentClient ?? createGitHubPullRequestClient(clientOptions)
+  };
 }
 function buildActionCommitInput(input, env, runtime) {
   requireEnvInput(env.GITHUB_TOKEN, "GITHUB_TOKEN");
@@ -5009,7 +5182,7 @@ async function readApprovedDraft(path, repositoryDir) {
   }
   let parsed;
   try {
-    parsed = JSON.parse(await readFile2(realDraftPath, "utf8"));
+    parsed = JSON.parse(await readFile3(realDraftPath, "utf8"));
   } catch (error) {
     if (error instanceof SyntaxError) {
       throw new Error("Approved Clarissimi draft contains invalid JSON.");
@@ -5028,7 +5201,7 @@ async function readApprovedDraft(path, repositoryDir) {
 }
 async function prepareActionAssessment(input) {
   const source = selectInputSource(input);
-  const eventPayload = JSON.parse(await readFile2(source.path, "utf8"));
+  const eventPayload = JSON.parse(await readFile3(source.path, "utf8"));
   const resolution = source.kind === "github_fixture" ? {
     kind: "merged_pull_request",
     fixture: parseGitHubMergedPullRequestFixture(eventPayload)
@@ -5078,7 +5251,7 @@ function selectInputSource(input) {
   throw new ActionUsageError("The action skeleton requires GITHUB_EVENT_PATH or INPUT_GITHUB_FIXTURE.");
 }
 function parseFixtureApprovalStatus(value) {
-  if (!isRecord7(value) || value.maintainerApprovalStatus === void 0) {
+  if (!isRecord8(value) || value.maintainerApprovalStatus === void 0) {
     return void 0;
   }
   if (typeof value.maintainerApprovalStatus !== "string" || !isApprovalStatus(value.maintainerApprovalStatus)) {
@@ -5132,7 +5305,7 @@ async function loadActionConfigFromEnvironment(env) {
 async function loadActionConfigValue(configPath, resolvedPath) {
   if (resolvedPath.endsWith(".json")) {
     try {
-      return JSON.parse(await readFile2(resolvedPath, "utf8"));
+      return JSON.parse(await readFile3(resolvedPath, "utf8"));
     } catch (error) {
       if (error instanceof SyntaxError) {
         throw new ActionUsageError(`Invalid JSON in Action config ${configPath}.`);
@@ -5251,6 +5424,9 @@ async function writeGitHubOutputs(outputPath, summary, summaryJsonPath) {
   if (summary.mode === "commit") {
     lines.push(`staged-file-count=${summary.stagedFileCount}`, `direct-commit-branch=${summary.directCommitBranch}`, `direct-commit-base-sha=${summary.directCommitBaseSha}`, `direct-commit-sha=${summary.directCommitSha}`, `direct-commit-created=${summary.directCommitCreated}`, `direct-commit-pushed=${summary.directCommitPushed}`);
   }
+  if (summary.mode === "gate") {
+    lines.push(`gate-mode=${summary.gateMode}`, `gate-passed=${summary.gatePassed}`, `gate-decision=${summary.gateDecision ?? ""}`, `gate-reason=${summary.gateReason}`);
+  }
   await appendFile(outputPath, `${lines.join("\n")}
 `, "utf8");
 }
@@ -5283,6 +5459,9 @@ async function writeGitHubStepSummary(summaryPath, summary) {
   }
   if (summary.mode === "commit") {
     rows.push(["Staged files", String(summary.stagedFileCount)], ["Target branch", summary.directCommitBranch], ["Commit SHA", summary.directCommitSha], ["Commit created", String(summary.directCommitCreated)], ["Commit pushed", String(summary.directCommitPushed)]);
+  }
+  if (summary.mode === "gate") {
+    rows.push(["Gate mode", summary.gateMode], ["Gate passed", String(summary.gatePassed)], ["Gate decision", summary.gateDecision ?? "none"], ["Gate reason", summary.gateReason]);
   }
   if (summary.mode === "dry-run" && summary.skippedReason !== void 0) {
     rows.push(["Skipped reason", summary.skippedReason]);
@@ -5327,7 +5506,7 @@ function boundedProviderFailureField(value) {
 function escapeMarkdownTableCell(value) {
   return value.replaceAll("|", "\\|").replaceAll("\n", " ");
 }
-function isRecord7(value) {
+function isRecord8(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function assignOptional6(target, key, value) {

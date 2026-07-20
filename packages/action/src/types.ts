@@ -3,6 +3,7 @@ import type { LiveGitHubClient } from "@clarissimi/github";
 import type { ContributionDraftProvider } from "@clarissimi/providers";
 import type { ProposalPullRequestClient } from "./pull-request.js";
 import type { SourceCommentMode, SourcePullRequestCommentClient } from "./source-comment.js";
+import type { ActionReviewGateSummary } from "./review-gate.js";
 
 export const ACTION_MODES = [
   "dry-run",
@@ -10,6 +11,7 @@ export const ACTION_MODES = [
   "commit",
   "stage-draft",
   "promote-draft",
+  "gate",
 ] as const;
 
 export type ActionMode = (typeof ACTION_MODES)[number];
@@ -118,7 +120,11 @@ export interface ActionCommitSummary {
   readonly directCommitPushed: boolean;
 }
 
-export type ActionRunSummary = ActionDryRunSummary | ActionProposeSummary | ActionCommitSummary;
+export type ActionRunSummary =
+  | ActionDryRunSummary
+  | ActionProposeSummary
+  | ActionCommitSummary
+  | ActionReviewGateSummary;
 
 export type SanitizedContributionAssessment = Omit<ContributionAssessment, "evidenceRefs"> & {
   readonly evidenceRefs: readonly SanitizedEvidenceRef[];

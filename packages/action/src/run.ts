@@ -50,6 +50,7 @@ import {
   type SourcePullRequestCommentClient,
   type SourcePullRequestCommentUpsertResult,
 } from "./source-comment.js";
+import { isActionReviewGateMode, runActionReviewGate } from "./review-gate.js";
 import {
   stageProposalDraftReviewOutput,
   stageProposalRecognitionOutputs,
@@ -448,10 +449,12 @@ export async function runActionFromEnvironment(
     const summaryJsonPath = await resolveActionSummaryPath(env);
 
     const config =
-      explicitMode === "promote-draft" ? {} : await loadActionConfigFromEnvironment(env);
+      explicitMode === "promote-draft" || explicitMode === "gate"
+        ? {}
+        : await loadActionConfigFromEnvironment(env);
     const mode = explicitMode ?? normalizeActionMode(config.mode ?? "propose");
     const commentMode = normalizeSourceCommentMode(readEnvInput(env.INPUT_COMMENT_MODE) ?? "none");
-    if (commentMode === "upsert" && (mode === "dry-run" || mode === "commit")) {
+    if (commentMode === "upsert" && (mode === "dry-run" || mode === "commit" || mode === "gate")) {
       throw new ActionUsageError(
         "INPUT_COMMENT_MODE upsert supports only propose, stage-draft, or promote-draft mode.",
       );
@@ -467,6 +470,11 @@ export async function runActionFromEnvironment(
           "promote-draft accepts draft-path instead of event-path or github-fixture.",
         );
       }
+    } else if (mode === "gate") {
+      if (githubFixturePath !== undefined) {
+        throw new ActionUsageError("gate accepts event-path instead of github-fixture.");
+      }
+      assignOptional(input, "eventPath", explicitEventPath ?? fallbackEventPath);
     } else {
       assignOptional(input, "eventPath", explicitEventPath ?? fallbackEventPath);
       assignOptional(input, "githubFixturePath", githubFixturePath);
@@ -556,6 +564,10 @@ async function runActionMode(
 ): Promise<ActionRunSummary> {
   const mode = normalizeActionMode(input.mode ?? "dry-run");
 
+  if (mode === "gate") {
+    return runActionReviewGate(buildActionReviewGateInput(input, env, runtime));
+  }
+
   if (mode === "propose") {
     return runActionPropose(buildActionWriteInput(input, env, runtime, "propose"));
   }
@@ -576,6 +588,31 @@ async function runActionMode(
     ...input,
     mode,
   });
+}
+
+function buildActionReviewGateInput(
+  input: ActionDryRunInput,
+  env: NodeJS.ProcessEnv,
+  runtime: ActionEnvironmentRuntime,
+): Parameters<typeof runActionReviewGate>[0] {
+  const eventPath = input.eventPath ?? readEnvInput(env.GITHUB_EVENT_PATH);
+  if (eventPath === undefined) {
+    throw new ActionUsageError("Review gate requires GITHUB_EVENT_PATH or INPUT_EVENT_PATH.");
+  }
+  const gateModeValue = readEnvInput(env.INPUT_GATE_MODE) ?? "advisory";
+  if (!isActionReviewGateMode(gateModeValue)) {
+    throw new ActionUsageError("INPUT_GATE_MODE supports only advisory or required.");
+  }
+  const clientOptions: Parameters<typeof createGitHubPullRequestClient>[0] = {
+    token: requireEnvInput(env.GITHUB_TOKEN, "GITHUB_TOKEN"),
+  };
+  assignOptional(clientOptions, "apiUrl", readEnvInput(env.GITHUB_API_URL));
+  assignOptional(clientOptions, "fetch", runtime.fetch);
+  return {
+    eventPath,
+    gateMode: gateModeValue,
+    commentClient: runtime.sourceCommentClient ?? createGitHubPullRequestClient(clientOptions),
+  };
 }
 
 function buildActionCommitInput(
@@ -1184,6 +1221,15 @@ async function writeGitHubOutputs(
     );
   }
 
+  if (summary.mode === "gate") {
+    lines.push(
+      `gate-mode=${summary.gateMode}`,
+      `gate-passed=${summary.gatePassed}`,
+      `gate-decision=${summary.gateDecision ?? ""}`,
+      `gate-reason=${summary.gateReason}`,
+    );
+  }
+
   await appendFile(outputPath, `${lines.join("\n")}\n`, "utf8");
 }
 
@@ -1243,6 +1289,15 @@ async function writeGitHubStepSummary(
       ["Commit SHA", summary.directCommitSha],
       ["Commit created", String(summary.directCommitCreated)],
       ["Commit pushed", String(summary.directCommitPushed)],
+    );
+  }
+
+  if (summary.mode === "gate") {
+    rows.push(
+      ["Gate mode", summary.gateMode],
+      ["Gate passed", String(summary.gatePassed)],
+      ["Gate decision", summary.gateDecision ?? "none"],
+      ["Gate reason", summary.gateReason],
     );
   }
 

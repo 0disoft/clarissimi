@@ -45,6 +45,7 @@ export interface SourcePullRequestComment {
   readonly body: string;
   readonly authorLogin: string;
   readonly authorType: string;
+  readonly authorAssociation?: string;
   readonly appSlug?: string;
 }
 

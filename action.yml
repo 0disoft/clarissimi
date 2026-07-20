@@ -8,9 +8,13 @@ branding:
 
 inputs:
   mode:
-    description: Action mode. Use dry-run for summaries, propose for approved event drafts, commit for an explicit direct commit, stage-draft for draft review PRs, or promote-draft for an approved draft file.
+    description: Action mode. Use gate for a pre-merge maintainer decision check, dry-run for summaries, propose for approved event drafts, commit for an explicit direct commit, stage-draft for draft review PRs, or promote-draft for an approved draft file.
     required: false
     default: propose
+  gate-mode:
+    description: Review gate enforcement. advisory reports a missing or stale decision without blocking; required fails the check.
+    required: false
+    default: advisory
   event-path:
     description: Optional GitHub event payload path for local runs and write-mode live collection.
     required: false
@@ -127,6 +131,18 @@ outputs:
   direct-commit-pushed:
     description: Whether explicit commit mode pushed a new commit.
     value: ${{ steps.clarissimi.outputs.direct-commit-pushed }}
+  gate-mode:
+    description: Effective advisory or required review gate mode.
+    value: ${{ steps.clarissimi.outputs.gate-mode }}
+  gate-passed:
+    description: Whether one trusted maintainer decision matches the current PR head SHA.
+    value: ${{ steps.clarissimi.outputs.gate-passed }}
+  gate-decision:
+    description: Matching approved or skip decision when present.
+    value: ${{ steps.clarissimi.outputs.gate-decision }}
+  gate-reason:
+    description: Bounded review gate result reason.
+    value: ${{ steps.clarissimi.outputs.gate-reason }}
 
 runs:
   using: composite
@@ -135,8 +151,9 @@ runs:
       id: clarissimi
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ (inputs.mode == 'propose' || inputs.mode == 'commit' || inputs.mode == 'stage-draft' || inputs.mode == 'promote-draft') && github.token || '' }}
+        GITHUB_TOKEN: ${{ (inputs.mode == 'gate' || inputs.mode == 'propose' || inputs.mode == 'commit' || inputs.mode == 'stage-draft' || inputs.mode == 'promote-draft') && github.token || '' }}
         INPUT_MODE: ${{ inputs.mode }}
+        INPUT_GATE_MODE: ${{ inputs.gate-mode }}
         INPUT_EVENT_PATH: ${{ inputs.event-path }}
         INPUT_GITHUB_FIXTURE: ${{ inputs.github-fixture }}
         INPUT_CONFIG_PATH: ${{ inputs.config-path }}

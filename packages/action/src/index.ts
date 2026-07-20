@@ -5,6 +5,7 @@ export * from "./direct-commit.js";
 export * from "./event.js";
 export * from "./github-client.js";
 export * from "./pull-request.js";
+export * from "./review-gate.js";
 export * from "./source-comment.js";
 export * from "./summary.js";
 export * from "./staging.js";

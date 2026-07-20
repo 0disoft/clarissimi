@@ -364,6 +364,7 @@ test("GitHub pull request client lists, creates, updates, and deletes source com
 
   assert.equal(listed.complete, true);
   assert.equal(listed.comments[0].appSlug, "github-actions");
+  assert.equal(listed.comments[0].authorAssociation, "MEMBER");
   assert.equal(created.body, "created body");
   assert.equal(updated.body, "updated body");
   assert.deepEqual(
@@ -517,6 +518,7 @@ function sourceCommentResponse(id, body) {
     id,
     html_url: `https://github.com/sample/project/pull/42#issuecomment-${id}`,
     body,
+    author_association: "MEMBER",
     user: {
       login: "github-actions[bot]",
       type: "Bot",

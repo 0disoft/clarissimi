@@ -590,11 +590,19 @@ function parseSourcePullRequestComment(value: unknown): SourcePullRequestComment
     authorLogin: expectString(value.user.login, "user.login"),
     authorType: expectString(value.user.type, "user.type"),
   };
+  const authorAssociation =
+    typeof value.author_association === "string" && value.author_association.trim().length > 0
+      ? value.author_association
+      : undefined;
   if (isRecord(app) && typeof app.slug === "string" && app.slug.trim().length > 0) {
-    return { ...comment, appSlug: app.slug };
+    return {
+      ...comment,
+      ...(authorAssociation === undefined ? {} : { authorAssociation }),
+      appSlug: app.slug,
+    };
   }
 
-  return comment;
+  return { ...comment, ...(authorAssociation === undefined ? {} : { authorAssociation }) };
 }
 
 function normalizeApiUrl(value: string | undefined): string {

@@ -773,6 +773,8 @@ argv = [
   "marketplace-action-tag",
   "--release-version",
   "v0.5.2",
+  "--sha",
+  "24a0ff299fecfa6cb70fd8f425945b2f13e284c9",
   "--external-ref",
   "v0.5.2",
 ]
@@ -863,12 +865,12 @@ status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
-description = "Commit the exact-version v0.5.2 alias-promotion command contract."
+description = "Commit the corrected exact-version v0.5.2 alias-promotion command contract."
 argv = [
   "git",
   "commit",
   "-m",
-  "chore(release): authorize v0.5.2 alias promotion",
+  "fix(release): pin v0.5.2 alias candidate SHA",
   "-m",
   "Validation: mustflow, release-readiness, format, major-alias promotion regressions",
 ]

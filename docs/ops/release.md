@@ -495,7 +495,8 @@ revision inputs to one commit: `--sha <commit-sha> --external-ref <v0.x.y> --liv
 The orchestrator resolves both refs before dispatch and rejects either one when it does not identify
 the requested SHA. Omitting `--live-ref` intentionally preserves the current-candidate default of
 running the live-provider workflow from `main`; major-alias validation defaults it to the selected
-immutable release tag.
+immutable release tag. Hosted CI lookup uses GitHub CLI's exact `--commit` filter, so historical
+revalidation does not depend on the candidate remaining within the newest workflow-run page.
 When a watched run fails, the orchestrator distinguishes workflow execution failures from GitHub
 Actions runner admission failures. It reports an admission failure only when all jobs report
 `runner_id` as zero or unassigned, every job has zero steps, and a check-run annotation names an

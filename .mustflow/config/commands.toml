@@ -881,7 +881,7 @@ argv = [
   "git",
   "commit",
   "-m",
-  "fix(release): pin historical validation refs",
+  "fix(release): filter historical CI by commit",
   "-m",
   "Validation: mustflow, docs, release-readiness, lint, format, check, release publication regressions",
 ]

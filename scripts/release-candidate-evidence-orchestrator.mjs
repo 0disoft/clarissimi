@@ -402,25 +402,24 @@ async function dispatchAndWatch(runtime, options) {
 async function findRun(runtime, options) {
   const deadline = runtime.now() + 120_000;
   while (runtime.now() < deadline) {
-    const output = await commandText(
-      runtime,
-      "gh",
-      [
-        "run",
-        "list",
-        "--repo",
-        options.repo,
-        "--workflow",
-        options.workflow,
-        "--branch",
-        options.branch,
-        "--limit",
-        "20",
-        "--json",
-        "databaseId,status,conclusion,headSha,url,createdAt,displayTitle",
-      ],
-      `list ${options.workflow} runs`,
+    const listArgs = [
+      "run",
+      "list",
+      "--repo",
+      options.repo,
+      "--workflow",
+      options.workflow,
+      "--branch",
+      options.branch,
+    ];
+    appendOption(listArgs, "--commit", options.headSha);
+    listArgs.push(
+      "--limit",
+      "20",
+      "--json",
+      "databaseId,status,conclusion,headSha,url,createdAt,displayTitle",
     );
+    const output = await commandText(runtime, "gh", listArgs, `list ${options.workflow} runs`);
     const runs = parseJson(output, "gh run list");
     const run = runs.find((candidate) => {
       const expectedTitle =

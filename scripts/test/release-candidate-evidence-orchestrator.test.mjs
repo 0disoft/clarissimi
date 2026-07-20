@@ -30,6 +30,17 @@ test("defaults to evidence preview and records every successful run", async () =
   );
   assert.deepEqual(runtime.watched, [102, 103, 104, 105]);
   assert.match(runtime.logs.at(-1), /"orphanAudit": 105/);
+  const ciLookup = runtime.calls.find(
+    (call) =>
+      call.command === "gh" &&
+      call.args[0] === "run" &&
+      call.args[1] === "list" &&
+      call.args.includes("CI"),
+  );
+  assert.deepEqual(
+    ciLookup.args.slice(ciLookup.args.indexOf("--commit"), ciLookup.args.indexOf("--commit") + 2),
+    ["--commit", sha],
+  );
 });
 
 test("create-issue is explicit and omits preview flag", async () => {

@@ -21,6 +21,13 @@ test("retirement removes completed mutations and keeps exact-tag revalidation ma
   const input = [
     'schema_version = "1"',
     sharedIntents,
+    '[intents.release_validate_pending_alias]\nstatus = "configured"\nrun_policy = "agent_allowed"',
+    '[intents.verify_marketplace_pending_alias]\nstatus = "configured"\nrun_policy = "agent_allowed"',
+    '[intents.promote_pending_alias]\nstatus = "configured"\nrun_policy = "agent_allowed"',
+    '[intents.git_stage_pending_alias_authorization]\nstatus = "configured"\nrun_policy = "agent_allowed"',
+    '[intents.git_commit_pending_alias_authorization]\nstatus = "configured"\nrun_policy = "agent_allowed"',
+    '[intents.git_stage_pending_alias_result]\nstatus = "configured"\nrun_policy = "agent_allowed"',
+    '[intents.git_commit_pending_alias_result]\nstatus = "configured"\nrun_policy = "agent_allowed"',
     '[intents.release_v0_5_2_stable_publish]\nstatus = "configured"\nrun_policy = "agent_allowed"',
     '[intents.verify_marketplace_v0_5_2]\nstatus = "configured"\nrun_policy = "agent_allowed"',
     '[intents.release_v0_5_1_stable_publish]\nstatus = "configured"\nrun_policy = "agent_allowed"',
@@ -56,6 +63,13 @@ test("retirement removes completed mutations and keeps exact-tag revalidation ma
   const result = retireHistoricalCommandIntents(input);
 
   assert.deepEqual(result.removed, [
+    "release_validate_pending_alias",
+    "verify_marketplace_pending_alias",
+    "promote_pending_alias",
+    "git_stage_pending_alias_authorization",
+    "git_commit_pending_alias_authorization",
+    "git_stage_pending_alias_result",
+    "git_commit_pending_alias_result",
     "release_v0_5_2_stable_publish",
     "verify_marketplace_v0_5_2",
     "release_v0_5_1_stable_publish",

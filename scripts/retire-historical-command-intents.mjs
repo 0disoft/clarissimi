@@ -51,6 +51,16 @@ const COMPLETED_MILESTONES = [
   "implementation_tracker_state_sync",
 ];
 
+const COMPLETED_INTENTS = new Set([
+  "release_validate_pending_alias",
+  "verify_marketplace_pending_alias",
+  "promote_pending_alias",
+  "git_stage_pending_alias_authorization",
+  "git_commit_pending_alias_authorization",
+  "git_stage_pending_alias_result",
+  "git_commit_pending_alias_result",
+]);
+
 const COMPLETED_LIFECYCLE_PREFIXES = [
   "git_stage_",
   "git_commit_",
@@ -160,6 +170,9 @@ function parseIntentDocument(text) {
 function shouldRemoveIntent(name) {
   if (isHistoricPostTagIntent(name)) {
     return false;
+  }
+  if (COMPLETED_INTENTS.has(name)) {
+    return true;
   }
   if (COMPLETED_VERSION_TOKENS.some((token) => name.includes(token))) {
     return true;

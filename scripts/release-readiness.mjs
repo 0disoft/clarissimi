@@ -171,7 +171,8 @@ export const standaloneCliDistributionContract = {
   verifyScriptPath: "scripts/verify-standalone-cli-package.mjs",
   workflowPath: ".github/workflows/npm-publish.yml",
   requiredReadmeSnippets: [
-    "The standalone npm package is not published yet.",
+    "The standalone package is available from [npm]",
+    "https://www.npmjs.com/package/clarissimi",
     "npm install --global clarissimi",
     "never place provider tokens in committed config files",
   ],
@@ -182,13 +183,16 @@ export const standaloneCliDistributionContract = {
     "npm package versions, Action release versions, and persisted schema versions are independent",
     "The first publication is a maintainer-operated bootstrap",
     "this one bootstrap version is published without provenance",
+    "As of 2026-07-21, `clarissimi@0.1.0` is public on npm",
     "Actual publication remains manual-only",
   ],
   requiredTrackerSnippets: [
     "### 40. Standalone CLI npm Distribution",
     "Workspace-package publication remains blocked.",
+    "`clarissimi@0.1.0` is public and externally verified",
+    "`0.1.1` to correct the immutable bootstrap package README",
     "`npm stage publish` only",
-    "requiring a maintainer to inspect and approve the staged version with 2FA",
+    "bypass-2FA granular tokens",
   ],
 };
 
@@ -330,7 +334,7 @@ export const releasePolicyDocumentContract = {
     "Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,",
     "`pnpm run lint`, `pnpm run format`, `pnpm run migration-check`, `pnpm run smoke`,",
     "`pnpm run check`, `pnpm run contract`, and repository hygiene checks pass.",
-    "- Standalone CLI package preparation: allowed under ADR 0056",
+    "- Standalone CLI package release: allowed under ADR 0056",
     "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044",
     "- Moving GitHub Action major alias: `v0` is allowed under ADR 0034",
     "- GitHub Marketplace publication: allowed for the validated root Action under ADR 0045",
@@ -343,8 +347,14 @@ export const releasePolicyDocumentContract = {
     "npm publication remains a separate decision",
     "`scripts/action-release-version.mjs` is the shared allowlist and alias-derivation boundary",
     "The versioned Action tag requires:",
-    "Actual standalone CLI publication remains blocked until every registry gate passes.",
+    "Standalone CLI `clarissimi@0.1.0` is public on npm.",
     "## Standalone CLI npm Publication",
+    "### Published Bootstrap Result",
+    "https://www.npmjs.com/package/clarissimi",
+    "a6d1b4766cc32a42b8026b72bc54c0b325bc96d0",
+    "29805748315",
+    "1691d855dc8634996f6ddbb65388d2ae33c68fe1",
+    "18482766256",
     "pnpm run verify:cli-package",
     "npm publish --access public` locally",
     "sole no-provenance exception",
@@ -403,6 +413,9 @@ export const implementationTrackerContract = {
     "24a0ff299fecfa6cb70fd8f425945b2f13e284c9",
     "moving `v0` release and SHA: `v0.5.2`",
     "the separate `v0` compare-and-swap promotion and repeated post-promotion validation passed",
+    "`clarissimi@0.1.0` is public and externally verified",
+    "`0.1.1` to correct the immutable bootstrap package README",
+    "18482766256",
   ],
   forbiddenSnippets: [
     "README keeps comment updates marked as not implemented",
@@ -591,10 +604,10 @@ export const readmeValidationContract = {
     "`migration-check` builds the schema package and validates the committed persisted-schema",
     "compatibility manifest, accepted historical fixtures, executable deterministic migration chains,",
     "current-schema validation, and the unknown-version fail-closed fixture accepted by ADR 0037.",
-    "The standalone `clarissimi` CLI packaging is ready",
-    "the npm package has not been published",
+    "The standalone `clarissimi` CLI is available from npm",
+    "npm install --global clarissimi",
     "Root and workspace packages remain private",
-    "follows the manual ADR 0056 registry and two-factor-authentication gates",
+    "Future CLI releases follow the ADR 0056 staged registry",
     'Use `markdownSummary: "gallery"` or `--markdown-summary gallery`',
     "Approved bot and AI-agent contribution records are included by default",
     "`--exclude-automation-contributors`",
@@ -1870,7 +1883,7 @@ export async function runReleaseReadiness(options = {}) {
     "stable v1.0.0 tooling is ready under ADR 0055; publication remains blocked pending candidate-version docs and fresh exact-candidate validation",
   );
   console.log(
-    "standalone CLI npm packaging is ready under ADR 0056; staging and final 2FA approval remain manual-only pending registry bootstrap and stage-only trusted-publisher configuration",
+    "standalone CLI clarissimi@0.1.0 is public; source version 0.1.1 is ready for exact-SHA staged OIDC validation under ADR 0056",
   );
 }
 

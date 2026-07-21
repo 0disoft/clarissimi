@@ -390,8 +390,8 @@ test("release readiness rejects release policy document drift", () => {
     .replace("candidate consumer documents name `v1.0.0`", "candidate docs may stay stale")
     .replace("ADR 0056 accepts only the", "No standalone CLI distribution decision exists.")
     .replace(
-      "- Standalone CLI package preparation: allowed under ADR 0056",
-      "- Standalone CLI package preparation: ungoverned.",
+      "- Standalone CLI package release: allowed under ADR 0056",
+      "- Standalone CLI package release: ungoverned.",
     )
     .replace(
       "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044",
@@ -432,7 +432,7 @@ test("release readiness rejects release policy document drift", () => {
       "release versions are duplicated",
     )
     .replace(
-      "Actual standalone CLI publication remains blocked until every registry gate passes.",
+      "Standalone CLI `clarissimi@0.1.0` is public on npm.",
       "Standalone CLI publication skips registry gates.",
     )
     .replace("## Standalone CLI npm Publication", "## Ungated npm Publication")
@@ -499,7 +499,7 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include stable v1 publication remains blocked until the.",
     "docs/ops/release.md must include candidate consumer documents name `v1.0.0`.",
     "docs/ops/release.md must include ADR 0056 accepts only the.",
-    "docs/ops/release.md must include - Standalone CLI package preparation: allowed under ADR 0056.",
+    "docs/ops/release.md must include - Standalone CLI package release: allowed under ADR 0056.",
     "docs/ops/release.md must include - Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044.",
     "docs/ops/release.md must include - Moving GitHub Action major alias: `v0` is allowed under ADR 0034.",
     "docs/ops/release.md must include - GitHub Marketplace publication: allowed for the validated root Action under ADR 0045.",
@@ -511,7 +511,7 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include The v1 release leaves existing `v0.x.y` tags and alias `v0` unchanged..",
     "docs/ops/release.md must include npm publication remains a separate decision.",
     "docs/ops/release.md must include `scripts/action-release-version.mjs` is the shared allowlist and alias-derivation boundary.",
-    "docs/ops/release.md must include Actual standalone CLI publication remains blocked until every registry gate passes..",
+    "docs/ops/release.md must include Standalone CLI `clarissimi@0.1.0` is public on npm..",
     "docs/ops/release.md must include ## Standalone CLI npm Publication.",
     "docs/ops/release.md must include pnpm run verify:cli-package.",
     "docs/ops/release.md must include trusted publishing.",
@@ -671,7 +671,11 @@ test("release readiness rejects README validation drift", () => {
       "`migration-check` builds the schema package and validates the committed persisted-schema",
       "`migration-check` is optional",
     )
-    .replace("the npm package has not been published", "the npm package is already public");
+    .replace(
+      "The standalone `clarissimi` CLI is available from npm",
+      "The standalone CLI is unavailable",
+    )
+    .replace("npm install --global clarissimi", "install from source only");
 
   assert.deepEqual(validateReadmeValidationContract(text), [
     "README.md must include updates that comment on reruns instead of posting duplicates.",
@@ -691,7 +695,8 @@ test("release readiness rejects README validation drift", () => {
     "README.md must include `format` runs the repository-wide Oxfmt baseline accepted by ADR 0036.",
     "README.md must include `oxlint` remains the JavaScript and TypeScript lint gate.",
     "README.md must include `migration-check` builds the schema package and validates the committed persisted-schema.",
-    "README.md must include the npm package has not been published.",
+    "README.md must include The standalone `clarissimi` CLI is available from npm.",
+    "README.md must include npm install --global clarissimi.",
   ]);
 });
 
@@ -2191,7 +2196,8 @@ test("release readiness accepts the standalone CLI distribution contract", () =>
     validateStandaloneCliDistributionContract({
       manifest: { ...standaloneCliPackageContract },
       readme: [
-        "The standalone npm package is not published yet.",
+        "The standalone package is available from [npm]",
+        "https://www.npmjs.com/package/clarissimi",
         "npm install --global clarissimi",
         "never place provider tokens in committed config files",
       ].join("\n"),
@@ -2202,13 +2208,16 @@ test("release readiness accepts the standalone CLI distribution contract", () =>
         "npm package versions, Action release versions, and persisted schema versions are independent",
         "The first publication is a maintainer-operated bootstrap",
         "this one bootstrap version is published without provenance",
+        "As of 2026-07-21, `clarissimi@0.1.0` is public on npm",
         "Actual publication remains manual-only",
       ].join("\n"),
       tracker: [
         "### 40. Standalone CLI npm Distribution",
         "Workspace-package publication remains blocked.",
+        "`clarissimi@0.1.0` is public and externally verified",
+        "`0.1.1` to correct the immutable bootstrap package README",
         "`npm stage publish` only",
-        "requiring a maintainer to inspect and approve the staged version with 2FA",
+        "bypass-2FA granular tokens",
       ].join("\n"),
       buildScript: 'bundle: true\ntarget: "node24"\njoin(".tmp", "npm", "clarissimi")',
       verifyScript: '"npm"\n"--ignore-scripts"\nprocess.execPath, [installedCli, "--help"]',
@@ -2479,7 +2488,7 @@ function createReleasePolicyText() {
     "`pnpm run lint`, `pnpm run format`, `pnpm run migration-check`, `pnpm run smoke`,",
     "`pnpm run check`, `pnpm run contract`, and repository hygiene checks pass.",
     "",
-    "- Standalone CLI package preparation: allowed under ADR 0056",
+    "- Standalone CLI package release: allowed under ADR 0056",
     "- Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044",
     "- Moving GitHub Action major alias: `v0` is allowed under ADR 0034",
     "- GitHub Marketplace publication: allowed for the validated root Action under ADR 0045",
@@ -2493,8 +2502,14 @@ function createReleasePolicyText() {
     "`scripts/action-release-version.mjs` is the shared allowlist and alias-derivation boundary",
     "",
     "The versioned Action tag requires:",
-    "Actual standalone CLI publication remains blocked until every registry gate passes.",
+    "Standalone CLI `clarissimi@0.1.0` is public on npm.",
     "## Standalone CLI npm Publication",
+    "### Published Bootstrap Result",
+    "https://www.npmjs.com/package/clarissimi",
+    "a6d1b4766cc32a42b8026b72bc54c0b325bc96d0",
+    "29805748315",
+    "1691d855dc8634996f6ddbb65388d2ae33c68fe1",
+    "18482766256",
     "pnpm run verify:cli-package",
     "npm publish --access public` locally",
     "sole no-provenance exception",
@@ -2644,10 +2659,10 @@ function createReadmeValidationText() {
     "`migration-check` builds the schema package and validates the committed persisted-schema",
     "compatibility manifest, accepted historical fixtures, executable deterministic migration chains,",
     "current-schema validation, and the unknown-version fail-closed fixture accepted by ADR 0037.",
-    "The standalone `clarissimi` CLI packaging is ready, but",
-    "the npm package has not been published.",
-    "Root and workspace packages remain private; publication",
-    "follows the manual ADR 0056 registry and two-factor-authentication gates.",
+    "The standalone `clarissimi` CLI is available from npm.",
+    "npm install --global clarissimi",
+    "Root and workspace packages remain private.",
+    "Future CLI releases follow the ADR 0056 staged registry",
     'Use `markdownSummary: "gallery"` or `--markdown-summary gallery` instead.',
     "Approved bot and AI-agent contribution records are included by default.",
     "`--exclude-automation-contributors`",

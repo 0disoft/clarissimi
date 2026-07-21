@@ -47,7 +47,7 @@ test("standalone CLI pack result accepts only the four public package files", ()
   assert.doesNotThrow(() =>
     validatePackResult({
       name: "clarissimi",
-      version: "0.1.0",
+      version: standaloneCliPackageContract.version,
       files: [
         { path: "package.json" },
         { path: "README.md" },
@@ -63,7 +63,7 @@ test("standalone CLI pack result rejects source leakage", () => {
     () =>
       validatePackResult({
         name: "clarissimi",
-        version: "0.1.0",
+        version: standaloneCliPackageContract.version,
         files: [
           { path: "package.json" },
           { path: "README.md" },
@@ -80,7 +80,7 @@ test("standalone CLI installed manifest preserves the executable mapping", () =>
   assert.deepEqual(
     validateInstalledPackageManifest({
       name: "clarissimi",
-      version: "0.1.0",
+      version: standaloneCliPackageContract.version,
       bin: { clarissimi: "dist/clarissimi.js" },
     }),
     [],
@@ -88,7 +88,7 @@ test("standalone CLI installed manifest preserves the executable mapping", () =>
   assert.deepEqual(
     validateInstalledPackageManifest({
       name: "clarissimi",
-      version: "0.1.0",
+      version: standaloneCliPackageContract.version,
     }),
     ['bin must equal {"clarissimi":"dist/clarissimi.js"}.'],
   );

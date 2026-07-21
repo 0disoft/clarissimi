@@ -1418,15 +1418,15 @@ Completed scope:
 Source: `docs/adr/0056-publish-a-standalone-cli-package.md`,
 `distribution/npm/clarissimi/package.json`, `docs/ops/release.md`
 
-Status: Distribution preparation completed on `main`; first registry bootstrap, stage-only trusted
-publisher configuration, staged review, 2FA approval, and public external-consumer verification
-remain manual release gates.
+Status: `clarissimi@0.1.0` is public and externally verified. The source manifest now prepares
+`0.1.1` to correct the immutable bootstrap package README and exercise the stage-only OIDC path.
 
 Completed scope:
 
 - keep root and all `packages/*` manifests private at `0.0.0` instead of exposing internal
   workspace boundaries as public npm dependencies
-- define independent `clarissimi@0.1.0` CLI, root Action, and persisted schema version namespaces
+- define an independent CLI version line beginning at `clarissimi@0.1.0`; the current source
+  manifest prepares patch `0.1.1` independently from root Action and persisted schema versions
 - bundle the compiled Node.js 24 CLI plus internal runtime modules into one dependency-free ESM
   executable under ignored `.tmp/npm/clarissimi`
 - keep the public tarball to exactly `package.json`, `README.md`, `LICENSE`, and
@@ -1436,14 +1436,19 @@ Completed scope:
 - preserve the Node shebang and avoid shell-mediated npm execution on Windows by invoking the npm
   CLI through the current Node runtime
 - add a manual-dispatch, exact-SHA, GitHub-hosted OIDC workflow with no npm token fallback
-- configure the automated path for `npm stage publish` only, leaving direct publication unavailable
-  and requiring a maintainer to inspect and approve the staged version with 2FA
+- publish `clarissimi@0.1.0` with maintainer-owned 2FA, then configure the trusted publisher for
+  `0disoft/clarissimi`, workflow `npm-publish.yml`, environment `npm`, and `npm stage publish` only
+- retain the maintainer-selected package policy that permits bypass-2FA granular tokens while the
+  repository workflow itself contains no token fallback or direct-publish permission
 - fail before staging when the package has not completed its first manual bootstrap or the requested
   immutable version already exists
 - validate workflow triggers, permissions, exact checkout, runtime and npm pins, package verification,
   registry preflight, stage-only command, and direct-publish rejection through release-readiness
-- pass hosted CI run `29638373698` at commit
-  `539cf4aa51b1b0ff1f11cfc7a866899fceed81cf`, including the standalone tarball consumer test
+- pass hosted CI run `29805748315` at commit
+  `a6d1b4766cc32a42b8026b72bc54c0b325bc96d0`, including the corrected standalone package contract
+- verify the public `0.1.0` registry metadata, exact integrity and shasum, executable shim help, and
+  one fixture-backed dry-run from an isolated external consumer
+- create protected-branch-only GitHub environment `npm` with id `18482766256`
 
 ## Deferred Work
 

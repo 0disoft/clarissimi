@@ -33,8 +33,8 @@ authorize publishing internal workspace packages or couple the CLI version to an
   `pnpm run check`, `pnpm run contract`, and repository hygiene checks pass.
 - Dogfood workflow update: allowed when Action examples, permissions, `actionlint`, and root
   `action.yml` parsing pass.
-- Standalone CLI package preparation: allowed under ADR 0056; actual npm publication is
-  manual-only and remains blocked until the registry and authentication gates below pass.
+- Standalone CLI package release: allowed under ADR 0056 after the exact version, registry,
+  authentication, staged-review, and external-consumer gates below pass.
 - Versioned GitHub Action tag: allowed for immutable `v0.x.y` tags under ADR 0044 after all
   pre-release gates pass for the exact tag target commit.
 - Moving GitHub Action major alias: `v0` is allowed under ADR 0034 after the selected immutable
@@ -101,10 +101,30 @@ The versioned Action tag requires:
 - secret scan shows no committed provider tokens, GitHub tokens, private keys, or environment files
 - rollback instructions cover closing proposal pull requests and deleting proposal branches
 
-Actual standalone CLI publication remains blocked until every registry gate passes. Action release
-validation does not substitute for the npm-specific checks below.
+Standalone CLI `clarissimi@0.1.0` is public on npm. Future CLI versions remain blocked until every
+version-specific registry gate passes; Action release validation does not substitute for the
+npm-specific checks below.
 
 ## Standalone CLI npm Publication
+
+### Published Bootstrap Result
+
+- Public package: <https://www.npmjs.com/package/clarissimi>, version `0.1.0`
+- Source commit: `a6d1b4766cc32a42b8026b72bc54c0b325bc96d0`
+- Hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29805748315>
+- Tarball: <https://registry.npmjs.org/clarissimi/-/clarissimi-0.1.0.tgz>
+- Integrity:
+  `sha512-5j5payPqBFHQ4s9b4tNLRTspuUQkDR/a47OirWf/e453JBdjM89ZS3GYotl9r0DV3bDPAASEFfG/0agmsHAZhg==`
+- Shasum: `1691d855dc8634996f6ddbb65388d2ae33c68fe1`
+- External consumer: isolated registry install, `.bin/clarissimi --help`, and one approved synthetic
+  fixture dry-run passed on Windows with Node.js 24
+- Trusted publisher: `0disoft/clarissimi`, workflow `npm-publish.yml`, protected-branch-only
+  environment `npm` id `18482766256`, allowed action `npm stage publish`
+- Package publishing access retains the maintainer-selected bypass-2FA granular-token fallback.
+  `.github/workflows/npm-publish.yml` still contains no token fallback and cannot call direct
+  `npm publish`.
+- `0.1.0` is the documented no-provenance bootstrap exception. Source `0.1.1` corrects its immutable
+  README and is the first candidate for staged OIDC publication and provenance verification.
 
 ADR 0056 defines `distribution/npm/clarissimi/package.json` as the only public npm manifest. The
 root and every `packages/*` manifest stay private at `0.0.0`. Before any publication:

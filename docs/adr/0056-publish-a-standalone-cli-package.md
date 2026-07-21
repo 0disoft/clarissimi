@@ -18,8 +18,9 @@ that the repository does not actually make.
 ## Decision
 
 Clarissimi accepts a public, dependency-free npm distribution named `clarissimi`, beginning with
-version `0.1.0`. This ADR authorizes the distribution contract and release preparation; it does not
-claim that the package name is available, create registry ownership, or publish a package.
+version `0.1.0`. At acceptance time this ADR authorized the distribution contract and release
+preparation without claiming package-name availability, registry ownership, or completed
+publication. Current implementation status is recorded below without changing that decision.
 
 - `distribution/npm/clarissimi/package.json` is the source manifest. Root and `packages/*`
   manifests remain private at `0.0.0` and are not npm publication surfaces.
@@ -57,12 +58,21 @@ Consumers get one normal CLI package while internal module boundaries stay priva
 larger than a thin workspace package, but it avoids registry dependency chains and makes a clean
 consumer test possible without contacting npm for Clarissimi runtime dependencies.
 
-The first release still needs registry-side work: verify the name, establish package ownership,
-publish locally with maintainer authentication, configure stage-only trusted publishing, and then
-verify the public install. The bootstrap version has no provenance attestation; subsequent releases
-add CI-generated provenance plus a proof-of-presence review between staging and public availability.
-If publication fails after a version is accepted by npm, recovery uses a new version. Deleting or
-republishing the same version is not a rollback plan.
+The first release established registry ownership, used maintainer authentication, configured
+stage-only trusted publishing, and verified the public install. The bootstrap version has no
+provenance attestation; subsequent releases add CI-generated provenance plus a proof-of-presence
+review between staging and public availability. If publication fails after a version is accepted by
+npm, recovery uses a new version. Deleting or republishing the same version is not a rollback plan.
+
+## Implementation Status
+
+As of 2026-07-21, `clarissimi@0.1.0` is public on npm. Its registry integrity and shasum matched the
+maintainer publish output, and an isolated external consumer passed installation, executable help,
+and a fixture-backed dry-run. Trusted publishing permits only `npm stage publish` from
+`0disoft/clarissimi`, workflow `npm-publish.yml`, environment `npm`. The package publishing-access
+setting retains the maintainer-selected bypass-2FA granular-token fallback; the repository workflow
+itself has no token fallback or direct-publish permission. Source version `0.1.1` corrects the
+immutable bootstrap package README and is the first candidate for the staged OIDC path.
 
 ## Validation
 

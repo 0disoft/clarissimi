@@ -179,7 +179,15 @@ Implemented MVP slices:
 
 ## Fixture-First CLI
 
-The first CLI slice runs without GitHub API access or live LLM credentials:
+Install the dependency-free standalone CLI from npm with Node.js 24 or newer:
+
+```console
+npm install --global clarissimi
+clarissimi --help
+```
+
+The fixture-first CLI runs without GitHub API access or live LLM credentials. For source-checkout
+development:
 
 ```powershell
 pnpm --filter @clarissimi/cli build
@@ -255,9 +263,9 @@ The current public Action release is `0disoft/clarissimi@v0.5.2`. Consumers may 
 tag or use `0disoft/clarissimi@v0` to follow maintainer-approved `0.x` Action releases. Earlier
 releases remain immutable, and `main` is never a consumer release channel. Clarissimi is also
 available in the [GitHub Marketplace](https://github.com/marketplace/actions/clarissimi) under the
-`Code review` and `Utilities` categories. The standalone `clarissimi` CLI packaging is ready, but
-the npm package has not been published. Root and workspace packages remain private; publication
-follows the manual ADR 0056 registry and two-factor-authentication gates.
+`Code review` and `Utilities` categories. The standalone `clarissimi` CLI is available from npm.
+Root and workspace packages remain private. Future CLI releases follow the ADR 0056 staged registry
+and two-factor-authentication gates.
 
 See [`0disoft/clarissimi-example`](https://github.com/0disoft/clarissimi-example) for a public,
 synthetic consumer repository with a read-only `v0` workflow, a manual recognition proposal, and

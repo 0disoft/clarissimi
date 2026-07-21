@@ -5,15 +5,15 @@ The CLI works locally and does not require the GitHub Action runtime.
 
 ## Install
 
-The standalone npm package is not published yet. After the first verified publication, install it
-with Node.js 24 or newer:
+The standalone package is available from [npm](https://www.npmjs.com/package/clarissimi). Install
+the latest verified release with Node.js 24 or newer:
 
 ```console
 npm install --global clarissimi
 clarissimi --help
 ```
 
-Until then, use the repository checkout or the published GitHub Action documented in the
+For GitHub-native automation or source-checkout development, see the
 [main project README](https://github.com/0disoft/clarissimi#readme).
 
 ## Safety boundary

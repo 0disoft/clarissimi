@@ -55,7 +55,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
   `./dist/index.js` and `./dist/index.d.ts` entrypoints, expose only `dist` in `files`, keep
   `tsc -b` build scripts, expose bin entries only from `packages/cli` and `packages/action`, and
   carry package-level publication metadata for license, repository directory, homepage, issue
-  tracker, Node.js runtime support, and a package README even while publication remains blocked.
+  tracker, Node.js runtime support, and a package README even while workspace-package publication
+  remains blocked.
 - Monorepo internal dependency policy: internal package dependencies must use `workspace:*` in
   `dependencies`, not dev, peer, or optional dependency sections. TypeScript project references
   must also follow the dependency graph below so package manifests and `tsconfig` build order do
@@ -82,10 +83,10 @@ This repository type owns workspace boundaries, package ownership, dependency po
 
 ## Distribution Table
 
-| Distribution                  | Status      | Owns                                                                                | Must Not Own                                                               |
-| ----------------------------- | ----------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `distribution/npm/clarissimi` | Pre-release | Public standalone CLI manifest and package-specific installation documentation      | CLI source, domain policy, workspace dependencies, generated bundle output |
-| `.tmp/npm/clarissimi`         | Generated   | Exact locally staged npm tarball inputs rebuilt by the package verification command | Source truth, committed files, credentials, registry state                 |
+| Distribution                  | Status    | Owns                                                                                | Must Not Own                                                               |
+| ----------------------------- | --------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `distribution/npm/clarissimi` | Public    | Public standalone CLI manifest and package-specific installation documentation      | CLI source, domain policy, workspace dependencies, generated bundle output |
+| `.tmp/npm/clarissimi`         | Generated | Exact locally staged npm tarball inputs rebuilt by the package verification command | Source truth, committed files, credentials, registry state                 |
 
 ## Internal Dependency Graph
 

@@ -37,8 +37,10 @@ claim that the package name is available, create registry ownership, or publish 
 - Package name ownership and exact version availability must be rechecked immediately before the
   first publication. npm versions are immutable and never reused; a defective release is followed
   by a new version and may be deprecated, not overwritten.
-- The first publication is a maintainer-operated bootstrap with npm two-factor authentication.
-  No long-lived npm token is committed or added merely to automate that bootstrap.
+- The first publication is a maintainer-operated bootstrap. It runs locally with npm two-factor
+  authentication. Because npm provenance is available only on supported cloud-hosted CI runners,
+  this one bootstrap version is published without provenance. No long-lived npm token is committed
+  or added merely to automate that bootstrap.
 - After the package exists, npm trusted publishing is configured for the repository workflow with
   stage-only permission. `.github/workflows/npm-publish.yml` submits a staged package only from a
   GitHub-hosted runner using OIDC, `id-token: write`, Node.js 24, npm 11.15.0 or newer, an exact
@@ -56,10 +58,11 @@ larger than a thin workspace package, but it avoids registry dependency chains a
 consumer test possible without contacting npm for Clarissimi runtime dependencies.
 
 The first release still needs registry-side work: verify the name, establish package ownership,
-publish with maintainer authentication, configure stage-only trusted publishing, and then verify the
-public install. Subsequent releases add a proof-of-presence review between CI staging and public
-availability. If publication fails after a version is accepted by npm, recovery uses a new version.
-Deleting or republishing the same version is not a rollback plan.
+publish locally with maintainer authentication, configure stage-only trusted publishing, and then
+verify the public install. The bootstrap version has no provenance attestation; subsequent releases
+add CI-generated provenance plus a proof-of-presence review between staging and public availability.
+If publication fails after a version is accepted by npm, recovery uses a new version. Deleting or
+republishing the same version is not a rollback plan.
 
 ## Validation
 

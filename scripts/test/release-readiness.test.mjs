@@ -2201,6 +2201,7 @@ test("release readiness accepts the standalone CLI distribution contract", () =>
         "manifests remain private at `0.0.0`",
         "npm package versions, Action release versions, and persisted schema versions are independent",
         "The first publication is a maintainer-operated bootstrap",
+        "this one bootstrap version is published without provenance",
         "Actual publication remains manual-only",
       ].join("\n"),
       tracker: [
@@ -2495,6 +2496,8 @@ function createReleasePolicyText() {
     "Actual standalone CLI publication remains blocked until every registry gate passes.",
     "## Standalone CLI npm Publication",
     "pnpm run verify:cli-package",
+    "npm publish --access public` locally",
+    "sole no-provenance exception",
     "trusted publishing",
     "npm stage publish --access public --provenance",
     "## Marketplace Release Procedure",

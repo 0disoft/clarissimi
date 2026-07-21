@@ -62,12 +62,30 @@ export async function verifyStandaloneCliPackage(options = {}) {
       { cwd: tempRoot },
     );
 
-    const installedCli = join(
+    const installedPackageDir = join(
       consumerDir,
       "node_modules",
       standaloneCliPackageContract.name,
-      standaloneCliPackagePaths.bundledCli,
     );
+    const installedManifest = JSON.parse(
+      await readFile(join(installedPackageDir, "package.json"), "utf8"),
+    );
+    const installedManifestIssues = validateInstalledPackageManifest(installedManifest);
+    if (installedManifestIssues.length > 0) {
+      throw new Error(
+        `Installed standalone CLI manifest is invalid:\n- ${installedManifestIssues.join("\n- ")}`,
+      );
+    }
+
+    const installedBinLink = join(
+      consumerDir,
+      "node_modules",
+      ".bin",
+      process.platform === "win32" ? "clarissimi.cmd" : "clarissimi",
+    );
+    await access(installedBinLink);
+
+    const installedCli = join(installedPackageDir, standaloneCliPackagePaths.bundledCli);
     const help = await runCommand(process.execPath, [installedCli, "--help"], { cwd: tempRoot });
     if (!help.stdout.includes("Clarissimi CLI") || !help.stdout.includes("clarissimi --help")) {
       throw new Error("Installed standalone CLI did not emit the expected help contract.");
@@ -80,6 +98,20 @@ export async function verifyStandaloneCliPackage(options = {}) {
   }
 
   console.log("Standalone CLI package verification passed");
+}
+
+export function validateInstalledPackageManifest(manifest) {
+  const issues = [];
+  if (manifest.name !== standaloneCliPackageContract.name) {
+    issues.push(`name must equal ${standaloneCliPackageContract.name}.`);
+  }
+  if (manifest.version !== standaloneCliPackageContract.version) {
+    issues.push(`version must equal ${standaloneCliPackageContract.version}.`);
+  }
+  if (JSON.stringify(manifest.bin) !== JSON.stringify(standaloneCliPackageContract.bin)) {
+    issues.push(`bin must equal ${JSON.stringify(standaloneCliPackageContract.bin)}.`);
+  }
+  return issues;
 }
 
 export async function resolveNpmInvocation(options = {}) {

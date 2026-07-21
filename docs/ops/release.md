@@ -118,8 +118,10 @@ root and every `packages/*` manifest stay private at `0.0.0`. Before any publica
 3. Confirm the requested version exactly matches
    `distribution/npm/clarissimi/package.json`, the source commit is the reviewed 40-character SHA,
    hosted CI passed for that SHA, and the worktree contains no uncommitted release changes.
-4. For the first publication only, use maintainer-owned npm authentication and two-factor
-   authentication to bootstrap the package. Do not create or commit a long-lived automation token.
+4. For the first publication only, run `npm publish --access public` locally with maintainer-owned
+   npm authentication and two-factor authentication. npm provenance requires a supported
+   cloud-hosted CI runner, so this bootstrap version is the sole no-provenance exception. Do not
+   create or commit a long-lived automation token merely to manufacture first-release provenance.
 5. Configure npm trusted publishing for `0disoft/clarissimi`, workflow
    `.github/workflows/npm-publish.yml`, and the protected `npm` GitHub environment. Grant
    `npm stage publish` only; do not grant direct `npm publish` permission.
@@ -128,8 +130,9 @@ root and every `packages/*` manifest stay private at `0.0.0`. Before any publica
    isolated package verification, and `npm stage publish --access public --provenance` from the
    staging directory. It deliberately fails when the package does not already exist, so the OIDC
    workflow cannot masquerade as the first-publish bootstrap.
-7. Inspect or download the staged tarball from npm. Approve it with 2FA only when the expected name,
-   version, files, integrity, provenance, and source commit agree; otherwise reject the stage.
+7. For subsequent releases, inspect or download the staged tarball from npm. Approve it with 2FA
+   only when the expected name, version, files, integrity, provenance, and source commit agree;
+   otherwise reject the stage.
 8. From an empty external repository, install the public version, run `clarissimi --help`, run one
    fixture-backed dry-run, and record the registry page, provenance link, exact tarball integrity,
    and consumer result outside the release commit.

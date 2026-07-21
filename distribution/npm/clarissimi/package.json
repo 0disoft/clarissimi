@@ -19,7 +19,7 @@
     "directory": "distribution/npm/clarissimi"
   },
   "bin": {
-    "clarissimi": "./dist/clarissimi.js"
+    "clarissimi": "dist/clarissimi.js"
   },
   "files": [
     "dist",
@@ -28,8 +28,7 @@
   ],
   "type": "module",
   "publishConfig": {
-    "access": "public",
-    "provenance": true
+    "access": "public"
   },
   "engines": {
     "node": ">=24"

@@ -5,7 +5,11 @@ import {
   standaloneCliPackageContract,
   validateStandaloneCliPackageManifest,
 } from "../build-standalone-cli-package.mjs";
-import { resolveNpmInvocation, validatePackResult } from "../verify-standalone-cli-package.mjs";
+import {
+  resolveNpmInvocation,
+  validateInstalledPackageManifest,
+  validatePackResult,
+} from "../verify-standalone-cli-package.mjs";
 
 function createManifest(overrides = {}) {
   return {
@@ -18,6 +22,10 @@ function createManifest(overrides = {}) {
 
 test("standalone CLI manifest accepts the dependency-free publication contract", () => {
   assert.deepEqual(validateStandaloneCliPackageManifest(createManifest()), []);
+  assert.deepEqual(standaloneCliPackageContract.bin, {
+    clarissimi: "dist/clarissimi.js",
+  });
+  assert.deepEqual(standaloneCliPackageContract.publishConfig, { access: "public" });
 });
 
 test("standalone CLI manifest rejects workspace dependencies and lifecycle scripts", () => {
@@ -65,6 +73,24 @@ test("standalone CLI pack result rejects source leakage", () => {
         ],
       }),
     /npm pack files must equal/,
+  );
+});
+
+test("standalone CLI installed manifest preserves the executable mapping", () => {
+  assert.deepEqual(
+    validateInstalledPackageManifest({
+      name: "clarissimi",
+      version: "0.1.0",
+      bin: { clarissimi: "dist/clarissimi.js" },
+    }),
+    [],
+  );
+  assert.deepEqual(
+    validateInstalledPackageManifest({
+      name: "clarissimi",
+      version: "0.1.0",
+    }),
+    ['bin must equal {"clarissimi":"dist/clarissimi.js"}.'],
   );
 });
 

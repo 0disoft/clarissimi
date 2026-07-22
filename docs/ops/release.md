@@ -101,7 +101,7 @@ The versioned Action tag requires:
 - secret scan shows no committed provider tokens, GitHub tokens, private keys, or environment files
 - rollback instructions cover closing proposal pull requests and deleting proposal branches
 
-Standalone CLI `clarissimi@0.1.0` is public on npm. Future CLI versions remain blocked until every
+Standalone CLI `clarissimi@0.1.1` is public on npm. Future CLI versions remain blocked until every
 version-specific registry gate passes; Action release validation does not substitute for the
 npm-specific checks below.
 
@@ -123,8 +123,25 @@ npm-specific checks below.
 - Package publishing access retains the maintainer-selected bypass-2FA granular-token fallback.
   `.github/workflows/npm-publish.yml` still contains no token fallback and cannot call direct
   `npm publish`.
-- `0.1.0` is the documented no-provenance bootstrap exception. Source `0.1.1` corrects its immutable
-  README and is the first candidate for staged OIDC publication and provenance verification.
+- `0.1.0` is the documented no-provenance bootstrap exception.
+
+### First Staged OIDC Result
+
+- Public package: <https://www.npmjs.com/package/clarissimi/v/0.1.1>, version and `latest` tag `0.1.1`
+- Source commit: `fae483e0b846e161d377a2969f0499de268c5591`
+- Hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29812771136>
+- Stage workflow: <https://github.com/0disoft/clarissimi/actions/runs/29813680660>
+- Tarball: <https://registry.npmjs.org/clarissimi/-/clarissimi-0.1.1.tgz>
+- Integrity:
+  `sha512-BlodiOwzU72xC3p6OTDhBJkRAz//wXKOxIJhJ56fH7EOrA/yrC6fS6siKuDECymDNna6xbabHy4cFY5qGT0R/g==`
+- Shasum: `df59ffe847506db28383b5f77c3d6a57520c7559`
+- Provenance: SLSA provenance v1 at
+  <https://registry.npmjs.org/-/npm/v1/attestations/clarissimi@0.1.1>; transparency log index
+  `2211248824`
+- External consumer: exact registry installation, executable shim help, fixture-backed dry-run,
+  and `npm audit signatures` passed with no invalid or missing attestations
+- The stage queue was empty after approval, and the public tarball integrity and shasum matched the
+  reviewed staged tarball.
 
 ADR 0056 defines `distribution/npm/clarissimi/package.json` as the only public npm manifest. The
 root and every `packages/*` manifest stay private at `0.0.0`. Before any publication:
@@ -247,6 +264,13 @@ publication and Marketplace verification completed at
 `24a0ff299fecfa6cb70fd8f425945b2f13e284c9`. Exact-tag revalidation and the separate
 compare-and-swap `v0` promotion then passed, so the moving alias now resolves to `v0.5.2` at the
 same commit.
+
+Action release candidate `v0.6.0` adds the opt-in SHA-bound pre-merge review gate accepted by ADR 0057. It also carries compatible input-validation, provider-resolution, output-rendering, and
+performance-regression hardening accumulated after `v0.5.2`. Existing dry-run, propose, commit,
+stage-draft, and promote-draft modes remain compatible. The candidate must complete exact-SHA
+hosted CI, live-provider, external dry-run, full-write, cleanup, orphan-audit, immutable stable
+publication, Marketplace verification, and separate compare-and-swap `v0` promotion before the
+moving channel changes.
 
 The first post-tag full-write run `29324962538` had one Ubuntu job fail while GitHub returned its
 `Unicorn!` timeout HTML during draft PR creation. macOS and Windows passed, cleanup ran, and orphan

@@ -31,14 +31,14 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - uses: 0disoft/clarissimi@v0.5.2
+      - uses: 0disoft/clarissimi@v0.6.0
         with:
           mode: dry-run
 ```
 
 This first workflow is read-only. It validates the post-merge event path and writes a bounded run
 summary without changing repository files, branches, comments, or pull requests. The immutable
-`v0.5.2` pin is reproducible; use `0disoft/clarissimi@v0` instead when you deliberately want the
+`v0.6.0` pin is reproducible; use `0disoft/clarissimi@v0` instead when you deliberately want the
 maintainer-approved moving `0.x` channel.
 
 Without provider configuration, Clarissimi uses its deterministic fake provider. That is useful for
@@ -71,7 +71,7 @@ guide after it is published. The same stable job can begin in `advisory` mode an
 Choose one optional `CONTRIBUTORS.md` summary without replacing the detailed recognition history:
 
 ```yaml
-- uses: 0disoft/clarissimi@v0.5.2
+- uses: 0disoft/clarissimi@v0.6.0
   with:
     mode: propose
     markdown-summary: gallery # use table for compact contribution counts
@@ -259,7 +259,7 @@ node packages/cli/dist/bin/clarissimi.js import-draft --draft .clarissimi/drafts
 
 ## GitHub Action
 
-The current public Action release is `0disoft/clarissimi@v0.5.2`. Consumers may pin that immutable
+The current public Action release is `0disoft/clarissimi@v0.6.0`. Consumers may pin that immutable
 tag or use `0disoft/clarissimi@v0` to follow maintainer-approved `0.x` Action releases. Earlier
 releases remain immutable, and `main` is never a consumer release channel. Clarissimi is also
 available in the [GitHub Marketplace](https://github.com/marketplace/actions/clarissimi) under the
@@ -328,7 +328,7 @@ workflow should keep the sanitized JSON run summary as an uploadable artifact. S
 `markdown-summary: table` to add the compact table or `markdown-summary: gallery` to add stable-id
 GitHub avatars to proposed `CONTRIBUTORS.md` output; this input also works in `promote-draft`, which
 otherwise skips config and provider loading. The `table` input is available in immutable tag
-`v0.1.1`; `gallery` is available in the current immutable `v0.5.2` release and moving `v0` line.
+`v0.1.1`; `gallery` is available in the current immutable `v0.6.0` release and moving `v0` line.
 
 Release maintainers who want automated provider mode can run `pnpm run live-provider-smoke` with
 `CLARISSIMI_PROVIDER_TOKEN` and `CLARISSIMI_PROVIDER_MODEL` to perform an explicit credentialed

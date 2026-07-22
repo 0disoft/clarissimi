@@ -37,7 +37,7 @@ code.
 ## Action Usage
 
 Use `0disoft/clarissimi@v0` for maintainer-approved `0.x` updates, or pin
-`0disoft/clarissimi@v0.5.2` when exact patch reproducibility matters. The moving `main` ref is
+`0disoft/clarissimi@v0.6.0` when exact release reproducibility matters. The moving `main` ref is
 reserved for this repository's development and dogfood workflows. Immutable version tags never
 move.
 
@@ -46,9 +46,9 @@ copyable read-only workflow, the manual least-privilege proposal workflow, and a
 recognition result with the contributor summary table.
 
 The current `action.yml` defaults to `propose` mode and also supports explicit read-only `gate` and
-`dry-run` plus write modes `commit` and `stage-draft`. Gate mode is present on the development
-branch and must not be consumed until its next immutable release is published. The current `v0.5.2` release executes the committed
-`action-dist/index.js` bundle without consumer-time package installation or TypeScript compilation. `v0.1.0` remains
+`dry-run` plus write modes `commit` and `stage-draft`. Gate mode is available in immutable release
+`v0.6.0`. That release executes the committed `action-dist/index.js` bundle without consumer-time
+package installation or TypeScript compilation. `v0.1.0` remains
 immutable and retains its published source-build behavior. Dry-run mode emits a bounded summary and does not read provider credentials, use
 GitHub write tokens, create branches, open pull requests, or update repository files. Propose mode
 stages approved recognition output, publishes a proposal branch, and opens or updates a pull
@@ -60,7 +60,7 @@ or updates a draft review pull request. When `propose` or `stage-draft` receives
 `GITHUB_TOKEN`; fixture inputs remain the deterministic local and test path.
 
 The composite launcher uses Bash. Ubuntu, macOS, and Windows have passed external dry-run and
-full-write consumer smoke for immutable tag `v0.5.2` and moving alias `v0`.
+full-write consumer smoke for immutable tag `v0.6.0` and moving alias `v0`.
 
 The Action defaults to the fake provider when no provider input or config value is set. To use an
 OpenAI-compatible provider, pass `provider: openai-compatible` and `provider-model`, or provide
@@ -78,7 +78,7 @@ values.
 Set `markdown-summary: table` to add a compact contributor totals table above the detailed
 `CONTRIBUTORS.md` recognition sections. The default `none` layout preserves existing output. The
 explicit input also applies to `promote-draft`, which does not load provider config. Immutable tag
-`v0.5.2` includes both table and gallery layouts.
+`v0.6.0` includes both table and gallery layouts.
 
 Set `markdown-summary: gallery` to show linked 64-pixel GitHub avatars above the same detailed
 sections. Avatar URLs use stable contributor ids, and the gallery does not replace evidence links.
@@ -106,8 +106,7 @@ executes the pull request head, calls a provider, or changes repository state. S
 `gate-mode: advisory`; after the team has exercised the flow, switch the same job to `required` and
 make `Clarissimi review decision` a required ruleset check.
 
-Use this workflow after replacing `<immutable-gate-tag>` with the immutable release that first
-contains gate mode:
+Gate mode is available from immutable release `v0.6.0`:
 
 ```yaml
 name: Clarissimi review decision
@@ -129,7 +128,7 @@ jobs:
     name: Clarissimi review decision
     runs-on: ubuntu-latest
     steps:
-      - uses: 0disoft/clarissimi@<immutable-gate-tag>
+      - uses: 0disoft/clarissimi@v0.6.0
         with:
           mode: gate
           gate-mode: advisory
@@ -173,7 +172,7 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - uses: 0disoft/clarissimi@v0.5.2
+      - uses: 0disoft/clarissimi@v0.6.0
         with:
           mode: dry-run
 ```
@@ -182,7 +181,7 @@ Example explicit OpenAI-compatible provider dry run:
 
 ```yaml
 steps:
-  - uses: 0disoft/clarissimi@v0.5.2
+  - uses: 0disoft/clarissimi@v0.6.0
     env:
       CLARISSIMI_PROVIDER_TOKEN: ${{ secrets.CLARISSIMI_PROVIDER_TOKEN }}
     with:
@@ -194,7 +193,7 @@ steps:
 For local fixture checks, pass `github-fixture`:
 
 ```yaml
-- uses: 0disoft/clarissimi@v0.5.2
+- uses: 0disoft/clarissimi@v0.6.0
   with:
     mode: dry-run
     github-fixture: fixtures/github-merged-pr-basic.json
@@ -203,7 +202,7 @@ For local fixture checks, pass `github-fixture`:
 For local or CI checks against a GitHub event payload file, pass `event-path`:
 
 ```yaml
-- uses: 0disoft/clarissimi@v0.5.2
+- uses: 0disoft/clarissimi@v0.6.0
   with:
     mode: dry-run
     event-path: fixtures/github-pull-request-merged-event.json
@@ -217,7 +216,7 @@ token in the workflow secret boundary:
 
 ```yaml
 steps:
-  - uses: 0disoft/clarissimi@v0.5.2
+  - uses: 0disoft/clarissimi@v0.6.0
     env:
       CLARISSIMI_PROVIDER_TOKEN: ${{ secrets.CLARISSIMI_PROVIDER_TOKEN }}
     with:
@@ -230,7 +229,7 @@ To upload the sanitized JSON summary as a workflow artifact:
 ```yaml
 steps:
   - id: clarissimi
-    uses: 0disoft/clarissimi@v0.5.2
+    uses: 0disoft/clarissimi@v0.6.0
     with:
       mode: dry-run
       summary-path: .clarissimi/run-summary.json
@@ -264,7 +263,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: 0disoft/clarissimi@v0.5.2
+      - uses: 0disoft/clarissimi@v0.6.0
         with:
           mode: propose
           base-branch: main
@@ -294,7 +293,7 @@ steps:
   - uses: actions/checkout@v7
     with:
       fetch-depth: 0
-  - uses: 0disoft/clarissimi@v0.5.2
+  - uses: 0disoft/clarissimi@v0.6.0
     with:
       mode: propose
       github-fixture: fixtures/github-merged-pr-approved.json
@@ -315,7 +314,7 @@ steps:
   - uses: actions/checkout@v7
     with:
       fetch-depth: 0
-  - uses: 0disoft/clarissimi@v0.5.2
+  - uses: 0disoft/clarissimi@v0.6.0
     with:
       mode: commit
       base-branch: main
@@ -338,7 +337,7 @@ steps:
   - uses: actions/checkout@v7
     with:
       fetch-depth: 0
-  - uses: 0disoft/clarissimi@v0.5.2
+  - uses: 0disoft/clarissimi@v0.6.0
     with:
       mode: stage-draft
       base-branch: main
@@ -372,14 +371,14 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: 0disoft/clarissimi@v0.5.2
+      - uses: 0disoft/clarissimi@v0.6.0
         with:
           mode: promote-draft
           draft-path: ${{ inputs.draft-path }}
           base-branch: main
 ```
 
-`promote-draft` is available in immutable tag `v0.5.2`, which passed external consumer smoke. Do not
+`promote-draft` is available in immutable tag `v0.6.0`, which passed external consumer smoke. Do not
 point production consumer workflows at `main` to get unreleased changes early.
 
 This repository keeps write-mode dogfood manual-only in

@@ -1418,15 +1418,14 @@ Completed scope:
 Source: `docs/adr/0056-publish-a-standalone-cli-package.md`,
 `distribution/npm/clarissimi/package.json`, `docs/ops/release.md`
 
-Status: `clarissimi@0.1.0` is public and externally verified. The source manifest now prepares
-`0.1.1` to correct the immutable bootstrap package README and exercise the stage-only OIDC path.
+Status: `clarissimi@0.1.1` is public, tagged `latest`, provenance-signed, and externally verified.
 
 Completed scope:
 
 - keep root and all `packages/*` manifests private at `0.0.0` instead of exposing internal
   workspace boundaries as public npm dependencies
-- define an independent CLI version line beginning at `clarissimi@0.1.0`; the current source
-  manifest prepares patch `0.1.1` independently from root Action and persisted schema versions
+- define an independent CLI version line beginning at `clarissimi@0.1.0`; public patch `0.1.1`
+  remains independent from root Action and persisted schema versions
 - bundle the compiled Node.js 24 CLI plus internal runtime modules into one dependency-free ESM
   executable under ignored `.tmp/npm/clarissimi`
 - keep the public tarball to exactly `package.json`, `README.md`, `LICENSE`, and
@@ -1449,6 +1448,40 @@ Completed scope:
 - verify the public `0.1.0` registry metadata, exact integrity and shasum, executable shim help, and
   one fixture-backed dry-run from an isolated external consumer
 - create protected-branch-only GitHub environment `npm` with id `18482766256`
+- stage `0.1.1` from exact source `fae483e0b846e161d377a2969f0499de268c5591` through trusted
+  publishing run `29813680660`, approve it with maintainer proof of presence, and publish SLSA
+  provenance v1
+- verify public `latest=0.1.1`, exact integrity and shasum parity with the staged tarball, four-file
+  package contents, executable help, fixture-backed dry-run, and npm signature audit from an empty
+  external consumer
+
+### 41. Pre-Merge Review Gate Action Release
+
+Source: `docs/adr/0057-add-pre-merge-review-gate.md`, `docs/github-action/README.md`,
+`docs/ops/release.md`
+
+Status: Immutable `v0.6.0` candidate preparation on `main`; public `v0.5.2` and moving `v0` remain
+unchanged until every candidate, publication, Marketplace, and alias-promotion gate passes.
+
+Completed implementation scope:
+
+- add read-only Action `gate` mode with advisory and required enforcement
+- bind trusted maintainer `approved` or `skip` decisions to repository, pull request number, and
+  exact 40-character head SHA
+- fail closed in required mode for missing, stale, untrusted, duplicate, or incompletely scanned
+  decisions while advisory mode reports the same state without blocking
+- keep gate mode free of checkout, contributor-code execution, provider calls, file writes, branch
+  creation, and recognition publication
+- retain compatible dry-run, propose, commit, stage-draft, and promote-draft contracts
+- synchronize consumer onboarding, the detailed Action guide, security support, release notes,
+  documentation validators, and release-readiness contracts on `v0.6.0`
+
+Candidate gates still required:
+
+- final local validation and exact-SHA hosted CI
+- hosted live-provider, external dry-run, full-write, cleanup, and orphan-audit validation
+- immutable stable release publication and Marketplace `Latest` verification
+- separate compare-and-swap `v0` promotion and repeated exact-alias validation
 
 ## Deferred Work
 

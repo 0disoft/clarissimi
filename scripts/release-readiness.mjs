@@ -183,14 +183,14 @@ export const standaloneCliDistributionContract = {
     "npm package versions, Action release versions, and persisted schema versions are independent",
     "The first publication is a maintainer-operated bootstrap",
     "this one bootstrap version is published without provenance",
-    "As of 2026-07-21, `clarissimi@0.1.0` is public on npm",
+    "As of 2026-07-22, `clarissimi@0.1.1` is public on npm",
     "Actual publication remains manual-only",
   ],
   requiredTrackerSnippets: [
     "### 40. Standalone CLI npm Distribution",
     "Workspace-package publication remains blocked.",
-    "`clarissimi@0.1.0` is public and externally verified",
-    "`0.1.1` to correct the immutable bootstrap package README",
+    "`clarissimi@0.1.1` is public, tagged `latest`, provenance-signed, and externally verified",
+    "29813680660",
     "`npm stage publish` only",
     "bypass-2FA granular tokens",
   ],
@@ -347,7 +347,7 @@ export const releasePolicyDocumentContract = {
     "npm publication remains a separate decision",
     "`scripts/action-release-version.mjs` is the shared allowlist and alias-derivation boundary",
     "The versioned Action tag requires:",
-    "Standalone CLI `clarissimi@0.1.0` is public on npm.",
+    "Standalone CLI `clarissimi@0.1.1` is public on npm.",
     "## Standalone CLI npm Publication",
     "### Published Bootstrap Result",
     "https://www.npmjs.com/package/clarissimi",
@@ -355,6 +355,10 @@ export const releasePolicyDocumentContract = {
     "29805748315",
     "1691d855dc8634996f6ddbb65388d2ae33c68fe1",
     "18482766256",
+    "### First Staged OIDC Result",
+    "29813680660",
+    "df59ffe847506db28383b5f77c3d6a57520c7559",
+    "attestations/clarissimi@0.1.1",
     "pnpm run verify:cli-package",
     "npm publish --access public` locally",
     "sole no-provenance exception",
@@ -413,8 +417,8 @@ export const implementationTrackerContract = {
     "24a0ff299fecfa6cb70fd8f425945b2f13e284c9",
     "moving `v0` release and SHA: `v0.5.2`",
     "the separate `v0` compare-and-swap promotion and repeated post-promotion validation passed",
-    "`clarissimi@0.1.0` is public and externally verified",
-    "`0.1.1` to correct the immutable bootstrap package README",
+    "`clarissimi@0.1.1` is public, tagged `latest`, provenance-signed, and externally verified",
+    "29813680660",
     "18482766256",
   ],
   forbiddenSnippets: [
@@ -568,7 +572,7 @@ export const readmeValidationContract = {
   path: "README.md",
   requiredSnippets: [
     "## Start in 30 Seconds",
-    "- uses: 0disoft/clarissimi@v0.5.2",
+    "- uses: 0disoft/clarissimi@v0.6.0",
     "mode: dry-run",
     "## Choose How Results Are Written",
     "`propose` is the recommended default for shared repositories.",
@@ -1883,7 +1887,7 @@ export async function runReleaseReadiness(options = {}) {
     "stable v1.0.0 tooling is ready under ADR 0055; publication remains blocked pending candidate-version docs and fresh exact-candidate validation",
   );
   console.log(
-    "standalone CLI clarissimi@0.1.0 is public; source version 0.1.1 is ready for exact-SHA staged OIDC validation under ADR 0056",
+    "standalone CLI clarissimi@0.1.1 is public with staged OIDC provenance and external-consumer verification under ADR 0056",
   );
 }
 

@@ -1781,8 +1781,18 @@ status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
-description = "Stage only the reviewed v0.6.0 alias-promotion validation record and implementation tracker result."
-argv = ["git", "add", "--", "docs/ops/release.md", "docs/product/04-implementation-tracker.md"]
+description = "Stage only the reviewed v0.6.0 alias-promotion validation record, synchronized release-readiness checks, and bounded command contract."
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  ".mustflow/config/manifest.lock.toml",
+  "docs/ops/release.md",
+  "docs/product/04-implementation-tracker.md",
+  "scripts/release-readiness.mjs",
+  "scripts/test/release-readiness.test.mjs",
+]
 cwd = "."
 timeout_seconds = 60
 stdin = "closed"

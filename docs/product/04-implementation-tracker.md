@@ -1460,8 +1460,8 @@ Completed scope:
 Source: `docs/adr/0057-add-pre-merge-review-gate.md`, `docs/github-action/README.md`,
 `docs/ops/release.md`
 
-Status: Immutable `v0.6.0` candidate preparation on `main`; public `v0.5.2` and moving `v0` remain
-unchanged until every candidate, publication, Marketplace, and alias-promotion gate passes.
+Status: Immutable `v0.6.0` is public and Marketplace `Latest`; moving `v0` resolves to the same
+validated commit `97398d030aaddf9568210181dda93031fd800584`.
 
 Completed implementation scope:
 
@@ -1475,13 +1475,17 @@ Completed implementation scope:
 - retain compatible dry-run, propose, commit, stage-draft, and promote-draft contracts
 - synchronize consumer onboarding, the detailed Action guide, security support, release notes,
   documentation validators, and release-readiness contracts on `v0.6.0`
-
-Candidate gates still required:
-
-- final local validation and exact-SHA hosted CI
-- hosted live-provider, external dry-run, full-write, cleanup, and orphan-audit validation
-- immutable stable release publication and Marketplace `Latest` verification
-- separate compare-and-swap `v0` promotion and repeated exact-alias validation
+- pass final local validation and exact-SHA hosted CI run `29892070069`
+- pass candidate live-provider, external dry-run, full-write, cleanup, and orphan-audit runs
+  `29892171054`, `29892197714`, `29892220684`, and `29892261189`
+- publish immutable stable release `v0.6.0`, close release record issue `21`, and verify Marketplace
+  `Latest` renders `0disoft/clarissimi@v0.6.0`
+- pass exact-tag live-provider, external dry-run, full-write, cleanup, and orphan-audit runs
+  `29892358683`, `29892385041`, `29892410570`, and `29892451172`
+- promote `v0` with compare-and-swap from `24a0ff299fecfa6cb70fd8f425945b2f13e284c9` to
+  `97398d030aaddf9568210181dda93031fd800584`
+- pass alias-bound live-provider, external dry-run, full-write, cleanup, and orphan-audit runs
+  `29892969685`, `29892996325`, `29893023855`, and `29893077391`
 
 ## Deferred Work
 

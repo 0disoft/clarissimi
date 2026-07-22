@@ -265,12 +265,23 @@ publication and Marketplace verification completed at
 compare-and-swap `v0` promotion then passed, so the moving alias now resolves to `v0.5.2` at the
 same commit.
 
-Action release candidate `v0.6.0` adds the opt-in SHA-bound pre-merge review gate accepted by ADR 0057. It also carries compatible input-validation, provider-resolution, output-rendering, and
+Action release `v0.6.0` adds the opt-in SHA-bound pre-merge review gate accepted by ADR 0057. It
+also carries compatible input-validation, provider-resolution, output-rendering, and
 performance-regression hardening accumulated after `v0.5.2`. Existing dry-run, propose, commit,
-stage-draft, and promote-draft modes remain compatible. The candidate must complete exact-SHA
-hosted CI, live-provider, external dry-run, full-write, cleanup, orphan-audit, immutable stable
-publication, Marketplace verification, and separate compare-and-swap `v0` promotion before the
-moving channel changes.
+stage-draft, and promote-draft modes remain compatible. Immutable release and Marketplace
+publication completed at commit `97398d030aaddf9568210181dda93031fd800584` with release record
+<https://github.com/0disoft/clarissimi/issues/21>. Exact-SHA hosted CI run `29892070069`, candidate
+live-provider run `29892171054`, external dry-run run `29892197714`, full-write run `29892220684`,
+and orphan audit run `29892261189` passed before publication. Exact-tag revalidation then passed in
+live-provider run `29892358683`, external dry-run run `29892385041`, full-write run `29892410570`,
+and orphan audit run `29892451172`. Marketplace verification confirmed `v0.6.0` as `Latest` and
+rendered `0disoft/clarissimi@v0.6.0`.
+
+The compare-and-swap `v0` promotion moved the lightweight alias from
+`24a0ff299fecfa6cb70fd8f425945b2f13e284c9` to
+`97398d030aaddf9568210181dda93031fd800584`. Alias-bound live-provider run `29892969685`, external
+dry-run run `29892996325`, full-write run `29893023855`, and orphan audit run `29893077391` passed,
+so the moving alias remains at immutable release `v0.6.0`.
 
 The first post-tag full-write run `29324962538` had one Ubuntu job fail while GitHub returned its
 `Unicorn!` timeout HTML during draft PR creation. macOS and Windows passed, cleanup ran, and orphan

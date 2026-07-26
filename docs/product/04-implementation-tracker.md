@@ -1487,6 +1487,21 @@ Completed implementation scope:
 - pass alias-bound live-provider, external dry-run, full-write, cleanup, and orphan-audit runs
   `29892969685`, `29892996325`, `29893023855`, and `29893077391`
 
+### 42. JSONL Diagnostics and Executable Config Hardening
+
+Status: Patch candidates `v0.6.1` and `clarissimi@0.1.2` are prepared; hosted and publication gates
+remain pending.
+
+Accepted scope:
+
+- report the one-based physical source line for malformed contribution JSONL
+- preserve structured zero-based issue paths for existing machine consumers
+- test LF, CRLF, and blank-line handling
+- document that `clarissimi.config.ts` executes runner code and must come from a trusted checkout
+- keep Action inputs, defaults, permissions, write authority, persisted schemas, and provider
+  behavior compatible
+- publish Action and npm artifacts only after their independent exact-SHA release gates pass
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

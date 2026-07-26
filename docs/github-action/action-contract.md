@@ -112,6 +112,10 @@ files. When set, the path is resolved relative to `GITHUB_WORKSPACE` unless it i
 and validated through `packages/schemas`. Action inputs and workflow environment values take
 precedence over config values. Omitted provider inputs fall back to config values, then the runner's
 fake provider default. Unsupported `INPUT_MODE` values fail before config-file loading.
+`clarissimi.config.ts` executes as runner code and must come from the trusted checkout. The workflow
+must not derive `config-path` from pull request data or load a TypeScript config from an untrusted
+pull request head. A `pull_request_target` workflow that uses TypeScript config must keep the trusted
+base revision checked out.
 
 `markdown-summary` controls presentation only. `table` adds deterministic counts and `gallery` adds
 stable-id GitHub avatar links before the existing evidence-linked detailed sections. An explicit

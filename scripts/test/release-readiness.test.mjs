@@ -600,7 +600,7 @@ test("release readiness accepts the README validation contract", () => {
 test("release readiness rejects missing or buried README onboarding", () => {
   const missing = createReadmeValidationText()
     .replace("## Start in 30 Seconds", "## Setup")
-    .replace("- uses: 0disoft/clarissimi@v0.6.0", "")
+    .replace("- uses: 0disoft/clarissimi@v0.6.1", "")
     .replace("mode: dry-run", "")
     .replace("## Choose How Results Are Written", "## Modes")
     .replace("`propose` is the recommended default for shared repositories.", "")
@@ -610,7 +610,7 @@ test("release readiness rejects missing or buried README onboarding", () => {
 
   assert.deepEqual(validateReadmeValidationContract(missing), [
     "README.md must include ## Start in 30 Seconds.",
-    "README.md must include - uses: 0disoft/clarissimi@v0.6.0.",
+    "README.md must include - uses: 0disoft/clarissimi@v0.6.1.",
     "README.md must include mode: dry-run.",
     "README.md must include ## Choose How Results Are Written.",
     "README.md must include `propose` is the recommended default for shared repositories..",
@@ -1287,6 +1287,14 @@ test("release readiness rejects Action inputs and outputs document drift", () =>
       "`config-path` can be discovered.",
     )
     .replace(
+      "`clarissimi.config.ts` executes as runner code and must come from the trusted checkout.",
+      "`clarissimi.config.ts` is inert data.",
+    )
+    .replace(
+      "Do not derive `config-path` from pull request data or load it from an untrusted pull request head.",
+      "Pull request data may select executable config.",
+    )
+    .replace(
       "`summary-path` is explicit-only, must be relative, and must stay inside `GITHUB_WORKSPACE`.",
       "`summary-path` can be absolute.",
     )
@@ -1305,6 +1313,8 @@ test("release readiness rejects Action inputs and outputs document drift", () =>
     "docs/github-action/inputs-and-outputs.md must include Provider API keys and GitHub tokens are not plain inputs..",
     "docs/github-action/inputs-and-outputs.md must include reads `GITHUB_TOKEN` in `gate`, `propose`, `commit`,.",
     "docs/github-action/inputs-and-outputs.md must include `config-path` is explicit-only; the Action does not automatically discover repository config files..",
+    "docs/github-action/inputs-and-outputs.md must include `clarissimi.config.ts` executes as runner code and must come from the trusted checkout..",
+    "docs/github-action/inputs-and-outputs.md must include Do not derive `config-path` from pull request data or load it from an untrusted pull request head..",
     "docs/github-action/inputs-and-outputs.md must include `summary-path` is explicit-only, must be relative, and must stay inside `GITHUB_WORKSPACE`..",
     "docs/github-action/inputs-and-outputs.md must include An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`.",
     "docs/github-action/inputs-and-outputs.md must include Outputs must not include raw provider output, raw diff text, raw issue text, tokens, private keys.",
@@ -1343,6 +1353,14 @@ test("release readiness rejects Action contract document drift", () => {
     .replace(
       "Unsupported `INPUT_MODE` values must fail",
       "Unsupported `INPUT_MODE` values are ignored",
+    )
+    .replace(
+      "`clarissimi.config.ts` executes as runner code and must come from the trusted checkout.",
+      "`clarissimi.config.ts` is inert data.",
+    )
+    .replace(
+      "must not derive `config-path` from pull request data or load a TypeScript config from an untrusted",
+      "may derive `config-path` from pull request data and load a TypeScript config from an untrusted",
     )
     .replace(
       "Invalid summary paths fail before provider",
@@ -1386,6 +1404,8 @@ test("release readiness rejects Action contract document drift", () => {
     "docs/github-action/action-contract.md must include require a non-draft and non-prerelease GitHub Release.",
     "docs/github-action/action-contract.md must include independent from the persisted `clarissimi.assessment/v1` schema identifier.",
     "docs/github-action/action-contract.md must include Unsupported `INPUT_MODE` values must fail.",
+    "docs/github-action/action-contract.md must include `clarissimi.config.ts` executes as runner code and must come from the trusted checkout..",
+    "docs/github-action/action-contract.md must include must not derive `config-path` from pull request data or load a TypeScript config from an untrusted.",
     "docs/github-action/action-contract.md must include Invalid summary paths fail before provider.",
     "docs/github-action/action-contract.md must include Normal provider drafts remain non-public and fail closed.",
     "docs/github-action/action-contract.md must include It must not write `.clarissimi/contributions.jsonl`,.",
@@ -2622,7 +2642,7 @@ function createReadmeValidationText() {
     "",
     "## Start in 30 Seconds",
     "",
-    "- uses: 0disoft/clarissimi@v0.6.0",
+    "- uses: 0disoft/clarissimi@v0.6.1",
     "  with:",
     "    mode: dry-run",
     "",
@@ -3154,6 +3174,8 @@ function createActionInputsOutputsDocumentText() {
     "`comment-mode` is explicit-only",
     "",
     "`config-path` is explicit-only; the Action does not automatically discover repository config files.",
+    "`clarissimi.config.ts` executes as runner code and must come from the trusted checkout.",
+    "Do not derive `config-path` from pull request data or load it from an untrusted pull request head.",
     "`summary-path` is explicit-only, must be relative, and must stay inside `GITHUB_WORKSPACE`.",
     "An explicit `github-fixture` input takes precedence over the runner-provided `GITHUB_EVENT_PATH`",
     "fallback.",
@@ -3209,6 +3231,9 @@ function createActionContractDocumentText() {
     "",
     "`config-path` is explicit and optional. The Action does not automatically discover repository config",
     "files.",
+    "`clarissimi.config.ts` executes as runner code and must come from the trusted checkout.",
+    "The workflow must not derive `config-path` from pull request data or load a TypeScript config from an untrusted",
+    "pull request head.",
     "`markdown-summary` controls presentation only.",
     "`include-automation-contributors` overrides config `includeAutomationContributors`.",
     "`comment-mode` is explicit and does not load from repository config.",

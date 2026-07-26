@@ -104,6 +104,24 @@ test("renders empty JSONL as an empty file", () => {
   assert.deepEqual(parseContributionsJsonl(""), []);
 });
 
+test("reports one-based physical line numbers for invalid JSONL", () => {
+  const validRecord = renderContributionsJsonl([assessment()]).trimEnd();
+
+  for (const newline of ["\n", "\r\n"]) {
+    assert.throws(
+      () => parseContributionsJsonl([validRecord, "", "{", ""].join(newline)),
+      (error) => {
+        assert.equal(error instanceof RendererValidationError, true);
+        assert.equal(error.message, "Ledger JSONL contains invalid JSON on line 3.");
+        assert.equal(error.issues[0].path, "$[2]");
+        assert.equal(error.issues[0].code, "invalid_json");
+        assert.equal(error.issues[0].message, "Ledger line 3 must be valid JSON.");
+        return true;
+      },
+    );
+  }
+});
+
 test("appends a contribution without replacing existing ledger records", () => {
   const existing = assessment({
     contributor: {

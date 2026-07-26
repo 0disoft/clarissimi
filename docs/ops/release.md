@@ -283,6 +283,12 @@ The compare-and-swap `v0` promotion moved the lightweight alias from
 dry-run run `29892996325`, full-write run `29893023855`, and orphan audit run `29893077391` passed,
 so the moving alias remains at immutable release `v0.6.0`.
 
+Patch release candidate `v0.6.1` adds one-based physical JSONL parse diagnostics and documents the
+executable `clarissimi.config.ts` trust boundary. It changes no Action input name, default,
+permission, write authority, persisted schema, or provider behavior. The same source candidate
+prepares standalone CLI `clarissimi@0.1.2`; npm staging and maintainer approval remain separate from
+the Action release.
+
 The first post-tag full-write run `29324962538` had one Ubuntu job fail while GitHub returned its
 `Unicorn!` timeout HTML during draft PR creation. macOS and Windows passed, cleanup ran, and orphan
 audit run `29325038208` found no residue. A complete new-correlation post-tag validation then passed

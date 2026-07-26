@@ -3213,15 +3213,16 @@ function parseContributionsJsonl(input) {
     if (line.trim().length === 0) {
       return;
     }
+    const lineNumber = index + 1;
     let parsed;
     try {
       parsed = JSON.parse(line);
     } catch {
-      throw new RendererValidationError("Ledger JSONL contains an invalid JSON line.", [
+      throw new RendererValidationError(`Ledger JSONL contains invalid JSON on line ${lineNumber}.`, [
         {
           path: `$[${index}]`,
           code: "invalid_json",
-          message: "Ledger line must be valid JSON."
+          message: `Ledger line ${lineNumber} must be valid JSON.`
         }
       ]);
     }

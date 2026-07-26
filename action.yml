@@ -22,7 +22,7 @@ inputs:
     description: Optional GitHub merged pull request fixture path for fixture-first runs.
     required: false
   config-path:
-    description: Optional Clarissimi config file path. Supports explicit JSON config files or clarissimi.config.ts.
+    description: Optional trusted config path. TypeScript config executes as runner code; never load it from an untrusted pull request head.
     required: false
   markdown-summary:
     description: Optional CONTRIBUTORS.md summary layout. Use table for totals or gallery for stable-id GitHub avatars before the detailed sections.

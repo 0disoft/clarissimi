@@ -130,17 +130,21 @@ export function parseContributionsJsonl(input: string): readonly PublicContribut
       return;
     }
 
+    const lineNumber = index + 1;
     let parsed: unknown;
     try {
       parsed = JSON.parse(line);
     } catch {
-      throw new RendererValidationError("Ledger JSONL contains an invalid JSON line.", [
-        {
-          path: `$[${index}]`,
-          code: "invalid_json",
-          message: "Ledger line must be valid JSON.",
-        },
-      ]);
+      throw new RendererValidationError(
+        `Ledger JSONL contains invalid JSON on line ${lineNumber}.`,
+        [
+          {
+            path: `$[${index}]`,
+            code: "invalid_json",
+            message: `Ledger line ${lineNumber} must be valid JSON.`,
+          },
+        ],
+      );
     }
 
     records.push(toPublicContributionRecord(parsed));

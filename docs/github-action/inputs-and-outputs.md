@@ -16,7 +16,8 @@
 
 - `event-path`: explicit event payload path for local runs, tests, and write-mode live collection
 - `github-fixture`: explicit GitHub merged pull request fixture path for fixture-first runs
-- `config-path`: optional explicit path to a JSON Clarissimi config file or `clarissimi.config.ts`
+- `config-path`: optional explicit path to a trusted JSON Clarissimi config file or executable
+  `clarissimi.config.ts`
 - `markdown-summary`: `none`, `table`, or `gallery`; table adds counts and gallery adds stable-id
   GitHub avatars before contributor details
 - `include-automation-contributors`: optional `true` or `false`; omitted values fall back to config
@@ -66,6 +67,8 @@ comment API calls.
 `config-path` is explicit-only; the Action does not automatically discover repository config files.
 Action inputs and workflow environment values take precedence over config values. Omitted provider
 inputs fall back to config values, then `fake`.
+`clarissimi.config.ts` executes as runner code and must come from the trusted checkout.
+Do not derive `config-path` from pull request data or load it from an untrusted pull request head.
 `markdown-summary` falls back to config `markdownSummary`, then `none`. An explicit Action input
 overrides config.
 `include-automation-contributors` falls back to config `includeAutomationContributors`, then `true`.

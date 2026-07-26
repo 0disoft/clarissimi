@@ -1489,8 +1489,8 @@ Completed implementation scope:
 
 ### 42. JSONL Diagnostics and Executable Config Hardening
 
-Status: Patch candidates `v0.6.1` and `clarissimi@0.1.2` are prepared; hosted and publication gates
-remain pending.
+Status: Immutable `v0.6.1` is public and Marketplace `Latest`, moving `v0` resolves to the same
+validated commit, and `clarissimi@0.1.2` is public npm `latest` with provenance.
 
 Accepted scope:
 
@@ -1501,6 +1501,14 @@ Accepted scope:
 - keep Action inputs, defaults, permissions, write authority, persisted schemas, and provider
   behavior compatible
 - publish Action and npm artifacts only after their independent exact-SHA release gates pass
+- publish Action commit `2def5c4b6630c26ca19245984c3d1eba033e7e5b` with release record issue
+  `22`; pass candidate, exact-tag, Marketplace, and moving-`v0` validation
+- retain candidate runs `30206485102`, `30206543241`, `30206566437`, `30206585049`, and
+  `30206619301`; exact-tag runs `30206671145`, `30206690098`, `30206713320`, and `30206749183`;
+  and alias-bound runs `30206900863`, `30206921313`, `30206940168`, and `30206978376`
+- stage npm workflow run `30207185788`, publish four-file tarball shasum
+  `16c19aa12e4a099b652162b7696d794fe3ff0f6b`, and verify exact registry installation, executable
+  help, fixture dry-run, and npm signatures
 
 ## Deferred Work
 

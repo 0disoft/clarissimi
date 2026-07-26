@@ -169,6 +169,7 @@ export const standaloneCliDistributionContract = {
   trackerPath: "docs/product/04-implementation-tracker.md",
   buildScriptPath: "scripts/build-standalone-cli-package.mjs",
   verifyScriptPath: "scripts/verify-standalone-cli-package.mjs",
+  publishedVerifyScriptPath: "scripts/verify-published-standalone-cli.mjs",
   workflowPath: ".github/workflows/npm-publish.yml",
   requiredReadmeSnippets: [
     "The standalone package is available from [npm]",
@@ -183,14 +184,14 @@ export const standaloneCliDistributionContract = {
     "npm package versions, Action release versions, and persisted schema versions are independent",
     "The first publication is a maintainer-operated bootstrap",
     "this one bootstrap version is published without provenance",
-    "As of 2026-07-22, `clarissimi@0.1.1` is public on npm",
+    "As of 2026-07-27, `clarissimi@0.1.2` is public on npm",
     "Actual publication remains manual-only",
   ],
   requiredTrackerSnippets: [
     "### 40. Standalone CLI npm Distribution",
     "Workspace-package publication remains blocked.",
-    "`clarissimi@0.1.1` is public, tagged `latest`, provenance-signed, and externally verified",
-    "29813680660",
+    "`clarissimi@0.1.2` is public npm `latest` with provenance",
+    "30207185788",
     "`npm stage publish` only",
     "bypass-2FA granular tokens",
   ],
@@ -347,7 +348,7 @@ export const releasePolicyDocumentContract = {
     "npm publication remains a separate decision",
     "`scripts/action-release-version.mjs` is the shared allowlist and alias-derivation boundary",
     "The versioned Action tag requires:",
-    "Standalone CLI `clarissimi@0.1.1` is public on npm.",
+    "Standalone CLI `clarissimi@0.1.2` is public on npm.",
     "## Standalone CLI npm Publication",
     "### Published Bootstrap Result",
     "https://www.npmjs.com/package/clarissimi",
@@ -359,6 +360,10 @@ export const releasePolicyDocumentContract = {
     "29813680660",
     "df59ffe847506db28383b5f77c3d6a57520c7559",
     "attestations/clarissimi@0.1.1",
+    "### Second Staged OIDC Result",
+    "30207185788",
+    "16c19aa12e4a099b652162b7696d794fe3ff0f6b",
+    "attestations/clarissimi@0.1.2",
     "pnpm run verify:cli-package",
     "npm publish --access public` locally",
     "sole no-provenance exception",
@@ -385,6 +390,10 @@ export const releasePolicyDocumentContract = {
     "29893077391",
     "Marketplace verification confirmed `v0.6.0` as `Latest`",
     "the moving alias remains at immutable release `v0.6.0`",
+    "Patch release `v0.6.1` adds one-based physical JSONL parse diagnostics",
+    "https://github.com/0disoft/clarissimi/issues/22",
+    "2def5c4b6630c26ca19245984c3d1eba033e7e5b",
+    "30206978376",
     "Marketplace rollback: clear the Marketplace setting without deleting or moving the immutable tag.",
     "## First Action Release Procedure",
     "release type `versioned-action-tag`",
@@ -433,8 +442,11 @@ export const implementationTrackerContract = {
     "29892358683",
     "29892969685",
     "29893077391",
-    "`clarissimi@0.1.1` is public, tagged `latest`, provenance-signed, and externally verified",
-    "29813680660",
+    "Immutable `v0.6.1` is public and Marketplace `Latest`",
+    "2def5c4b6630c26ca19245984c3d1eba033e7e5b",
+    "30206978376",
+    "`clarissimi@0.1.2` is public npm `latest` with provenance",
+    "30207185788",
     "18482766256",
   ],
   forbiddenSnippets: [
@@ -1907,7 +1919,7 @@ export async function runReleaseReadiness(options = {}) {
     "stable v1.0.0 tooling is ready under ADR 0055; publication remains blocked pending candidate-version docs and fresh exact-candidate validation",
   );
   console.log(
-    "standalone CLI clarissimi@0.1.1 is public with staged OIDC provenance and external-consumer verification under ADR 0056",
+    "standalone CLI clarissimi@0.1.2 is public with staged OIDC provenance and external-consumer verification under ADR 0056",
   );
 }
 
@@ -2659,6 +2671,16 @@ export function validateStandaloneCliDistributionContract(
       files.verifyScript,
       ["npm", "--ignore-scripts", 'process.execPath, [installedCli, "--help"]'],
     ],
+    [
+      contract.publishedVerifyScriptPath,
+      files.publishedVerifyScript,
+      [
+        "--save-exact",
+        '"audit", "signatures"',
+        "validatePublishedDryRunOutput",
+        "clarissimi-published-cli-",
+      ],
+    ],
   ]) {
     if (typeof text !== "string") {
       issues.push(`${path} must be readable.`);
@@ -3067,6 +3089,7 @@ async function runStandaloneCliDistributionContractCheck(repoRoot) {
   let tracker;
   let buildScript;
   let verifyScript;
+  let publishedVerifyScript;
   try {
     manifest = JSON.parse(await readFile(join(repoRoot, contract.manifestPath), "utf8"));
     readme = await readFile(join(repoRoot, contract.readmePath), "utf8");
@@ -3074,6 +3097,10 @@ async function runStandaloneCliDistributionContractCheck(repoRoot) {
     tracker = await readFile(join(repoRoot, contract.trackerPath), "utf8");
     buildScript = await readFile(join(repoRoot, contract.buildScriptPath), "utf8");
     verifyScript = await readFile(join(repoRoot, contract.verifyScriptPath), "utf8");
+    publishedVerifyScript = await readFile(
+      join(repoRoot, contract.publishedVerifyScriptPath),
+      "utf8",
+    );
   } catch (error) {
     throw new Error(`standalone CLI distribution files are invalid: ${error.message}`);
   }
@@ -3084,6 +3111,7 @@ async function runStandaloneCliDistributionContractCheck(repoRoot) {
     tracker,
     buildScript,
     verifyScript,
+    publishedVerifyScript,
   });
   if (issues.length > 0) {
     throw new Error(`standalone CLI distribution contract failed:\n${issues.join("\n")}`);

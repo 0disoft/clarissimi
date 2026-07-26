@@ -101,7 +101,7 @@ The versioned Action tag requires:
 - secret scan shows no committed provider tokens, GitHub tokens, private keys, or environment files
 - rollback instructions cover closing proposal pull requests and deleting proposal branches
 
-Standalone CLI `clarissimi@0.1.1` is public on npm. Future CLI versions remain blocked until every
+Standalone CLI `clarissimi@0.1.2` is public on npm. Future CLI versions remain blocked until every
 version-specific registry gate passes; Action release validation does not substitute for the
 npm-specific checks below.
 
@@ -142,6 +142,25 @@ npm-specific checks below.
   and `npm audit signatures` passed with no invalid or missing attestations
 - The stage queue was empty after approval, and the public tarball integrity and shasum matched the
   reviewed staged tarball.
+
+### Second Staged OIDC Result
+
+- Public package: <https://www.npmjs.com/package/clarissimi/v/0.1.2>, version and `latest` tag `0.1.2`
+- Source commit: `2def5c4b6630c26ca19245984c3d1eba033e7e5b`
+- Hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/30206485102>
+- Stage workflow: <https://github.com/0disoft/clarissimi/actions/runs/30207185788>
+- Tarball: <https://registry.npmjs.org/clarissimi/-/clarissimi-0.1.2.tgz>
+- Integrity:
+  `sha512-dvaToRtwAJdtpNYMCr3Lifus4RpNRVYjvBipVqM8wcRrht8CdZy3L9QuOFBGhls1v3Y4Yxq9bqe4ZMZoMAvvtA==`
+- Shasum: `16c19aa12e4a099b652162b7696d794fe3ff0f6b`
+- Provenance: SLSA provenance v1 at
+  <https://registry.npmjs.org/-/npm/v1/attestations/clarissimi@0.1.2>; transparency log index
+  `2256235677`
+- Provenance identifies workflow run `30207185788` and the `main` workflow definition at
+  `eac01043027c3385d6a4088ddff094cd348792de`; the workflow checked out and verified exact package
+  source `2def5c4b6630c26ca19245984c3d1eba033e7e5b` before staging.
+- External consumer: exact registry installation, executable shim presence, fixture-backed dry-run,
+  and `npm audit signatures` passed from an empty temporary consumer.
 
 ADR 0056 defines `distribution/npm/clarissimi/package.json` as the only public npm manifest. The
 root and every `packages/*` manifest stay private at `0.0.0`. Before any publication:
@@ -283,11 +302,16 @@ The compare-and-swap `v0` promotion moved the lightweight alias from
 dry-run run `29892996325`, full-write run `29893023855`, and orphan audit run `29893077391` passed,
 so the moving alias remains at immutable release `v0.6.0`.
 
-Patch release candidate `v0.6.1` adds one-based physical JSONL parse diagnostics and documents the
+Patch release `v0.6.1` adds one-based physical JSONL parse diagnostics and documents the
 executable `clarissimi.config.ts` trust boundary. It changes no Action input name, default,
-permission, write authority, persisted schema, or provider behavior. The same source candidate
-prepares standalone CLI `clarissimi@0.1.2`; npm staging and maintainer approval remain separate from
-the Action release.
+permission, write authority, persisted schema, or provider behavior. Immutable release and
+Marketplace publication completed at `2def5c4b6630c26ca19245984c3d1eba033e7e5b` with release record
+<https://github.com/0disoft/clarissimi/issues/22>. Candidate runs `30206485102`, `30206543241`,
+`30206566437`, `30206585049`, and `30206619301` passed. Exact-tag runs `30206671145`,
+`30206690098`, `30206713320`, and `30206749183` then passed. The compare-and-swap `v0` promotion
+moved from `97398d030aaddf9568210181dda93031fd800584` to the release SHA; alias-bound runs
+`30206900863`, `30206921313`, `30206940168`, and `30206978376` passed. The same source publishes
+standalone CLI `clarissimi@0.1.2` under the independent npm release contract above.
 
 The first post-tag full-write run `29324962538` had one Ubuntu job fail while GitHub returned its
 `Unicorn!` timeout HTML during draft PR creation. macOS and Windows passed, cleanup ran, and orphan

@@ -432,7 +432,7 @@ test("release readiness rejects release policy document drift", () => {
       "release versions are duplicated",
     )
     .replace(
-      "Standalone CLI `clarissimi@0.1.1` is public on npm.",
+      "Standalone CLI `clarissimi@0.1.2` is public on npm.",
       "Standalone CLI publication skips registry gates.",
     )
     .replace("## Standalone CLI npm Publication", "## Ungated npm Publication")
@@ -511,7 +511,7 @@ test("release readiness rejects release policy document drift", () => {
     "docs/ops/release.md must include The v1 release leaves existing `v0.x.y` tags and alias `v0` unchanged..",
     "docs/ops/release.md must include npm publication remains a separate decision.",
     "docs/ops/release.md must include `scripts/action-release-version.mjs` is the shared allowlist and alias-derivation boundary.",
-    "docs/ops/release.md must include Standalone CLI `clarissimi@0.1.1` is public on npm..",
+    "docs/ops/release.md must include Standalone CLI `clarissimi@0.1.2` is public on npm..",
     "docs/ops/release.md must include ## Standalone CLI npm Publication.",
     "docs/ops/release.md must include pnpm run verify:cli-package.",
     "docs/ops/release.md must include trusted publishing.",
@@ -2228,19 +2228,21 @@ test("release readiness accepts the standalone CLI distribution contract", () =>
         "npm package versions, Action release versions, and persisted schema versions are independent",
         "The first publication is a maintainer-operated bootstrap",
         "this one bootstrap version is published without provenance",
-        "As of 2026-07-22, `clarissimi@0.1.1` is public on npm",
+        "As of 2026-07-27, `clarissimi@0.1.2` is public on npm",
         "Actual publication remains manual-only",
       ].join("\n"),
       tracker: [
         "### 40. Standalone CLI npm Distribution",
         "Workspace-package publication remains blocked.",
-        "`clarissimi@0.1.1` is public, tagged `latest`, provenance-signed, and externally verified",
-        "29813680660",
+        "`clarissimi@0.1.2` is public npm `latest` with provenance",
+        "30207185788",
         "`npm stage publish` only",
         "bypass-2FA granular tokens",
       ].join("\n"),
       buildScript: 'bundle: true\ntarget: "node24"\njoin(".tmp", "npm", "clarissimi")',
       verifyScript: '"npm"\n"--ignore-scripts"\nprocess.execPath, [installedCli, "--help"]',
+      publishedVerifyScript:
+        '"--save-exact"\n"audit", "signatures"\nvalidatePublishedDryRunOutput\nclarissimi-published-cli-',
     }),
     [],
   );
@@ -2257,6 +2259,7 @@ test("release readiness rejects a dependency-bearing standalone CLI manifest", (
     tracker: "",
     buildScript: "",
     verifyScript: "",
+    publishedVerifyScript: "",
   });
 
   assert.ok(
@@ -2522,7 +2525,7 @@ function createReleasePolicyText() {
     "`scripts/action-release-version.mjs` is the shared allowlist and alias-derivation boundary",
     "",
     "The versioned Action tag requires:",
-    "Standalone CLI `clarissimi@0.1.1` is public on npm.",
+    "Standalone CLI `clarissimi@0.1.2` is public on npm.",
     "## Standalone CLI npm Publication",
     "### Published Bootstrap Result",
     "https://www.npmjs.com/package/clarissimi",
@@ -2534,6 +2537,10 @@ function createReleasePolicyText() {
     "29813680660",
     "df59ffe847506db28383b5f77c3d6a57520c7559",
     "attestations/clarissimi@0.1.1",
+    "### Second Staged OIDC Result",
+    "30207185788",
+    "16c19aa12e4a099b652162b7696d794fe3ff0f6b",
+    "attestations/clarissimi@0.1.2",
     "pnpm run verify:cli-package",
     "npm publish --access public` locally",
     "sole no-provenance exception",
@@ -2560,6 +2567,10 @@ function createReleasePolicyText() {
     "29893077391",
     "Marketplace verification confirmed `v0.6.0` as `Latest`",
     "the moving alias remains at immutable release `v0.6.0`",
+    "Patch release `v0.6.1` adds one-based physical JSONL parse diagnostics",
+    "https://github.com/0disoft/clarissimi/issues/22",
+    "2def5c4b6630c26ca19245984c3d1eba033e7e5b",
+    "30206978376",
     "Marketplace rollback: clear the Marketplace setting without deleting or moving the immutable tag.",
     "## First Action Release Procedure",
     "release type `versioned-action-tag`",

@@ -66,13 +66,13 @@ npm, recovery uses a new version. Deleting or republishing the same version is n
 
 ## Implementation Status
 
-As of 2026-07-22, `clarissimi@0.1.1` is public on npm and tagged `latest`. The immutable `0.1.0`
-bootstrap remains the sole no-provenance exception. Version `0.1.1` was staged by GitHub Actions
-trusted publishing, signed with SLSA provenance, approved with maintainer proof of presence, and
-verified from an isolated external consumer. Trusted publishing permits only `npm stage publish`
-from `0disoft/clarissimi`, workflow `npm-publish.yml`, environment `npm`. The package
-publishing-access setting retains the maintainer-selected bypass-2FA granular-token fallback; the
-repository workflow itself has no token fallback or direct-publish permission.
+As of 2026-07-27, `clarissimi@0.1.2` is public on npm and tagged `latest`. The immutable `0.1.0`
+bootstrap remains the sole no-provenance exception. Versions `0.1.1` and `0.1.2` were staged by
+GitHub Actions trusted publishing, signed with SLSA provenance, approved with maintainer proof of
+presence, and verified from isolated external consumers. Trusted publishing permits only
+`npm stage publish` from `0disoft/clarissimi`, workflow `npm-publish.yml`, environment `npm`. The
+package publishing-access setting retains the maintainer-selected bypass-2FA granular-token
+fallback; the repository workflow itself has no token fallback or direct-publish permission.
 
 ## Validation
 

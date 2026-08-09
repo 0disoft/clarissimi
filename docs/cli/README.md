@@ -23,6 +23,7 @@ redaction, providers, or renderers.
 - `clarissimi approve-draft --draft <path>`
 - `clarissimi import-draft --draft <path>`
 - `clarissimi rebuild`
+- `clarissimi render-page --out-dir <path>`
 - `clarissimi analytics recent-share`
 - `clarissimi completion <bash|zsh|fish|powershell>`
 
@@ -54,6 +55,11 @@ contributor ranking output.
 `completion` writes a deterministic Bash, Zsh, fish, or PowerShell completion program to stdout.
 It does not install files, inspect the repository or environment, enumerate paths, or make network
 requests. See [`shell-completion.md`](shell-completion.md) for session setup examples.
+
+`render-page` writes one static `index.html` from the approved ledger. The command requires an
+explicit output directory, includes evidence-linked human, bot, and AI-agent recognition by default,
+and supports the existing display-only automation opt-out. It does not deploy the page, call a
+provider, fetch GitHub data, or modify the ledger.
 
 The public ledger format is documented in [`ledger-format.md`](ledger-format.md). The ledger stores
 PR numbers in `source.pullRequestNumber`, PR URLs in `evidenceRefs`, and no public contributor

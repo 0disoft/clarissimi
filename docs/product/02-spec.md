@@ -142,7 +142,8 @@ Approved recognition may update:
 - `.clarissimi/contributions.jsonl`
 - `.clarissimi/contributors.json`
 - `CONTRIBUTORS.md`
-- static JSON data for a future GitHub Pages view
+- `.clarissimi/static/contributions.json`
+- a CLI-generated static contributor page at an explicit output directory
 
 `contributions.jsonl` is the source of truth. JSON and Markdown outputs are derived and must be
 rebuildable.
@@ -160,6 +161,11 @@ An opt-in contributor gallery may instead display one stable-id GitHub avatar pe
 the same detailed sections. Gallery items link to the contributor profile, use deterministic
 non-ranking order, include accessible text, and must not replace evidence-linked recognition detail.
 Clarissimi does not generate or rewrite the repository README as part of this output contract.
+
+The standalone CLI may render one repository-owned `index.html` page from approved ledger records.
+The page uses deterministic non-ranking contributor order, preserves evidence links and event
+counts, includes no JavaScript, and does not require a hosted Clarissimi service. Its output
+directory must be explicit. Hosting and deployment remain consumer-owned.
 
 Approved contributors may be human, bot, or AI-agent identities. Bot and AI-agent assessments are
 included in contributor Markdown, contributor JSON, galleries, and static display data by default.
@@ -226,6 +232,7 @@ The MVP CLI should expose:
 - `clarissimi approve-draft --draft <path>`
 - `clarissimi import-draft --draft <path>`
 - `clarissimi rebuild`
+- `clarissimi render-page --out-dir <path>`
 - `clarissimi analytics recent-share`
 - `clarissimi completion <bash|zsh|fish|powershell>`
 

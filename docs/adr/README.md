@@ -101,6 +101,8 @@ engine.
   while keeping workspace packages private and separating npm, Action, and schema versions
 - `0057-add-pre-merge-review-gate.md`: add advisory and required pre-merge decision checks bound to
   the current pull request head SHA without executing untrusted head code
+- `0058-add-static-contributor-page.md`: render one repository-owned contributor page from the
+  approved ledger without a hosted service, JavaScript runtime, or public ranking model
 
 ## Review Blockers
 

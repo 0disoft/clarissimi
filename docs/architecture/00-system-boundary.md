@@ -31,6 +31,7 @@ Clarissimi writes only to the target repository in the MVP:
 - `.clarissimi/contributions.jsonl`
 - `.clarissimi/contributors.json`
 - `CONTRIBUTORS.md`
+- an explicitly generated static contributor page
 - proposed recognition pull requests
 - dry-run summaries
 
@@ -53,7 +54,7 @@ Clarissimi writes only to the target repository in the MVP:
 - `redaction` owns provider-boundary sanitization.
 - `github` owns collection and normalization from GitHub.
 - `providers` owns model calls and fake deterministic providers.
-- `renderers` owns JSONL, JSON, Markdown, and static-data output.
+- `renderers` owns JSONL, JSON, Markdown, static-data, and static contributor page output.
 - `cli` owns user command orchestration.
 - `action` is a thin runner wrapper.
 

@@ -31,7 +31,7 @@ test("scale benchmark corpus is deterministic and preserves contributor diversit
   );
 });
 
-test("scale benchmark validates rebuild, redaction, and Markdown output integrity", () => {
+test("scale benchmark validates rebuild, redaction, Markdown, and page output integrity", () => {
   const report = runScaleBenchmark({
     recordCounts: [20],
     sampleCount: 2,
@@ -42,6 +42,7 @@ test("scale benchmark validates rebuild, redaction, and Markdown output integrit
   assert.equal(report.results[0].workloads.ledgerRebuild.value.parsedRecordCount, 20);
   assert.equal(report.results[0].workloads.redaction.value.occurrenceCount, 20);
   assert.equal(report.results[0].workloads.markdownRender.value.contributorCount, 2);
+  assert.equal(report.results[0].workloads.pageRender.value.contributorCount, 2);
 });
 
 test("scale benchmark fails closed when a workload exceeds the runaway ceiling", () => {
@@ -59,7 +60,7 @@ test("scale benchmark fails closed when a workload exceeds the runaway ceiling",
   });
 
   assert.deepEqual(validateScaleBenchmarkReport(report, { enforceRunawayCeiling: true }), [
-    "results[10] exceeded the 1 ms runaway ceiling with 30 ms.",
+    "results[10] exceeded the 1 ms runaway ceiling with 40 ms.",
   ]);
 });
 

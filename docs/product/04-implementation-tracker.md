@@ -34,14 +34,14 @@ The repository currently has a fixture-first MVP skeleton with a live GitHub col
   OpenAI-compatible HTTP adapter; deterministic fake provider falls back to safe narrative values
   when maintainer hints would introduce public scoring or ranking language; OpenAI-compatible
   provider instructions reject public score-share and time-window contribution-percentage language
-- `packages/renderers`: JSONL, contributor JSON, Markdown, static-data renderers, draft review
-  JSON rendering, per-contributor Markdown totals and type counts, and maintainer-only recent-share
-  analytics
+- `packages/renderers`: JSONL, contributor JSON, Markdown, static-data and single-file contributor
+  page renderers, draft review JSON rendering, per-contributor Markdown totals and type counts, and
+  maintainer-only recent-share analytics
 - `packages/cli`: fixture-first validation, recognition dry-run, agent-assisted draft staging,
-  approval, import, rebuild, maintainer-only analytics commands, help output, and explicit fake or
-  OpenAI-compatible provider selection; config loading supports `clarissimi.config.ts` and
-  `.clarissimi/config.json`; flag-only commands reject unexpected positional arguments before
-  reading configs, ledgers, providers, or draft files
+  approval, import, rebuild, static contributor page, maintainer-only analytics commands, help
+  output, and explicit fake or OpenAI-compatible provider selection; config loading supports
+  `clarissimi.config.ts` and `.clarissimi/config.json`; flag-only commands reject unexpected
+  positional arguments before reading configs, ledgers, providers, or draft files
 - `packages/action`: Action runner for dry-run summaries, fixture-first public recognition
   proposals, explicit direct commits, fixture-first draft review proposals, and event-path live
   GitHub collection in write modes with explicit config-path loading, optional sanitized JSON
@@ -1509,6 +1509,33 @@ Accepted scope:
 - stage npm workflow run `30207185788`, publish four-file tarball shasum
   `16c19aa12e4a099b652162b7696d794fe3ff0f6b`, and verify exact registry installation, executable
   help, fixture dry-run, and npm signatures
+
+### 43. Repository-Owned Static Contributor Page
+
+Source: `docs/adr/0058-add-static-contributor-page.md`, `docs/product/02-spec.md`,
+`docs/cli/command-contract.md`
+
+Status: Implemented on `main`; a standalone CLI release containing the command remains gated and
+manual-only.
+
+Completed scope:
+
+- add `clarissimi render-page --out-dir <path>` to the shared command descriptor, validation, help,
+  and shell-completion surface
+- generate one deterministic `index.html` from the approved ledger without JavaScript, a frontend
+  framework, hosted service, database, or deployment workflow
+- preserve contributor profiles, evidence links, event counts, deterministic non-ranking order,
+  and the existing default inclusion plus display-only opt-out for bot and AI-agent contributors
+- require an explicit output directory and reject malformed or duplicate ledger records before
+  writing the page
+- share HTTPS, URL-credential, and secret-bearing-parameter link validation with Markdown output
+- restrict page content with CSP and limit view-time remote loading to GitHub avatars
+- add renderer and CLI regressions for security policy, escaping, empty state, automation display,
+  duplicate rejection, JSON output, and explicit output-path handling
+- keep hosting and deployment consumer-owned; README mutation, custom themes, JavaScript apps,
+  organization aggregation, and hosted dashboards remain outside this boundary
+- keep the public manifest at verified npm `latest=0.1.2`; the additive command warrants a future
+  `0.2.0` candidate only when the independent publication gates are intentionally started
 
 ## Deferred Work
 

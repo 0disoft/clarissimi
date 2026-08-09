@@ -18,6 +18,7 @@
 - Maintainer analytics boundary: `docs/adr/0026-add-maintainer-recent-share-analytics.md`
 - TypeScript config loader boundary: `docs/adr/0028-add-native-typescript-config-loading.md`
 - Static shell completion boundary: `docs/adr/0051-add-static-shell-completion.md`
+- Static contributor page boundary: `docs/adr/0058-add-static-contributor-page.md`
 
 ## MVP Commands
 
@@ -85,6 +86,21 @@ is explicit. Rebuild fails before writing derived outputs when the selected ledg
 duplicate contribution identities.
 Rebuild loads the selected or default Clarissimi config. `--markdown-summary none|table|gallery` overrides
 `markdownSummary` for that run.
+
+### `clarissimi render-page --out-dir <path>`
+
+Renders one repository-owned contributor page from `.clarissimi/contributions.jsonl`. The command
+requires an explicit output directory and writes exactly `<out-dir>/index.html`. It loads the
+selected or default config and supports `--exclude-automation-contributors` as a display-only
+override; approved bot and AI-agent records remain in the canonical ledger.
+
+The page contains inline CSS and no JavaScript. It may load GitHub avatar images when viewed, but a
+content security policy denies other remote and executable content. Profile and evidence links must
+pass the shared safe-HTTPS validation. Contributor order is deterministic and not based on counts.
+
+The command does not call GitHub or a provider, mutate the ledger, deploy GitHub Pages, rewrite the
+README, or create a hosted service. `--json` reports the absolute ledger, output directory, and page
+paths without embedding the generated HTML.
 
 ### `clarissimi analytics recent-share`
 

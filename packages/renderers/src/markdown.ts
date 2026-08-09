@@ -1,15 +1,9 @@
 import type { ConfigMarkdownSummary } from "@clarissimi/schemas";
 
-import {
-  RendererValidationError,
-  type ContributorRecognitionProfile,
-  type PublicRecognitionSummary,
-} from "./types.js";
+import type { ContributorRecognitionProfile, PublicRecognitionSummary } from "./types.js";
 import { deriveContributorProfiles } from "./contributors.js";
 import type { ContributorDisplayOptions } from "./contributors.js";
-
-const SENSITIVE_URL_PARAMETER_PATTERN =
-  /(?:^|[_-])(?:access[_-]?token|auth[_-]?token|token|secret|password|api[_-]?key|private[_-]?key)(?:$|[=_-])/i;
+import { normalizeSafeHttpsUrl } from "./safe-url.js";
 
 const GALLERY_AVATAR_SIZE = 64;
 const GALLERY_ROW_SIZE = 12;
@@ -186,83 +180,9 @@ function firstEvidenceLink(recognition: PublicRecognitionSummary): string | unde
 }
 
 function normalizeMarkdownLinkDestination(value: string, path: string): string {
-  const encoded = [...value]
-    .map((character) =>
-      shouldEncodeMarkdownDestinationCharacter(character)
-        ? encodeURIComponent(character)
-        : character,
-    )
-    .join("");
-
-  let parsed: URL;
-  try {
-    parsed = new URL(encoded);
-  } catch {
-    throw new RendererValidationError("Markdown link destination must be a valid HTTPS URL.", [
-      {
-        path,
-        code: "invalid_url",
-        message: "Rendered Markdown links require a valid HTTPS URL.",
-      },
-    ]);
-  }
-
-  if (parsed.protocol !== "https:") {
-    throw new RendererValidationError("Markdown link destination must use HTTPS.", [
-      {
-        path,
-        code: "invalid_url_protocol",
-        message: "Rendered Markdown links require HTTPS.",
-      },
-    ]);
-  }
-
-  if (parsed.username.length > 0 || parsed.password.length > 0) {
-    throw new RendererValidationError(
-      "Markdown link destination must not include URL credentials.",
-      [
-        {
-          path,
-          code: "invalid_url_userinfo",
-          message: "Rendered Markdown links must not include a URL username or password.",
-        },
-      ],
-    );
-  }
-
-  const sensitiveParameter = [...parsed.searchParams.keys()].find((name) =>
-    SENSITIVE_URL_PARAMETER_PATTERN.test(name),
-  );
-  if (
-    sensitiveParameter !== undefined ||
-    SENSITIVE_URL_PARAMETER_PATTERN.test(parsed.hash.slice(1))
-  ) {
-    throw new RendererValidationError(
-      "Markdown link destination must not include secret-bearing URL parameters.",
-      [
-        {
-          path,
-          code: "unsafe_url_parameter",
-          message:
-            "Rendered Markdown links must not include credential-like query or fragment data.",
-        },
-      ],
-    );
-  }
-
-  return parsed.href.replaceAll("(", "%28").replaceAll(")", "%29");
-}
-
-function shouldEncodeMarkdownDestinationCharacter(character: string): boolean {
-  const codePoint = character.codePointAt(0) ?? 0;
-  return (
-    codePoint <= 0x20 ||
-    (codePoint >= 0x7f && codePoint <= 0x9f) ||
-    /\s/u.test(character) ||
-    character === "\\" ||
-    character === "(" ||
-    character === ")"
-  );
+  return normalizeSafeHttpsUrl(value, path, "Markdown")
+    .replaceAll("(", "%28")
+    .replaceAll(")", "%29");
 }
 
 function normalizeTitle(value: string | undefined): string {

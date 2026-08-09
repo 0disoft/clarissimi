@@ -9,7 +9,8 @@ Focus on restore, including restore owner, schedule, test cadence, RTO, RPO, int
 Clarissimi has no external database in the MVP. Backup and restore are Git-based:
 
 - canonical approved ledger: `.clarissimi/contributions.jsonl`
-- derived public files: `.clarissimi/contributors.json`, `CONTRIBUTORS.md`, and future static data
+- derived public files: `.clarissimi/contributors.json`, `CONTRIBUTORS.md`, static data, and any
+  explicitly generated contributor page
 - review inbox files: `.clarissimi/drafts/*.json`
 - operational evidence: GitHub workflow runs and proposal pull requests
 
@@ -17,6 +18,7 @@ Restore expectations:
 
 - Restore canonical ledger records from Git history or a reviewed revert commit.
 - Rebuild derived outputs with `clarissimi rebuild --out-dir .` after ledger restoration.
+- Regenerate an optional contributor page with `clarissimi render-page --out-dir <path>`.
 - Delete or close unsafe proposal branches and pull requests rather than treating them as backups.
 - Do not restore raw provider responses, raw diffs, or draft provenance into public output files.
 

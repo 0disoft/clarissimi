@@ -100,7 +100,8 @@ proves its base and generated file tree match; divergent runs still stop without
 - `.clarissimi/contributions.jsonl`: append-only approved recognition records
 - `.clarissimi/contributors.json`: derived contributor profiles and counts
 - `CONTRIBUTORS.md`: maintainer-approved contribution history with optional table or gallery
-- `.clarissimi/static/contributors.json`: static data for repository-owned presentation
+- `.clarissimi/static/contributions.json`: static data for repository-owned presentation
+- an optional single-file contributor page generated into an explicit directory
 
 See [`0disoft/clarissimi-example`](https://github.com/0disoft/clarissimi-example) for a public
 consumer workflow and merged output. Clarissimi records contribution stories and event counts; it
@@ -135,7 +136,7 @@ The initial source-of-truth output is:
 - `.clarissimi/contributions.jsonl`: append-only recognition ledger
 - `.clarissimi/contributors.json`: derived contributor profile data
 - `CONTRIBUTORS.md`: maintainer-approved recognition history with per-contributor totals and type counts
-- static JSON data for future GitHub Pages rendering
+- static JSON data plus an explicitly generated single-file contributor page
 
 The default write mode should be `propose`: Clarissimi opens a pull request with recognition
 changes, and the maintainer decides whether to merge it. Direct commit mode can exist for small
@@ -150,7 +151,7 @@ This repository is a single public-ready monorepo. The intended implementation p
 - `packages/redaction`: secret, email, private-key, and environment-file redaction
 - `packages/github`: GitHub event and evidence collection
 - `packages/providers`: fake deterministic provider and SDK-free OpenAI-compatible provider adapter
-- `packages/renderers`: JSONL, JSON, Markdown, and static-data renderers
+- `packages/renderers`: JSONL, JSON, Markdown, static-data, and contributor-page renderers
 - `packages/cli`: local commands and orchestration
 - `packages/action`: thin GitHub Action entrypoint
 
@@ -167,11 +168,12 @@ Implemented MVP slices:
   collection
 - `packages/providers`: provider adapter interface, deterministic fake contribution draft provider
   for tests and fixture-first workflows, and SDK-free OpenAI-compatible HTTP adapter
-- `packages/renderers`: deterministic JSONL, contributor JSON, Markdown, static-data output, and
-  draft review rendering
+- `packages/renderers`: deterministic JSONL, contributor JSON, Markdown, static-data output,
+  single-file contributor pages, and draft review rendering
 - `packages/cli`: fixture-first local command orchestration for validation, recognition dry runs,
-  agent-assisted draft staging, approval, import, rebuild previews, maintainer-only analytics, and
-  help output; config loading supports `clarissimi.config.ts` and `.clarissimi/config.json`
+  agent-assisted draft staging, approval, import, rebuild previews, static contributor pages,
+  maintainer-only analytics, and help output; config loading supports `clarissimi.config.ts` and
+  `.clarissimi/config.json`
 - `packages/action`: GitHub Action entrypoint for dry-run summaries, fixture-first proposal
   branch/pull-request flows, draft review proposals, explicit config-path loading, optional
   sanitized JSON summary artifacts, explicit direct commits, and event-path live GitHub collection
@@ -212,6 +214,17 @@ source <(clarissimi completion bash)
 ```powershell
 clarissimi completion powershell | Out-String | Invoke-Expression
 ```
+
+Generate a repository-owned contributor page without a server or frontend framework:
+
+```console
+clarissimi render-page --out-dir docs/contributors
+```
+
+This writes `docs/contributors/index.html` from the approved ledger. The page includes human, bot,
+and AI-agent recognition by default, preserves evidence links, contains no JavaScript, and does not
+publish or deploy itself. Use `--exclude-automation-contributors` for a display-only opt-out; the
+ledger remains unchanged.
 
 See `docs/cli/shell-completion.md` for Zsh and fish examples and the full completion contract.
 

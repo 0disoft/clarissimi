@@ -16,6 +16,15 @@ clarissimi --help
 For GitHub-native automation or source-checkout development, see the
 [main project README](https://github.com/0disoft/clarissimi#readme).
 
+Generate a single-file contributor site from an approved ledger:
+
+```console
+clarissimi render-page --out-dir docs/contributors
+```
+
+The command writes `docs/contributors/index.html`. Publishing that directory through GitHub Pages
+or another static host remains repository-owned and optional.
+
 ## Safety boundary
 
 Clarissimi keeps approved contribution records in repository-owned files. Live GitHub collection

@@ -219,6 +219,24 @@ export const CLI_COMMAND_SPECS: readonly CliCommandSpec[] = [
     ],
   },
   {
+    name: "render-page",
+    description: "Render a self-contained contributor page from the public ledger.",
+    usage:
+      "clarissimi render-page --out-dir <path> [--ledger <path>] [--config <path>] [--exclude-automation-contributors] [--json]",
+    flags: [
+      LEDGER_FLAG,
+      {
+        name: "out-dir",
+        description: "Write the contributor page to an explicit directory.",
+        valueLabel: "path",
+      },
+      CONFIG_FLAG,
+      EXCLUDE_AUTOMATION_FLAG,
+      JSON_FLAG,
+      HELP_FLAG,
+    ],
+  },
+  {
     name: "analytics",
     description: "Run maintainer-only ledger analytics.",
     usage:

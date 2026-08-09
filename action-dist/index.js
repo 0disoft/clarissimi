@@ -3401,8 +3401,58 @@ function uniqueSorted(values) {
   return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right));
 }
 
-// packages/renderers/dist/markdown.js
+// packages/renderers/dist/safe-url.js
 var SENSITIVE_URL_PARAMETER_PATTERN = /(?:^|[_-])(?:access[_-]?token|auth[_-]?token|token|secret|password|api[_-]?key|private[_-]?key)(?:$|[=_-])/i;
+function normalizeSafeHttpsUrl(value, path, surface) {
+  const encoded = [...value].map((character) => shouldEncodeUrlCharacter(character) ? encodeURIComponent(character) : character).join("");
+  let parsed;
+  try {
+    parsed = new URL(encoded);
+  } catch {
+    throw new RendererValidationError(`${surface} link destination must be a valid HTTPS URL.`, [
+      {
+        path,
+        code: "invalid_url",
+        message: `Rendered ${surface} links require a valid HTTPS URL.`
+      }
+    ]);
+  }
+  if (parsed.protocol !== "https:") {
+    throw new RendererValidationError(`${surface} link destination must use HTTPS.`, [
+      {
+        path,
+        code: "invalid_url_protocol",
+        message: `Rendered ${surface} links require HTTPS.`
+      }
+    ]);
+  }
+  if (parsed.username.length > 0 || parsed.password.length > 0) {
+    throw new RendererValidationError(`${surface} link destination must not include URL credentials.`, [
+      {
+        path,
+        code: "invalid_url_userinfo",
+        message: `Rendered ${surface} links must not include a URL username or password.`
+      }
+    ]);
+  }
+  const sensitiveParameter = [...parsed.searchParams.keys()].find((name) => SENSITIVE_URL_PARAMETER_PATTERN.test(name));
+  if (sensitiveParameter !== void 0 || SENSITIVE_URL_PARAMETER_PATTERN.test(parsed.hash.slice(1))) {
+    throw new RendererValidationError(`${surface} link destination must not include secret-bearing URL parameters.`, [
+      {
+        path,
+        code: "unsafe_url_parameter",
+        message: `Rendered ${surface} links must not include credential-like query or fragment data.`
+      }
+    ]);
+  }
+  return parsed.href;
+}
+function shouldEncodeUrlCharacter(character) {
+  const codePoint = character.codePointAt(0) ?? 0;
+  return codePoint <= 32 || codePoint >= 127 && codePoint <= 159 || /\s/u.test(character) || character === "\\";
+}
+
+// packages/renderers/dist/markdown.js
 var GALLERY_AVATAR_SIZE = 64;
 var GALLERY_ROW_SIZE = 12;
 function renderContributorProfilesMarkdown(profiles, options = {}) {
@@ -3499,52 +3549,7 @@ function firstEvidenceLink(recognition) {
   return `[${escapeMarkdown(label)}](${destination})`;
 }
 function normalizeMarkdownLinkDestination(value, path) {
-  const encoded = [...value].map((character) => shouldEncodeMarkdownDestinationCharacter(character) ? encodeURIComponent(character) : character).join("");
-  let parsed;
-  try {
-    parsed = new URL(encoded);
-  } catch {
-    throw new RendererValidationError("Markdown link destination must be a valid HTTPS URL.", [
-      {
-        path,
-        code: "invalid_url",
-        message: "Rendered Markdown links require a valid HTTPS URL."
-      }
-    ]);
-  }
-  if (parsed.protocol !== "https:") {
-    throw new RendererValidationError("Markdown link destination must use HTTPS.", [
-      {
-        path,
-        code: "invalid_url_protocol",
-        message: "Rendered Markdown links require HTTPS."
-      }
-    ]);
-  }
-  if (parsed.username.length > 0 || parsed.password.length > 0) {
-    throw new RendererValidationError("Markdown link destination must not include URL credentials.", [
-      {
-        path,
-        code: "invalid_url_userinfo",
-        message: "Rendered Markdown links must not include a URL username or password."
-      }
-    ]);
-  }
-  const sensitiveParameter = [...parsed.searchParams.keys()].find((name) => SENSITIVE_URL_PARAMETER_PATTERN.test(name));
-  if (sensitiveParameter !== void 0 || SENSITIVE_URL_PARAMETER_PATTERN.test(parsed.hash.slice(1))) {
-    throw new RendererValidationError("Markdown link destination must not include secret-bearing URL parameters.", [
-      {
-        path,
-        code: "unsafe_url_parameter",
-        message: "Rendered Markdown links must not include credential-like query or fragment data."
-      }
-    ]);
-  }
-  return parsed.href.replaceAll("(", "%28").replaceAll(")", "%29");
-}
-function shouldEncodeMarkdownDestinationCharacter(character) {
-  const codePoint = character.codePointAt(0) ?? 0;
-  return codePoint <= 32 || codePoint >= 127 && codePoint <= 159 || /\s/u.test(character) || character === "\\" || character === "(" || character === ")";
+  return normalizeSafeHttpsUrl(value, path, "Markdown").replaceAll("(", "%28").replaceAll(")", "%29");
 }
 function normalizeTitle(value) {
   const normalized = value?.replace(/\s+/g, " ").trim();

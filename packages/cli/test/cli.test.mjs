@@ -274,6 +274,7 @@ test("flag-only commands reject unexpected positional arguments", async () => {
       ["approve-draft", "unexpected", "--draft", "missing.json"],
       ["import-draft", "unexpected", "--draft", "missing.json"],
       ["rebuild", "unexpected"],
+      ["render-page", "unexpected", "--out-dir", "site"],
     ];
 
     for (const argv of commands) {

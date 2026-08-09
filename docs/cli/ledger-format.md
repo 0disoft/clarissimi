@@ -16,7 +16,8 @@ The MVP ledger is:
 
 Each non-empty line is one approved `clarissimi.assessment/v1` JSON object. The file is the
 canonical source of truth for public recognition records. `contributors.json`, `CONTRIBUTORS.md`,
-and static JSON data are derived outputs and must be rebuildable from the ledger.
+static JSON data, and the optional contributor page are derived outputs and must be rebuildable from
+the ledger.
 
 ## Record Shape
 

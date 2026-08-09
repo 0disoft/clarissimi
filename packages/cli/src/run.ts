@@ -3,6 +3,7 @@ import { join } from "node:path";
 import {
   CONTRIBUTORS_JSON_PATH,
   CONTRIBUTORS_MARKDOWN_PATH,
+  CONTRIBUTOR_PAGE_HTML_PATH,
   CONTRIBUTIONS_JSONL_PATH,
   DRAFTS_DIR_PATH,
   RendererValidationError,
@@ -14,6 +15,7 @@ import {
   buildMaintainerRecentRecognitionShareDocument,
   renderContributorsJson,
   renderContributorsMarkdown,
+  renderContributorPage,
   renderContributionsJsonl,
   renderDraftReviewJson,
   renderPrettyJson,
@@ -97,6 +99,8 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExi
         return await runImportDraft(args, io);
       case "rebuild":
         return await runRebuild(args, io);
+      case "render-page":
+        return await runRenderPage(args, io);
       case "analytics":
         return await runAnalytics(args, io);
       case "completion":
@@ -602,6 +606,60 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
     }
 
     writeFailure(io, args, "rebuild", error);
+    if (error instanceof CliConfigError) {
+      return CLI_EXIT_CODES.invalidConfig;
+    }
+    return error instanceof RendererValidationError
+      ? CLI_EXIT_CODES.invalidLedger
+      : CLI_EXIT_CODES.writeFailure;
+  }
+}
+
+async function runRenderPage(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
+  const positionalError = rejectUnexpectedPositionals(args, "render-page");
+  if (positionalError !== undefined) {
+    throw new CliUsageError(positionalError);
+  }
+
+  const outDir = getStringFlag(args, "out-dir");
+  if (outDir === undefined) {
+    throw new CliUsageError("render-page requires --out-dir <path>.");
+  }
+
+  const ledgerPath = resolveFromCwd(
+    io.cwd,
+    getStringFlag(args, "ledger", CONTRIBUTIONS_JSONL_PATH) ?? CONTRIBUTIONS_JSONL_PATH,
+  );
+  const outputDirectory = resolveFromCwd(io.cwd, outDir);
+  const pagePath = join(outputDirectory, CONTRIBUTOR_PAGE_HTML_PATH);
+
+  try {
+    const config = (await validateConfigFile(io.cwd, getStringFlag(args, "config"))).config;
+    const ledgerText = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
+    const records = parseContributionsJsonl(ledgerText);
+    assertUniqueContributionRecords(records);
+    const page = renderContributorPage(records, {
+      includeAutomationContributors: resolveIncludeAutomationContributors(args, config),
+    });
+
+    await writeTextFile(pagePath, page);
+    writeOutput(io, args, {
+      ok: true,
+      command: "render-page",
+      ledgerPath,
+      records: records.length,
+      outputDirectory,
+      pagePath,
+      files: [CONTRIBUTOR_PAGE_HTML_PATH],
+      message: `Contributor page rendered to ${pagePath}.`,
+    });
+    return CLI_EXIT_CODES.success;
+  } catch (error) {
+    if (error instanceof CliUsageError) {
+      throw error;
+    }
+
+    writeFailure(io, args, "render-page", error);
     if (error instanceof CliConfigError) {
       return CLI_EXIT_CODES.invalidConfig;
     }

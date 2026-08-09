@@ -135,9 +135,9 @@ test("release readiness rejects completed release mutations that remain runnable
 test("release readiness accepts declared TOML writes for format_write", () => {
   const text = `[intents.format_write]
 status = "configured"
-writes = ["**/*.md", "**/*.toml"]
+writes = ["docs", ".mustflow"]
 effects = [
-  { type = "write", mode = "replace", path = "**/*.toml", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = ".mustflow", concurrency = "exclusive" },
 ]
 network = false
 
@@ -150,15 +150,15 @@ status = "configured"`;
 test("release readiness rejects undeclared TOML writes for format_write", () => {
   const text = `[intents.format_write]
 status = "configured"
-writes = ["**/*.md"]
+writes = ["docs"]
 effects = [
-  { type = "write", mode = "replace", path = "**/*.md", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "docs", concurrency = "exclusive" },
 ]
 network = false`;
 
   assert.deepEqual(validateFormatWriteCommandContract(text), [
-    "format_write writes must include **/*.toml.",
-    "format_write effects must declare **/*.toml replacement writes.",
+    "format_write writes must include the .mustflow TOML subtree.",
+    "format_write effects must declare the .mustflow TOML subtree.",
   ]);
 });
 
@@ -870,6 +870,12 @@ test("release readiness rejects CLI command contract drift", () => {
     )
     .replace("Unknown flags,", "Unknown flags are ignored,")
     .replace("Repeating the same flag is", "Duplicate flags are accepted and")
+    .replace("clarissimi render-page --out-dir <path>", "clarissimi page")
+    .replace("writes exactly `<out-dir>/index.html`", "writes files")
+    .replace(
+      "content security policy denies other remote and executable content",
+      "content security policy is optional",
+    )
     .replace("| `7`  | write failure", "| `7`  | failure");
 
   assert.deepEqual(validateCliCommandContract(text), [
@@ -882,6 +888,9 @@ test("release readiness rejects CLI command contract drift", () => {
     "docs/cli/command-contract.md must include Unexpected positional arguments fail as usage errors.",
     "docs/cli/command-contract.md must include Unknown flags,.",
     "docs/cli/command-contract.md must include Repeating the same flag is.",
+    "docs/cli/command-contract.md must include clarissimi render-page --out-dir <path>.",
+    "docs/cli/command-contract.md must include writes exactly `<out-dir>/index.html`.",
+    "docs/cli/command-contract.md must include content security policy denies other remote and executable content.",
     "docs/cli/command-contract.md must include | `7`  | write failure.",
   ]);
 });
@@ -919,6 +928,14 @@ test("release readiness rejects CLI output and exit codes drift", () => {
     .replace("private environment values", "environment values")
     .replace("both success and failure write one JSON document to", "only success writes JSON to")
     .replace("applies to argument parsing and usage errors.", "does not apply to usage errors.")
+    .replace(
+      "`clarissimi render-page --json` reports `ledgerPath`, `outputDirectory`, `pagePath`",
+      "render-page reports output",
+    )
+    .replace(
+      "does not include the generated HTML in command output",
+      "includes generated HTML in command output",
+    )
     .replace("- `1`: usage error", "- `1`: error")
     .replace("- `7`: write failure", "- `7`: failure")
     .replace(
@@ -933,6 +950,8 @@ test("release readiness rejects CLI output and exit codes drift", () => {
     "docs/cli/output-and-exit-codes.md must include private environment values.",
     "docs/cli/output-and-exit-codes.md must include both success and failure write one JSON document to.",
     "docs/cli/output-and-exit-codes.md must include applies to argument parsing and usage errors..",
+    "docs/cli/output-and-exit-codes.md must include `clarissimi render-page --json` reports `ledgerPath`, `outputDirectory`, `pagePath`.",
+    "docs/cli/output-and-exit-codes.md must include does not include the generated HTML in command output.",
     "docs/cli/output-and-exit-codes.md must include - `1`: usage error.",
     "docs/cli/output-and-exit-codes.md must include - `7`: write failure.",
     "docs/cli/output-and-exit-codes.md must include Output implies a recognition entry was approved when it is only a draft..",
@@ -2869,6 +2888,10 @@ function createCliCommandContractText() {
     "The command does not install completion, write files, enumerate paths, load config or ledgers,",
     "`--json` is unsupported because successful stdout is the shell program itself.",
     "",
+    "clarissimi render-page --out-dir <path>",
+    "The command requires an explicit output directory and writes exactly `<out-dir>/index.html`.",
+    "content security policy denies other remote and executable content.",
+    "",
     "| `7`  | write failure",
     "A command writes public recognition without approval or configured policy.",
     "",
@@ -2896,6 +2919,9 @@ function createCliOutputExitCodesDocumentText() {
     "stderr.",
     "`clarissimi completion <shell>` is the deliberate exception to JSON success output:",
     "generated shell program, and `--json` is rejected as an unsupported option.",
+    "",
+    "`clarissimi render-page --json` reports `ledgerPath`, `outputDirectory`, `pagePath`, and the single",
+    "`index.html` file name. It does not include the generated HTML in command output.",
     "",
     "- `0`: success",
     "- `1`: usage error",

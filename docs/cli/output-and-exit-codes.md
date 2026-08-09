@@ -39,6 +39,9 @@ uses LF line endings, ends with a newline, and contains no repository, environme
 data. If the unsupported `--json` flag is present, the usage failure still follows the global JSON
 failure contract above; it never wraps a successful completion script in JSON.
 
+`clarissimi render-page --json` reports `ledgerPath`, `outputDirectory`, `pagePath`, and the single
+`index.html` file name. It does not include the generated HTML in command output.
+
 ## Exit Codes
 
 - `0`: success

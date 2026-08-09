@@ -7,6 +7,7 @@ import {
   assertUniqueContributionRecords,
   parseContributionsJsonl,
   renderContributionsJsonl,
+  renderContributorPage,
   renderContributorsMarkdown,
   renderRecognitionOutputs,
 } from "../packages/renderers/dist/index.js";
@@ -137,11 +138,22 @@ export function runScaleBenchmark(options = {}) {
       };
     });
 
+    const pageRender = measureSamples(sampleCount, now, () => {
+      const page = renderContributorPage(corpus.records, {
+        includeAutomationContributors: true,
+      });
+      return {
+        contributorCount: corpus.contributorCount,
+        outputBytes: Buffer.byteLength(page, "utf8"),
+        outputSha256: sha256(page),
+      };
+    });
+
     const totalMedianMs = roundMilliseconds(
-      ledgerRebuild.medianMs + redaction.medianMs + markdownRender.medianMs,
+      ledgerRebuild.medianMs + redaction.medianMs + markdownRender.medianMs + pageRender.medianMs,
     );
     const totalMaxMs = roundMilliseconds(
-      ledgerRebuild.maxMs + redaction.maxMs + markdownRender.maxMs,
+      ledgerRebuild.maxMs + redaction.maxMs + markdownRender.maxMs + pageRender.maxMs,
     );
     const ceilingMs = ceilingForRecordCount(recordCount, options.runawayCeilingMs);
 
@@ -152,6 +164,7 @@ export function runScaleBenchmark(options = {}) {
         ledgerRebuild,
         redaction,
         markdownRender,
+        pageRender,
       },
       totalMedianMs,
       totalMaxMs,
@@ -220,6 +233,12 @@ export function validateScaleBenchmarkReport(report, options = {}) {
       `${prefix}.markdownRender`,
       issues,
     );
+    validateWorkloadTiming(
+      result.workloads?.pageRender,
+      sampleCount,
+      `${prefix}.pageRender`,
+      issues,
+    );
 
     const ledgerValue = result.workloads?.ledgerRebuild?.value;
     if (ledgerValue?.parsedRecordCount !== result.recordCount) {
@@ -240,6 +259,10 @@ export function validateScaleBenchmarkReport(report, options = {}) {
     const markdownValue = result.workloads?.markdownRender?.value;
     if (markdownValue?.contributorCount !== expectedContributorCount) {
       issues.push(`${prefix}.markdownRender contributorCount must be ${expectedContributorCount}.`);
+    }
+    const pageValue = result.workloads?.pageRender?.value;
+    if (pageValue?.contributorCount !== expectedContributorCount) {
+      issues.push(`${prefix}.pageRender contributorCount must be ${expectedContributorCount}.`);
     }
 
     for (const [name, workload] of Object.entries(result.workloads ?? {})) {

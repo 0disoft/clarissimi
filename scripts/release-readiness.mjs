@@ -769,6 +769,9 @@ export const cliCommandContract = {
     "clarissimi completion <bash|zsh|fish|powershell>",
     "does not install completion, write files, enumerate paths, load config or ledgers",
     "`--json` is unsupported because successful stdout is the shell",
+    "clarissimi render-page --out-dir <path>",
+    "writes exactly `<out-dir>/index.html`",
+    "content security policy denies other remote and executable content",
     "| `7`  | write failure",
     "A command writes public recognition without approval or configured policy.",
   ],
@@ -804,6 +807,8 @@ export const cliOutputExitCodesDocumentContract = {
     "applies to argument parsing and usage errors.",
     "`clarissimi completion <shell>` is the deliberate exception to JSON success output",
     "generated shell program, and `--json` is rejected",
+    "`clarissimi render-page --json` reports `ledgerPath`, `outputDirectory`, `pagePath`",
+    "does not include the generated HTML in command output",
     "- `0`: success",
     "- `1`: usage error",
     "- `2`: invalid configuration",
@@ -837,11 +842,11 @@ export function validateFormatWriteCommandContract(text) {
   const writesMatch = intent.match(/writes\s*=\s*\[([\s\S]*?)\]\s*effects\s*=/);
   const effectsMatch = intent.match(/effects\s*=\s*\[([\s\S]*?)\]\s*network\s*=/);
 
-  if (!writesMatch?.[1].includes('"**/*.toml"')) {
-    issues.push("format_write writes must include **/*.toml.");
+  if (!writesMatch?.[1].includes('".mustflow"')) {
+    issues.push("format_write writes must include the .mustflow TOML subtree.");
   }
-  if (!effectsMatch?.[1].includes('path = "**/*.toml"')) {
-    issues.push("format_write effects must declare **/*.toml replacement writes.");
+  if (!effectsMatch?.[1].includes('path = ".mustflow"')) {
+    issues.push("format_write effects must declare the .mustflow TOML subtree.");
   }
 
   return issues;

@@ -35,6 +35,8 @@ deterministic ledgers containing 1,000 and 10,000 approved contribution records:
   address per item.
 - Contributor Markdown rendering: aggregate ten contributions per contributor, including human,
   bot, and AI-agent identities, then render the summary table and contributor sections.
+- Static contributor page rendering: aggregate the same contributor profiles and render one
+  evidence-linked HTML document with inline CSS and no client-side JavaScript.
 
 The check records output sizes and SHA-256 digests so an empty or skipped workload cannot look
 fast. It runs one wall-clock sample per workload and enforces only generous runaway ceilings:

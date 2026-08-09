@@ -20,5 +20,7 @@ export type { ContributorDisplayOptions } from "./contributors.js";
 export { renderContributorsMarkdown } from "./markdown.js";
 export type { ContributorsMarkdownOptions } from "./markdown.js";
 export { buildStaticContributionsDocument, renderStaticContributionsJson } from "./static-data.js";
+export { renderContributorPage } from "./contributor-page.js";
+export type { ContributorPageOptions } from "./contributor-page.js";
 export * from "./analytics.js";
 export * from "./outputs.js";

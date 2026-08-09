@@ -12,6 +12,7 @@ export const DRAFTS_DIR_PATH = ".clarissimi/drafts" as const;
 export const CONTRIBUTORS_JSON_PATH = ".clarissimi/contributors.json" as const;
 export const CONTRIBUTORS_MARKDOWN_PATH = "CONTRIBUTORS.md" as const;
 export const STATIC_DATA_JSON_PATH = ".clarissimi/static/contributions.json" as const;
+export const CONTRIBUTOR_PAGE_HTML_PATH = "index.html" as const;
 
 export const CONTRIBUTORS_JSON_SCHEMA_VERSION = "clarissimi.contributors/v1" as const;
 export const STATIC_DATA_SCHEMA_VERSION = "clarissimi.static-contributions/v1" as const;

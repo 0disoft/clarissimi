@@ -89,4 +89,5 @@ Avoid:
 ## Source-of-Truth Rule
 
 `.clarissimi/contributions.jsonl` is the durable source of truth. `contributors.json`,
-`CONTRIBUTORS.md`, release thank-you sections, and static site data are derived views.
+`CONTRIBUTORS.md`, release thank-you sections, static site data, and the generated contributor page
+are derived views.

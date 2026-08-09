@@ -39,11 +39,11 @@ This repository type owns workspace boundaries, package ownership, dependency po
   collection.
 - `packages/providers`: Provider adapter interface, deterministic fake contribution draft
   provider, and SDK-free OpenAI-compatible HTTP adapter.
-- `packages/renderers`: Deterministic JSONL, contributor JSON, Markdown, static-data output, and
-  draft review rendering.
+- `packages/renderers`: Deterministic JSONL, contributor JSON, Markdown, static-data and contributor
+  page output, and draft review rendering.
 - `packages/cli`: Fixture-first local command orchestration for config file loading, ledger
-  validation, recognition dry runs, agent-assisted draft staging/approval/import, and rebuild
-  previews.
+  validation, recognition dry runs, agent-assisted draft staging/approval/import, rebuild previews,
+  and static contributor pages.
 - `packages/action`: GitHub Action entrypoint for dry-run summaries, fixture-first proposal pull
   requests, draft review proposals, and event-path live GitHub collection in write modes.
 

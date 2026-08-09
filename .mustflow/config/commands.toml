@@ -17,7 +17,24 @@ env_allowlist = []
 
 [resources.build_outputs]
 type = "path"
-paths = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+paths = [
+  "packages/action/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/dist",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/dist",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/dist",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/dist",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/dist",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/dist",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/dist",
+  "packages/schemas/tsconfig.tsbuildinfo",
+]
 concurrency = "exclusive_writer"
 description = "Ignored TypeScript workspace build outputs and incremental metadata."
 
@@ -93,9 +110,33 @@ cwd = "."
 timeout_seconds = 600
 stdin = "closed"
 success_exit_codes = [0]
-writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+writes = [
+  "packages/action/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/dist",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/dist",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/dist",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/dist",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/dist",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/dist",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/dist",
+  "packages/schemas/tsconfig.tsbuildinfo",
+]
 effects = [
-  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/dist", lock = "build_outputs", concurrency = "exclusive" },
 ]
 network = false
 destructive = false
@@ -111,9 +152,33 @@ cwd = "."
 timeout_seconds = 1200
 stdin = "closed"
 success_exit_codes = [0]
-writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+writes = [
+  "packages/action/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/dist",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/dist",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/dist",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/dist",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/dist",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/dist",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/dist",
+  "packages/schemas/tsconfig.tsbuildinfo",
+]
 effects = [
-  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/dist", lock = "build_outputs", concurrency = "exclusive" },
 ]
 network = false
 destructive = false
@@ -145,9 +210,33 @@ cwd = "."
 timeout_seconds = 300
 stdin = "closed"
 success_exit_codes = [0]
-writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+writes = [
+  "packages/action/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/dist",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/dist",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/dist",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/dist",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/dist",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/dist",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/dist",
+  "packages/schemas/tsconfig.tsbuildinfo",
+]
 effects = [
-  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/dist", lock = "build_outputs", concurrency = "exclusive" },
 ]
 network = false
 destructive = false
@@ -163,9 +252,33 @@ cwd = "."
 timeout_seconds = 600
 stdin = "closed"
 success_exit_codes = [0]
-writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+writes = [
+  "packages/action/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/dist",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/dist",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/dist",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/dist",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/dist",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/dist",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/dist",
+  "packages/schemas/tsconfig.tsbuildinfo",
+]
 effects = [
-  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/dist", lock = "build_outputs", concurrency = "exclusive" },
 ]
 network = false
 destructive = false
@@ -181,9 +294,33 @@ cwd = "."
 timeout_seconds = 600
 stdin = "closed"
 success_exit_codes = [0]
-writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+writes = [
+  "packages/action/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/dist",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/dist",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/dist",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/dist",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/dist",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/dist",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/dist",
+  "packages/schemas/tsconfig.tsbuildinfo",
+]
 effects = [
-  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/dist", lock = "build_outputs", concurrency = "exclusive" },
 ]
 network = false
 destructive = false
@@ -199,9 +336,33 @@ cwd = "."
 timeout_seconds = 1200
 stdin = "closed"
 success_exit_codes = [0]
-writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+writes = [
+  "packages/action/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/dist",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/dist",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/dist",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/dist",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/dist",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/dist",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/dist",
+  "packages/schemas/tsconfig.tsbuildinfo",
+]
 effects = [
-  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/dist", lock = "build_outputs", concurrency = "exclusive" },
 ]
 network = false
 destructive = false
@@ -273,9 +434,33 @@ cwd = "."
 timeout_seconds = 1200
 stdin = "closed"
 success_exit_codes = [0]
-writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+writes = [
+  "packages/action/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/dist",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/dist",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/dist",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/dist",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/dist",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/dist",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/dist",
+  "packages/schemas/tsconfig.tsbuildinfo",
+]
 effects = [
-  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/dist", lock = "build_outputs", concurrency = "exclusive" },
 ]
 network = false
 destructive = false
@@ -291,9 +476,33 @@ cwd = "."
 timeout_seconds = 600
 stdin = "closed"
 success_exit_codes = [0]
-writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+writes = [
+  "packages/action/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/dist",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/dist",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/dist",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/dist",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/dist",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/dist",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/dist",
+  "packages/schemas/tsconfig.tsbuildinfo",
+]
 effects = [
-  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/dist", lock = "build_outputs", concurrency = "exclusive" },
 ]
 network = false
 destructive = false
@@ -309,9 +518,33 @@ cwd = "."
 timeout_seconds = 600
 stdin = "closed"
 success_exit_codes = [0]
-writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+writes = [
+  "packages/action/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/dist",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/dist",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/dist",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/dist",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/dist",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/dist",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/dist",
+  "packages/schemas/tsconfig.tsbuildinfo",
+]
 effects = [
-  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/dist", lock = "build_outputs", concurrency = "exclusive" },
 ]
 network = false
 destructive = false
@@ -360,22 +593,58 @@ timeout_seconds = 300
 stdin = "closed"
 success_exit_codes = [0]
 writes = [
-  "**/*.ts",
-  "**/*.js",
-  "**/*.mjs",
-  "**/*.json",
-  "**/*.md",
-  "**/*.toml",
-  "**/*.yml",
-  "**/*.yaml",
+  ".agents",
+  ".github",
+  ".mustflow",
+  "diagrams",
+  "distribution",
+  "docs",
+  "fixtures",
+  "packages",
+  "scripts",
+  ".oxfmtrc.json",
+  "action.yml",
+  "AGENTS.md",
+  "ARCHITECTURE.md",
+  "CHECKLIST.md",
+  "CODE_OF_CONDUCT.md",
+  "CONTRIBUTING.md",
+  "DEVELOPMENT.md",
+  "package.json",
+  "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
+  "PRIVACY.md",
+  "README.md",
+  "SECURITY.md",
+  "tsconfig.json",
+  "VALIDATION.md",
 ]
 effects = [
-  { type = "write", mode = "replace", path = "**/*.ts", concurrency = "exclusive" },
-  { type = "write", mode = "replace", path = "**/*.mjs", concurrency = "exclusive" },
-  { type = "write", mode = "replace", path = "**/*.json", concurrency = "exclusive" },
-  { type = "write", mode = "replace", path = "**/*.md", concurrency = "exclusive" },
-  { type = "write", mode = "replace", path = "**/*.toml", concurrency = "exclusive" },
-  { type = "write", mode = "replace", path = "**/*.yml", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = ".agents", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = ".github", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = ".mustflow", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "diagrams", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "distribution", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "docs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "fixtures", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "scripts", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = ".oxfmtrc.json", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "action.yml", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "AGENTS.md", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "ARCHITECTURE.md", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "CHECKLIST.md", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "CODE_OF_CONDUCT.md", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "CONTRIBUTING.md", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "DEVELOPMENT.md", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "package.json", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "pnpm-lock.yaml", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "pnpm-workspace.yaml", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "PRIVACY.md", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "README.md", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "SECURITY.md", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "tsconfig.json", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "VALIDATION.md", concurrency = "exclusive" },
 ]
 network = false
 destructive = false
@@ -441,9 +710,33 @@ cwd = "."
 timeout_seconds = 600
 stdin = "closed"
 success_exit_codes = [0]
-writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+writes = [
+  "packages/action/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/dist",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/dist",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/dist",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/dist",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/dist",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/dist",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/dist",
+  "packages/schemas/tsconfig.tsbuildinfo",
+]
 effects = [
-  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/dist", lock = "build_outputs", concurrency = "exclusive" },
 ]
 network = false
 destructive = false
@@ -459,9 +752,33 @@ cwd = "."
 timeout_seconds = 1200
 stdin = "closed"
 success_exit_codes = [0]
-writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+writes = [
+  "packages/action/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/dist",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/dist",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/dist",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/dist",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/dist",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/dist",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/dist",
+  "packages/schemas/tsconfig.tsbuildinfo",
+]
 effects = [
-  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/dist", lock = "build_outputs", concurrency = "exclusive" },
 ]
 network = false
 destructive = false
@@ -477,9 +794,33 @@ cwd = "."
 timeout_seconds = 1200
 stdin = "closed"
 success_exit_codes = [0]
-writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+writes = [
+  "packages/action/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/dist",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/dist",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/dist",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/dist",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/dist",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/dist",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/dist",
+  "packages/schemas/tsconfig.tsbuildinfo",
+]
 effects = [
-  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/dist", lock = "build_outputs", concurrency = "exclusive" },
 ]
 network = false
 destructive = false
@@ -495,9 +836,33 @@ cwd = "."
 timeout_seconds = 1200
 stdin = "closed"
 success_exit_codes = [0]
-writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+writes = [
+  "packages/action/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/dist",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/dist",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/dist",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/dist",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/dist",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/dist",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/dist",
+  "packages/schemas/tsconfig.tsbuildinfo",
+]
 effects = [
-  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/dist", lock = "build_outputs", concurrency = "exclusive" },
 ]
 network = false
 destructive = false
@@ -513,9 +878,34 @@ cwd = "."
 timeout_seconds = 600
 stdin = "closed"
 success_exit_codes = [0]
-writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo", "action-dist/index.js"]
+writes = [
+  "packages/action/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/dist",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/dist",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/dist",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/dist",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/dist",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/dist",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/dist",
+  "packages/schemas/tsconfig.tsbuildinfo",
+  "action-dist/index.js",
+]
 effects = [
-  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/dist", lock = "build_outputs", concurrency = "exclusive" },
   { type = "write", mode = "replace", path = "action-dist/index.js", lock = "action_bundle", concurrency = "exclusive" },
 ]
 network = false
@@ -532,9 +922,33 @@ cwd = "."
 timeout_seconds = 600
 stdin = "closed"
 success_exit_codes = [0]
-writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+writes = [
+  "packages/action/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/dist",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/dist",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/dist",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/dist",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/dist",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/dist",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/dist",
+  "packages/schemas/tsconfig.tsbuildinfo",
+]
 effects = [
-  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/dist", lock = "build_outputs", concurrency = "exclusive" },
 ]
 network = false
 destructive = false
@@ -679,15 +1093,41 @@ timeout_seconds = 600
 stdin = "closed"
 success_exit_codes = [0]
 writes = [
-  "packages/*/dist/**",
-  "*.tsbuildinfo",
-  "packages/*/*.tsbuildinfo",
+  "packages/action/dist",
+  "packages/cli/dist",
+  "packages/core/dist",
+  "packages/github/dist",
+  "packages/providers/dist",
+  "packages/redaction/dist",
+  "packages/renderers/dist",
+  "packages/schemas/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/tsconfig.tsbuildinfo",
   ".tmp/npm/clarissimi/**",
 ]
 effects = [
-  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
-  { type = "write", mode = "replace", path = "*.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
-  { type = "write", mode = "replace", path = "packages/*/*.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/tsconfig.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/tsconfig.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/tsconfig.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/tsconfig.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/tsconfig.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/tsconfig.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/tsconfig.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/tsconfig.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
   { type = "write", mode = "replace", path = ".tmp/npm/clarissimi/**", lock = "standalone_cli_package", concurrency = "exclusive" },
 ]
 network = false
@@ -705,15 +1145,41 @@ timeout_seconds = 600
 stdin = "closed"
 success_exit_codes = [0]
 writes = [
-  "packages/*/dist/**",
-  "*.tsbuildinfo",
-  "packages/*/*.tsbuildinfo",
+  "packages/action/dist",
+  "packages/cli/dist",
+  "packages/core/dist",
+  "packages/github/dist",
+  "packages/providers/dist",
+  "packages/redaction/dist",
+  "packages/renderers/dist",
+  "packages/schemas/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/tsconfig.tsbuildinfo",
   ".tmp/npm/clarissimi/**",
 ]
 effects = [
-  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
-  { type = "write", mode = "replace", path = "*.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
-  { type = "write", mode = "replace", path = "packages/*/*.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/tsconfig.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/tsconfig.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/tsconfig.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/tsconfig.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/tsconfig.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/tsconfig.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/tsconfig.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/tsconfig.tsbuildinfo", lock = "build_outputs", concurrency = "exclusive" },
   { type = "write", mode = "replace", path = ".tmp/npm/clarissimi/**", lock = "standalone_cli_package", concurrency = "exclusive" },
 ]
 network = false
@@ -1509,9 +1975,33 @@ cwd = "."
 timeout_seconds = 3600
 stdin = "closed"
 success_exit_codes = [0]
-writes = ["packages/*/dist/**", "*.tsbuildinfo", "packages/*/*.tsbuildinfo"]
+writes = [
+  "packages/action/dist",
+  "packages/action/tsconfig.tsbuildinfo",
+  "packages/cli/dist",
+  "packages/cli/tsconfig.tsbuildinfo",
+  "packages/core/dist",
+  "packages/core/tsconfig.tsbuildinfo",
+  "packages/github/dist",
+  "packages/github/tsconfig.tsbuildinfo",
+  "packages/providers/dist",
+  "packages/providers/tsconfig.tsbuildinfo",
+  "packages/redaction/dist",
+  "packages/redaction/tsconfig.tsbuildinfo",
+  "packages/renderers/dist",
+  "packages/renderers/tsconfig.tsbuildinfo",
+  "packages/schemas/dist",
+  "packages/schemas/tsconfig.tsbuildinfo",
+]
 effects = [
-  { type = "write", mode = "replace", path = "packages/*/dist/**", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/dist", lock = "build_outputs", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/dist", lock = "build_outputs", concurrency = "exclusive" },
 ]
 env_policy = "inherit"
 network = true

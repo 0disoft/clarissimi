@@ -128,7 +128,7 @@ export const rootPackageManagerContract = {
 
 export const formatterContract = {
   dependency: "oxfmt",
-  version: "0.58.0",
+  version: "0.62.0",
   configPath: ".oxfmtrc.json",
   config: {
     endOfLine: "lf",
@@ -593,9 +593,10 @@ export const docsValidationScriptContract = {
 };
 
 export const lintAndFormatDecisionDocumentContract = {
-  path: "docs/adr/0036-replace-prettier-with-oxfmt.md",
+  path: "docs/adr/0059-refresh-development-toolchain.md",
   requiredSnippets: [
-    "Replace Prettier with exactly pinned `oxfmt@0.58.0`.",
+    "Refresh the root development toolchain with `pnpm update --latest`.",
+    "`oxfmt@0.62.0`",
     "run `oxfmt --check`",
     "cover maintained TypeScript, JavaScript, JSON, Markdown, and YAML files",
     "use `.oxfmtrc.json`",

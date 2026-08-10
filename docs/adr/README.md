@@ -103,6 +103,8 @@ engine.
   the current pull request head SHA without executing untrusted head code
 - `0058-add-static-contributor-page.md`: render one repository-owned contributor page from the
   approved ledger without a hosted service, JavaScript runtime, or public ranking model
+- `0059-refresh-development-toolchain.md`: adopt the current TypeScript 7 native compiler and
+  refresh the root formatter, linter, bundler, and Node type toolchain as one verified snapshot
 
 ## Review Blockers
 

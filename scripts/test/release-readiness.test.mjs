@@ -189,11 +189,11 @@ test("release readiness accepts the formatter dependency and config contract", (
 test("release readiness rejects formatter dependency, config, and ignore drift", () => {
   assert.deepEqual(
     validateFormatterContract(
-      { devDependencies: { oxfmt: "^0.58.0" } },
+      { devDependencies: { oxfmt: "^0.62.0" } },
       { endOfLine: "crlf", proseWrap: "always", ignorePatterns: ["dist/**"] },
     ),
     [
-      "package.json devDependencies.oxfmt must remain exactly 0.58.0.",
+      "package.json devDependencies.oxfmt must remain exactly 0.62.0.",
       '.oxfmtrc.json endOfLine must remain "lf".',
       '.oxfmtrc.json proseWrap must remain "preserve".',
       ".oxfmtrc.json ignorePatterns must include action-dist/**.",
@@ -765,7 +765,11 @@ test("release readiness accepts the lint and format decision contract", () => {
 
 test("release readiness rejects lint and format decision drift", () => {
   const text = createLintAndFormatDecisionText()
-    .replace("Replace Prettier with exactly pinned `oxfmt@0.58.0`.", "Use any formatter.")
+    .replace(
+      "Refresh the root development toolchain with `pnpm update --latest`.",
+      "Use any toolchain.",
+    )
+    .replace("`oxfmt@0.62.0`", "any formatter")
     .replace("run `oxfmt --check`", "run formatter")
     .replace(
       "cover maintained TypeScript, JavaScript, JSON, Markdown, and YAML files",
@@ -783,16 +787,17 @@ test("release readiness rejects lint and format decision drift", () => {
     );
 
   assert.deepEqual(validateLintAndFormatDecisionDocumentContract(text), [
-    "docs/adr/0036-replace-prettier-with-oxfmt.md must include Replace Prettier with exactly pinned `oxfmt@0.58.0`..",
-    "docs/adr/0036-replace-prettier-with-oxfmt.md must include run `oxfmt --check`.",
-    "docs/adr/0036-replace-prettier-with-oxfmt.md must include cover maintained TypeScript, JavaScript, JSON, Markdown, and YAML files.",
-    "docs/adr/0036-replace-prettier-with-oxfmt.md must include use `.oxfmtrc.json`.",
-    "docs/adr/0036-replace-prettier-with-oxfmt.md must include use `ignorePatterns`.",
-    "docs/adr/0036-replace-prettier-with-oxfmt.md must include exclude `action-dist/**`.",
-    "docs/adr/0036-replace-prettier-with-oxfmt.md must include be protected by `release-readiness` checks.",
-    "docs/adr/0036-replace-prettier-with-oxfmt.md must include Future changes must pass.",
-    "docs/adr/0036-replace-prettier-with-oxfmt.md must include CI must never rewrite source files..",
-    "docs/adr/0036-replace-prettier-with-oxfmt.md must include tracked `action-dist/index.js` remains outside the formatter surface.",
+    "docs/adr/0059-refresh-development-toolchain.md must include Refresh the root development toolchain with `pnpm update --latest`..",
+    "docs/adr/0059-refresh-development-toolchain.md must include `oxfmt@0.62.0`.",
+    "docs/adr/0059-refresh-development-toolchain.md must include run `oxfmt --check`.",
+    "docs/adr/0059-refresh-development-toolchain.md must include cover maintained TypeScript, JavaScript, JSON, Markdown, and YAML files.",
+    "docs/adr/0059-refresh-development-toolchain.md must include use `.oxfmtrc.json`.",
+    "docs/adr/0059-refresh-development-toolchain.md must include use `ignorePatterns`.",
+    "docs/adr/0059-refresh-development-toolchain.md must include exclude `action-dist/**`.",
+    "docs/adr/0059-refresh-development-toolchain.md must include be protected by `release-readiness` checks.",
+    "docs/adr/0059-refresh-development-toolchain.md must include Future changes must pass.",
+    "docs/adr/0059-refresh-development-toolchain.md must include CI must never rewrite source files..",
+    "docs/adr/0059-refresh-development-toolchain.md must include tracked `action-dist/index.js` remains outside the formatter surface.",
   ]);
 });
 
@@ -2787,7 +2792,8 @@ function createDocsValidationScriptText() {
 
 function createLintAndFormatDecisionText() {
   return [
-    "Replace Prettier with exactly pinned `oxfmt@0.58.0`.",
+    "Refresh the root development toolchain with `pnpm update --latest`.",
+    "The selected formatter snapshot is `oxfmt@0.62.0`.",
     "",
     "The `format` validation must:",
     "",

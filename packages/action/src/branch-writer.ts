@@ -48,6 +48,11 @@ export async function writeProposalBranch(
   ]);
   const originalRef = await currentRef(input.repositoryDir);
 
+  for (const file of input.manifest.files) {
+    await assertSafeRepositoryOutputPath(input.repositoryDir, file.path);
+  }
+  await assertCleanWorktree(input.repositoryDir);
+
   await assertExistingProposalBranchIsOwned(
     input.repositoryDir,
     input.baseBranch,
@@ -55,6 +60,7 @@ export async function writeProposalBranch(
     input.manifest.files,
   );
 
+  let writeSucceeded = false;
   try {
     await git(input.repositoryDir, ["checkout", "-B", branchName, input.baseBranch]);
     await writeStagedFilesToRepository(input);
@@ -81,6 +87,8 @@ export async function writeProposalBranch(
       input.baseBranch,
       branchName,
     );
+    assertChangedFilesAreOwned(changedFiles, input.manifest.files);
+    writeSucceeded = true;
 
     return {
       branchName,
@@ -91,6 +99,9 @@ export async function writeProposalBranch(
       rollbackHint: `Delete branch ${branchName} before merge to discard this proposal.`,
     };
   } finally {
+    if (!writeSucceeded) {
+      await restoreOwnedPaths(input.repositoryDir, originalRef, input.manifest.files);
+    }
     await restoreRef(input.repositoryDir, originalRef);
   }
 }
@@ -156,6 +167,51 @@ async function assertExistingProposalBranchIsOwned(
     throw new ProposalBranchWriterError(
       "existing_branch_has_unowned_changes",
       "Existing proposal branch has changes outside the staged Clarissimi output manifest.",
+    );
+  }
+}
+
+async function assertCleanWorktree(repositoryDir: string): Promise<void> {
+  const status = await git(repositoryDir, ["status", "--porcelain", "--untracked-files=all"]);
+  if (status.length > 0) {
+    throw new ProposalBranchWriterError(
+      "dirty_worktree",
+      "Proposal branch writing requires a clean worktree before writing recognition outputs.",
+    );
+  }
+}
+
+function assertChangedFilesAreOwned(
+  changedFiles: readonly string[],
+  files: readonly ProposalStagedFile[],
+): void {
+  const ownedPaths = new Set(files.map((file) => file.path));
+  if (changedFiles.some((path) => !ownedPaths.has(path))) {
+    throw new ProposalBranchWriterError(
+      "proposal_has_unowned_changes",
+      "Proposal branch contains changes outside the staged Clarissimi output manifest.",
+    );
+  }
+}
+
+async function restoreOwnedPaths(
+  repositoryDir: string,
+  originalRef: string,
+  files: readonly ProposalStagedFile[],
+): Promise<void> {
+  const paths = files.map((file) => file.path);
+  const result = await runGit(repositoryDir, [
+    "restore",
+    `--source=${originalRef}`,
+    "--staged",
+    "--worktree",
+    "--",
+    ...paths,
+  ]);
+  if (result.exitCode !== 0) {
+    throw new ProposalBranchWriterError(
+      "git_rollback_failed",
+      "Proposal branch writing failed and owned output rollback did not complete.",
     );
   }
 }

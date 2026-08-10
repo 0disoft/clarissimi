@@ -154,6 +154,68 @@ test("rejects missing branch writer metadata before git mutation", async () => {
   );
 });
 
+test("rejects a dirty index before proposal branch mutation", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const stagedOutputDir = join(dir, "staged");
+    await initRepository(repositoryDir);
+    const staging = await stageProposalRecognitionOutputs({
+      outputDir: stagedOutputDir,
+      assessments: [assessment()],
+      redactionMatchCount: 0,
+    });
+    await writeFile(join(repositoryDir, "unrelated.txt"), "must not be committed\n", "utf8");
+    await git(repositoryDir, ["add", "unrelated.txt"]);
+    const mainSha = await git(repositoryDir, ["rev-parse", "main"]);
+
+    await assert.rejects(
+      () =>
+        writeProposalBranch({
+          repositoryDir,
+          stagedOutputDir,
+          manifest: staging.manifest,
+          baseBranch: "main",
+        }),
+      (error) => error instanceof ProposalBranchWriterError && error.code === "dirty_worktree",
+    );
+
+    assert.equal(await git(repositoryDir, ["rev-parse", "main"]), mainSha);
+    assert.equal(await git(repositoryDir, ["branch", "--show-current"]), "main");
+    assert.equal(await git(repositoryDir, ["diff", "--cached", "--name-only"]), "unrelated.txt");
+  });
+});
+
+test("restores owned paths when proposal commit fails", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const stagedOutputDir = join(dir, "staged");
+    await initRepository(repositoryDir);
+    const staging = await stageProposalRecognitionOutputs({
+      outputDir: stagedOutputDir,
+      assessments: [assessment()],
+      redactionMatchCount: 0,
+    });
+    const hookPath = join(repositoryDir, ".git", "hooks", "pre-commit");
+    await writeFile(hookPath, "#!/bin/sh\nexit 1\n", { encoding: "utf8", mode: 0o755 });
+    const mainSha = await git(repositoryDir, ["rev-parse", "main"]);
+
+    await assert.rejects(
+      () =>
+        writeProposalBranch({
+          repositoryDir,
+          stagedOutputDir,
+          manifest: staging.manifest,
+          baseBranch: "main",
+        }),
+      (error) => error instanceof ProposalBranchWriterError && error.code === "git_command_failed",
+    );
+
+    assert.equal(await git(repositoryDir, ["rev-parse", "main"]), mainSha);
+    assert.equal(await git(repositoryDir, ["branch", "--show-current"]), "main");
+    assert.equal(await git(repositoryDir, ["status", "--porcelain", "--untracked-files=all"]), "");
+  });
+});
+
 test("refuses to overwrite existing proposal branches with unowned changes", async () => {
   await withTempDir(async (dir) => {
     const repositoryDir = join(dir, "repo");

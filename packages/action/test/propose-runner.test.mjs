@@ -366,6 +366,9 @@ test("promotes an approved draft through a public recognition proposal", async (
       recursive: true,
     });
     await writeFile(draftPath, JSON.stringify(approvedDraftAssessment()), "utf8");
+    await git(repositoryDir, ["add", ".clarissimi/drafts/sample-project-42.json"]);
+    await git(repositoryDir, ["commit", "-m", "Add approved Clarissimi draft"]);
+    await git(repositoryDir, ["push", "origin", "main"]);
     const remoteMainSha = await git(repositoryDir, ["ls-remote", "origin", "refs/heads/main"]);
 
     const summary = await runActionPromoteDraft({
@@ -412,6 +415,9 @@ test("environment runner writes promote-draft proposal outputs", async () => {
       recursive: true,
     });
     await writeFile(draftPath, JSON.stringify(approvedDraftAssessment()), "utf8");
+    await git(repositoryDir, ["add", draftRelativePath]);
+    await git(repositoryDir, ["commit", "-m", "Add approved Clarissimi draft"]);
+    await git(repositoryDir, ["push", "origin", "main"]);
     let stdout = "";
     let stderr = "";
 

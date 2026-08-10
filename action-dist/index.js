@@ -183,7 +183,12 @@ async function writeProposalBranch(input) {
     `${input.baseBranch}^{commit}`
   ]);
   const originalRef = await currentRef(input.repositoryDir);
+  for (const file of input.manifest.files) {
+    await assertSafeRepositoryOutputPath(input.repositoryDir, file.path);
+  }
+  await assertCleanWorktree(input.repositoryDir);
   await assertExistingProposalBranchIsOwned(input.repositoryDir, input.baseBranch, branchName, input.manifest.files);
+  let writeSucceeded = false;
   try {
     await git2(input.repositoryDir, ["checkout", "-B", branchName, input.baseBranch]);
     await writeStagedFilesToRepository(input);
@@ -204,6 +209,8 @@ async function writeProposalBranch(input) {
     }
     const commitSha = await git2(input.repositoryDir, ["rev-parse", "HEAD"]);
     const changedFiles = await changedFilesFromBase(input.repositoryDir, input.baseBranch, branchName);
+    assertChangedFilesAreOwned(changedFiles, input.manifest.files);
+    writeSucceeded = true;
     return {
       branchName,
       baseBranch: input.baseBranch,
@@ -213,6 +220,9 @@ async function writeProposalBranch(input) {
       rollbackHint: `Delete branch ${branchName} before merge to discard this proposal.`
     };
   } finally {
+    if (!writeSucceeded) {
+      await restoreOwnedPaths(input.repositoryDir, originalRef, input.manifest.files);
+    }
     await restoreRef(input.repositoryDir, originalRef);
   }
 }
@@ -249,6 +259,32 @@ async function assertExistingProposalBranchIsOwned(repositoryDir, baseBranch, br
   const outsideOwnedFiles = changedFiles.filter((file) => !ownedPaths.has(file));
   if (outsideOwnedFiles.length > 0) {
     throw new ProposalBranchWriterError("existing_branch_has_unowned_changes", "Existing proposal branch has changes outside the staged Clarissimi output manifest.");
+  }
+}
+async function assertCleanWorktree(repositoryDir) {
+  const status = await git2(repositoryDir, ["status", "--porcelain", "--untracked-files=all"]);
+  if (status.length > 0) {
+    throw new ProposalBranchWriterError("dirty_worktree", "Proposal branch writing requires a clean worktree before writing recognition outputs.");
+  }
+}
+function assertChangedFilesAreOwned(changedFiles, files) {
+  const ownedPaths = new Set(files.map((file) => file.path));
+  if (changedFiles.some((path) => !ownedPaths.has(path))) {
+    throw new ProposalBranchWriterError("proposal_has_unowned_changes", "Proposal branch contains changes outside the staged Clarissimi output manifest.");
+  }
+}
+async function restoreOwnedPaths(repositoryDir, originalRef, files) {
+  const paths = files.map((file) => file.path);
+  const result = await runGit2(repositoryDir, [
+    "restore",
+    `--source=${originalRef}`,
+    "--staged",
+    "--worktree",
+    "--",
+    ...paths
+  ]);
+  if (result.exitCode !== 0) {
+    throw new ProposalBranchWriterError("git_rollback_failed", "Proposal branch writing failed and owned output rollback did not complete.");
   }
 }
 async function writeStagedFilesToRepository(input) {
@@ -398,7 +434,7 @@ var DirectCommitError = class extends Error {
 async function createDirectCommit(input) {
   validateDirectCommitInput(input);
   await assertValidBranchName(input.repositoryDir, input.targetBranch);
-  await assertCleanWorktree(input.repositoryDir);
+  await assertCleanWorktree2(input.repositoryDir);
   const baseCommitSha = await git3(input.repositoryDir, ["rev-parse", "HEAD"]);
   if (input.expectedHeadSha !== void 0 && input.expectedHeadSha !== baseCommitSha) {
     throw new DirectCommitError("expected_head_mismatch", "Direct commit mode refuses to write because HEAD does not match the expected source commit.");
@@ -486,7 +522,7 @@ function validateDirectCommitInput(input) {
     throw new DirectCommitError("invalid_expected_head", "Direct commit mode requires expected-head to be a full Git commit SHA.");
   }
 }
-async function assertCleanWorktree(repositoryDir) {
+async function assertCleanWorktree2(repositoryDir) {
   const status = await git3(repositoryDir, ["status", "--porcelain", "--untracked-files=all"]);
   if (status.length > 0) {
     throw new DirectCommitError("dirty_worktree", "Direct commit mode requires a clean worktree before writing recognition outputs.");
@@ -2900,6 +2936,20 @@ var REDACTION_RULES = [
     pattern: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi
   }
 ];
+var SENSITIVE_JSON_KEYS = /* @__PURE__ */ new Set([
+  "api_key",
+  "apikey",
+  "authorization",
+  "client_secret",
+  "cookie",
+  "password",
+  "private_key",
+  "refresh_token",
+  "set_cookie",
+  "signature",
+  "token",
+  "access_token"
+]);
 function redactText(input) {
   const occurrences = [];
   let text = input;
@@ -2941,9 +2991,23 @@ function redactJsonValue(value, occurrences) {
     return value.map((entry) => redactJsonValue(entry, occurrences));
   }
   if (value !== null && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, redactJsonValue(entry, occurrences)]));
+    return Object.fromEntries(Object.entries(value).map(([key, entry]) => {
+      if (isSensitiveJsonKey(key)) {
+        occurrences.push({
+          kind: "sensitive_json_key",
+          replacement: REDACTION_PLACEHOLDER,
+          start: 0,
+          end: typeof entry === "string" ? entry.length : 0
+        });
+        return [key, REDACTION_PLACEHOLDER];
+      }
+      return [key, redactJsonValue(entry, occurrences)];
+    }));
   }
   return value;
+}
+function isSensitiveJsonKey(key) {
+  return SENSITIVE_JSON_KEYS.has(key.trim().toLowerCase().replaceAll("-", "_"));
 }
 function buildReport(occurrences) {
   return {
@@ -4458,17 +4522,32 @@ function buildSystemPrompt() {
 }
 function buildProviderPayload(input) {
   return {
-    contributor: input.contributor,
-    source: input.preparedEvidence.source,
-    evidenceRefs: input.preparedEvidence.evidenceRefs,
+    contributor: {
+      platform: input.contributor.platform,
+      id: input.contributor.id,
+      login: input.contributor.login,
+      profileUrl: input.contributor.profileUrl,
+      ...input.contributor.kind === void 0 ? {} : { kind: input.contributor.kind }
+    },
+    source: {
+      repository: input.preparedEvidence.source.repository,
+      event: input.preparedEvidence.source.event,
+      pullRequestNumber: input.preparedEvidence.source.pullRequestNumber,
+      ...input.preparedEvidence.source.mergedAt === void 0 ? {} : { mergedAt: input.preparedEvidence.source.mergedAt }
+    },
+    evidenceRefs: input.preparedEvidence.evidenceRefs.map((ref) => ({
+      kind: ref.kind,
+      id: ref.id,
+      ...ref.title === void 0 ? {} : { title: ref.title },
+      ...ref.excerpt === void 0 ? {} : { excerpt: ref.excerpt }
+    })),
     evidenceItems: input.preparedEvidence.items.map((item) => ({
       kind: item.kind,
       id: item.id,
-      url: item.url,
       title: item.title,
       excerpt: item.excerpt,
       text: item.text,
-      metadata: item.metadata
+      metadata: allowlistedProviderMetadata(item.metadata)
     })),
     redaction: {
       changed: input.preparedEvidence.redactionReport.changed,
@@ -4476,6 +4555,24 @@ function buildProviderPayload(input) {
     },
     hints: input.hints ?? {}
   };
+}
+function allowlistedProviderMetadata(metadata) {
+  if (!isProviderMetadataRecord(metadata)) {
+    return void 0;
+  }
+  const record = metadata;
+  const allowedKeys = ["status", "additions", "deletions", "sourceIndex"];
+  const result = {};
+  for (const key of allowedKeys) {
+    const value = record[key];
+    if (typeof value === "string" || typeof value === "number" && Number.isFinite(value)) {
+      result[key] = value;
+    }
+  }
+  return Object.keys(result).length === 0 ? void 0 : result;
+}
+function isProviderMetadataRecord(value) {
+  return value !== void 0 && value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function parseAssessmentDraft(content, input) {
   let draft;

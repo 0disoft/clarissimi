@@ -48,12 +48,14 @@ import { CLI_EXIT_CODES, type CliExitCode } from "./exit-codes.js";
 import { recognizeFixture, recognizeGitHubFixture } from "./fixture.js";
 import {
   fileExists,
+  ExclusiveFileExistsError,
   parseJsonText,
   readTextFile,
   resolveFromCwd,
   withFileLock,
   writeTextFilesAtomically,
   writeTextFile,
+  writeTextFileExclusive,
   type CliIo,
 } from "./io.js";
 import {
@@ -322,7 +324,12 @@ async function runStageDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> 
     const draftReview = toDraftReviewRecord(draftInput.assessment);
 
     const stagedDraftPath = join(draftsDir, draftInboxFilename(draftReview));
-    if (await fileExists(stagedDraftPath)) {
+    try {
+      await writeTextFileExclusive(stagedDraftPath, renderDraftReviewJson(draftReview));
+    } catch (error) {
+      if (!(error instanceof ExclusiveFileExistsError)) {
+        throw error;
+      }
       throw new RendererValidationError("Draft is already staged for this contribution source.", [
         {
           path: "$.source",
@@ -332,8 +339,6 @@ async function runStageDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> 
         },
       ]);
     }
-
-    await writeTextFile(stagedDraftPath, renderDraftReviewJson(draftReview));
 
     writeOutput(io, args, {
       ok: true,
@@ -375,7 +380,10 @@ async function runApproveDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode
       maintainerApprovalStatus: "approved",
     };
 
-    await writeTextFile(resolvedDraftPath, renderPrettyJson(approvedDraft));
+    await writeTextFilesAtomically(
+      [{ path: resolvedDraftPath, value: renderPrettyJson(approvedDraft) }],
+      resolvedDraftPath,
+    );
 
     writeOutput(io, args, {
       ok: true,

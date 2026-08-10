@@ -38,6 +38,35 @@ export async function writeTextFile(path: string, value: string): Promise<void> 
   await writeFile(path, value, "utf8");
 }
 
+export class ExclusiveFileExistsError extends Error {
+  constructor(path: string) {
+    super(`File already exists: ${path}`);
+    this.name = "ExclusiveFileExistsError";
+  }
+}
+
+export async function writeTextFileExclusive(path: string, value: string): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
+  let handle: Awaited<ReturnType<typeof open>>;
+  try {
+    handle = await open(path, "wx", 0o600);
+  } catch (error) {
+    if (isNodeError(error) && error.code === "EEXIST") {
+      throw new ExclusiveFileExistsError(path);
+    }
+    throw error;
+  }
+
+  try {
+    await handle.writeFile(value, "utf8");
+  } catch (error) {
+    await handle.close();
+    await rm(path, { force: true });
+    throw error;
+  }
+  await handle.close();
+}
+
 export async function withFileLock<T>(
   path: string,
   task: () => Promise<T>,

@@ -822,8 +822,11 @@ test("stage-draft rejects duplicate staged draft paths", async () => {
       "utf8",
     );
 
-    const first = await run(["stage-draft", "--draft", draftPath, "--json"], dir);
-    const second = await run(["stage-draft", "--draft", draftPath, "--json"], dir);
+    const results = await Promise.all([
+      run(["stage-draft", "--draft", draftPath, "--json"], dir),
+      run(["stage-draft", "--draft", draftPath, "--json"], dir),
+    ]);
+    const [first, second] = results.sort((left, right) => left.exitCode - right.exitCode);
 
     assert.equal(first.exitCode, 0);
     assert.equal(second.exitCode, 6);

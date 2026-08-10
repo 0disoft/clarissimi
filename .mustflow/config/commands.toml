@@ -68,6 +68,12 @@ paths = [".mustflow/review/docs.toml"]
 concurrency = "exclusive_writer"
 description = "Repository-local documentation review queue and audit record."
 
+[resources.dependency_manifests]
+type = "path"
+paths = ["package.json", "pnpm-lock.yaml"]
+concurrency = "exclusive_writer"
+description = "Clarissimi root dependency declarations and pnpm resolution lock."
+
 [intents.changes_status]
 status = "configured"
 lifecycle = "oneshot"
@@ -99,6 +105,26 @@ effects = []
 network = false
 destructive = false
 required_after = ["code_change", "documentation_change", "before_final_report"]
+
+[intents.dependency_update_latest]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Update Clarissimi root development dependencies to their latest registry releases with pnpm."
+argv = ["pnpm", "update", "--latest"]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = ["package.json", "pnpm-lock.yaml"]
+effects = [
+  { type = "write", mode = "replace", path = "package.json", lock = "dependency_manifests", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "pnpm-lock.yaml", lock = "dependency_manifests", concurrency = "exclusive" },
+]
+env_policy = "minimal"
+network = true
+destructive = false
+required_after = ["user_authorized_latest_dependency_refresh"]
 
 [intents.build]
 status = "configured"

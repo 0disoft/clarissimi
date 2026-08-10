@@ -133,7 +133,7 @@ async function git(runtime, repositoryDir, args) {
   return result.stdout.trim();
 }
 function runGit(repositoryDir, args) {
-  return new Promise((resolve2, reject) => {
+  return new Promise((resolve3, reject) => {
     const child = spawn("git", args, {
       cwd: repositoryDir,
       stdio: ["ignore", "pipe", "pipe"]
@@ -150,7 +150,7 @@ function runGit(repositoryDir, args) {
     });
     child.on("error", reject);
     child.on("close", (exitCode2) => {
-      resolve2({
+      resolve3({
         exitCode: exitCode2 ?? 1,
         stdout,
         stderr
@@ -393,7 +393,7 @@ async function gitExitCode(repositoryDir, args) {
   return (await runGit2(repositoryDir, args)).exitCode;
 }
 function runGit2(repositoryDir, args) {
-  return new Promise((resolve2, reject) => {
+  return new Promise((resolve3, reject) => {
     const child = spawn2("git", args, {
       cwd: repositoryDir,
       stdio: ["ignore", "pipe", "pipe"]
@@ -410,7 +410,7 @@ function runGit2(repositoryDir, args) {
     });
     child.on("error", reject);
     child.on("close", (exitCode2) => {
-      resolve2({
+      resolve3({
         exitCode: exitCode2 ?? 1,
         stdout,
         stderr
@@ -555,7 +555,7 @@ async function git3(repositoryDir, args) {
   return result.stdout.trim();
 }
 function runGit3(repositoryDir, args) {
-  return new Promise((resolve2, reject) => {
+  return new Promise((resolve3, reject) => {
     const child = spawn3("git", args, {
       cwd: repositoryDir,
       stdio: ["ignore", "pipe", "pipe"]
@@ -572,7 +572,7 @@ function runGit3(repositoryDir, args) {
     });
     child.on("error", reject);
     child.on("close", (exitCode2) => {
-      resolve2({ exitCode: exitCode2 ?? 1, stdout, stderr });
+      resolve3({ exitCode: exitCode2 ?? 1, stdout, stderr });
     });
   });
 }
@@ -2141,7 +2141,7 @@ function randomOption(value) {
   };
 }
 function defaultSleep(milliseconds) {
-  return new Promise((resolve2) => setTimeout(resolve2, milliseconds));
+  return new Promise((resolve3) => setTimeout(resolve3, milliseconds));
 }
 function expectString3(value, field) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -3854,8 +3854,8 @@ function assertClarissimiOutputPath(path) {
 }
 
 // packages/action/dist/run.js
-import { lstat as lstat2, readFile as readFile4, realpath as realpath2 } from "node:fs/promises";
-import { isAbsolute as isAbsolute4, join as join4, relative as relative2, resolve } from "node:path";
+import { readFile as readFile4, realpath as realpath3 } from "node:fs/promises";
+import { isAbsolute as isAbsolute5, join as join5, resolve as resolve2 } from "node:path";
 import { tmpdir } from "node:os";
 
 // packages/providers/dist/result-quality.js
@@ -4181,7 +4181,7 @@ function isPublicNetworkAddress(address) {
   return !subnets.some(({ network, prefix }) => isInSubnet(numeric, network, prefix, bits));
 }
 async function executePinnedRequest(options, body, signal, pinned) {
-  return await new Promise((resolve2, reject) => {
+  return await new Promise((resolve3, reject) => {
     const request = (options.protocol === "https:" ? httpsRequest : httpRequest)({
       hostname: options.hostname,
       family: options.family,
@@ -4210,7 +4210,7 @@ async function executePinnedRequest(options, body, signal, pinned) {
       }
       const hasNoBody = status === 204 || status === 205 || status === 304;
       const stream = hasNoBody ? null : Readable.toWeb(response);
-      resolve2(new Response(stream, { status, headers }));
+      resolve3(new Response(stream, { status, headers }));
     });
     request.once("socket", (socket) => {
       socket.once("connect", () => {
@@ -4853,6 +4853,53 @@ function formatActionConfigValidationIssue(issue) {
   return issue.message;
 }
 
+// packages/action/dist/path-security.js
+import { lstat as lstat2, realpath as realpath2 } from "node:fs/promises";
+import { isAbsolute as isAbsolute4, join as join4, relative as relative2, resolve } from "node:path";
+async function resolveActionSummaryPath(env) {
+  const inputPath = readEnvInput(env.INPUT_SUMMARY_PATH);
+  if (inputPath === void 0) {
+    return void 0;
+  }
+  if (isAbsolute4(inputPath)) {
+    throw new ActionUsageError("INPUT_SUMMARY_PATH must be a relative path inside GITHUB_WORKSPACE.");
+  }
+  const workspace = resolve(readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd());
+  const resolvedPath = resolve(workspace, inputPath);
+  if (!isPathInside(workspace, resolvedPath)) {
+    throw new ActionUsageError("INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.");
+  }
+  const workspaceRoot = await realpath2(workspace);
+  let currentPath = workspaceRoot;
+  const relativePath = relative2(workspace, resolvedPath);
+  for (const segment of relativePath.split(/[\\/]+/).filter((value) => value.length > 0)) {
+    currentPath = join4(currentPath, segment);
+    try {
+      const stats = await lstat2(currentPath);
+      if (stats.isSymbolicLink() || stats.isFile() && stats.nlink > 1) {
+        throw new ActionUsageError("INPUT_SUMMARY_PATH must not traverse symbolic links, junctions, or hard links.");
+      }
+      const resolvedCurrentPath = await realpath2(currentPath);
+      if (!isPathInside(workspaceRoot, resolvedCurrentPath)) {
+        throw new ActionUsageError("INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.");
+      }
+    } catch (error) {
+      if (isNodeError2(error) && error.code === "ENOENT") {
+        continue;
+      }
+      throw error;
+    }
+  }
+  return resolvedPath;
+}
+function isPathInside(basePath, targetPath) {
+  const relativePath = relative2(basePath, targetPath);
+  return relativePath.length === 0 || !relativePath.startsWith("..") && !isAbsolute4(relativePath);
+}
+function isNodeError2(error) {
+  return error instanceof Error && "code" in error;
+}
+
 // packages/action/dist/provider.js
 function resolveActionProvider(env, runtime, config) {
   const providerId = readEnvInput(env.INPUT_PROVIDER) ?? config.provider ?? "fake";
@@ -5282,17 +5329,17 @@ function validateSourceCommentInput(input) {
   }
 }
 async function readExistingRecognitionRecords(repositoryDir) {
-  const ledgerPath = join4(repositoryDir, CONTRIBUTIONS_JSONL_PATH);
+  const ledgerPath = join5(repositoryDir, CONTRIBUTIONS_JSONL_PATH);
   try {
     return parseContributionsJsonl(await readFile4(ledgerPath, "utf8"));
   } catch (error) {
-    if (isNodeError2(error) && error.code === "ENOENT") {
+    if (isNodeError3(error) && error.code === "ENOENT") {
       return [];
     }
     throw error;
   }
 }
-function isNodeError2(error) {
+function isNodeError3(error) {
   return error instanceof Error && "code" in error;
 }
 async function runActionFromEnvironment(env, io, runtime = {}) {
@@ -5350,46 +5397,6 @@ async function runActionFromEnvironment(env, io, runtime = {}) {
     return error instanceof ActionUsageError ? 1 : 4;
   }
 }
-async function resolveActionSummaryPath(env) {
-  const inputPath = readEnvInput(env.INPUT_SUMMARY_PATH);
-  if (inputPath === void 0) {
-    return void 0;
-  }
-  if (isAbsolute4(inputPath)) {
-    throw new ActionUsageError("INPUT_SUMMARY_PATH must be a relative path inside GITHUB_WORKSPACE.");
-  }
-  const workspace = resolve(readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd());
-  const resolvedPath = resolve(workspace, inputPath);
-  if (!isPathInside(workspace, resolvedPath)) {
-    throw new ActionUsageError("INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.");
-  }
-  const workspaceRoot = await realpath2(workspace);
-  let currentPath = workspaceRoot;
-  const relativePath = relative2(workspace, resolvedPath);
-  for (const segment of relativePath.split(/[\\/]+/).filter((value) => value.length > 0)) {
-    currentPath = join4(currentPath, segment);
-    try {
-      const stats = await lstat2(currentPath);
-      if (stats.isSymbolicLink() || stats.isFile() && stats.nlink > 1) {
-        throw new ActionUsageError("INPUT_SUMMARY_PATH must not traverse symbolic links, junctions, or hard links.");
-      }
-      const resolvedCurrentPath = await realpath2(currentPath);
-      if (!isPathInside(workspaceRoot, resolvedCurrentPath)) {
-        throw new ActionUsageError("INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.");
-      }
-    } catch (error) {
-      if (isNodeError2(error) && error.code === "ENOENT") {
-        continue;
-      }
-      throw error;
-    }
-  }
-  return resolvedPath;
-}
-function isPathInside(basePath, targetPath) {
-  const relativePath = relative2(basePath, targetPath);
-  return relativePath.length === 0 || !relativePath.startsWith("..") && !isAbsolute4(relativePath);
-}
 async function runActionMode(input, env, runtime) {
   const mode = normalizeActionMode(input.mode ?? "dry-run");
   if (mode === "gate") {
@@ -5443,7 +5450,7 @@ function buildActionCommitInput(input, env, runtime) {
     ...input,
     mode: "commit",
     repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
-    stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join4(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-commit"),
+    stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join5(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-commit"),
     targetBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
     liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(clientOptions)
   };
@@ -5479,7 +5486,7 @@ function buildActionWriteInput(input, env, runtime, mode) {
       ...input,
       mode,
       repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
-      stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join4(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-propose"),
+      stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join5(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-propose"),
       baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
       pullRequestClient,
       commentMode,
@@ -5495,7 +5502,7 @@ function buildActionWriteInput(input, env, runtime, mode) {
       mode,
       draftPath: resolvePromoteDraftPath(env),
       repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
-      stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join4(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-promote-draft"),
+      stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join5(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-promote-draft"),
       baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
       pullRequestClient,
       commentMode,
@@ -5512,7 +5519,7 @@ function buildActionWriteInput(input, env, runtime, mode) {
     ...input,
     mode,
     repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
-    stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join4(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-stage-draft"),
+    stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join5(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-stage-draft"),
     baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
     pullRequestClient,
     commentMode,
@@ -5536,12 +5543,12 @@ function resolvePromoteDraftPath(env) {
   if (inputPath === void 0) {
     throw new ActionUsageError("INPUT_DRAFT_PATH is required for promote-draft mode.");
   }
-  if (isAbsolute4(inputPath)) {
+  if (isAbsolute5(inputPath)) {
     throw new ActionUsageError("INPUT_DRAFT_PATH must be relative to GITHUB_WORKSPACE.");
   }
-  const workspace = resolve(readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd());
-  const draftsRoot = resolve(workspace, ".clarissimi", "drafts");
-  const resolvedPath = resolve(workspace, inputPath);
+  const workspace = resolve2(readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd());
+  const draftsRoot = resolve2(workspace, ".clarissimi", "drafts");
+  const resolvedPath = resolve2(workspace, inputPath);
   if (!isPathInside(draftsRoot, resolvedPath) || resolvedPath === draftsRoot) {
     throw new ActionUsageError("INPUT_DRAFT_PATH must point inside .clarissimi/drafts/.");
   }
@@ -5556,9 +5563,9 @@ async function readApprovedDraft(path, repositoryDir) {
   let realRepositoryDir;
   try {
     [realDraftPath, realDraftsRoot, realRepositoryDir] = await Promise.all([
-      realpath2(path),
-      realpath2(join4(repositoryDir, ".clarissimi", "drafts")),
-      realpath2(repositoryDir)
+      realpath3(path),
+      realpath3(join5(repositoryDir, ".clarissimi", "drafts")),
+      realpath3(repositoryDir)
     ]);
   } catch {
     throw new Error("Unable to resolve the approved Clarissimi draft path.");

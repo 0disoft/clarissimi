@@ -62,6 +62,7 @@ import {
   validateStandaloneCliDistributionContract,
   validateSecretsDocumentContract,
   validateTrackedGeneratedOutputPaths,
+  validateToolchainPlatformSmokeWorkflowContract,
   validateWorkspaceContract,
   validateWorkspaceInternalDependencies,
   validateWorkspacePackageManifest,
@@ -2164,6 +2165,63 @@ test("release readiness accepts the CI workflow contract", () => {
   assert.deepEqual(validateCiWorkflowContract(createCiWorkflowText()), []);
 });
 
+test("release readiness accepts the cross-platform toolchain smoke workflow contract", () => {
+  const text = [
+    "name: Toolchain platform smoke",
+    "push:",
+    "pull_request:",
+    "workflow_dispatch:",
+    "- package.json",
+    "- pnpm-lock.yaml",
+    "- .github/workflows/toolchain-platform-smoke.yml",
+    "contents: read",
+    "fail-fast: false",
+    "- ubuntu-latest",
+    "- windows-latest",
+    "- macos-latest",
+    "uses: actions/checkout@v7",
+    "uses: actions/setup-node@v6",
+    "node-version: 24",
+    "pnpm install --frozen-lockfile",
+    "pnpm run build",
+    "pnpm run format",
+    "pnpm run lint",
+    "pnpm run bundle:action:check",
+  ].join("\n");
+
+  assert.deepEqual(validateToolchainPlatformSmokeWorkflowContract(text), []);
+});
+
+test("release readiness rejects unsafe or incomplete toolchain smoke workflows", () => {
+  const text = [
+    "name: Toolchain platform smoke",
+    "push:",
+    "pull_request:",
+    "workflow_dispatch:",
+    "- package.json",
+    "- pnpm-lock.yaml",
+    "- .github/workflows/toolchain-platform-smoke.yml",
+    "contents: write",
+    "fail-fast: false",
+    "- ubuntu-latest",
+    "- windows-latest",
+    "uses: actions/checkout@v7",
+    "uses: actions/setup-node@v6",
+    "node-version: 24",
+    "pnpm install --frozen-lockfile",
+    "pnpm run build",
+    "pnpm run format",
+    "pnpm run lint",
+    "pnpm run bundle:action:check",
+  ].join("\n");
+
+  assert.deepEqual(validateToolchainPlatformSmokeWorkflowContract(text), [
+    ".github/workflows/toolchain-platform-smoke.yml must include contents: read.",
+    ".github/workflows/toolchain-platform-smoke.yml must include - macos-latest.",
+    ".github/workflows/toolchain-platform-smoke.yml must not include contents: write.",
+  ]);
+});
+
 test("release readiness accepts safe workflow trust boundaries", () => {
   assert.deepEqual(
     validateWorkflowTrustBoundaryContract(createCiWorkflowText(), ".github/workflows/ci.yml"),
@@ -3041,6 +3099,7 @@ function createCiOperationalDocumentText() {
     "temporary repositories.",
     "",
     "`pnpm run hosted-ci-validation` uses `gh run list` to find the `CI` workflow run",
+    "`pnpm run hosted-toolchain-validation` checks the `Toolchain platform smoke` workflow on Ubuntu, Windows, and macOS",
     "for the selected commit and `gh run watch` while it is still running.",
     "",
     "The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`",

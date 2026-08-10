@@ -105,6 +105,8 @@ engine.
   approved ledger without a hosted service, JavaScript runtime, or public ranking model
 - `0059-refresh-development-toolchain.md`: adopt the current TypeScript 7 native compiler and
   refresh the root formatter, linter, bundler, and Node type toolchain as one verified snapshot
+- `0060-add-cross-platform-toolchain-smoke.md`: verify the native TypeScript, Oxfmt, Oxlint, and
+  esbuild toolchain on Linux, Windows, and macOS only when toolchain inputs change or on demand
 
 ## Review Blockers
 

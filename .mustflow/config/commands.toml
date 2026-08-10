@@ -1458,6 +1458,24 @@ network = true
 destructive = false
 required_after = ["git_push_main"]
 
+[intents.hosted_toolchain_main]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Verify the cross-platform toolchain smoke result for the current pushed main commit without reading repository secrets."
+argv = ["pnpm", "run", "hosted-toolchain-validation"]
+cwd = "."
+timeout_seconds = 1800
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["git_push_main", "toolchain_platform_smoke_workflow_change"]
+
 [intents.test_release_publication]
 status = "configured"
 lifecycle = "oneshot"

@@ -27,6 +27,11 @@ The current local CI parity commands are:
   `0disoft/clarissimi@main`, validates repository, ref, workflow, and SHA inputs before GitHub API
   calls, and does not read repository secrets. This command is a release candidate verification
   helper, not a replacement for local checks.
+- `pnpm run hosted-toolchain-validation`: checks the exact current commit's workflow result.
+  Workflow: `Toolchain platform smoke`. It exercises the frozen TypeScript 7, Oxfmt, Oxlint, and
+  esbuild toolchain on Ubuntu, Windows, and macOS. It runs automatically only when `package.json`,
+  `pnpm-lock.yaml`, or the workflow itself changes, and remains manually dispatchable for release
+  investigation. It is an additional compatibility signal, not a required branch-protection check.
 - `pnpm run release-readiness`: runs non-credentialed release checks for documentation,
   release-critical package script registration, package and script test-glob registration, the
   workspace package glob, workspace package manifest identity, the blocked root and workspace

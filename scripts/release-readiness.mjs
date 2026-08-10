@@ -827,6 +827,9 @@ export const ciOperationalDocumentContract = {
     "`pnpm run benchmark:cli-io`: runs compiled `rebuild` and `import-draft` commands against fresh",
     "`pnpm run hosted-ci-validation`",
     "uses `gh run list` to find the `CI` workflow run",
+    "`pnpm run hosted-toolchain-validation`",
+    "Toolchain platform smoke",
+    "Ubuntu, Windows, and macOS",
     "The `main` branch is protected and requires the `Validation` check from `.github/workflows/ci.yml`",
     "to pass with strict up-to-date status checks. Administrator enforcement is disabled",
     "- Required validation names: `docs`, `release-readiness`, `lint`, `format`, `migration-check`, `smoke`, `check`, `contract`",
@@ -1397,6 +1400,33 @@ export const ciWorkflowContract = {
   ],
 };
 
+export const toolchainPlatformSmokeWorkflowContract = {
+  path: ".github/workflows/toolchain-platform-smoke.yml",
+  requiredSnippets: [
+    "name: Toolchain platform smoke",
+    "push:",
+    "pull_request:",
+    "workflow_dispatch:",
+    "- package.json",
+    "- pnpm-lock.yaml",
+    "- .github/workflows/toolchain-platform-smoke.yml",
+    "contents: read",
+    "fail-fast: false",
+    "- ubuntu-latest",
+    "- windows-latest",
+    "- macos-latest",
+    "uses: actions/checkout@v7",
+    "uses: actions/setup-node@v6",
+    "node-version: 24",
+    "pnpm install --frozen-lockfile",
+    "pnpm run build",
+    "pnpm run format",
+    "pnpm run lint",
+    "pnpm run bundle:action:check",
+  ],
+  forbiddenSnippets: ["contents: write", "pull-requests: write", "secrets:"],
+};
+
 export const dogfoodWorkflowContracts = [
   {
     path: ".github/workflows/clarissimi-dry-run.yml",
@@ -1581,6 +1611,7 @@ export async function runReleaseReadiness(options = {}) {
   await runActionManifestContractCheck(repoRoot);
   await runWorkflowTrustBoundaryContractCheck(repoRoot, workflowFiles);
   await runCiWorkflowContractCheck(repoRoot);
+  await runToolchainPlatformSmokeWorkflowContractCheck(repoRoot);
   await runNpmPublishWorkflowContractCheck(repoRoot);
   await runDogfoodWorkflowContractChecks(repoRoot);
   await runHostedLiveProviderWorkflowContractCheck(repoRoot);
@@ -2086,6 +2117,13 @@ export function validateCiWorkflowContract(text, contract = ciWorkflowContract) 
   return issues;
 }
 
+export function validateToolchainPlatformSmokeWorkflowContract(
+  text,
+  contract = toolchainPlatformSmokeWorkflowContract,
+) {
+  return validateRequiredAndForbiddenDocumentSnippets(text, contract);
+}
+
 export function validateNpmPublishWorkflowContract(text, contract = npmPublishWorkflowContract) {
   const issues = [];
   for (const snippet of contract.requiredSnippets) {
@@ -2257,6 +2295,25 @@ async function runCiWorkflowContractCheck(repoRoot) {
   }
 
   console.log("CI workflow contract passed");
+}
+
+async function runToolchainPlatformSmokeWorkflowContractCheck(repoRoot) {
+  const workflowPath = join(repoRoot, toolchainPlatformSmokeWorkflowContract.path);
+  let text;
+  try {
+    text = await readFile(workflowPath, "utf8");
+  } catch (error) {
+    throw new Error(
+      `Unable to read ${toolchainPlatformSmokeWorkflowContract.path}: ${error.message}`,
+    );
+  }
+
+  const issues = validateToolchainPlatformSmokeWorkflowContract(text);
+  if (issues.length > 0) {
+    throw new Error(`toolchain platform smoke workflow contract failed:\n${issues.join("\n")}`);
+  }
+
+  console.log("toolchain platform smoke workflow contract passed");
 }
 
 async function runNpmPublishWorkflowContractCheck(repoRoot) {

@@ -25,6 +25,7 @@
     "live-provider-smoke": "pnpm run build && node scripts/live-provider-smoke.mjs",
     "provider-model-eval": "pnpm run build && node scripts/provider-model-eval.mjs",
     "hosted-ci-validation": "node scripts/hosted-ci-validation.mjs",
+    "hosted-toolchain-validation": "node scripts/hosted-ci-validation.mjs --workflow toolchain-platform-smoke.yml",
     "hosted-external-consumer-smoke": "node scripts/hosted-external-consumer-smoke.mjs",
     "hosted-live-provider-smoke": "node scripts/hosted-live-provider-smoke.mjs",
     "verify-action-major-tag": "node scripts/verify-action-major-tag.mjs",

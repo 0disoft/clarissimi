@@ -313,6 +313,15 @@ moved from `97398d030aaddf9568210181dda93031fd800584` to the release SHA; alias-
 `30206900863`, `30206921313`, `30206940168`, and `30206978376` passed. The same source publishes
 standalone CLI `clarissimi@0.1.2` under the independent npm release contract above.
 
+Patch release candidate `v0.6.2` carries the accumulated proposal-branch isolation, canonical
+contributor-record validation, deterministic contributor identity, race-safe draft writes, and
+provider-result redaction fixes from `main`. It also includes behavior-preserving Action module
+extractions and the refreshed tracked runtime bundle. Action inputs, permissions, defaults,
+persisted schemas, and maintainer approval authority remain compatible. The independently
+versioned npm CLI stays at `clarissimi@0.1.2`; the unreleased `render-page` command is not part of
+this Action publication. Publication remains conditional on exact-SHA local, hosted, live-provider,
+external dry-run, full-write, orphan-audit, post-tag, Marketplace, and moving-alias validation.
+
 The first post-tag full-write run `29324962538` had one Ubuntu job fail while GitHub returned its
 `Unicorn!` timeout HTML during draft PR creation. macOS and Windows passed, cleanup ran, and orphan
 audit run `29325038208` found no residue. A complete new-correlation post-tag validation then passed

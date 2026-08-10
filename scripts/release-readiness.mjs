@@ -356,7 +356,7 @@ export const implementationTrackerContract = {
     "29892358683",
     "29892969685",
     "29893077391",
-    "Immutable `v0.6.1` is public and Marketplace `Latest`",
+    "Immutable `v0.6.2` is the selected Action release candidate",
     "2def5c4b6630c26ca19245984c3d1eba033e7e5b",
     "30206978376",
     "`clarissimi@0.1.2` is public npm `latest` with provenance",
@@ -514,7 +514,7 @@ export const readmeValidationContract = {
   path: "README.md",
   requiredSnippets: [
     "## Start in 30 Seconds",
-    "- uses: 0disoft/clarissimi@v0.6.1",
+    "- uses: 0disoft/clarissimi@v0.6.2",
     "mode: dry-run",
     "## Choose How Results Are Written",
     "`propose` is the recommended default for shared repositories.",

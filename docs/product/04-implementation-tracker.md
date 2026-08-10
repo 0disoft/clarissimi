@@ -1537,6 +1537,23 @@ Completed scope:
 - keep the public manifest at verified npm `latest=0.1.2`; the additive command warrants a future
   `0.2.0` candidate only when the independent publication gates are intentionally started
 
+### 44. Action v0.6.2 Correctness and Security Patch
+
+Status: Immutable `v0.6.2` is the selected Action release candidate. Publication and moving-`v0`
+promotion require fresh exact-SHA validation.
+
+Accepted scope:
+
+- isolate proposal commits from unrelated checkout history
+- enforce canonical approved contributor records and deterministic contribution identity
+- make concurrent draft writes race safe
+- harden provider-result redaction for structured and embedded secret-bearing values
+- retain existing Action inputs, permissions, defaults, persisted schemas, and maintainer approval
+  authority
+- ship the refreshed tracked Action bundle without publishing a new standalone npm CLI version
+- require exact-SHA hosted CI, live-provider, external dry-run, full-write, cleanup, orphan-audit,
+  post-tag, Marketplace, and compare-and-swap moving-`v0` validation before completion
+
 ## Deferred Work
 
 Deferred work stays outside the MVP unless a new ADR or product decision changes scope:

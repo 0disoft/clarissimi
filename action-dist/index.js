@@ -3854,10 +3854,9 @@ function assertClarissimiOutputPath(path) {
 }
 
 // packages/action/dist/run.js
-import { lstat as lstat2, readFile as readFile3, realpath as realpath2 } from "node:fs/promises";
-import { basename, isAbsolute as isAbsolute3, join as join3, relative as relative2, resolve } from "node:path";
+import { lstat as lstat2, readFile as readFile4, realpath as realpath2 } from "node:fs/promises";
+import { isAbsolute as isAbsolute4, join as join4, relative as relative2, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { pathToFileURL } from "node:url";
 
 // packages/providers/dist/result-quality.js
 var SECURITY_CLAIM_PATTERN = /\b(?:security|vulnerabilit(?:y|ies)|exploit|advisory|cve-\d{4}-\d{4,})\b/i;
@@ -4749,6 +4748,11 @@ function isRecord7(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+// packages/action/dist/config.js
+import { readFile as readFile3 } from "node:fs/promises";
+import { basename, isAbsolute as isAbsolute3, join as join3 } from "node:path";
+import { pathToFileURL } from "node:url";
+
 // packages/action/dist/errors.js
 var ActionUsageError = class extends Error {
   constructor(message) {
@@ -4770,6 +4774,83 @@ function requireEnvInput(value, name) {
     throw new ActionUsageError(`${name} is required for write modes.`);
   }
   return normalized;
+}
+
+// packages/action/dist/config.js
+async function loadActionConfigFromEnvironment(env) {
+  const configPath = readEnvInput(env.INPUT_CONFIG_PATH);
+  if (configPath === void 0) {
+    return {};
+  }
+  const workspace = readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd();
+  const resolvedPath = isAbsolute3(configPath) ? configPath : join3(workspace, configPath);
+  const parsed = await loadActionConfigValue(configPath, resolvedPath);
+  const result = validateClarissimiConfig(parsed);
+  if (!result.ok) {
+    throw new ActionUsageError(formatActionConfigValidationIssue(result.issues[0]));
+  }
+  return result.value;
+}
+function resolveActionMarkdownSummary(env, config) {
+  const value = readEnvInput(env.INPUT_MARKDOWN_SUMMARY) ?? config.markdownSummary ?? "none";
+  if (!isConfigMarkdownSummary(value)) {
+    throw new ActionUsageError("INPUT_MARKDOWN_SUMMARY supports only none, table, or gallery.");
+  }
+  return value;
+}
+function resolveActionIncludeAutomationContributors(env, config) {
+  const value = readEnvInput(env.INPUT_INCLUDE_AUTOMATION_CONTRIBUTORS);
+  if (value === void 0) {
+    return config.includeAutomationContributors ?? true;
+  }
+  if (value === "true") {
+    return true;
+  }
+  if (value === "false") {
+    return false;
+  }
+  throw new ActionUsageError("INPUT_INCLUDE_AUTOMATION_CONTRIBUTORS supports only true or false.");
+}
+async function loadActionConfigValue(configPath, resolvedPath) {
+  if (resolvedPath.endsWith(".json")) {
+    try {
+      return JSON.parse(await readFile3(resolvedPath, "utf8"));
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        throw new ActionUsageError(`Invalid JSON in Action config ${configPath}.`);
+      }
+      throw new ActionUsageError(`Unable to read Action config ${configPath}.`);
+    }
+  }
+  if (basename(configPath.replaceAll("\\", "/")) === "clarissimi.config.ts") {
+    let module;
+    try {
+      module = await import(pathToFileURL(resolvedPath).href);
+    } catch {
+      throw new ActionUsageError(`Failed to load TypeScript Action config ${configPath}.`);
+    }
+    if (!("default" in module)) {
+      throw new ActionUsageError(`TypeScript Action config ${configPath} must export a default config object.`);
+    }
+    return module.default;
+  }
+  throw new ActionUsageError("Action config-path must point to a JSON config file or clarissimi.config.ts.");
+}
+function formatActionConfigValidationIssue(issue) {
+  if (issue === void 0) {
+    return "Action config is invalid.";
+  }
+  if (issue.path === "$" && issue.code === "expected_object") {
+    return "Action config must be an object.";
+  }
+  const field = issue.path.startsWith("$.") ? issue.path.slice(2) : issue.path;
+  if (issue.code === "invalid_enum") {
+    return `Action config field ${field} has an unsupported value.`;
+  }
+  if (issue.code === "empty_string") {
+    return `Action config field ${field} must be a non-empty string.`;
+  }
+  return issue.message;
 }
 
 // packages/action/dist/provider.js
@@ -5201,9 +5282,9 @@ function validateSourceCommentInput(input) {
   }
 }
 async function readExistingRecognitionRecords(repositoryDir) {
-  const ledgerPath = join3(repositoryDir, CONTRIBUTIONS_JSONL_PATH);
+  const ledgerPath = join4(repositoryDir, CONTRIBUTIONS_JSONL_PATH);
   try {
-    return parseContributionsJsonl(await readFile3(ledgerPath, "utf8"));
+    return parseContributionsJsonl(await readFile4(ledgerPath, "utf8"));
   } catch (error) {
     if (isNodeError2(error) && error.code === "ENOENT") {
       return [];
@@ -5274,7 +5355,7 @@ async function resolveActionSummaryPath(env) {
   if (inputPath === void 0) {
     return void 0;
   }
-  if (isAbsolute3(inputPath)) {
+  if (isAbsolute4(inputPath)) {
     throw new ActionUsageError("INPUT_SUMMARY_PATH must be a relative path inside GITHUB_WORKSPACE.");
   }
   const workspace = resolve(readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd());
@@ -5286,7 +5367,7 @@ async function resolveActionSummaryPath(env) {
   let currentPath = workspaceRoot;
   const relativePath = relative2(workspace, resolvedPath);
   for (const segment of relativePath.split(/[\\/]+/).filter((value) => value.length > 0)) {
-    currentPath = join3(currentPath, segment);
+    currentPath = join4(currentPath, segment);
     try {
       const stats = await lstat2(currentPath);
       if (stats.isSymbolicLink() || stats.isFile() && stats.nlink > 1) {
@@ -5307,7 +5388,7 @@ async function resolveActionSummaryPath(env) {
 }
 function isPathInside(basePath, targetPath) {
   const relativePath = relative2(basePath, targetPath);
-  return relativePath.length === 0 || !relativePath.startsWith("..") && !isAbsolute3(relativePath);
+  return relativePath.length === 0 || !relativePath.startsWith("..") && !isAbsolute4(relativePath);
 }
 async function runActionMode(input, env, runtime) {
   const mode = normalizeActionMode(input.mode ?? "dry-run");
@@ -5362,7 +5443,7 @@ function buildActionCommitInput(input, env, runtime) {
     ...input,
     mode: "commit",
     repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
-    stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join3(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-commit"),
+    stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join4(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-commit"),
     targetBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
     liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(clientOptions)
   };
@@ -5398,7 +5479,7 @@ function buildActionWriteInput(input, env, runtime, mode) {
       ...input,
       mode,
       repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
-      stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join3(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-propose"),
+      stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join4(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-propose"),
       baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
       pullRequestClient,
       commentMode,
@@ -5414,7 +5495,7 @@ function buildActionWriteInput(input, env, runtime, mode) {
       mode,
       draftPath: resolvePromoteDraftPath(env),
       repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
-      stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join3(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-promote-draft"),
+      stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join4(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-promote-draft"),
       baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
       pullRequestClient,
       commentMode,
@@ -5431,7 +5512,7 @@ function buildActionWriteInput(input, env, runtime, mode) {
     ...input,
     mode,
     repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
-    stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join3(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-stage-draft"),
+    stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join4(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-stage-draft"),
     baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
     pullRequestClient,
     commentMode,
@@ -5455,7 +5536,7 @@ function resolvePromoteDraftPath(env) {
   if (inputPath === void 0) {
     throw new ActionUsageError("INPUT_DRAFT_PATH is required for promote-draft mode.");
   }
-  if (isAbsolute3(inputPath)) {
+  if (isAbsolute4(inputPath)) {
     throw new ActionUsageError("INPUT_DRAFT_PATH must be relative to GITHUB_WORKSPACE.");
   }
   const workspace = resolve(readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd());
@@ -5476,7 +5557,7 @@ async function readApprovedDraft(path, repositoryDir) {
   try {
     [realDraftPath, realDraftsRoot, realRepositoryDir] = await Promise.all([
       realpath2(path),
-      realpath2(join3(repositoryDir, ".clarissimi", "drafts")),
+      realpath2(join4(repositoryDir, ".clarissimi", "drafts")),
       realpath2(repositoryDir)
     ]);
   } catch {
@@ -5487,7 +5568,7 @@ async function readApprovedDraft(path, repositoryDir) {
   }
   let parsed;
   try {
-    parsed = JSON.parse(await readFile3(realDraftPath, "utf8"));
+    parsed = JSON.parse(await readFile4(realDraftPath, "utf8"));
   } catch (error) {
     if (error instanceof SyntaxError) {
       throw new Error("Approved Clarissimi draft contains invalid JSON.");
@@ -5506,7 +5587,7 @@ async function readApprovedDraft(path, repositoryDir) {
 }
 async function prepareActionAssessment(input) {
   const source = selectInputSource(input);
-  const eventPayload = JSON.parse(await readFile3(source.path, "utf8"));
+  const eventPayload = JSON.parse(await readFile4(source.path, "utf8"));
   const resolution = source.kind === "github_fixture" ? {
     kind: "merged_pull_request",
     fixture: parseGitHubMergedPullRequestFixture(eventPayload)
@@ -5572,81 +5653,6 @@ function applyFixtureApproval(draft, status) {
     ...draft,
     maintainerApprovalStatus: status
   };
-}
-async function loadActionConfigFromEnvironment(env) {
-  const configPath = readEnvInput(env.INPUT_CONFIG_PATH);
-  if (configPath === void 0) {
-    return {};
-  }
-  const workspace = readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd();
-  const resolvedPath = isAbsolute3(configPath) ? configPath : join3(workspace, configPath);
-  const parsed = await loadActionConfigValue(configPath, resolvedPath);
-  const result = validateClarissimiConfig(parsed);
-  if (!result.ok) {
-    throw new ActionUsageError(formatActionConfigValidationIssue(result.issues[0]));
-  }
-  return result.value;
-}
-async function loadActionConfigValue(configPath, resolvedPath) {
-  if (resolvedPath.endsWith(".json")) {
-    try {
-      return JSON.parse(await readFile3(resolvedPath, "utf8"));
-    } catch (error) {
-      if (error instanceof SyntaxError) {
-        throw new ActionUsageError(`Invalid JSON in Action config ${configPath}.`);
-      }
-      throw new ActionUsageError(`Unable to read Action config ${configPath}.`);
-    }
-  }
-  if (basename(configPath.replaceAll("\\", "/")) === "clarissimi.config.ts") {
-    let module;
-    try {
-      module = await import(pathToFileURL(resolvedPath).href);
-    } catch {
-      throw new ActionUsageError(`Failed to load TypeScript Action config ${configPath}.`);
-    }
-    if (!("default" in module)) {
-      throw new ActionUsageError(`TypeScript Action config ${configPath} must export a default config object.`);
-    }
-    return module.default;
-  }
-  throw new ActionUsageError("Action config-path must point to a JSON config file or clarissimi.config.ts.");
-}
-function formatActionConfigValidationIssue(issue) {
-  if (issue === void 0) {
-    return "Action config is invalid.";
-  }
-  if (issue.path === "$" && issue.code === "expected_object") {
-    return "Action config must be an object.";
-  }
-  const field = issue.path.startsWith("$.") ? issue.path.slice(2) : issue.path;
-  if (issue.code === "invalid_enum") {
-    return `Action config field ${field} has an unsupported value.`;
-  }
-  if (issue.code === "empty_string") {
-    return `Action config field ${field} must be a non-empty string.`;
-  }
-  return issue.message;
-}
-function resolveActionMarkdownSummary(env, config) {
-  const value = readEnvInput(env.INPUT_MARKDOWN_SUMMARY) ?? config.markdownSummary ?? "none";
-  if (!isConfigMarkdownSummary(value)) {
-    throw new ActionUsageError("INPUT_MARKDOWN_SUMMARY supports only none, table, or gallery.");
-  }
-  return value;
-}
-function resolveActionIncludeAutomationContributors(env, config) {
-  const value = readEnvInput(env.INPUT_INCLUDE_AUTOMATION_CONTRIBUTORS);
-  if (value === void 0) {
-    return config.includeAutomationContributors ?? true;
-  }
-  if (value === "true") {
-    return true;
-  }
-  if (value === "false") {
-    return false;
-  }
-  throw new ActionUsageError("INPUT_INCLUDE_AUTOMATION_CONTRIBUTORS supports only true or false.");
 }
 function isRecord8(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);

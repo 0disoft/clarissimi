@@ -121,7 +121,8 @@ effects = [
   { type = "write", mode = "replace", path = "package.json", lock = "dependency_manifests", concurrency = "exclusive" },
   { type = "write", mode = "replace", path = "pnpm-lock.yaml", lock = "dependency_manifests", concurrency = "exclusive" },
 ]
-env_policy = "minimal"
+env_policy = "allowlist"
+env_allowlist = ["LOCALAPPDATA"]
 network = true
 destructive = false
 required_after = ["user_authorized_latest_dependency_refresh"]

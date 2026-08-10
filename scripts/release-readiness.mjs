@@ -12,6 +12,12 @@ import {
 } from "./release-readiness/action-manifest-contract.mjs";
 import { validatePackageScriptRegistration } from "./release-readiness/package-script-contract.mjs";
 import {
+  validateDocumentSetRequiredSnippets,
+  validateMarkdownTableDocumentSnippets,
+  validateRequiredAndForbiddenDocumentSnippets,
+  validateRequiredDocumentSnippets,
+} from "./release-readiness/document-contract.mjs";
+import {
   credentialedReleaseEvidenceContract,
   dryRunDogfoodEvidenceContract,
   hostedCiEvidenceContract,
@@ -1767,30 +1773,14 @@ export function validateWorkflowTrustBoundaryContract(
 }
 
 export function validateRollbackProcedureContract(text, contract = rollbackProcedureContract) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateReleasePolicyDocumentContract(
   text,
   contract = releasePolicyDocumentContract,
 ) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateImplementationTrackerContract(
@@ -1891,381 +1881,167 @@ export function validateDocsValidationScriptContract(
   text,
   contract = docsValidationScriptContract,
 ) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateLintAndFormatDecisionDocumentContract(
   text,
   contract = lintAndFormatDecisionDocumentContract,
 ) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateLedgerFormatDocumentContract(
   text,
   contract = ledgerFormatDocumentContract,
 ) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateCliCommandContract(text, contract = cliCommandContract) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateShellCompletionDocumentContract(
   text,
   contract = shellCompletionDocumentContract,
 ) {
-  const issues = [];
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-  for (const snippet of contract.forbiddenSnippets) {
-    if (text.includes(snippet)) {
-      issues.push(`${contract.path} must not include ${snippet}.`);
-    }
-  }
-  return issues;
+  return validateRequiredAndForbiddenDocumentSnippets(text, contract);
 }
 
 export function validateCliOutputExitCodesDocumentContract(
   text,
   contract = cliOutputExitCodesDocumentContract,
 ) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateCliConfigurationDocumentContract(
   text,
   contract = cliConfigurationDocumentContract,
 ) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateAgentAssistedDraftsDocumentContract(
   text,
   contract = agentAssistedDraftsDocumentContract,
 ) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateCiOperationalDocumentContract(
   text,
   contract = ciOperationalDocumentContract,
 ) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateOperationalContractDocumentContract(
   text,
   contract = operationalContractDocumentContract,
 ) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateObservabilityDocumentContract(
   text,
   contract = observabilityDocumentContract,
 ) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateServiceLevelsDocumentContract(
   text,
   contract = serviceLevelsDocumentContract,
 ) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateIncidentResponseDocumentContract(
   text,
   contract = incidentResponseDocumentContract,
 ) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateDisasterRecoveryDocumentContract(
   text,
   contract = disasterRecoveryDocumentContract,
 ) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateSecretsDocumentContract(text, contract = secretsDocumentContract) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateBackupRestoreDocumentContract(
   text,
   contract = backupRestoreDocumentContract,
 ) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateActionInputsOutputsDocumentContract(
   text,
   contract = actionInputsOutputsDocumentContract,
 ) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateActionContractDocumentContract(
   text,
   contract = actionContractDocumentContract,
 ) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateActionPermissionsDocumentContract(
   text,
   contract = actionPermissionsDocumentContract,
 ) {
-  const issues = [];
-  const normalizedTableRows = text
-    .split(/\r?\n/)
-    .filter((line) => line.trim().startsWith("|"))
-    .map(normalizeMarkdownTableRow);
-
-  for (const snippet of contract.requiredSnippets) {
-    const present = snippet.startsWith("|")
-      ? normalizedTableRows.includes(normalizeMarkdownTableRow(snippet))
-      : text.includes(snippet);
-    if (!present) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
-}
-
-function normalizeMarkdownTableRow(line) {
-  return line
-    .trim()
-    .split("|")
-    .map((cell) => cell.trim())
-    .join(" | ");
+  return validateMarkdownTableDocumentSnippets(text, contract);
 }
 
 export function validateOpsValidationFooterContract(
   textsByPath,
   contract = opsValidationFooterContract,
 ) {
-  const issues = [];
-
-  for (const documentPath of contract.documents) {
-    const text = textsByPath[documentPath];
-    if (typeof text !== "string") {
-      issues.push(`${documentPath} must be readable for ops validation footer contract.`);
-      continue;
-    }
-
-    for (const snippet of contract.requiredSnippets) {
-      if (!text.includes(snippet)) {
-        issues.push(`${documentPath} must include ${snippet}.`);
-      }
-    }
-  }
-
-  return issues;
+  return validateDocumentSetRequiredSnippets(
+    textsByPath,
+    contract,
+    "ops validation footer contract",
+  );
 }
 
 export function validateEngineeringValidationDocumentContract(
   textsByPath,
   contract = engineeringValidationDocumentContract,
 ) {
-  const issues = [];
-
-  for (const documentPath of contract.documents) {
-    const text = textsByPath[documentPath];
-    if (typeof text !== "string") {
-      issues.push(`${documentPath} must be readable for engineering validation document contract.`);
-      continue;
-    }
-
-    for (const snippet of contract.requiredSnippets) {
-      if (!text.includes(snippet)) {
-        issues.push(`${documentPath} must include ${snippet}.`);
-      }
-    }
-  }
-
-  return issues;
+  return validateDocumentSetRequiredSnippets(
+    textsByPath,
+    contract,
+    "engineering validation document contract",
+  );
 }
 
 export function validatePerformanceBenchmarkDocumentContract(
   text,
   contract = performanceBenchmarkDocumentContract,
 ) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateRequiredDocumentSnippets(text, contract);
 }
 
 export function validateMonorepoValidationDocumentContract(
   textsByPath,
   contract = monorepoValidationDocumentContract,
 ) {
-  const issues = [];
-
-  for (const documentPath of contract.documents) {
-    const text = textsByPath[documentPath];
-    if (typeof text !== "string") {
-      issues.push(`${documentPath} must be readable for monorepo validation document contract.`);
-      continue;
-    }
-
-    for (const snippet of contract.requiredSnippets) {
-      if (!text.includes(snippet)) {
-        issues.push(`${documentPath} must include ${snippet}.`);
-      }
-    }
-  }
-
-  return issues;
+  return validateDocumentSetRequiredSnippets(
+    textsByPath,
+    contract,
+    "monorepo validation document contract",
+  );
 }
 
 export function validateCiWorkflowContract(text, contract = ciWorkflowContract) {

@@ -27,7 +27,14 @@ import {
   validateWriteModeDogfoodEvidence,
   writeModeDogfoodEvidenceContract,
 } from "./release-readiness/release-evidence-contract.mjs";
-import { findYamlMappingBlock, findYamlScalarValue } from "./release-readiness/yaml-contract.mjs";
+import {
+  validateCiWorkflowContract as validateCiWorkflowContractValues,
+  validateDogfoodWorkflowContract as validateDogfoodWorkflowContractValues,
+  validateHostedLiveProviderWorkflowContract as validateHostedLiveProviderWorkflowContractValues,
+  validateNpmPublishWorkflowContract as validateNpmPublishWorkflowContractValues,
+  validateToolchainPlatformSmokeWorkflowContract as validateToolchainPlatformSmokeWorkflowContractValues,
+  validateWorkflowTrustBoundaryContract as validateWorkflowTrustBoundaryContractValues,
+} from "./release-readiness/workflow-contract.mjs";
 import {
   validatePackageOwnershipContract as validatePackageOwnershipContractValues,
   validatePackageReleasePolicy as validatePackageReleasePolicyValues,
@@ -1752,45 +1759,7 @@ export function validateHostedLiveProviderWorkflowContract(
   text,
   contract = hostedLiveProviderWorkflowContract,
 ) {
-  const issues = [];
-
-  for (const input of contract.requiredInputs) {
-    const block = findYamlMappingBlock(text, input.name);
-    if (block === undefined) {
-      issues.push(`${contract.path} must define workflow_dispatch input ${input.name}.`);
-      continue;
-    }
-
-    const requiredValue = findYamlScalarValue(block, "required");
-    const expected = String(input.required);
-    if (requiredValue !== expected) {
-      issues.push(`${contract.path} input ${input.name} must set required: ${expected}.`);
-    }
-  }
-
-  if (!text.includes(`secrets.${contract.secretName}`)) {
-    issues.push(`${contract.path} must read secrets.${contract.secretName}.`);
-  }
-
-  if (!text.includes(contract.runCommand)) {
-    issues.push(`${contract.path} must run ${contract.runCommand}.`);
-  }
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  for (const snippet of contract.forbiddenSnippets) {
-    if (text.includes(snippet)) {
-      issues.push(`${contract.path} must not include ${snippet}.`);
-    }
-  }
-
-  issues.push(...validateSnippetOrder(text, contract.path, contract.requiredOrder));
-
-  return issues;
+  return validateHostedLiveProviderWorkflowContractValues(text, contract);
 }
 
 export function validateWorkflowTrustBoundaryContract(
@@ -1798,21 +1767,7 @@ export function validateWorkflowTrustBoundaryContract(
   path,
   contract = workflowTrustBoundaryContract,
 ) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${path} must include ${snippet}.`);
-    }
-  }
-
-  for (const snippet of contract.forbiddenSnippets) {
-    if (text.includes(snippet)) {
-      issues.push(`${path} must not include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateWorkflowTrustBoundaryContractValues(text, path, contract);
 }
 
 export function validateRollbackProcedureContract(text, contract = rollbackProcedureContract) {
@@ -2088,55 +2043,18 @@ export function validateMonorepoValidationDocumentContract(
 }
 
 export function validateCiWorkflowContract(text, contract = ciWorkflowContract) {
-  const issues = [];
-
-  for (const trigger of contract.requiredTriggers) {
-    if (!text.includes(trigger)) {
-      issues.push(`${contract.path} must define ${trigger} trigger.`);
-    }
-  }
-
-  for (const permission of contract.requiredPermissions) {
-    if (!text.includes(permission)) {
-      issues.push(`${contract.path} must set ${permission}.`);
-    }
-  }
-
-  for (const command of contract.requiredCommands) {
-    if (!text.includes(command)) {
-      issues.push(`${contract.path} must run ${command}.`);
-    }
-  }
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateCiWorkflowContractValues(text, contract);
 }
 
 export function validateToolchainPlatformSmokeWorkflowContract(
   text,
   contract = toolchainPlatformSmokeWorkflowContract,
 ) {
-  return validateRequiredAndForbiddenDocumentSnippets(text, contract);
+  return validateToolchainPlatformSmokeWorkflowContractValues(text, contract);
 }
 
 export function validateNpmPublishWorkflowContract(text, contract = npmPublishWorkflowContract) {
-  const issues = [];
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-  for (const snippet of contract.forbiddenSnippets) {
-    if (text.includes(snippet)) {
-      issues.push(`${contract.path} must not include ${snippet}.`);
-    }
-  }
-  return issues;
+  return validateNpmPublishWorkflowContractValues(text, contract);
 }
 
 export function validateStandaloneCliDistributionContract(
@@ -2202,21 +2120,7 @@ export function validateStandaloneCliDistributionContract(
 }
 
 export function validateDogfoodWorkflowContract(text, contract) {
-  const issues = [];
-
-  for (const snippet of contract.requiredSnippets) {
-    if (!text.includes(snippet)) {
-      issues.push(`${contract.path} must include ${snippet}.`);
-    }
-  }
-
-  for (const snippet of contract.forbiddenSnippets ?? []) {
-    if (text.includes(snippet)) {
-      issues.push(`${contract.path} must not include ${snippet}.`);
-    }
-  }
-
-  return issues;
+  return validateDogfoodWorkflowContractValues(text, contract);
 }
 
 async function runDogfoodWorkflowContractChecks(repoRoot) {
@@ -3459,27 +3363,6 @@ export function validatePackageOwnershipContract(
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function validateSnippetOrder(text, path, snippets) {
-  const issues = [];
-  let cursor = -1;
-
-  for (const snippet of snippets) {
-    const next = text.indexOf(snippet);
-    if (next === -1) {
-      continue;
-    }
-
-    if (next <= cursor) {
-      issues.push(`${path} must keep ${snippet} after the previous release-check step.`);
-      continue;
-    }
-
-    cursor = next;
-  }
-
-  return issues;
 }
 
 function shouldSkipSecretScanPath(repoPath) {

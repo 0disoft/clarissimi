@@ -2427,9 +2427,27 @@ function validateContributor(value, path, issues) {
   expectLiteral(value.platform, "github", `${path}.platform`, issues);
   expectNonEmptyString(value.id, `${path}.id`, issues);
   expectNonEmptyString(value.login, `${path}.login`, issues);
-  expectUrl(value.profileUrl, `${path}.profileUrl`, issues);
+  expectGitHubProfileUrl(value.profileUrl, value.login, value.kind, `${path}.profileUrl`, issues);
   if (value.kind !== void 0) {
     expectEnum(value.kind, isContributorKind, `${path}.kind`, issues);
+  }
+}
+function expectGitHubProfileUrl(value, login, kind, path, issues) {
+  if (typeof value !== "string" || typeof login !== "string") {
+    expectUrl(value, path, issues);
+    return;
+  }
+  try {
+    const parsed = new URL(value);
+    const normalizedPath = decodeURIComponent(parsed.pathname).replace(/\/$/, "");
+    const expectedUserPath = `/${login}`.toLowerCase();
+    const expectedAppPath = `/apps/${login.replace(/\[bot\]$/i, "")}`.toLowerCase();
+    const validPath = normalizedPath.toLowerCase() === expectedUserPath || kind === "bot" && normalizedPath.toLowerCase() === expectedAppPath;
+    if (parsed.protocol !== "https:" || parsed.hostname.toLowerCase() !== "github.com" || parsed.port !== "" || parsed.username !== "" || parsed.password !== "" || parsed.search !== "" || parsed.hash !== "" || !validPath) {
+      pushIssue(issues, path, "invalid_github_profile_url", "GitHub contributor profile URL must match the contributor login.");
+    }
+  } catch {
+    pushIssue(issues, path, "invalid_url", "Value must be a valid URL.");
   }
 }
 function validateEvidenceRefs(value, path, issues) {
@@ -2599,8 +2617,8 @@ function expectPositiveInteger(value, path, issues) {
   }
 }
 function expectIsoDateTime(value, path, issues) {
-  if (typeof value !== "string" || Number.isNaN(Date.parse(value))) {
-    pushIssue(issues, path, "invalid_datetime", "Value must be an ISO-compatible date time.");
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value) || Number.isNaN(Date.parse(value)) || new Date(value).toISOString() !== value) {
+    pushIssue(issues, path, "invalid_datetime", "Value must be a canonical RFC 3339 UTC date time with milliseconds.");
   }
 }
 function isRecord4(value) {

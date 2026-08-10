@@ -55,6 +55,50 @@ test("accepts a valid contribution assessment draft", () => {
   assert.deepEqual(result.issues, []);
 });
 
+test("binds GitHub profile URLs to contributor identity", () => {
+  for (const profileUrl of [
+    "https://evil.example/octocat",
+    "https://github.com/not-octocat",
+    "https://github.com/octocat?tab=followers",
+  ]) {
+    const result = validateContributionAssessment({
+      ...validAssessment,
+      contributor: { ...validAssessment.contributor, profileUrl },
+    });
+    assert.equal(result.ok, false);
+    assert.equal(
+      result.issues.some((issue) => issue.code === "invalid_github_profile_url"),
+      true,
+    );
+  }
+
+  const bot = validateContributionAssessment({
+    ...validAssessment,
+    contributor: {
+      platform: "github",
+      id: "49699333",
+      login: "dependabot[bot]",
+      profileUrl: "https://github.com/apps/dependabot",
+      kind: "bot",
+    },
+  });
+  assert.equal(bot.ok, true);
+});
+
+test("rejects non-canonical and impossible merged dates", () => {
+  for (const mergedAt of ["2026-02-31T00:00:00.000Z", "2026-07-08", "2026-07-08T00:00:00Z"]) {
+    const result = validateContributionAssessment({
+      ...validAssessment,
+      source: { ...validAssessment.source, mergedAt },
+    });
+    assert.equal(result.ok, false);
+    assert.equal(
+      result.issues.some((issue) => issue.code === "invalid_datetime"),
+      true,
+    );
+  }
+});
+
 test("rejects unknown contribution types", () => {
   const result = validateContributionAssessment({
     ...validAssessment,

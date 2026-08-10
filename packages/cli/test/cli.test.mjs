@@ -1,11 +1,69 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
 
 import { runCli } from "../dist/index.js";
-import { retryTransientFileOperation, withFileLock } from "../dist/io.js";
+import {
+  fileExists,
+  retryTransientFileOperation,
+  withFileLock,
+  writeTextFilesAtomically,
+} from "../dist/io.js";
+
+test("fileExists distinguishes absence from filesystem failures", async () => {
+  assert.equal(
+    await fileExists("missing", async () => {
+      const error = new Error("missing");
+      error.code = "ENOENT";
+      throw error;
+    }),
+    false,
+  );
+  await assert.rejects(
+    () =>
+      fileExists("denied", async () => {
+        const error = new Error("denied");
+        error.code = "EACCES";
+        throw error;
+      }),
+    /denied/,
+  );
+});
+
+test("atomic staging cleans earlier temporary files when preparation fails", async () => {
+  await withTempDir(async (dir) => {
+    const first = join(dir, "first.txt");
+    const second = join(dir, "second.txt");
+    let writes = 0;
+    await assert.rejects(
+      () =>
+        writeTextFilesAtomically(
+          [
+            { path: first, value: "first" },
+            { path: second, value: "second" },
+          ],
+          second,
+          {
+            writeFile: async (...args) => {
+              writes += 1;
+              if (writes === 2) {
+                throw new Error("injected staging failure");
+              }
+              return writeFile(...args);
+            },
+          },
+        ),
+      /injected staging failure/,
+    );
+    assert.deepEqual(
+      (await readdir(dir)).filter((name) => name.endsWith(".clarissimi-tmp")),
+      [],
+    );
+    await assert.rejects(stat(first));
+  });
+});
 
 function assessment(overrides = {}) {
   return {

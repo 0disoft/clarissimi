@@ -46,7 +46,10 @@ for (const [index, entry] of corpus.cases.entries()) {
         ...corpus.contributor,
         ...(trustedOverrides.contributorLogin === undefined
           ? {}
-          : { login: trustedOverrides.contributorLogin }),
+          : {
+              login: trustedOverrides.contributorLogin,
+              profileUrl: `https://github.com/${trustedOverrides.contributorLogin}`,
+            }),
       },
       ...corpus.baseCandidate,
       ...entry.candidate,

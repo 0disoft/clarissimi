@@ -70,7 +70,7 @@ Example:
   "schemaVersion": "clarissimi.assessment/v1",
   "source": {
     "event": "merged_pull_request",
-    "mergedAt": "2026-07-09T08:14:19Z",
+    "mergedAt": "2026-07-09T08:14:19.000Z",
     "pullRequestNumber": 42,
     "repository": "example/project"
   },

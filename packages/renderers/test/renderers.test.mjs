@@ -498,17 +498,10 @@ test("renders an optional contributor summary table before the detailed sections
 });
 
 test("encodes unsafe Markdown link destination characters without changing URL meaning", () => {
-  const profileUrl = "https://github.com/octocat/profile (primary)\\notes\t\u0001";
   const evidenceUrl = "https://github.com/example/project/pull/42 (proof)\\details\n\u007f";
   const markdown = renderContributorsMarkdown(
     [
       assessment({
-        contributor: {
-          platform: "github",
-          id: "123456",
-          login: "octocat",
-          profileUrl,
-        },
         evidenceRefs: [
           {
             kind: "pull_request",
@@ -522,19 +515,13 @@ test("encodes unsafe Markdown link destination characters without changing URL m
     { summary: "table" },
   );
 
-  assert.equal(
-    markdown.includes(
-      "[@octocat](https://github.com/octocat/profile%20%28primary%29%5Cnotes%09%01)",
-    ),
-    true,
-  );
+  assert.equal(markdown.includes("[@octocat](https://github.com/octocat)"), true);
   assert.equal(
     markdown.includes(
       "[Proof](https://github.com/example/project/pull/42%20%28proof%29%5Cdetails%0A%7F)",
     ),
     true,
   );
-  assert.equal(markdown.includes(profileUrl), false);
   assert.equal(markdown.includes(evidenceUrl), false);
 });
 
@@ -557,7 +544,7 @@ test("rejects URL userinfo before rendering contributor or evidence links", () =
     (error) => {
       assert.equal(error instanceof RendererValidationError, true);
       assert.equal(error.issues[0].path, "$.contributor.profileUrl");
-      assert.equal(error.issues[0].code, "invalid_url_userinfo");
+      assert.equal(error.issues[0].code, "invalid_github_profile_url");
       return true;
     },
   );
@@ -608,7 +595,7 @@ test("rejects secret-bearing query and fragment values before rendering Markdown
       (error) => {
         assert.equal(error instanceof RendererValidationError, true);
         assert.equal(error.issues[0].path, "$.contributor.profileUrl");
-        assert.equal(error.issues[0].code, "unsafe_url_parameter");
+        assert.equal(error.issues[0].code, "invalid_github_profile_url");
         return true;
       },
     );
@@ -654,7 +641,7 @@ test("renders an optional contributor avatar gallery before evidence-linked deta
           platform: "github",
           id: "456",
           login: "maintainer-helper",
-          profileUrl: "https://github.com/maintainer-helper?tab=contributions&view=all",
+          profileUrl: "https://github.com/maintainer-helper",
         },
         contributionType: "security",
         source: {
@@ -669,7 +656,7 @@ test("renders an optional contributor avatar gallery before evidence-linked deta
   assert.equal(markdown.includes("## Contributor gallery"), true);
   assert.equal(
     markdown.includes(
-      '<a href="https://github.com/maintainer-helper?tab=contributions&amp;view=all"><img src="https://avatars.githubusercontent.com/u/456?s=64&v=4" width="64" height="64" alt="@maintainer-helper on GitHub"></a>',
+      '<a href="https://github.com/maintainer-helper"><img src="https://avatars.githubusercontent.com/u/456?s=64&v=4" width="64" height="64" alt="@maintainer-helper on GitHub"></a>',
     ),
     true,
   );

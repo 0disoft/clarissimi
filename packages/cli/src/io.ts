@@ -78,6 +78,7 @@ export async function withFileLock<T>(
 export async function writeTextFilesAtomically(
   entries: readonly { readonly path: string; readonly value: string }[],
   commitPointPath: string,
+  options: AtomicWriteOptions = {},
 ): Promise<void> {
   const uniqueEntries = new Map(entries.map((entry) => [entry.path, entry]));
   if (uniqueEntries.size !== entries.length || !uniqueEntries.has(commitPointPath)) {
@@ -98,28 +99,39 @@ export async function writeTextFilesAtomically(
     }
   }
 
-  const staged = await Promise.all(
-    Array.from(uniqueEntries.values()).map(async (entry) => {
-      const temporaryPath = join(dirname(entry.path), `.${randomUUID()}.clarissimi-tmp`);
-      await writeFile(temporaryPath, entry.value, { encoding: "utf8", flag: "wx", mode: 0o600 });
-      return { destination: entry.path, temporaryPath };
-    }),
-  );
-
+  const staged: { destination: string; temporaryPath: string }[] = [];
+  const writeTemporaryFile = options.writeFile ?? writeFile;
+  const renameFile = options.rename ?? rename;
+  const removeFile = options.rm ?? rm;
   try {
+    for (const entry of uniqueEntries.values()) {
+      const temporaryPath = join(dirname(entry.path), `.${randomUUID()}.clarissimi-tmp`);
+      await writeTemporaryFile(temporaryPath, entry.value, {
+        encoding: "utf8",
+        flag: "wx",
+        mode: 0o600,
+      });
+      staged.push({ destination: entry.path, temporaryPath });
+    }
     const ordered = staged
       .filter((entry) => entry.destination !== commitPointPath)
       .concat(staged.filter((entry) => entry.destination === commitPointPath));
     for (const entry of ordered) {
-      await retryTransientFileOperation(() => rename(entry.temporaryPath, entry.destination));
+      await retryTransientFileOperation(() => renameFile(entry.temporaryPath, entry.destination));
     }
   } finally {
     await Promise.all(
       staged.map((entry) =>
-        retryTransientFileOperation(() => rm(entry.temporaryPath, { force: true })),
+        retryTransientFileOperation(() => removeFile(entry.temporaryPath, { force: true })),
       ),
     );
   }
+}
+
+export interface AtomicWriteOptions {
+  readonly writeFile?: typeof writeFile;
+  readonly rename?: typeof rename;
+  readonly rm?: typeof rm;
 }
 
 export async function retryTransientFileOperation<T>(
@@ -150,12 +162,15 @@ export async function retryTransientFileOperation<T>(
   }
 }
 
-export async function fileExists(path: string): Promise<boolean> {
+export async function fileExists(path: string, statFile: typeof stat = stat): Promise<boolean> {
   try {
-    const result = await stat(path);
+    const result = await statFile(path);
     return result.isFile();
-  } catch {
-    return false;
+  } catch (error) {
+    if (isNodeError(error) && (error.code === "ENOENT" || error.code === "ENOTDIR")) {
+      return false;
+    }
+    throw error;
   }
 }
 

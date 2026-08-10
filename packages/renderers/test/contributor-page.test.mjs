@@ -80,7 +80,7 @@ test("escapes contributor content and rejects secret-bearing links", () => {
         platform: "github",
         id: "123456",
         login: '<octo & "cat">',
-        profileUrl: "https://github.com/octocat",
+        profileUrl: "https://github.com/%3Cocto%20%26%20%22cat%22%3E",
       },
     }),
   ]);
@@ -101,7 +101,7 @@ test("escapes contributor content and rejects secret-bearing links", () => {
       ]),
     (error) => {
       assert.equal(error instanceof RendererValidationError, true);
-      assert.equal(error.issues[0].code, "unsafe_url_parameter");
+      assert.equal(error.issues[0].code, "invalid_github_profile_url");
       return true;
     },
   );

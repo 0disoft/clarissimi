@@ -2165,6 +2165,8 @@ argv = [
   "docs/github-action/README.md",
   "docs/ops/release.md",
   "docs/product/04-implementation-tracker.md",
+  "packages/renderers/src/ledger.ts",
+  "packages/renderers/test/renderers.test.mjs",
   "scripts/release-notes/v0.6.2.md",
   "scripts/release-readiness.mjs",
   "scripts/test/release-readiness.test.mjs",
@@ -2188,12 +2190,12 @@ status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
-description = "Commit the reviewed v0.6.2 Action release candidate."
+description = "Commit the v0.6.2 historic-ledger compatibility fix and refreshed release candidate."
 argv = [
   "git",
   "commit",
   "-m",
-  "🔒 fix(release): prepare Action v0.6.2",
+  "🐛 fix: preserve v1 ledger timestamp compatibility",
   "-m",
   "Validation: docs, release-readiness, lint, format, migration-check, smoke, check, contract, bundle-action-check, mustflow",
 ]

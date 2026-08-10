@@ -4,7 +4,7 @@ import type { ContributionAssessment } from "@clarissimi/schemas";
 import { RendererValidationError, type PublicContributionRecord } from "./types.js";
 
 export function toPublicContributionRecord(value: unknown): PublicContributionRecord {
-  const result = canPublishAssessment(value);
+  const result = canPublishAssessment(normalizeLegacyMergedAt(value));
 
   if (!result.ok) {
     throw new RendererValidationError(
@@ -14,6 +14,30 @@ export function toPublicContributionRecord(value: unknown): PublicContributionRe
   }
 
   return sanitizePublicContributionRecord(result.value.assessment);
+}
+
+function normalizeLegacyMergedAt(value: unknown): unknown {
+  if (!isRecord(value) || !isRecord(value.source)) {
+    return value;
+  }
+
+  const mergedAt = value.source.mergedAt;
+  if (typeof mergedAt !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(mergedAt)) {
+    return value;
+  }
+
+  const canonical = new Date(mergedAt).toISOString();
+  if (canonical !== mergedAt.replace(/Z$/, ".000Z")) {
+    return value;
+  }
+
+  return {
+    ...value,
+    source: {
+      ...value.source,
+      mergedAt: canonical,
+    },
+  };
 }
 
 export function toPublicContributionRecords(

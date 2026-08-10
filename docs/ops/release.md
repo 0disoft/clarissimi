@@ -315,7 +315,8 @@ standalone CLI `clarissimi@0.1.2` under the independent npm release contract abo
 
 Patch release candidate `v0.6.2` carries the accumulated proposal-branch isolation, canonical
 contributor-record validation, deterministic contributor identity, race-safe draft writes, and
-provider-result redaction fixes from `main`. It also includes behavior-preserving Action module
+provider-result redaction fixes from `main`. It preserves existing v1 ledgers by normalizing valid
+historic UTC-second timestamps to canonical millisecond form during rebuilds. It also includes behavior-preserving Action module
 extractions and the refreshed tracked runtime bundle. Action inputs, permissions, defaults,
 persisted schemas, and maintainer approval authority remain compatible. The independently
 versioned npm CLI stays at `clarissimi@0.1.2`; the unreleased `render-page` command is not part of

@@ -3204,11 +3204,31 @@ var RendererValidationError = class extends Error {
 
 // packages/renderers/dist/ledger.js
 function toPublicContributionRecord(value) {
-  const result = canPublishAssessment(value);
+  const result = canPublishAssessment(normalizeLegacyMergedAt(value));
   if (!result.ok) {
     throw new RendererValidationError("Only valid approved assessments can be rendered as public contribution records.", result.issues);
   }
   return sanitizePublicContributionRecord(result.value.assessment);
+}
+function normalizeLegacyMergedAt(value) {
+  if (!isRecord6(value) || !isRecord6(value.source)) {
+    return value;
+  }
+  const mergedAt = value.source.mergedAt;
+  if (typeof mergedAt !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(mergedAt)) {
+    return value;
+  }
+  const canonical = new Date(mergedAt).toISOString();
+  if (canonical !== mergedAt.replace(/Z$/, ".000Z")) {
+    return value;
+  }
+  return {
+    ...value,
+    source: {
+      ...value.source,
+      mergedAt: canonical
+    }
+  };
 }
 function toPublicContributionRecords(values) {
   return values.map(toPublicContributionRecord);

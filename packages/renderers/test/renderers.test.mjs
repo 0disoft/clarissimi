@@ -67,6 +67,22 @@ test("renders approved assessments as parseable JSONL", () => {
   assert.equal(parsed[0].publicRecognitionText, "Added regression coverage for the parser crash.");
 });
 
+test("normalizes historic v1 UTC timestamps while rejecting impossible dates", () => {
+  const jsonl = renderContributionsJsonl([
+    assessment({ source: { ...source, mergedAt: "2026-07-08T00:00:00Z" } }),
+  ]);
+  const parsed = parseContributionsJsonl(jsonl);
+
+  assert.equal(parsed[0].source.mergedAt, "2026-07-08T00:00:00.000Z");
+  assert.throws(
+    () =>
+      renderContributionsJsonl([
+        assessment({ source: { ...source, mergedAt: "2026-02-31T00:00:00Z" } }),
+      ]),
+    RendererValidationError,
+  );
+});
+
 test("keeps approved ledger output on the MVP single-file path", () => {
   assert.equal(CONTRIBUTIONS_JSONL_PATH, ".clarissimi/contributions.jsonl");
   assert.equal(RENDERED_OUTPUT_PATHS.contributionsJsonl, CONTRIBUTIONS_JSONL_PATH);

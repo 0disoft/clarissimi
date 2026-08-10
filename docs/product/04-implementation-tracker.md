@@ -1548,6 +1548,8 @@ Accepted scope:
 - enforce canonical approved contributor records and deterministic contribution identity
 - make concurrent draft writes race safe
 - harden provider-result redaction for structured and embedded secret-bearing values
+- normalize valid historic v1 UTC-second ledger timestamps during rebuilds while continuing to
+  reject impossible dates
 - retain existing Action inputs, permissions, defaults, persisted schemas, and maintainer approval
   authority
 - ship the refreshed tracked Action bundle without publishing a new standalone npm CLI version

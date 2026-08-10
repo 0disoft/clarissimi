@@ -91,6 +91,31 @@ test("redacts nested JSON values but preserves object shape", () => {
   assert.equal(result.report.occurrences.length, 2);
 });
 
+test("redacts sensitive JSON keys regardless of value shape", () => {
+  const result = redactJson({
+    token: "synthetic-secret-value-123456789",
+    authorization: "Bearer synthetic-secret-value-123456789",
+    apiKey: "synthetic-secret-value-123456789",
+    nested: {
+      "set-cookie": ["session=synthetic-secret-value-123456789"],
+    },
+  });
+
+  assert.deepEqual(result.value, {
+    token: REDACTION_PLACEHOLDER,
+    authorization: REDACTION_PLACEHOLDER,
+    apiKey: REDACTION_PLACEHOLDER,
+    nested: {
+      "set-cookie": REDACTION_PLACEHOLDER,
+    },
+  });
+  assert.equal(result.report.changed, true);
+  assert.deepEqual(
+    result.report.occurrences.map((occurrence) => occurrence.kind),
+    Array(4).fill("sensitive_json_key"),
+  );
+});
+
 test("reports unchanged text without false positives", () => {
   const result = redactText("Added regression coverage for parser crash.");
 

@@ -129,6 +129,64 @@ test("creates a draft assessment from an OpenAI-compatible response", async () =
   assert.equal(requestText.includes("[REDACTED]"), true);
 });
 
+test("keeps secret canaries out of the provider transport payload", async () => {
+  const canary = "synthetic-secret-canary-123456789";
+  let requestText = "";
+  const provider = createOpenAiCompatibleContributionDraftProvider({
+    model: "clarissimi-test-model",
+    token: "unit-token",
+    fetch: async (_url, init) => {
+      requestText = String(init.body);
+      return jsonResponse({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                contributionType: "test",
+                affectedArea: "provider payload regression coverage",
+                impactLevel: "medium",
+                evidenceSummary: "Added coverage for the provider payload boundary.",
+                suggestedBadge: "Boundary Guard",
+                publicRecognitionText: "Protected provider payload handling.",
+                confidence: 0.9,
+              }),
+            },
+          },
+        ],
+      });
+    },
+  });
+  const evidence = prepareEvidenceForProvider({
+    source,
+    items: [
+      {
+        kind: "pull_request",
+        id: "PR-42",
+        url: `https://github.com/example/project/pull/42?access_token=${canary}#${canary}`,
+        title: "Provider payload boundary",
+        metadata: {
+          authorization: `Bearer ${canary}`,
+          apiKey: canary,
+          nested: { token: canary },
+          status: "modified",
+          additions: 4,
+        },
+      },
+    ],
+  });
+
+  await provider.createAssessment({ contributor, preparedEvidence: evidence });
+
+  assert.equal(requestText.includes(canary), false);
+  const userPayload = JSON.parse(JSON.parse(requestText).messages[1].content);
+  assert.deepEqual(userPayload.evidenceItems[0].metadata, {
+    status: "modified",
+    additions: 4,
+  });
+  assert.equal("url" in userPayload.evidenceItems[0], false);
+  assert.equal("url" in userPayload.evidenceRefs[0], false);
+});
+
 test("can disable provider thinking for OpenAI-compatible providers that support it", async () => {
   const requests = [];
   const provider = createOpenAiCompatibleContributionDraftProvider({

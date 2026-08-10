@@ -8,7 +8,8 @@ export type RedactionKind =
   | "openai_token"
   | "anthropic_token"
   | "gemini_token"
-  | "generic_secret_assignment";
+  | "generic_secret_assignment"
+  | "sensitive_json_key";
 
 export interface RedactionOccurrence {
   readonly kind: RedactionKind;

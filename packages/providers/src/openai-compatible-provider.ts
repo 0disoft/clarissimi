@@ -351,17 +351,34 @@ function buildSystemPrompt(): string {
 
 function buildProviderPayload(input: ProviderAssessmentInput): Record<string, unknown> {
   return {
-    contributor: input.contributor,
-    source: input.preparedEvidence.source,
-    evidenceRefs: input.preparedEvidence.evidenceRefs,
+    contributor: {
+      platform: input.contributor.platform,
+      id: input.contributor.id,
+      login: input.contributor.login,
+      profileUrl: input.contributor.profileUrl,
+      ...(input.contributor.kind === undefined ? {} : { kind: input.contributor.kind }),
+    },
+    source: {
+      repository: input.preparedEvidence.source.repository,
+      event: input.preparedEvidence.source.event,
+      pullRequestNumber: input.preparedEvidence.source.pullRequestNumber,
+      ...(input.preparedEvidence.source.mergedAt === undefined
+        ? {}
+        : { mergedAt: input.preparedEvidence.source.mergedAt }),
+    },
+    evidenceRefs: input.preparedEvidence.evidenceRefs.map((ref) => ({
+      kind: ref.kind,
+      id: ref.id,
+      ...(ref.title === undefined ? {} : { title: ref.title }),
+      ...(ref.excerpt === undefined ? {} : { excerpt: ref.excerpt }),
+    })),
     evidenceItems: input.preparedEvidence.items.map((item) => ({
       kind: item.kind,
       id: item.id,
-      url: item.url,
       title: item.title,
       excerpt: item.excerpt,
       text: item.text,
-      metadata: item.metadata,
+      metadata: allowlistedProviderMetadata(item.metadata),
     })),
     redaction: {
       changed: input.preparedEvidence.redactionReport.changed,
@@ -369,6 +386,34 @@ function buildProviderPayload(input: ProviderAssessmentInput): Record<string, un
     },
     hints: input.hints ?? {},
   };
+}
+
+function allowlistedProviderMetadata(
+  metadata: ProviderAssessmentInput["preparedEvidence"]["items"][number]["metadata"],
+): Record<string, string | number> | undefined {
+  if (!isProviderMetadataRecord(metadata)) {
+    return undefined;
+  }
+
+  const record = metadata as Readonly<Record<string, unknown>>;
+  const allowedKeys = ["status", "additions", "deletions", "sourceIndex"] as const;
+  const result: Record<string, string | number> = {};
+  for (const key of allowedKeys) {
+    const value = record[key];
+    if (typeof value === "string" || (typeof value === "number" && Number.isFinite(value))) {
+      result[key] = value;
+    }
+  }
+
+  return Object.keys(result).length === 0 ? undefined : result;
+}
+
+function isProviderMetadataRecord(
+  value: ProviderAssessmentInput["preparedEvidence"]["items"][number]["metadata"],
+): value is Exclude<NonNullable<typeof value>, readonly unknown[]> {
+  return (
+    value !== undefined && value !== null && typeof value === "object" && !Array.isArray(value)
+  );
 }
 
 function parseAssessmentDraft(

@@ -51,6 +51,21 @@ const REDACTION_RULES: readonly RedactionRule[] = [
   },
 ];
 
+const SENSITIVE_JSON_KEYS = new Set([
+  "api_key",
+  "apikey",
+  "authorization",
+  "client_secret",
+  "cookie",
+  "password",
+  "private_key",
+  "refresh_token",
+  "set_cookie",
+  "signature",
+  "token",
+  "access_token",
+]);
+
 export function redactText(input: string): RedactedText {
   const occurrences: RedactionOccurrence[] = [];
   let text = input;
@@ -105,11 +120,27 @@ function redactJsonValue(
 
   if (value !== null && typeof value === "object") {
     return Object.fromEntries(
-      Object.entries(value).map(([key, entry]) => [key, redactJsonValue(entry, occurrences)]),
+      Object.entries(value).map(([key, entry]) => {
+        if (isSensitiveJsonKey(key)) {
+          occurrences.push({
+            kind: "sensitive_json_key",
+            replacement: REDACTION_PLACEHOLDER,
+            start: 0,
+            end: typeof entry === "string" ? entry.length : 0,
+          });
+          return [key, REDACTION_PLACEHOLDER];
+        }
+
+        return [key, redactJsonValue(entry, occurrences)];
+      }),
     );
   }
 
   return value;
+}
+
+function isSensitiveJsonKey(key: string): boolean {
+  return SENSITIVE_JSON_KEYS.has(key.trim().toLowerCase().replaceAll("-", "_"));
 }
 
 function buildReport(occurrences: readonly RedactionOccurrence[]): RedactionReport {

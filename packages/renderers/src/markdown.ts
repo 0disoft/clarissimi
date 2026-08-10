@@ -4,6 +4,7 @@ import type { ContributorRecognitionProfile, PublicRecognitionSummary } from "./
 import { deriveContributorProfiles } from "./contributors.js";
 import type { ContributorDisplayOptions } from "./contributors.js";
 import { normalizeSafeHttpsUrl } from "./safe-url.js";
+import { compareDeterministically } from "./deterministic.js";
 
 const GALLERY_AVATAR_SIZE = 64;
 const GALLERY_ROW_SIZE = 12;
@@ -150,7 +151,7 @@ function renderTypeBreakdown(profile: ContributorRecognitionProfile): string {
   });
 
   return Array.from(typeCounts.entries())
-    .sort(([left], [right]) => left.localeCompare(right))
+    .sort(([left], [right]) => compareDeterministically(left, right))
     .map(([type, count]) => `${escapeMarkdown(type)} ${count}`)
     .join(" · ");
 }

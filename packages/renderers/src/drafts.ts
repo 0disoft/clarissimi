@@ -54,6 +54,7 @@ function sanitizeDraftReviewRecord(assessment: ContributionAssessment): DraftRev
       id: assessment.contributor.id,
       login: assessment.contributor.login,
       profileUrl: assessment.contributor.profileUrl,
+      ...(assessment.contributor.kind === undefined ? {} : { kind: assessment.contributor.kind }),
     },
     contributionType: assessment.contributionType,
     affectedArea: assessment.affectedArea,

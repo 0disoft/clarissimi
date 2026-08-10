@@ -10,6 +10,7 @@ import {
   buildContributorsJsonDocument,
   buildMaintainerRecentRecognitionShareDocument,
   buildStaticContributionsDocument,
+  deriveContributorProfiles,
   draftReviewPathForAssessment,
   parseContributionsJsonl,
   renderContributionsJsonl,
@@ -178,6 +179,13 @@ test("rejects draft assessments before rendering public outputs", () => {
 test("renders sanitized draft review JSON for inbox staging", () => {
   const draft = assessment({
     maintainerApprovalStatus: "draft",
+    contributor: {
+      platform: "github",
+      id: "49699333",
+      login: "dependabot[bot]",
+      profileUrl: "https://github.com/apps/dependabot",
+      kind: "bot",
+    },
     evidenceRefs: [
       {
         kind: "pull_request",
@@ -194,6 +202,7 @@ test("renders sanitized draft review JSON for inbox staging", () => {
   const parsed = JSON.parse(rendered);
 
   assert.equal(parsed.maintainerApprovalStatus, "draft");
+  assert.equal(parsed.contributor.kind, "bot");
   assert.equal(parsed.evidenceRefs[0].excerpt, undefined);
   assert.equal(rendered.includes("PATCH_EXCERPT_SENTINEL"), false);
   assert.equal(rendered.includes("PROVIDER_RAW_SENTINEL"), false);
@@ -201,6 +210,30 @@ test("renders sanitized draft review JSON for inbox staging", () => {
   assert.equal(
     draftReviewPathForAssessment(draft),
     ".clarissimi/drafts/example-project-merged_pull_request-42.json",
+  );
+});
+
+test("uses locale-independent code-unit contributor ordering", () => {
+  const profiles = deriveContributorProfiles(
+    ["zeta", "älex", "åke", "anna"].map((login, index) =>
+      assessment({
+        contributor: {
+          platform: "github",
+          id: String(index),
+          login,
+          profileUrl: `https://github.com/${encodeURIComponent(login)}`,
+        },
+        source: {
+          ...assessment().source,
+          pullRequestNumber: index + 1,
+        },
+      }),
+    ),
+  );
+
+  assert.deepEqual(
+    profiles.map((profile) => profile.contributor.login),
+    ["anna", "zeta", "älex", "åke"],
   );
 });
 

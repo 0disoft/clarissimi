@@ -8,6 +8,7 @@ import {
   type PublicRecognitionSummary,
 } from "./types.js";
 import { renderPrettyJson, toPublicContributionRecords } from "./ledger.js";
+import { compareDeterministically } from "./deterministic.js";
 
 export function deriveContributorProfiles(
   values: readonly unknown[],
@@ -124,8 +125,8 @@ function compareContributorProfiles(
   right: ContributorRecognitionProfile,
 ): number {
   return (
-    left.contributor.login.localeCompare(right.contributor.login) ||
-    left.contributor.id.localeCompare(right.contributor.id)
+    compareDeterministically(left.contributor.login, right.contributor.login) ||
+    compareDeterministically(left.contributor.id, right.contributor.id)
   );
 }
 
@@ -134,12 +135,12 @@ function compareRecognitionSummaries(
   right: PublicRecognitionSummary,
 ): number {
   return (
-    left.source.repository.localeCompare(right.source.repository) ||
+    compareDeterministically(left.source.repository, right.source.repository) ||
     left.source.pullRequestNumber - right.source.pullRequestNumber ||
-    left.publicRecognitionText.localeCompare(right.publicRecognitionText)
+    compareDeterministically(left.publicRecognitionText, right.publicRecognitionText)
   );
 }
 
 function uniqueSorted<T extends string | ContributionType>(values: readonly T[]): readonly T[] {
-  return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right));
+  return Array.from(new Set(values)).sort(compareDeterministically);
 }

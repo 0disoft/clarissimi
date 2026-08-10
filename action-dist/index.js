@@ -3366,7 +3366,8 @@ function sanitizeDraftReviewRecord(assessment) {
       platform: assessment.contributor.platform,
       id: assessment.contributor.id,
       login: assessment.contributor.login,
-      profileUrl: assessment.contributor.profileUrl
+      profileUrl: assessment.contributor.profileUrl,
+      ...assessment.contributor.kind === void 0 ? {} : { kind: assessment.contributor.kind }
     },
     contributionType: assessment.contributionType,
     affectedArea: assessment.affectedArea,
@@ -3393,6 +3394,11 @@ function sanitizeDraftReviewRecord(assessment) {
 function sanitizePathPart(value) {
   const normalized = value.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
   return normalized.length === 0 ? "unknown" : normalized;
+}
+
+// packages/renderers/dist/deterministic.js
+function compareDeterministically(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 // packages/renderers/dist/contributors.js
@@ -3456,13 +3462,13 @@ function contributorKey(record) {
   return `${record.contributor.platform}:${record.contributor.id}`;
 }
 function compareContributorProfiles(left, right) {
-  return left.contributor.login.localeCompare(right.contributor.login) || left.contributor.id.localeCompare(right.contributor.id);
+  return compareDeterministically(left.contributor.login, right.contributor.login) || compareDeterministically(left.contributor.id, right.contributor.id);
 }
 function compareRecognitionSummaries(left, right) {
-  return left.source.repository.localeCompare(right.source.repository) || left.source.pullRequestNumber - right.source.pullRequestNumber || left.publicRecognitionText.localeCompare(right.publicRecognitionText);
+  return compareDeterministically(left.source.repository, right.source.repository) || left.source.pullRequestNumber - right.source.pullRequestNumber || compareDeterministically(left.publicRecognitionText, right.publicRecognitionText);
 }
 function uniqueSorted(values) {
-  return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right));
+  return Array.from(new Set(values)).sort(compareDeterministically);
 }
 
 // packages/renderers/dist/safe-url.js
@@ -3591,7 +3597,7 @@ function renderTypeBreakdown(profile) {
   profile.recognitions.forEach((recognition) => {
     typeCounts.set(recognition.contributionType, (typeCounts.get(recognition.contributionType) ?? 0) + 1);
   });
-  return Array.from(typeCounts.entries()).sort(([left], [right]) => left.localeCompare(right)).map(([type, count]) => `${escapeMarkdown(type)} ${count}`).join(" \xB7 ");
+  return Array.from(typeCounts.entries()).sort(([left], [right]) => compareDeterministically(left, right)).map(([type, count]) => `${escapeMarkdown(type)} ${count}`).join(" \xB7 ");
 }
 function renderRecognitionLine(recognition) {
   const text = escapeMarkdown(recognition.publicRecognitionText);

@@ -9,6 +9,7 @@ import {
   type PublicContributionRecord,
 } from "./types.js";
 import { renderPrettyJson, toPublicContributionRecords } from "./ledger.js";
+import { compareDeterministically } from "./deterministic.js";
 
 const DEFAULT_RECENT_WINDOW_DAYS = 90;
 const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
@@ -154,8 +155,8 @@ function compareRecentShareContributors(
   return (
     right.recognitionWeight - left.recognitionWeight ||
     right.recognitionCount - left.recognitionCount ||
-    left.contributor.login.localeCompare(right.contributor.login) ||
-    left.contributor.id.localeCompare(right.contributor.id)
+    compareDeterministically(left.contributor.login, right.contributor.login) ||
+    compareDeterministically(left.contributor.id, right.contributor.id)
   );
 }
 
@@ -168,7 +169,7 @@ function contributorKey(record: PublicContributionRecord): string {
 }
 
 function uniqueSorted<T extends string | ContributionType>(values: readonly T[]): readonly T[] {
-  return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right));
+  return Array.from(new Set(values)).sort(compareDeterministically);
 }
 
 interface ContributorAccumulator {

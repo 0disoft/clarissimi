@@ -875,6 +875,43 @@ test("approve-draft output can be imported into the public ledger", async () => 
   });
 });
 
+test("draft approval and import preserve automation contributor kind", async () => {
+  await withTempDir(async (dir) => {
+    const draftPath = join(dir, "automation-draft.json");
+    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+    await writeFile(
+      draftPath,
+      JSON.stringify(
+        assessment({
+          maintainerApprovalStatus: "draft",
+          contributor: {
+            platform: "github",
+            id: "49699333",
+            login: "dependabot[bot]",
+            profileUrl: "https://github.com/apps/dependabot",
+            kind: "bot",
+          },
+        }),
+      ),
+      "utf8",
+    );
+
+    const stageResult = await run(["stage-draft", "--draft", draftPath, "--json"], dir);
+    const stagedPath = JSON.parse(stageResult.stdout).stagedDraftPath;
+    const approvalResult = await run(["approve-draft", "--draft", stagedPath, "--json"], dir);
+    const importResult = await run(
+      ["import-draft", "--draft", stagedPath, "--ledger", ledger, "--json"],
+      dir,
+    );
+    const ledgerRecord = JSON.parse((await readFile(ledger, "utf8")).trim());
+
+    assert.equal(stageResult.exitCode, 0);
+    assert.equal(approvalResult.exitCode, 0);
+    assert.equal(importResult.exitCode, 0);
+    assert.equal(ledgerRecord.contributor.kind, "bot");
+  });
+});
+
 test("import-draft appends an approved agent draft and writes derived outputs", async () => {
   await withTempDir(async (dir) => {
     const draftPath = join(dir, "agent-draft.json");

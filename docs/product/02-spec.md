@@ -228,6 +228,9 @@ Tests for core correctness must use fake deterministic providers, not live LLM A
 - Before a generated or imported assessment reaches repository files or machine-readable run
   summaries, inspect its repository-visible fields for sensitive patterns. Reject unsafe content
   with field-level diagnostics that omit the matched value; do not silently rewrite approved text.
+- Inspect bounded layers of URL encoding in repository-visible links before accepting query names,
+  values, paths, or fragments. Reject encoding that remains ambiguous at the limit without
+  repeating the input value in diagnostics.
 - Security contributions require maintainer confirmation, security label, advisory reference, or
   test evidence before strong impact is recorded.
 - Provider raw responses are not logged by default.

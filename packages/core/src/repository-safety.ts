@@ -3,6 +3,8 @@ import type { ContributionAssessment, ValidationIssue } from "@clarissimi/schema
 
 const SENSITIVE_URL_PARAMETER_PATTERN =
   /(?:^|[_-])(?:access[_-]?token|auth[_-]?token|token|secret|password|api[_-]?key|private[_-]?key)(?:$|[=_-])/i;
+const MAX_URL_DECODE_LAYERS = 6;
+const ENCODED_BYTE_PATTERN = /%[0-9a-f]{2}/i;
 
 interface RepositoryTextField {
   readonly path: string;
@@ -16,7 +18,8 @@ interface UnsafeMatch {
 }
 
 export function isSensitiveUrlParameterName(name: string): boolean {
-  return SENSITIVE_URL_PARAMETER_PATTERN.test(name);
+  const decoded = decodeNestedUrlComponent(name);
+  return decoded === undefined || SENSITIVE_URL_PARAMETER_PATTERN.test(decoded);
 }
 
 export function findUnsafeRepositoryAssessmentFields(
@@ -72,10 +75,15 @@ function findSensitiveTextKind(value: string, url: boolean): UnsafeMatch | undef
     return { code: "invalid_url_userinfo", kind: "URL credentials" };
   }
   for (const [name, parameterValue] of parsed.searchParams) {
-    if (isSensitiveUrlParameterName(name)) {
+    const decodedName = decodeNestedUrlComponent(name);
+    const decodedValue = decodeNestedUrlComponent(parameterValue);
+    if (decodedName === undefined || decodedValue === undefined) {
+      return { code: "invalid_url_encoding", kind: "an invalid URL encoding" };
+    }
+    if (isSensitiveUrlParameterName(decodedName)) {
       return { code: "unsafe_url_parameter", kind: "a sensitive URL parameter" };
     }
-    const kind = redactText(`${name}=${parameterValue}`).report.occurrences[0]?.kind;
+    const kind = redactText(`${decodedName}=${decodedValue}`).report.occurrences[0]?.kind;
     if (kind !== undefined) {
       return { code: "unsafe_repository_text", kind };
     }
@@ -85,28 +93,43 @@ function findSensitiveTextKind(value: string, url: boolean): UnsafeMatch | undef
     return direct;
   }
   for (const encodedPart of [parsed.pathname, parsed.hash]) {
-    try {
-      const decoded = decodeURIComponent(encodedPart);
-      const kind = redactText(decoded).report.occurrences[0]?.kind;
-      if (kind !== undefined) {
-        return { code: "unsafe_repository_text", kind };
-      }
-      if (encodedPart === parsed.hash) {
-        const fragment = decoded.slice(1);
-        if (
-          isSensitiveUrlParameterName(fragment) ||
-          fragment
-            .split(/[?&/]/)
-            .some((part) => part.includes("=") && isSensitiveUrlParameterName(part.split("=")[0]))
-        ) {
-          return { code: "unsafe_url_parameter", kind: "a sensitive URL fragment" };
-        }
-      }
-    } catch {
+    const decoded = decodeNestedUrlComponent(encodedPart);
+    if (decoded === undefined) {
       return { code: "invalid_url_encoding", kind: "an invalid URL encoding" };
+    }
+    const kind = redactText(decoded).report.occurrences[0]?.kind;
+    if (kind !== undefined) {
+      return { code: "unsafe_repository_text", kind };
+    }
+    if (encodedPart === parsed.hash) {
+      const fragment = decoded.slice(1);
+      if (
+        isSensitiveUrlParameterName(fragment) ||
+        fragment
+          .split(/[?&/]/)
+          .some((part) => part.includes("=") && isSensitiveUrlParameterName(part.split("=")[0]))
+      ) {
+        return { code: "unsafe_url_parameter", kind: "a sensitive URL fragment" };
+      }
     }
   }
   return undefined;
+}
+
+function decodeNestedUrlComponent(value: string): string | undefined {
+  let decoded = value;
+  for (
+    let layer = 0;
+    layer < MAX_URL_DECODE_LAYERS && ENCODED_BYTE_PATTERN.test(decoded);
+    layer += 1
+  ) {
+    try {
+      decoded = decodeURIComponent(decoded);
+    } catch {
+      return undefined;
+    }
+  }
+  return ENCODED_BYTE_PATTERN.test(decoded) ? undefined : decoded;
 }
 
 function findDirectSensitiveText(value: string, scanEmbeddedUrls = true): UnsafeMatch | undefined {

@@ -121,6 +121,34 @@ test("repository safety rejects visible secrets without putting values in diagno
   assert.deepEqual(findUnsafeRepositoryAssessmentFields(assessment), []);
 });
 
+test("repository safety rejects nested URL encoding of secret names and values", () => {
+  const assessment = validAssessment();
+  const syntheticToken = `ghp_${"a".repeat(20)}`;
+  const encodedToken = [...syntheticToken]
+    .map((character) => `%${character.codePointAt(0).toString(16).padStart(2, "0")}`)
+    .join("");
+  const twiceEncodedToken = encodeURIComponent(encodedToken);
+  const issues = findUnsafeRepositoryAssessmentFields({
+    ...assessment,
+    affectedArea: "See https://example.invalid/docs?access%255Ftoken=short",
+    evidenceRefs: [
+      {
+        ...assessment.evidenceRefs[0],
+        url: `https://example.invalid/proof?reference=${twiceEncodedToken}`,
+      },
+    ],
+  });
+
+  assert.deepEqual(
+    issues.map(({ path, code }) => ({ path, code })),
+    [
+      { path: "$.affectedArea", code: "unsafe_url_parameter" },
+      { path: "$.evidenceRefs[].url", code: "unsafe_repository_text" },
+    ],
+  );
+  assert.equal(JSON.stringify(issues).includes(syntheticToken), false);
+});
+
 test("prepares provider evidence by redacting all text-bearing fields", () => {
   const address = `contributor@${["example", "invalid"].join(".")}`;
   const keyName = ["OPENAI", "API", "KEY"].join("_");

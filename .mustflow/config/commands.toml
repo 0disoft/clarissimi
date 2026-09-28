@@ -74,6 +74,22 @@ paths = ["package.json", "pnpm-lock.yaml"]
 concurrency = "exclusive_writer"
 description = "Clarissimi root dependency declarations and pnpm resolution lock."
 
+[resources.installed_dependencies]
+type = "path"
+paths = [
+  "node_modules",
+  "packages/action/node_modules",
+  "packages/cli/node_modules",
+  "packages/core/node_modules",
+  "packages/github/node_modules",
+  "packages/providers/node_modules",
+  "packages/redaction/node_modules",
+  "packages/renderers/node_modules",
+  "packages/schemas/node_modules",
+]
+concurrency = "exclusive_writer"
+description = "Ignored dependencies installed from the frozen workspace lockfile."
+
 [intents.changes_status]
 status = "configured"
 lifecycle = "oneshot"
@@ -106,6 +122,44 @@ network = false
 destructive = false
 required_after = ["code_change", "documentation_change", "before_final_report"]
 
+[intents.dependency_install_frozen]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Install Clarissimi workspace dependencies from the frozen lockfile without changing manifests."
+argv = ["pnpm", "install", "--frozen-lockfile"]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = [
+  "node_modules",
+  "packages/action/node_modules",
+  "packages/cli/node_modules",
+  "packages/core/node_modules",
+  "packages/github/node_modules",
+  "packages/providers/node_modules",
+  "packages/redaction/node_modules",
+  "packages/renderers/node_modules",
+  "packages/schemas/node_modules",
+]
+effects = [
+  { type = "write", mode = "replace", path = "node_modules", lock = "installed_dependencies", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/action/node_modules", lock = "installed_dependencies", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/cli/node_modules", lock = "installed_dependencies", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/core/node_modules", lock = "installed_dependencies", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/github/node_modules", lock = "installed_dependencies", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/providers/node_modules", lock = "installed_dependencies", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/redaction/node_modules", lock = "installed_dependencies", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/renderers/node_modules", lock = "installed_dependencies", concurrency = "exclusive" },
+  { type = "write", mode = "replace", path = "packages/schemas/node_modules", lock = "installed_dependencies", concurrency = "exclusive" },
+]
+env_policy = "allowlist"
+env_allowlist = ["LOCALAPPDATA"]
+network = true
+destructive = false
+required_after = ["isolated_worktree_without_installed_dependencies"]
+
 [intents.dependency_update_latest]
 status = "configured"
 lifecycle = "oneshot"
@@ -126,6 +180,44 @@ env_allowlist = ["LOCALAPPDATA"]
 network = true
 destructive = false
 required_after = ["user_authorized_latest_dependency_refresh"]
+
+[intents.git_stage_clarissimi_improvements]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Stage only Clarissimi improvement paths in the isolated worktree; inspect exact staged names before committing."
+argv = ["git", "add", "--", ".mustflow/config/commands.toml", ".mustflow/config/manifest.lock.toml", "packages", "docs", "README.md", ".github/workflows/ci.yml"]
+cwd = "."
+timeout_seconds = 60
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/index", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["clarissimi_improvement_validation_complete"]
+
+[intents.git_commit_clarissimi_improvements]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["git_commit"]
+description = "Commit the exact reviewed staged Clarissimi improvement paths using a task-specific message."
+argv = ["git", "commit", "--file", ".mustflow/state/commit-message-clarissimi-improvements.txt"]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/index", ".git/refs/**", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+network = false
+destructive = false
+required_after = ["git_stage_clarissimi_improvements", "exact_staged_path_review"]
 
 [intents.build]
 status = "configured"

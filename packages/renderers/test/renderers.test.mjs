@@ -186,6 +186,30 @@ test("rejects duplicate contribution identity while appending", () => {
   );
 });
 
+test("treats GitHub repository spelling as one identity without changing stored display", () => {
+  const uppercaseSource = { ...source, repository: "Example/Project" };
+  assert.throws(
+    () => appendPublicContributionRecord([assessment({ source: uppercaseSource })], assessment()),
+    (error) =>
+      error instanceof RendererValidationError && error.issues[0].code === "duplicate_source",
+  );
+  assert.throws(
+    () =>
+      appendPublicContributionRecord(
+        [assessment({ source: uppercaseSource }), assessment()],
+        assessment({ source: { ...source, pullRequestNumber: 43 } }),
+      ),
+    (error) =>
+      error instanceof RendererValidationError && error.issues[0].code === "duplicate_source",
+  );
+
+  const records = appendPublicContributionRecord(
+    [assessment({ source: { ...uppercaseSource, pullRequestNumber: 41 } })],
+    assessment(),
+  );
+  assert.equal(records[0].source.repository, "Example/Project");
+});
+
 test("rejects duplicate identities already present in a ledger before appending", () => {
   assert.throws(
     () =>

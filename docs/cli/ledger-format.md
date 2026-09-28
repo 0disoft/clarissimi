@@ -92,6 +92,8 @@ derive a stable identity from `source.repository`, `source.event`, and `source.p
 Within a ledger, public records must be unique for contributor platform, contributor id, repository,
 event, and pull request number. `validate-ledger`, `import-draft`, and `rebuild` reject duplicate
 contribution identities so derived outputs do not double-count recognition.
+GitHub repository names are compared without case when detecting duplicates; each stored record
+keeps the spelling it was given.
 
 Derived profiles and analytics group records by the stable contributor `platform` and platform-issued
 `id`. The newest approved record supplies mutable display fields such as login and profile URL, so an

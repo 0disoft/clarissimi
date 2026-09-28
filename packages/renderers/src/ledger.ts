@@ -209,7 +209,7 @@ function contributionIdentityKey(record: PublicContributionRecord): string {
   return [
     record.contributor.platform,
     record.contributor.id,
-    record.source.repository,
+    record.source.repository.toLowerCase(),
     record.source.event,
     String(record.source.pullRequestNumber),
   ].join("\0");

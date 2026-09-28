@@ -32,6 +32,43 @@ test("required gate accepts one trusted decision for the current head", async ()
   });
 });
 
+test("required gate rejects a member who currently has only read access", async () => {
+  await withEvent(async (eventPath) => {
+    await assert.rejects(
+      () =>
+        runActionReviewGate({
+          eventPath,
+          gateMode: "required",
+          commentClient: commentClient(
+            [decisionComment({ headSha, authorAssociation: "MEMBER" })],
+            "read",
+          ),
+        }),
+      (error) => error instanceof ReviewGateError && error.code === "review_decision_required",
+    );
+  });
+});
+
+test("required gate fails closed when current permission lookup is unavailable", async () => {
+  await withEvent(async (eventPath) => {
+    const missingMethod = commentClient([decisionComment({ headSha })]);
+    delete missingMethod.getRepositoryPermission;
+    await assert.rejects(
+      () => runActionReviewGate({ eventPath, gateMode: "required", commentClient: missingMethod }),
+      (error) => error instanceof ReviewGateError && error.code === "review_decision_required",
+    );
+
+    const client = commentClient([decisionComment({ headSha })]);
+    client.getRepositoryPermission = async () => {
+      throw new Error("lookup unavailable");
+    };
+    await assert.rejects(
+      () => runActionReviewGate({ eventPath, gateMode: "required", commentClient: client }),
+      (error) => error instanceof ReviewGateError && error.code === "review_decision_required",
+    );
+  });
+});
+
 test("required gate accepts skip and visible audit text after a case-insensitive repository match", async () => {
   await withEvent(async (eventPath) => {
     const comment = decisionComment({ headSha, decision: "skip", repository: "Example/Project" });
@@ -95,10 +132,15 @@ function decisionComment({
   };
 }
 
-function commentClient(comments) {
+function commentClient(comments, permission = "write") {
   return {
     async listPullRequestComments() {
       return { comments, complete: true };
+    },
+    async getRepositoryPermission({ repository, username }) {
+      assert.equal(repository, "example/project");
+      assert.equal(username, "maintainer");
+      return permission;
     },
     async createPullRequestComment() {
       throw new Error("not used");

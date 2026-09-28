@@ -108,10 +108,12 @@ implemented propose-mode sequencing is recorded in
 
 ## Pre-Merge Decision Gate
 
-Gate mode only reads the pull request event and bounded issue comments. It never checks out or
+The current development gate reads the pull request event, bounded issue comments, and repository
+permissions. The released `v0.6.2` gate reads only the event and comments. Neither checks out or
 executes the pull request head, calls a provider, or changes repository state. Start with
-`gate-mode: advisory`; after the team has exercised the flow, switch the same job to `required` and
-make `Clarissimi review decision` a required ruleset check.
+`gate-mode: advisory`; after a release includes current permission verification and the team has
+exercised the flow, switch the same job to `required` and make `Clarissimi review decision` a
+required ruleset check.
 
 Gate mode is available from immutable release `v0.6.2`:
 
@@ -154,8 +156,12 @@ Clarissimi decision: approved for the current revision.
 ```
 
 Use `decision: skip` when the pull request must merge without recognition, such as a generated
-Clarissimi proposal. Only comments authored by a GitHub user associated as `OWNER`, `MEMBER`, or
-`COLLABORATOR` count. After adding or editing the decision, rerun the existing gate job. A new push
+Clarissimi proposal. The current development source also requires the comment author to have
+current `write` or `admin` repository permission; a lookup failure blocks required mode. Immutable
+`v0.6.2` checks only the comment's `OWNER`, `MEMBER`, or `COLLABORATOR` association, so its gate
+cannot establish current write access in an organization repository. Keep that release in advisory
+mode where organization membership does not imply write access. After adding or editing the
+decision, rerun the existing gate job. A new push
 changes the head SHA and deliberately makes the prior decision stale. Required mode then blocks;
 advisory mode reports the same state but exits successfully.
 

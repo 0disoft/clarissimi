@@ -85,6 +85,39 @@ test("GitHub pull request client finds open proposal pull requests", async () =>
   );
 });
 
+test("GitHub pull request client reads current repository permission and treats missing users as none", async () => {
+  const requests = [];
+  const client = createGitHubPullRequestClient({
+    token: "test-token",
+    fetch: async (url, init) => {
+      requests.push({ url: String(url), method: init.method });
+      if (String(url).includes("/missing/permission")) {
+        return jsonResponse({ message: "Not Found" }, 404);
+      }
+      return jsonResponse({ permission: "write", role_name: "maintain" });
+    },
+  });
+
+  assert.equal(
+    await client.getRepositoryPermission({ repository: "sample/project", username: "maintainer" }),
+    "write",
+  );
+  assert.equal(
+    await client.getRepositoryPermission({ repository: "sample/project", username: "missing" }),
+    "none",
+  );
+  assert.deepEqual(requests, [
+    {
+      url: "https://api.github.com/repos/sample/project/collaborators/maintainer/permission",
+      method: "GET",
+    },
+    {
+      url: "https://api.github.com/repos/sample/project/collaborators/missing/permission",
+      method: "GET",
+    },
+  ]);
+});
+
 test("GitHub pull request client rejects unsafe API base URLs before requests", () => {
   for (const apiUrl of [
     "not a URL",

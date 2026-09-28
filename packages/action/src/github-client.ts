@@ -14,6 +14,8 @@ import type {
   SourcePullRequestCommentListResult,
   SourcePullRequestCommentLookupInput,
   SourcePullRequestCommentUpdateInput,
+  SourceRepositoryPermission,
+  SourceRepositoryPermissionLookupInput,
 } from "./source-comment.js";
 
 const DEFAULT_GITHUB_API_URL = "https://api.github.com";
@@ -215,6 +217,49 @@ export function createGitHubPullRequestClient(
     },
 
     listPullRequestComments,
+
+    async getRepositoryPermission(
+      input: SourceRepositoryPermissionLookupInput,
+    ): Promise<SourceRepositoryPermission> {
+      splitRepository(input.repository);
+      const url = new URL(
+        `${apiUrl}/repos/${input.repository}/collaborators/${encodeURIComponent(input.username)}/permission`,
+      );
+      let response: unknown;
+      try {
+        response = await requestJsonWithRetry(
+          fetchImpl,
+          token,
+          url,
+          { method: "GET" },
+          { timeoutMs, maxResponseBytes, sleep, random },
+        );
+      } catch (error) {
+        if (error instanceof ProposalPullRequestClientError && error.code === "not_found") {
+          return "none";
+        }
+        throw error;
+      }
+      if (!isRecord(response)) {
+        throw new ProposalPullRequestClientError(
+          "unexpected",
+          "GitHub repository permission response must be an object.",
+        );
+      }
+      const permission = response.permission;
+      if (
+        permission !== "admin" &&
+        permission !== "write" &&
+        permission !== "read" &&
+        permission !== "none"
+      ) {
+        throw new ProposalPullRequestClientError(
+          "unexpected",
+          "GitHub repository permission response has an unknown permission.",
+        );
+      }
+      return permission;
+    },
 
     async createPullRequestComment(
       input: SourcePullRequestCommentCreateInput,

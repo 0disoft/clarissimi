@@ -301,7 +301,9 @@ or executes pull request head code. It checks whether one trusted maintainer dec
 the current repository, pull request number, and head commit SHA. `advisory` reports a missing or
 stale decision without blocking; `required` fails so a ruleset can block merge. Accepted decisions
 are `approved` and `skip`. A new head commit invalidates the prior decision, and duplicate current
-decisions fail closed. Gate mode remains separate from post-merge ledger publication.
+decisions fail closed. A marked comment must come from a GitHub user associated with the repository
+and that user must currently have `write` or `admin` repository permission. An unavailable permission
+lookup fails closed. Gate mode remains separate from post-merge ledger publication.
 
 Both `propose` and `promote-draft` must preserve the append-only ledger. They parse and validate the
 checked-out canonical JSONL, reject malformed or duplicate existing identities, reject a new

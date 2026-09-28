@@ -357,6 +357,9 @@ test("environment runner gates an explicit INPUT_EVENT_PATH and writes gate outp
               ],
             };
           },
+          async getRepositoryPermission() {
+            return "write";
+          },
           async createPullRequestComment() {
             throw new Error("not used");
           },

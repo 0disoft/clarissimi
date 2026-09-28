@@ -65,9 +65,10 @@ automation-first repositories; it never force-pushes and still loses to branch p
 concurrent update. Copy the complete least-privilege workflows from the
 [Action guide](docs/github-action/README.md).
 
-`gate` is available in immutable Action release `v0.6.2`. Do not point a consumer at `main`; use
-the release tag documented in the Action guide. The same stable job can begin in `advisory` mode and later switch to
-`required` without changing the check name used by a GitHub ruleset.
+`gate` is available in immutable Action release `v0.6.2`. That release checks comment author
+association; current development source also verifies current repository write permission. Keep
+`v0.6.2` advisory for organization repositories where membership does not imply write access. Do
+not point a consumer at `main`; use the release tag documented in the Action guide.
 
 Choose one optional `CONTRIBUTORS.md` summary without replacing the detailed recognition history:
 

@@ -12,6 +12,7 @@ import type { SourcePullRequestComment, SourcePullRequestCommentClient } from ".
 const REVIEW_DECISION_MARKER = "<!-- clarissimi:review-decision:v1";
 const REVIEW_DECISION_END = "-->";
 const MAX_REVIEW_COMMENT_LENGTH = 4_096;
+const MAX_REVIEW_PERMISSION_LOOKUPS = 16;
 const TRUSTED_AUTHOR_ASSOCIATIONS = new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
 
 export interface ActionReviewGateInput {
@@ -72,19 +73,60 @@ export async function runActionReviewGate(
   const marked = listed.comments.filter((comment) =>
     comment.body.startsWith(REVIEW_DECISION_MARKER),
   );
-  const trusted = marked.filter(isTrustedMaintainerComment);
-  const parsed = trusted.flatMap((comment) => {
+  const candidates = marked.filter(isTrustedMaintainerComment);
+  const parsed = candidates.flatMap((comment) => {
     const decision = parseDecisionComment(comment);
-    return decision === undefined ? [] : [decision];
+    return decision === undefined ? [] : [{ comment, decision }];
   });
   const matchingSource = parsed.filter(
-    (decision) =>
+    ({ decision }) =>
       decision.repository.toLowerCase() === event.repository.toLowerCase() &&
       decision.pullRequestNumber === event.pullRequestNumber,
   );
-  const current = matchingSource.filter(
-    (decision) => decision.headSha.toLowerCase() === event.headSha.toLowerCase(),
+  const currentCandidates = matchingSource.filter(
+    ({ decision }) => decision.headSha.toLowerCase() === event.headSha.toLowerCase(),
   );
+  if (currentCandidates.length > MAX_REVIEW_PERMISSION_LOOKUPS) {
+    return finishGate(
+      input.gateMode,
+      null,
+      "Too many review decisions target the current PR head SHA.",
+    );
+  }
+  const permissions = new Map<string, boolean>();
+  const current: ReviewDecision[] = [];
+  for (const { comment, decision } of currentCandidates) {
+    const login = comment.authorLogin.toLowerCase();
+    let canApprove = permissions.get(login);
+    if (canApprove === undefined) {
+      const lookupPermission = input.commentClient.getRepositoryPermission;
+      if (lookupPermission === undefined) {
+        return finishGate(
+          input.gateMode,
+          null,
+          "Clarissimi cannot verify current maintainer permissions.",
+        );
+      }
+      let permission: string;
+      try {
+        permission = await lookupPermission.call(input.commentClient, {
+          repository: event.repository,
+          username: comment.authorLogin,
+        });
+      } catch {
+        return finishGate(
+          input.gateMode,
+          null,
+          "Clarissimi could not verify current maintainer permissions.",
+        );
+      }
+      canApprove = permission === "admin" || permission === "write";
+      permissions.set(login, canApprove);
+    }
+    if (canApprove) {
+      current.push(decision);
+    }
+  }
 
   if (current.length > 1) {
     return finishGate(
@@ -100,6 +142,13 @@ export async function runActionReviewGate(
       `Maintainer decision ${current[0].decision} matches the current PR head SHA.`,
     );
   }
+  if (currentCandidates.length > current.length || marked.length > candidates.length) {
+    return finishGate(
+      input.gateMode,
+      null,
+      "Review decision markers from authors without current maintainer access were ignored.",
+    );
+  }
   if (matchingSource.length > 0) {
     return finishGate(
       input.gateMode,
@@ -107,14 +156,7 @@ export async function runActionReviewGate(
       "The maintainer decision is stale because the PR head SHA changed.",
     );
   }
-  if (marked.length > trusted.length) {
-    return finishGate(
-      input.gateMode,
-      null,
-      "Review decision markers from untrusted authors were ignored.",
-    );
-  }
-  if (trusted.length > parsed.length) {
+  if (candidates.length > parsed.length) {
     return finishGate(input.gateMode, null, "A trusted review decision comment is malformed.");
   }
   return finishGate(

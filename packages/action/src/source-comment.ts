@@ -18,7 +18,17 @@ export interface SourcePullRequestCommentClient {
     input: SourcePullRequestCommentUpdateInput,
   ): Promise<SourcePullRequestComment>;
   deletePullRequestComment(input: SourcePullRequestCommentDeleteInput): Promise<void>;
+  getRepositoryPermission?(
+    input: SourceRepositoryPermissionLookupInput,
+  ): Promise<SourceRepositoryPermission>;
 }
+
+export interface SourceRepositoryPermissionLookupInput {
+  readonly repository: string;
+  readonly username: string;
+}
+
+export type SourceRepositoryPermission = "admin" | "write" | "read" | "none";
 
 export interface SourcePullRequestCommentLookupInput {
   readonly repository: string;

@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-12
+- Amended: 2026-09-29
 - Owner: Repository maintainers
 
 ## Context
@@ -33,6 +34,9 @@ unrelated program that ignores the lock from modifying the same files.
   the canonical ledger remains the recovery source and `rebuild` restores derived outputs.
 - A process terminated without cleanup can leave a stale lock that requires explicit maintainer
   inspection and removal; Clarissimi does not guess that a lock owner is dead.
+- A newly acquired lock records a PID, acquisition time, and random owner token. Normal cleanup
+  checks the token-bearing file before removal and leaves a replacement lock in place when ownership
+  has changed. These fields aid manual inspection; they are not proof that a process is still alive.
 
 ## Validation
 

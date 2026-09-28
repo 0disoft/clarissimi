@@ -187,7 +187,10 @@ regenerate the output set, then repeat the check. An optional contributor page i
 regenerated separately.
 
 The lock is local coordination, not a distributed lock. Clarissimi does not automatically delete a
-stale lock because it cannot safely prove that another writer is dead.
+stale lock because it cannot safely prove that another writer is dead. Newly created locks contain
+a PID, UTC acquisition time, and owner token. Clarissimi checks this content before normal removal
+and preserves a replacement lock if the original path changed. A PID may be reused, so these
+fields are diagnostic hints rather than authority to delete a lock.
 
 On Windows, antivirus scanners and filesystem filters can briefly return `EACCES`, `EBUSY`, or
 `EPERM` while Clarissimi replaces a staged file or removes the lock it owns. Those operations use a

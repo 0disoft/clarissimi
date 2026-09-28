@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, open, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
@@ -1009,30 +1009,58 @@ test("file locks retry transient Windows access failures while opening the owned
   await withTempDir(async (dir) => {
     const waits = [];
     let attempts = 0;
-    let closes = 0;
     const value = await withFileLock(join(dir, "ledger.lock"), async () => "locked", {
       platform: "win32",
       retryDelaysMs: [7],
       wait: async (milliseconds) => {
         waits.push(milliseconds);
       },
-      openFile: async () => {
+      openFile: async (...args) => {
         attempts += 1;
         if (attempts === 1) {
           throw Object.assign(new Error("transient lock open"), { code: "EPERM" });
         }
-        return {
-          close: async () => {
-            closes += 1;
-          },
-        };
+        return open(...args);
       },
     });
 
     assert.equal(value, "locked");
     assert.equal(attempts, 2);
-    assert.equal(closes, 1);
+    await assert.rejects(readFile(join(dir, "ledger.lock"), "utf8"));
     assert.deepEqual(waits, [7]);
+  });
+});
+
+test("file locks record their owner and preserve a replacement lock", async () => {
+  await withTempDir(async (dir) => {
+    const lockPath = join(dir, "ledger.lock");
+    await assert.rejects(
+      withFileLock(lockPath, async () => {
+        const owner = JSON.parse(await readFile(lockPath, "utf8"));
+        assert.equal(owner.pid, process.pid);
+        assert.match(owner.startedAt, /^\d{4}-\d{2}-\d{2}T/);
+        assert.match(owner.token, /^[0-9a-f-]{36}$/);
+        await rm(lockPath);
+        await writeFile(lockPath, "replacement owner\n", "utf8");
+      }),
+      /File lock ownership changed before release/,
+    );
+    assert.equal(await readFile(lockPath, "utf8"), "replacement owner\n");
+  });
+});
+
+test("file locks release their own marker without masking a task failure", async () => {
+  await withTempDir(async (dir) => {
+    const lockPath = join(dir, "ledger.lock");
+    const expected = new Error("synthetic task failure");
+    await assert.rejects(
+      withFileLock(lockPath, async () => {
+        assert.equal(JSON.parse(await readFile(lockPath, "utf8")).pid, process.pid);
+        throw expected;
+      }),
+      (error) => error === expected,
+    );
+    await assert.rejects(readFile(lockPath, "utf8"));
   });
 });
 

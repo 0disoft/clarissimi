@@ -96,12 +96,34 @@ export async function withFileLock<T>(
     throw new Error(`Unable to acquire file lock ${path}.`);
   }
 
+  const owner = `${JSON.stringify({
+    pid: process.pid,
+    startedAt: new Date().toISOString(),
+    token: randomUUID(),
+  })}\n`;
+  let ownerWritten = false;
+  let outcome:
+    | { readonly ok: true; readonly value: T }
+    | { readonly ok: false; readonly error: unknown };
   try {
-    return await task();
-  } finally {
-    await handle.close();
-    await retryTransientFileOperation(() => rm(path, { force: true }));
+    await retryTransientFileOperation(() => handle.writeFile(owner, "utf8"), options);
+    ownerWritten = true;
+    outcome = { ok: true, value: await task() };
+  } catch (error) {
+    outcome = { ok: false, error };
   }
+  await handle.close();
+  if (ownerWritten) {
+    const currentOwner = await retryTransientFileOperation(() => readFile(path, "utf8"), options);
+    if (currentOwner !== owner) {
+      throw new Error(`File lock ownership changed before release: ${path}.`);
+    }
+  }
+  await retryTransientFileOperation(() => rm(path, { force: true }), options);
+  if (!outcome.ok) {
+    throw outcome.error;
+  }
+  return outcome.value;
 }
 
 export async function writeTextFilesAtomically(

@@ -28,6 +28,13 @@ RTO and RPO are repository-scoped:
 - RPO: last pushed Git commit for canonical repository files.
 - Partial restore: restore the ledger first, then rebuild derived files.
 
+After a lock timeout, inspect the sibling `<ledger>.lock` file and confirm whether a Clarissimi
+writer is still active. New locks record a PID and acquisition time; old or interrupted locks may
+be empty. Do not remove a lock based only on age or PID because processes can overlap and PIDs can
+be reused. Once a maintainer has independently confirmed that no writer owns the lock, remove the
+stale file, validate the canonical ledger, run `rebuild --out-dir . --check`, and regenerate derived
+outputs from the ledger if the check reports drift.
+
 Integrity checks after restore:
 
 - `clarissimi validate-ledger`

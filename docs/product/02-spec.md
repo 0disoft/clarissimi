@@ -57,6 +57,10 @@ Clarissimi may collect public repository evidence such as:
 - test file changes
 - release or validation labels
 
+Issue references found in pull request text are candidates, not verified issue content. Keep the
+`owner/repo` qualifier for cross-repository references; unqualified and same-repository references
+may use `#number`.
+
 Raw evidence text is untrusted input. It can contain prompt injection, secrets, private data, or
 misleading claims.
 

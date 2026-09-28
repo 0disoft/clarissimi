@@ -125,7 +125,11 @@ export async function collectLiveMergedPullRequestEvidence(
   const fixture = toMergedPullRequestFixture(input.repository, pullRequest, files);
   const collected = collectMergedPullRequestEvidence(fixture);
   const extraItems = [
-    ...buildLinkedIssueItems(pullRequest, input.linkedIssueLimit ?? DEFAULT_LINKED_ISSUE_LIMIT),
+    ...buildLinkedIssueItems(
+      pullRequest,
+      input.repository,
+      input.linkedIssueLimit ?? DEFAULT_LINKED_ISSUE_LIMIT,
+    ),
     ...buildReviewCommentItems(
       reviewComments,
       input.reviewCommentLimit ?? DEFAULT_REVIEW_COMMENT_LIMIT,
@@ -194,10 +198,12 @@ function toChangedFileFixture(file: LiveGitHubPullRequestFile): GitHubChangedFil
 
 function buildLinkedIssueItems(
   pullRequest: LiveGitHubPullRequest,
+  repository: string,
   limit: number,
 ): EvidenceItemInput[] {
   const references = collectLinkedIssueRefs(
     `${pullRequest.title}\n${pullRequest.body ?? ""}`,
+    repository,
     limit,
   );
 
@@ -208,16 +214,27 @@ function buildLinkedIssueItems(
   }));
 }
 
-function collectLinkedIssueRefs(value: string, limit: number): readonly string[] {
+function collectLinkedIssueRefs(
+  value: string,
+  repository: string,
+  limit: number,
+): readonly string[] {
   const refs: string[] = [];
   const seen = new Set<string>();
-  const pattern = /(?:^|[\s([:{])(?:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)?#([1-9][0-9]{0,8})\b/g;
+  const pattern = /(?:^|[\s([:{])([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)?#([1-9][0-9]{0,8})\b/g;
   let match: RegExpExecArray | null;
 
   while ((match = pattern.exec(value)) !== null && refs.length < limit) {
-    const ref = `#${match[1]}`;
-    if (!seen.has(ref)) {
-      seen.add(ref);
+    const qualifiedRepository = match[1];
+    const number = match[2];
+    const ref =
+      qualifiedRepository === undefined ||
+      qualifiedRepository.toLowerCase() === repository.toLowerCase()
+        ? `#${number}`
+        : `${qualifiedRepository}#${number}`;
+    const key = ref.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
       refs.push(ref);
     }
   }

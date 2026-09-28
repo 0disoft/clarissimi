@@ -142,6 +142,24 @@ test("bounds review comments and linked issue candidates", async () => {
   assert.equal(JSON.stringify(collected).includes("@@ -0,0 +1,12 @@"), false);
 });
 
+test("keeps cross-repository issue candidates distinct from local references", async () => {
+  const collected = await collectLiveMergedPullRequestEvidence({
+    client: new FakeLiveClient({
+      pullRequest: livePullRequest({
+        title: "Fix #8 and other/project#8",
+        body: "Also closes SAMPLE/PROJECT#8 and Other/Project#8",
+      }),
+    }),
+    repository: "sample/project",
+    pullRequestNumber: 42,
+  });
+
+  assert.deepEqual(
+    collected.evidence.items.filter((item) => item.kind === "issue").map((item) => item.id),
+    ["#8", "other/project#8"],
+  );
+});
+
 test("rejects unmerged live pull requests before returning evidence", async () => {
   await assert.rejects(
     () =>

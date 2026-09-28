@@ -604,7 +604,12 @@ test("release readiness rejects missing or buried README onboarding", () => {
     .replace("- uses: 0disoft/clarissimi@v0.6.2", "")
     .replace("mode: dry-run", "")
     .replace("## Choose How Results Are Written", "## Modes")
-    .replace("`propose` is the recommended default for shared repositories.", "")
+    .replace(
+      "`propose` remains the default write mode and accepts an already approved assessment.",
+      "",
+    )
+    .replace("merged pull request events, use `stage-draft`", "")
+    .replace("then run `promote-draft` with that approved file.", "")
     .replace("include-automation-contributors: false", "")
     .replace("comment-mode: upsert", "")
     .replace("## What Clarissimi Creates", "## Files");
@@ -614,7 +619,9 @@ test("release readiness rejects missing or buried README onboarding", () => {
     "README.md must include - uses: 0disoft/clarissimi@v0.6.2.",
     "README.md must include mode: dry-run.",
     "README.md must include ## Choose How Results Are Written.",
-    "README.md must include `propose` is the recommended default for shared repositories..",
+    "README.md must include `propose` remains the default write mode and accepts an already approved assessment..",
+    "README.md must include merged pull request events, use `stage-draft`.",
+    "README.md must include then run `promote-draft` with that approved file..",
     "README.md must include include-automation-contributors: false.",
     "README.md must include comment-mode: upsert.",
     "README.md must include ## What Clarissimi Creates.",
@@ -1043,7 +1050,7 @@ test("release readiness accepts the CI operational document contract", () => {
 test("release readiness rejects CI operational document drift", () => {
   const text = createCiOperationalDocumentText()
     .replace(
-      "`lint`, `format`, `migration-check`, `benchmark:scale`, `benchmark:cli-io`, `smoke`, `check`, and",
+      "`lint`, `format`, `migration-check`, `benchmark:scale`, `benchmark:cli-io`, `smoke`, and `check`",
       "`smoke`, `check`, and `contract` with Node.js 24",
     )
     .replace(
@@ -1071,7 +1078,7 @@ test("release readiness rejects CI operational document drift", () => {
     .replace("uses `gh run list` to find the `CI` workflow run", "uses the GitHub UI");
 
   assert.deepEqual(validateCiOperationalDocumentContract(withoutHostedCiValidation), [
-    "docs/ops/ci.md must include `lint`, `format`, `migration-check`, `benchmark:scale`, `benchmark:cli-io`, `smoke`, `check`, and.",
+    "docs/ops/ci.md must include `lint`, `format`, `migration-check`, `benchmark:scale`, `benchmark:cli-io`, `smoke`, and `check`.",
     "docs/ops/ci.md must include `pnpm run benchmark:scale`: builds the workspace, runs deterministic 1,000- and 10,000-record.",
     "docs/ops/ci.md must include `pnpm run benchmark:cli-io`: runs compiled `rebuild` and `import-draft` commands against fresh.",
     "docs/ops/ci.md must include `pnpm run hosted-ci-validation`.",
@@ -2261,7 +2268,7 @@ test("release readiness rejects CI workflow command drift", () => {
   const text = createCiWorkflowText()
     .replace("pnpm run release-readiness", "pnpm run docs")
     .replace("pnpm run lint", "pnpm run typecheck")
-    .replace("pnpm run contract", "pnpm run check")
+    .replace("pnpm run check", "pnpm run typecheck")
     .replace("pnpm run benchmark:scale", "pnpm run build")
     .replace("pnpm run benchmark:cli-io", "pnpm run build")
     .replace("pnpm run verify:cli-package", "pnpm run build");
@@ -2272,7 +2279,15 @@ test("release readiness rejects CI workflow command drift", () => {
     ".github/workflows/ci.yml must run pnpm run benchmark:scale.",
     ".github/workflows/ci.yml must run pnpm run benchmark:cli-io.",
     ".github/workflows/ci.yml must run pnpm run verify:cli-package.",
-    ".github/workflows/ci.yml must run pnpm run contract.",
+    ".github/workflows/ci.yml must run pnpm run check.",
+  ]);
+});
+
+test("release readiness rejects the duplicate CI contract run", () => {
+  const text = `${createCiWorkflowText()}\n      - run: pnpm run contract`;
+
+  assert.deepEqual(validateCiWorkflowContract(text), [
+    ".github/workflows/ci.yml must not run pnpm run contract.",
   ]);
 });
 
@@ -2741,7 +2756,9 @@ function createReadmeValidationText() {
     "",
     "## Choose How Results Are Written",
     "",
-    "`propose` is the recommended default for shared repositories.",
+    "`propose` remains the default write mode and accepts an already approved assessment.",
+    "merged pull request events, use `stage-draft`",
+    "then run `promote-draft` with that approved file.",
     "include-automation-contributors: false",
     "comment-mode: upsert",
     "",
@@ -3087,8 +3104,7 @@ function createCiOperationalDocumentText() {
   return [
     "The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and",
     "manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,",
-    "`lint`, `format`, `migration-check`, `benchmark:scale`, `benchmark:cli-io`, `smoke`, `check`, and",
-    "`contract` with",
+    "`lint`, `format`, `migration-check`, `benchmark:scale`, `benchmark:cli-io`, `smoke`, and `check`",
     "Node.js 24 and the package-manager version declared",
     "by `package.json`.",
     "",
@@ -3832,7 +3848,6 @@ function createCiWorkflowText() {
     "      - run: pnpm run verify:cli-package",
     "      - run: pnpm run smoke",
     "      - run: pnpm run check",
-    "      - run: pnpm run contract",
   ].join("\n");
 }
 

@@ -77,7 +77,8 @@ The current local CI parity commands are:
 - `pnpm run benchmark:cli-io:sample`: repeats those real subprocess and filesystem workloads three
   times for a machine-specific local report; it is not a merge gate.
 - `pnpm run check`: runs typecheck and the package test suite.
-- `pnpm run contract`: runs typecheck and tests as the current contract gate.
+- `pnpm run contract`: remains a local alias for the same typecheck and tests. CI runs `check` once
+  instead of repeating the suite through this alias.
 
 ADR 0036 accepts the corrected Oxfmt baseline and `release-readiness` protects its package,
 configuration, ignore, and CI contracts. ADR 0037 accepts the manifest-backed migration
@@ -91,8 +92,8 @@ smoke cover that artifact instead.
 
 The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and
 manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,
-`lint`, `format`, `migration-check`, `benchmark:scale`, `benchmark:cli-io`, `smoke`, `check`, and
-`contract` with Node.js 24 and the package-manager version declared by `package.json`.
+`lint`, `format`, `migration-check`, `benchmark:scale`, `benchmark:cli-io`, `smoke`, and `check`
+with Node.js 24 and the package-manager version declared by `package.json`.
 
 Before public package publication or a versioned Action tag, release maintainers should run:
 

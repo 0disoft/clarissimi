@@ -195,6 +195,7 @@ argv = [
   ".mustflow/config/manifest.lock.toml",
   "packages",
   "docs",
+  "scripts",
   "README.md",
   "action.yml",
   ".github/workflows/ci.yml",

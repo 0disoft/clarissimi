@@ -517,7 +517,9 @@ export const readmeValidationContract = {
     "- uses: 0disoft/clarissimi@v0.6.2",
     "mode: dry-run",
     "## Choose How Results Are Written",
-    "`propose` is the recommended default for shared repositories.",
+    "`propose` remains the default write mode and accepts an already approved assessment.",
+    "merged pull request events, use `stage-draft`",
+    "then run `promote-draft` with that approved file.",
     "include-automation-contributors: false",
     "comment-mode: upsert",
     "## What Clarissimi Creates",
@@ -829,7 +831,7 @@ export const ciOperationalDocumentContract = {
   requiredSnippets: [
     "The hosted CI workflow `.github/workflows/ci.yml` runs on `push` to `main`, `pull_request`, and",
     "manual dispatch. It uses read-only repository permissions and runs `docs`, `release-readiness`,",
-    "`lint`, `format`, `migration-check`, `benchmark:scale`, `benchmark:cli-io`, `smoke`, `check`, and",
+    "`lint`, `format`, `migration-check`, `benchmark:scale`, `benchmark:cli-io`, `smoke`, and `check`",
     "`pnpm run benchmark:scale`: builds the workspace, runs deterministic 1,000- and 10,000-record",
     "`pnpm run benchmark:cli-io`: runs compiled `rebuild` and `import-draft` commands against fresh",
     "`pnpm run hosted-ci-validation`",
@@ -1403,8 +1405,8 @@ export const ciWorkflowContract = {
     "pnpm run verify:cli-package",
     "pnpm run smoke",
     "pnpm run check",
-    "pnpm run contract",
   ],
+  forbiddenCommands: ["pnpm run contract"],
 };
 
 export const toolchainPlatformSmokeWorkflowContract = {

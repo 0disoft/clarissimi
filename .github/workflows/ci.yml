@@ -93,6 +93,3 @@ jobs:
 
       - name: Run check validation
         run: pnpm run check
-
-      - name: Run contract validation
-        run: pnpm run contract

@@ -56,6 +56,12 @@ export function validateCiWorkflowContract(text, contract) {
     }
   }
 
+  for (const command of contract.forbiddenCommands ?? []) {
+    if (text.includes(command)) {
+      issues.push(`${contract.path} must not run ${command}.`);
+    }
+  }
+
   for (const snippet of contract.requiredSnippets) {
     if (!text.includes(snippet)) {
       issues.push(`${contract.path} must include ${snippet}.`);

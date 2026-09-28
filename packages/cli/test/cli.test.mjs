@@ -1703,10 +1703,41 @@ test("rebuild writes derived outputs only when out-dir is provided", async () =>
     const result = await run(["rebuild", "--ledger", ledger, "--out-dir", outDir, "--json"], dir);
     const output = JSON.parse(result.stdout);
     const markdown = await readFile(join(outDir, "CONTRIBUTORS.md"), "utf8");
+    const exportedLedger = await readFile(
+      join(outDir, ".clarissimi", "contributions.jsonl"),
+      "utf8",
+    );
 
     assert.equal(result.exitCode, 0);
     assert.equal(output.wroteFiles, true);
     assert.equal(markdown.includes("Added regression coverage"), true);
+    assert.equal(exportedLedger.includes("parser crash"), true);
+  });
+});
+
+test("file locks keep rebuild from rewriting the source ledger", async () => {
+  await withTempDir(async (dir) => {
+    const ledgerDir = join(dir, ".clarissimi");
+    const ledger = join(ledgerDir, "contributions.jsonl");
+    const sourceRecord = assessment({
+      source: {
+        repository: "example/project",
+        event: "merged_pull_request",
+        pullRequestNumber: 42,
+        mergedAt: "2026-07-08T00:00:00Z",
+      },
+    });
+    const sourceText = `${JSON.stringify(sourceRecord)}\n`;
+    await mkdir(ledgerDir, { recursive: true });
+    await writeFile(ledger, sourceText, "utf8");
+
+    const result = await run(["rebuild", "--ledger", ledger, "--out-dir", dir, "--json"], dir);
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(JSON.parse(result.stdout).records, 1);
+    assert.equal(await readFile(ledger, "utf8"), sourceText);
+    assert.match(await readFile(join(dir, "CONTRIBUTORS.md"), "utf8"), /parser crash/);
+    await assert.rejects(() => readFile(`${ledger}.lock`, "utf8"));
   });
 });
 

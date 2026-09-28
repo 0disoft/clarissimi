@@ -1,4 +1,5 @@
-import { join } from "node:path";
+import { realpath, stat } from "node:fs/promises";
+import { join, resolve } from "node:path";
 
 import {
   CONTRIBUTORS_JSON_PATH,
@@ -577,23 +578,28 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
 
   try {
     const config = (await validateConfigFile(io.cwd, getStringFlag(args, "config"))).config;
-    const ledgerText = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
-    const records = parseContributionsJsonl(ledgerText);
-    assertUniqueContributionRecords(records);
-    const outputs = renderRecognitionOutputs(records, {
-      summary: resolveMarkdownSummary(args, config),
-      includeAutomationContributors: resolveIncludeAutomationContributors(args, config),
-    });
+    const rebuild = async (): Promise<number> => {
+      const ledgerText = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
+      const records = parseContributionsJsonl(ledgerText);
+      assertUniqueContributionRecords(records);
+      const outputs = renderRecognitionOutputs(records, {
+        summary: resolveMarkdownSummary(args, config),
+        includeAutomationContributors: resolveIncludeAutomationContributors(args, config),
+      });
 
-    if (outDir !== undefined) {
-      await writeRenderedOutputs(resolveFromCwd(io.cwd, outDir), outputs);
-    }
+      if (outDir !== undefined) {
+        await writeRenderedOutputs(resolveFromCwd(io.cwd, outDir), ledgerPath, outputs);
+      }
+      return records.length;
+    };
+    const recordCount =
+      outDir === undefined ? await rebuild() : await withFileLock(`${ledgerPath}.lock`, rebuild);
 
     writeOutput(io, args, {
       ok: true,
       command: "rebuild",
       ledgerPath,
-      records: records.length,
+      records: recordCount,
       wroteFiles: outDir !== undefined,
       outputDirectory: outDir ?? null,
       files: [
@@ -687,6 +693,7 @@ function rejectUnexpectedPositionals(args: ParsedArgs, command: string): string 
 
 async function writeRenderedOutputs(
   outDir: string,
+  sourceLedgerPath: string,
   outputs: {
     readonly contributionsJsonl: string;
     readonly contributorsJson: string;
@@ -694,12 +701,41 @@ async function writeRenderedOutputs(
     readonly staticDataJson: string;
   },
 ): Promise<void> {
-  await Promise.all(
-    [
-      [CONTRIBUTIONS_JSONL_PATH, outputs.contributionsJsonl],
-      [CONTRIBUTORS_JSON_PATH, outputs.contributorsJson],
-      [CONTRIBUTORS_MARKDOWN_PATH, outputs.contributorsMarkdown],
-      [STATIC_DATA_JSON_PATH, outputs.staticDataJson],
-    ].map(([path, value]) => writeTextFile(join(outDir, path), value)),
+  const outputLedgerPath = join(outDir, CONTRIBUTIONS_JSONL_PATH);
+  const sourceIsOutput = await pathsReferToSameFile(sourceLedgerPath, outputLedgerPath);
+  const entries = [
+    { path: join(outDir, CONTRIBUTORS_JSON_PATH), value: outputs.contributorsJson },
+    { path: join(outDir, CONTRIBUTORS_MARKDOWN_PATH), value: outputs.contributorsMarkdown },
+    { path: join(outDir, STATIC_DATA_JSON_PATH), value: outputs.staticDataJson },
+  ];
+  if (!sourceIsOutput) {
+    entries.push({ path: outputLedgerPath, value: outputs.contributionsJsonl });
+  }
+  await writeTextFilesAtomically(
+    entries,
+    sourceIsOutput ? join(outDir, STATIC_DATA_JSON_PATH) : outputLedgerPath,
+  );
+}
+
+async function pathsReferToSameFile(left: string, right: string): Promise<boolean> {
+  const pathKey = (path: string): string => {
+    const normalized = resolve(path);
+    return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+  };
+  if (pathKey(left) === pathKey(right)) {
+    return true;
+  }
+  if (!(await fileExists(left)) || !(await fileExists(right))) {
+    return false;
+  }
+  const [leftReal, rightReal, leftStat, rightStat] = await Promise.all([
+    realpath(left),
+    realpath(right),
+    stat(left),
+    stat(right),
+  ]);
+  return (
+    pathKey(leftReal) === pathKey(rightReal) ||
+    (leftStat.ino !== 0 && leftStat.dev === rightStat.dev && leftStat.ino === rightStat.ino)
   );
 }

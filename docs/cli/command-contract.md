@@ -84,6 +84,11 @@ Rebuilds derived outputs from `.clarissimi/contributions.jsonl`.
 The fixture-first implementation previews rebuilds by default and writes files only when `--out-dir`
 is explicit. Rebuild fails before writing derived outputs when the selected ledger contains
 duplicate contribution identities.
+When `<out-dir>/.clarissimi/contributions.jsonl` is the selected ledger, rebuild leaves that
+canonical ledger unchanged and writes only derived files. A different output directory also receives
+a ledger copy.
+Writing rebuilds share the ledger lock with `import-draft` so a concurrent import cannot be replaced
+by an older rebuild snapshot.
 Rebuild loads the selected or default Clarissimi config. `--markdown-summary none|table|gallery` overrides
 `markdownSummary` for that run.
 

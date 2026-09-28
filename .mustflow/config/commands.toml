@@ -187,7 +187,17 @@ lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_commit"]
 description = "Stage only Clarissimi improvement paths in the isolated worktree; inspect exact staged names before committing."
-argv = ["git", "add", "--", ".mustflow/config/commands.toml", ".mustflow/config/manifest.lock.toml", "packages", "docs", "README.md", ".github/workflows/ci.yml"]
+argv = [
+  "git",
+  "add",
+  "--",
+  ".mustflow/config/commands.toml",
+  ".mustflow/config/manifest.lock.toml",
+  "packages",
+  "docs",
+  "README.md",
+  ".github/workflows/ci.yml",
+]
 cwd = "."
 timeout_seconds = 60
 stdin = "closed"

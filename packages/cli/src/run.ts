@@ -1,6 +1,7 @@
 import { realpath, stat } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 
+import { createDraftApprovalSnapshot, matchesDraftApprovalSnapshot } from "@clarissimi/core";
 import {
   CONTRIBUTORS_JSON_PATH,
   CONTRIBUTORS_MARKDOWN_PATH,
@@ -379,6 +380,7 @@ async function runApproveDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode
     const approvedDraft = {
       ...draftReview,
       maintainerApprovalStatus: "approved",
+      approvalSnapshot: createDraftApprovalSnapshot(draftReview, new Date().toISOString()),
     };
 
     await writeTextFilesAtomically(
@@ -434,6 +436,15 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
         "Draft is not a valid contribution assessment.",
         validation.issues,
       );
+    }
+    if (!matchesDraftApprovalSnapshot(validation.value)) {
+      throw new RendererValidationError("Approved draft content changed after approval.", [
+        {
+          path: "$.approvalSnapshot.contentSha256",
+          code: "approval_snapshot_mismatch",
+          message: "Edit and approve the draft again before importing it.",
+        },
+      ]);
     }
 
     const outputDirectory = outDir === undefined ? undefined : resolveFromCwd(io.cwd, outDir);

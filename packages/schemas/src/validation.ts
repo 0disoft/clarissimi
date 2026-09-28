@@ -216,6 +216,7 @@ export function validateContributionAssessment(
     "$.maintainerApprovalStatus",
     issues,
   );
+  validateDraftApprovalSnapshot(value.approvalSnapshot, value.maintainerApprovalStatus, issues);
   validateSource(value.source, "$.source", issues);
 
   if (issues.length > 0) {
@@ -227,6 +228,42 @@ export function validateContributionAssessment(
     value: value as unknown as ContributionAssessment,
     issues: [],
   };
+}
+
+function validateDraftApprovalSnapshot(
+  value: unknown,
+  status: unknown,
+  issues: ValidationIssue[],
+): void {
+  if (value === undefined) {
+    return;
+  }
+  if (status !== "approved") {
+    pushIssue(
+      issues,
+      "$.approvalSnapshot",
+      "invalid_approval_snapshot_status",
+      "An approval snapshot requires maintainerApprovalStatus approved.",
+    );
+  }
+  if (!isRecord(value)) {
+    pushIssue(
+      issues,
+      "$.approvalSnapshot",
+      "expected_object",
+      "Approval snapshot must be an object.",
+    );
+    return;
+  }
+  if (typeof value.contentSha256 !== "string" || !/^[0-9a-f]{64}$/.test(value.contentSha256)) {
+    pushIssue(
+      issues,
+      "$.approvalSnapshot.contentSha256",
+      "invalid_digest",
+      "Approval snapshot digest must be a lowercase SHA-256 hex string.",
+    );
+  }
+  expectIsoDateTime(value.recordedAt, "$.approvalSnapshot.recordedAt", issues);
 }
 
 export function validateClarissimiConfig(value: unknown): ValidationResult<ClarissimiConfig> {

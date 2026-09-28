@@ -37,6 +37,9 @@ A ledger record contains the same public assessment fields validated by `package
 - `maintainerApprovalStatus`: `approved` or `auto_approved` for public ledger records
 - `source`: repository event identity
 
+An `approvalSnapshot` in an approved draft is checked before import and omitted from this public
+record. Approval actor identity remains in the repository's review and commit history.
+
 Example:
 
 ```json

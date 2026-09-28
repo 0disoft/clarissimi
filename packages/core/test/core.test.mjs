@@ -5,7 +5,9 @@ import {
   EvidencePreparationError,
   PROVIDER_EVIDENCE_LIMITS,
   canPublishAssessment,
+  createDraftApprovalSnapshot,
   findUnsafeRepositoryAssessmentFields,
+  matchesDraftApprovalSnapshot,
   prepareEvidenceForProvider,
 } from "../dist/index.js";
 import { ASSESSMENT_SCHEMA_VERSION, REDACTION_PLACEHOLDER } from "./support.mjs";
@@ -45,6 +47,29 @@ function validAssessment(status = "approved") {
     source,
   };
 }
+
+test("approval snapshot binds the draft content independently of JSON key order", () => {
+  const draft = validAssessment("draft");
+  const snapshot = createDraftApprovalSnapshot(draft, "2026-09-29T00:00:00.000Z");
+  const approved = {
+    ...draft,
+    maintainerApprovalStatus: "approved",
+    approvalSnapshot: snapshot,
+  };
+  assert.match(snapshot.contentSha256, /^[0-9a-f]{64}$/);
+  assert.equal(matchesDraftApprovalSnapshot(approved), true);
+  assert.equal(
+    matchesDraftApprovalSnapshot(Object.fromEntries(Object.entries(approved).reverse())),
+    true,
+  );
+  assert.equal(
+    matchesDraftApprovalSnapshot({
+      ...approved,
+      publicRecognitionText: "A different recognition after approval.",
+    }),
+    false,
+  );
+});
 
 test("repository safety rejects visible secrets without putting values in diagnostics", () => {
   const syntheticToken = `ghp_${"a".repeat(20)}`;

@@ -113,6 +113,11 @@ export interface RecognitionSource {
   readonly mergedAt?: string;
 }
 
+export interface DraftApprovalSnapshot {
+  readonly contentSha256: string;
+  readonly recordedAt: string;
+}
+
 export interface ContributionAssessment {
   readonly schemaVersion: typeof ASSESSMENT_SCHEMA_VERSION;
   readonly contributor: ContributorIdentity;
@@ -125,6 +130,7 @@ export interface ContributionAssessment {
   readonly publicRecognitionText: string;
   readonly confidence: number;
   readonly maintainerApprovalStatus: ApprovalStatus;
+  readonly approvalSnapshot?: DraftApprovalSnapshot;
   readonly source: RecognitionSource;
 }
 

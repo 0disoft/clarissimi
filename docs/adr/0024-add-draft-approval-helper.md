@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-09
+- Amended: 2026-09-29
 - Owner: Repository maintainers
 
 ## Context
@@ -51,6 +52,17 @@ clarissimi import-draft --draft .clarissimi/drafts/<file>.json --out-dir .
 Maintainers get a clear command for the approval step without weakening the approval boundary.
 `approve-draft` records maintainer intent in the draft file, while `import-draft` remains the only
 CLI command that writes approved records into the public ledger.
+
+## Approval Content Snapshot
+
+`approve-draft` also records a SHA-256 digest of the sanitized draft content and a UTC timestamp
+in an optional `approvalSnapshot` field. The digest excludes the approval status and the snapshot
+itself. `import-draft` rejects a draft when its current content differs from that snapshot. The
+snapshot is not copied into the public ledger.
+
+The field remains optional for already approved legacy drafts. It detects edits while present, but
+does not authenticate a maintainer: anyone able to replace both the draft and snapshot can forge a
+matching pair. Git review and merge controls remain the authority for who approved a change.
 
 ## Validation
 

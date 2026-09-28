@@ -138,6 +138,8 @@ Approval states are:
 
 Auto approval is allowed only when repository policy explicitly permits it. The default public write
 mode should still be `propose`.
+An approved draft may carry a content snapshot to detect edits after local approval. This snapshot
+does not establish the approver's identity and is omitted from the public recognition ledger.
 
 ## Output Files
 

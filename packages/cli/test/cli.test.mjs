@@ -747,6 +747,8 @@ test("approve-draft marks a staged draft approved without touching the ledger", 
     assert.equal(output.command, "approve-draft");
     assert.equal(output.approvalStatus, "approved");
     assert.equal(approvedDraft.maintainerApprovalStatus, "approved");
+    assert.match(approvedDraft.approvalSnapshot.contentSha256, /^[0-9a-f]{64}$/);
+    assert.match(approvedDraft.approvalSnapshot.recordedAt, /^\d{4}-\d{2}-\d{2}T/);
     assert.equal(approvedText.includes("Raw PR body should not survive approval"), false);
     await assert.rejects(readFile(ledger, "utf8"));
   });
@@ -814,6 +816,32 @@ test("approve-draft output can be imported into the public ledger", async () => 
     assert.equal(importResult.exitCode, 0);
     assert.equal(JSON.parse(importResult.stdout).records, 1);
     assert.equal(ledgerText.includes('"maintainerApprovalStatus":"approved"'), true);
+    assert.equal(ledgerText.includes("approvalSnapshot"), false);
+  });
+});
+
+test("import-draft rejects content changed after approval without writing the ledger", async () => {
+  await withTempDir(async (dir) => {
+    const draftPath = join(dir, "agent-draft.json");
+    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+    await writeFile(
+      draftPath,
+      JSON.stringify(assessment({ maintainerApprovalStatus: "draft" })),
+      "utf8",
+    );
+    const approved = await run(["approve-draft", "--draft", draftPath, "--json"], dir);
+    assert.equal(approved.exitCode, 0);
+    const changed = JSON.parse(await readFile(draftPath, "utf8"));
+    changed.publicRecognitionText = "Updated after the approval snapshot.";
+    await writeFile(draftPath, JSON.stringify(changed), "utf8");
+
+    const imported = await run(
+      ["import-draft", "--draft", draftPath, "--ledger", ledger, "--json"],
+      dir,
+    );
+    assert.equal(imported.exitCode, 6);
+    assert.match(JSON.parse(imported.stdout).message, /changed after approval/);
+    await assert.rejects(readFile(ledger, "utf8"));
   });
 });
 

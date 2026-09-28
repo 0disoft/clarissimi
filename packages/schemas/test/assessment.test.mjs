@@ -55,6 +55,39 @@ test("accepts a valid contribution assessment draft", () => {
   assert.deepEqual(result.issues, []);
 });
 
+test("validates an approval snapshot only on approved assessments", () => {
+  const approvalSnapshot = {
+    contentSha256: "a".repeat(64),
+    recordedAt: "2026-09-29T00:00:00.000Z",
+  };
+  const approved = {
+    ...validAssessment,
+    maintainerApprovalStatus: "approved",
+    approvalSnapshot,
+  };
+  assert.equal(validateContributionAssessment(approved).ok, true);
+  assert.equal(
+    validateContributionAssessment({ ...approved, maintainerApprovalStatus: "draft" }).issues.some(
+      (issue) => issue.code === "invalid_approval_snapshot_status",
+    ),
+    true,
+  );
+  assert.equal(
+    validateContributionAssessment({
+      ...approved,
+      approvalSnapshot: { ...approvalSnapshot, contentSha256: "not-a-digest" },
+    }).issues.some((issue) => issue.code === "invalid_digest"),
+    true,
+  );
+  assert.equal(
+    validateContributionAssessment({
+      ...approved,
+      approvalSnapshot: { ...approvalSnapshot, recordedAt: "2026-09-29" },
+    }).issues.some((issue) => issue.code === "invalid_datetime"),
+    true,
+  );
+});
+
 test("binds GitHub profile URLs to contributor identity", () => {
   for (const profileUrl of [
     "https://evil.example/octocat",

@@ -357,10 +357,11 @@ steps:
       base-branch: main
 ```
 
-After the staged draft pull request is reviewed, its `maintainerApprovalStatus` is changed to
-`approved`, and that pull request is merged, `promote-draft` can render a normal
-public recognition proposal without another provider call. Use a manual workflow input so the
-maintainer chooses the exact checked-in draft:
+Review the staged draft pull request, then run `clarissimi approve-draft --draft <path>` on that
+pull request's branch, using its `.clarissimi/drafts/*.json` file as `<path>`. Commit the rewritten
+draft, including its `approvalSnapshot`, and merge the draft pull request after reviewing that
+exact version. `promote-draft` can then render a public recognition proposal without another
+provider call. Use a manual workflow input so the maintainer chooses the exact checked-in draft:
 
 Current development source rejects external `auto_approved` drafts until a repository auto-approval
 policy is configured; `allow-legacy-approval` cannot bypass this requirement.

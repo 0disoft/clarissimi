@@ -740,7 +740,7 @@ test("environment runner writes bounded stage-draft outputs and step summary", a
   });
 });
 
-test("environment stage-draft mode routes merged pull request events through the live collector", async () => {
+test("merged event stages a draft before a reviewed file can be promoted", async () => {
   await withTempDir(async (dir) => {
     const repositoryDir = join(dir, "repo");
     const remoteDir = join(dir, "remote.git");
@@ -855,6 +855,39 @@ test("environment stage-draft mode routes merged pull request events through the
     assert.equal(outputText.includes("LIVE_BODY_SENTINEL"), false);
     assert.equal(summaryText.includes("PATCH_SENTINEL"), false);
     assert.equal(client.created[0].body.includes("REVIEW_SENTINEL"), false);
+
+    const draftRelativePath = ".clarissimi/drafts/sample-project-merged_pull_request-42.json";
+    const draftPath = join(repositoryDir, draftRelativePath);
+    const stagedDraft = JSON.parse(await readFile(join(stagingDir, draftRelativePath), "utf8"));
+    await mkdir(join(repositoryDir, ".clarissimi", "drafts"), { recursive: true });
+    await writeFile(
+      draftPath,
+      JSON.stringify({ ...stagedDraft, maintainerApprovalStatus: "approved" }),
+      "utf8",
+    );
+    await git(repositoryDir, ["add", draftRelativePath]);
+    await git(repositoryDir, ["commit", "-m", "Approve reviewed Clarissimi draft"]);
+    await git(repositoryDir, ["push", "origin", "main"]);
+    const reviewedMainSha = await remoteBranchSha(repositoryDir, "main");
+
+    const promotedDir = join(dir, "promoted");
+    const promoted = await runActionPromoteDraft({
+      mode: "promote-draft",
+      draftPath,
+      repositoryDir,
+      stagingDir: promotedDir,
+      baseBranch: "main",
+      pullRequestClient: client,
+    });
+    const record = JSON.parse(
+      (await readFile(join(promotedDir, ".clarissimi", "contributions.jsonl"), "utf8")).trim(),
+    );
+    assert.equal(promoted.approvalStatus, "approved");
+    assert.equal(promoted.proposedEntryCount, 1);
+    assert.equal(record.source.pullRequestNumber, 42);
+    assert.equal(record.source.repository, "sample/project");
+    assert.equal(client.created.length, 2);
+    assert.equal(await remoteBranchSha(repositoryDir, "main"), reviewedMainSha);
   });
 });
 

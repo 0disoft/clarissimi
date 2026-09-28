@@ -199,6 +199,7 @@ argv = [
   "README.md",
   "action.yml",
   ".github/workflows/ci.yml",
+  ".github/workflows/clarissimi-promote-draft-fixture.yml",
 ]
 cwd = "."
 timeout_seconds = 60

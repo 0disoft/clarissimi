@@ -63,6 +63,7 @@ export interface ActionPromoteDraftInput extends Omit<
 > {
   readonly mode: "promote-draft";
   readonly draftPath: string;
+  readonly allowLegacyApproval?: boolean;
 }
 
 export interface ActionDryRunSummary {

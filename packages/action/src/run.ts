@@ -2,7 +2,7 @@ import { readFile, realpath } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
-import { matchesDraftApprovalSnapshot, prepareEvidenceForProvider } from "@clarissimi/core";
+import { checkDraftApprovalSnapshot, prepareEvidenceForProvider } from "@clarissimi/core";
 import { CONTRIBUTIONS_JSONL_PATH, parseContributionsJsonl } from "@clarissimi/renderers";
 import {
   collectMergedPullRequestEvidence,
@@ -310,7 +310,11 @@ export async function runActionPromoteDraft(
   input: ActionPromoteDraftInput,
 ): Promise<ActionProposeSummary> {
   validateSourceCommentInput(input);
-  const assessment = await readApprovedDraft(input.draftPath, input.repositoryDir);
+  const assessment = await readApprovedDraft(
+    input.draftPath,
+    input.repositoryDir,
+    input.allowLegacyApproval ?? false,
+  );
   const staging = await stageProposalRecognitionOutputs({
     outputDir: input.stagingDir,
     assessments: [assessment],
@@ -665,6 +669,7 @@ function buildActionWriteInput(
     const promoteDraftInput: ActionPromoteDraftInput = {
       mode,
       draftPath: resolvePromoteDraftPath(env),
+      allowLegacyApproval: parseLegacyApprovalInput(env.INPUT_ALLOW_LEGACY_APPROVAL),
       repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
       stagingDir:
         readEnvInput(env.INPUT_STAGING_DIR) ??
@@ -746,6 +751,7 @@ function resolvePromoteDraftPath(env: NodeJS.ProcessEnv): string {
 async function readApprovedDraft(
   path: string,
   repositoryDir: string,
+  allowLegacyApproval: boolean,
 ): Promise<ContributionAssessment> {
   let realDraftPath: string;
   let realDraftsRoot: string;
@@ -795,11 +801,26 @@ async function readApprovedDraft(
   ) {
     throw new Error("promote-draft requires maintainerApprovalStatus approved or auto_approved.");
   }
-  if (!matchesDraftApprovalSnapshot(result.value)) {
+  const approvalCheck = checkDraftApprovalSnapshot(result.value);
+  if (approvalCheck === "missing" && !allowLegacyApproval) {
+    throw new Error("Approved Clarissimi draft requires an approval snapshot.");
+  }
+  if (approvalCheck === "mismatch") {
     throw new Error("Approved Clarissimi draft content changed after approval.");
   }
 
   return result.value;
+}
+
+function parseLegacyApprovalInput(value: string | undefined): boolean {
+  const normalized = readEnvInput(value);
+  if (normalized === undefined || normalized === "false") {
+    return false;
+  }
+  if (normalized === "true") {
+    return true;
+  }
+  throw new ActionUsageError("INPUT_ALLOW_LEGACY_APPROVAL supports only true or false.");
 }
 
 type PreparedActionAssessment =

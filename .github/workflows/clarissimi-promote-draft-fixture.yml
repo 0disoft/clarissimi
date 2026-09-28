@@ -41,6 +41,7 @@ jobs:
         with:
           mode: promote-draft
           draft-path: .clarissimi/drafts/sample-project-merged_pull_request-42.json
+          allow-legacy-approval: true
           base-branch: ${{ inputs.base-branch }}
 
       - name: Verify fixture promote-draft outputs

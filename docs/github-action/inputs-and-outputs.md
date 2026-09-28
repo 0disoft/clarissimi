@@ -27,6 +27,8 @@
 - `mode`: `gate`, `dry-run`, `propose`, `commit`, `stage-draft`, or `promote-draft`, default `propose`
 - `gate-mode`: `advisory` or `required`, default `advisory`; used only by `gate`
 - `draft-path`: approved `.clarissimi/drafts/*.json` path required by `promote-draft`
+- `allow-legacy-approval`: `true` or `false`, default `false`; only permits an older approved
+  draft without `approvalSnapshot`; a mismatched snapshot is always rejected
 - `base-branch`: base branch for proposal pull requests
 - `remote-name`: Git remote used to publish proposal branches
 - `staging-dir`: optional temporary staging directory for proposal outputs
@@ -51,13 +53,13 @@ repository publication. It reads
 `CLARISSIMI_PROVIDER_TOKEN` only when `provider` is `openai-compatible`.
 
 The current package supports `INPUT_EVENT_PATH`, `GITHUB_EVENT_PATH`, `INPUT_GITHUB_FIXTURE`,
-`INPUT_CONFIG_PATH`, `INPUT_DRAFT_PATH`, `INPUT_MODE`, `INPUT_GATE_MODE`, `INPUT_COMMENT_MODE`,
+`INPUT_CONFIG_PATH`, `INPUT_DRAFT_PATH`, `INPUT_ALLOW_LEGACY_APPROVAL`, `INPUT_MODE`, `INPUT_GATE_MODE`, `INPUT_COMMENT_MODE`,
 `INPUT_BASE_BRANCH`, `INPUT_REMOTE_NAME`, `INPUT_STAGING_DIR`,
 `INPUT_SUMMARY_PATH`, `INPUT_PROVIDER`, `INPUT_PROVIDER_MODEL`, `INPUT_PROVIDER_ENDPOINT`, and
 `INPUT_PROVIDER_ENDPOINT_TRUST`, `INPUT_PROVIDER_THINKING`. It also supports
 `INPUT_MARKDOWN_SUMMARY` for derived Markdown layout.
 
-The root `action.yml` currently exposes `event-path`, `github-fixture`, `draft-path`, `mode`,
+The root `action.yml` currently exposes `event-path`, `github-fixture`, `draft-path`, `allow-legacy-approval`, `mode`,
 `gate-mode`, `base-branch`, `remote-name`, `staging-dir`, `summary-path`, `config-path`, `provider`,
 `provider-model`, `provider-endpoint`, `provider-endpoint-trust`, and `provider-thinking`.
 `markdown-summary` is also exposed.

@@ -37,6 +37,10 @@ inputs:
   draft-path:
     description: Approved .clarissimi/drafts/*.json path required by promote-draft mode.
     required: false
+  allow-legacy-approval:
+    description: Permit promote-draft to read an older approved draft without an approval snapshot. A mismatched snapshot is always rejected.
+    required: false
+    default: "false"
   base-branch:
     description: Base branch for propose, stage-draft, and promote-draft mode pull requests.
     required: false
@@ -161,6 +165,7 @@ runs:
         INPUT_INCLUDE_AUTOMATION_CONTRIBUTORS: ${{ inputs.include-automation-contributors }}
         INPUT_COMMENT_MODE: ${{ inputs.comment-mode }}
         INPUT_DRAFT_PATH: ${{ inputs.draft-path }}
+        INPUT_ALLOW_LEGACY_APPROVAL: ${{ inputs.allow-legacy-approval }}
         INPUT_BASE_BRANCH: ${{ inputs.base-branch }}
         INPUT_REMOTE_NAME: ${{ inputs.remote-name }}
         INPUT_STAGING_DIR: ${{ inputs.staging-dir }}

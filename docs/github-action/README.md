@@ -362,10 +362,10 @@ After the staged draft pull request is reviewed, its `maintainerApprovalStatus` 
 public recognition proposal without another provider call. Use a manual workflow input so the
 maintainer chooses the exact checked-in draft:
 
-Current development source checks the content digest when a draft was approved with the CLI's
-`approve-draft` command. Edit and approve the draft again if its text changes after approval.
-Legacy approved drafts without a digest remain accepted; immutable `v0.6.2` does not include this
-new check.
+Current development source requires the content digest produced by the CLI's `approve-draft`
+command. Edit and approve the draft again if its text changes after approval. For an older approved
+draft without a digest, set `allow-legacy-approval: true` explicitly after reviewing the exact
+file; a digest mismatch cannot be bypassed. Immutable `v0.6.2` does not include this new check.
 
 ```yaml
 name: Clarissimi promote approved draft

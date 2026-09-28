@@ -33,6 +33,8 @@ inbox proposals. It accepts:
 - `INPUT_MODE`: `gate`, `dry-run`, `propose`, `commit`, `stage-draft`, or `promote-draft`, default `propose`
 - `INPUT_GATE_MODE`: `advisory` or `required`, default `advisory`; used only by `gate`
 - `INPUT_DRAFT_PATH`: approved `.clarissimi/drafts/*.json` path required by `promote-draft`
+- `INPUT_ALLOW_LEGACY_APPROVAL`: `true` or `false`, default `false`; permits only a missing
+  `approvalSnapshot` on an older approved draft, never a mismatched snapshot
 - `INPUT_CONFIG_PATH`: optional explicit path to a Clarissimi config file
 - `INPUT_COMMENT_MODE`: `none` or `upsert`, default `none`; supported only by proposal modes
 - `INPUT_BASE_BRANCH`: base branch for proposal pull requests, default `main`
@@ -73,6 +75,7 @@ The root `action.yml` exposes the same surface as a composite action:
   the connection, and does not follow redirects
 - `provider-thinking`: optional OpenAI-compatible thinking mode, currently only `disabled`
 - `draft-path`: approved draft inbox path required by `promote-draft`
+- `allow-legacy-approval`: explicit compatibility option for older approved drafts, default `false`
 
 The composite Action executes `action-dist/index.js`. Consumer runs must not install repository
 dependencies or compile workspace TypeScript. The tracked bundle is derived from the Action source
@@ -154,8 +157,8 @@ Dry-run mode reads provider credentials only when `provider` is explicitly set t
 reads `GITHUB_TOKEN` for live GitHub collection and proposal pull request creation or update.
 Fixture-first `propose` succeeds only when the fixture explicitly carries an approved or
 auto-approved maintainer approval status. `GITHUB_EVENT_PATH` and `event-path` payloads cannot
-grant approval, even if they contain a `maintainerApprovalStatus` property. Normal provider drafts
-remain non-public and fail closed before branch mutation. Before rendering, propose mode parses the
+grant approval, even if they contain a `maintainerApprovalStatus` property.
+Normal provider drafts remain non-public and fail closed before branch mutation. Before rendering, propose mode parses the
 checked-out `.clarissimi/contributions.jsonl` when present, rejects malformed or duplicate
 existing records, and appends the new contribution identity. It rebuilds all derived outputs from that complete
 ledger; it must never replace prior recognition history with only the new assessment.
@@ -177,8 +180,9 @@ or update. It accepts one approved JSON file under `.clarissimi/drafts/`, perfor
 event collection work, renders public recognition outputs, and uses the normal recognition branch
 and pull request boundary. It follows the same existing-ledger validation, duplicate rejection,
 append, and full derived-output rebuild contract as propose mode. A draft with an
-`approvalSnapshot` must match its recorded content digest; legacy drafts without one remain
-accepted. Draft, rejected, or skipped assessments fail before branch mutation. Malformed or
+`approvalSnapshot` must match its recorded content digest. Approved drafts without one are
+rejected unless `allow-legacy-approval: true` is explicit. A mismatched snapshot is rejected even
+with that option. Draft, rejected, or skipped assessments fail before branch mutation. Malformed or
 internally duplicated ledgers and already-recorded contribution identities also fail before branch
 mutation.
 

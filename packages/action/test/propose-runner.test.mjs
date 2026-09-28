@@ -113,6 +113,14 @@ function approvedDraftAssessment(overrides = {}) {
   };
 }
 
+function approvedDraftWithSnapshot(overrides = {}) {
+  const assessment = approvedDraftAssessment(overrides);
+  return {
+    ...assessment,
+    approvalSnapshot: createDraftApprovalSnapshot(assessment, "2026-09-29T00:00:00.000Z"),
+  };
+}
+
 async function withTempDir(callback) {
   const dir = await mkdtemp(join(tmpdir(), "clarissimi-propose-runner-"));
   try {
@@ -449,6 +457,7 @@ test("promote-draft rejects a changed approval snapshot before proposal publicat
       runActionPromoteDraft({
         mode: "promote-draft",
         draftPath,
+        allowLegacyApproval: true,
         repositoryDir,
         stagingDir: join(dir, "staged"),
         baseBranch: "main",
@@ -484,31 +493,39 @@ test("environment runner writes promote-draft proposal outputs", async () => {
     await git(repositoryDir, ["push", "origin", "main"]);
     let stdout = "";
     let stderr = "";
+    const environment = {
+      GITHUB_OUTPUT: outputPath,
+      GITHUB_STEP_SUMMARY: summaryPath,
+      GITHUB_WORKSPACE: repositoryDir,
+      GITHUB_REPOSITORY: "0disoft/clarissimi",
+      INPUT_BASE_BRANCH: "main",
+      INPUT_DRAFT_PATH: draftRelativePath,
+      INPUT_MARKDOWN_SUMMARY: "table",
+      INPUT_MODE: "promote-draft",
+      INPUT_STAGING_DIR: stagingDir,
+      GITHUB_TOKEN: "test-token",
+    };
+    const output = {
+      stdout: (value) => {
+        stdout += value;
+      },
+      stderr: (value) => {
+        stderr += value;
+      },
+    };
+    const dependencies = { pullRequestClient: client };
+    const rejectedExitCode = await runActionFromEnvironment(environment, output, dependencies);
+    assert.equal(rejectedExitCode, 4);
+    assert.equal(stdout, "");
+    assert.match(stderr, /requires an approval snapshot/);
+    assert.equal(client.created.length, 0);
+    stdout = "";
+    stderr = "";
 
     const exitCode = await runActionFromEnvironment(
-      {
-        GITHUB_OUTPUT: outputPath,
-        GITHUB_STEP_SUMMARY: summaryPath,
-        GITHUB_WORKSPACE: repositoryDir,
-        GITHUB_REPOSITORY: "0disoft/clarissimi",
-        INPUT_BASE_BRANCH: "main",
-        INPUT_DRAFT_PATH: draftRelativePath,
-        INPUT_MARKDOWN_SUMMARY: "table",
-        INPUT_MODE: "promote-draft",
-        INPUT_STAGING_DIR: stagingDir,
-        GITHUB_TOKEN: "test-token",
-      },
-      {
-        stdout: (value) => {
-          stdout += value;
-        },
-        stderr: (value) => {
-          stderr += value;
-        },
-      },
-      {
-        pullRequestClient: client,
-      },
+      { ...environment, INPUT_ALLOW_LEGACY_APPROVAL: "true" },
+      output,
+      dependencies,
     );
     const parsed = JSON.parse(stdout);
     const outputText = await readFile(outputPath, "utf8");
@@ -544,7 +561,7 @@ test("promote-draft rejects a contribution already present in the ledger before 
     await mkdir(join(repositoryDir, ".clarissimi", "drafts"), {
       recursive: true,
     });
-    await writeFile(draftPath, JSON.stringify(approvedDraftAssessment()), "utf8");
+    await writeFile(draftPath, JSON.stringify(approvedDraftWithSnapshot()), "utf8");
 
     await assert.rejects(
       () =>
@@ -927,7 +944,11 @@ test("merged event stages a draft before a reviewed file can be promoted", async
     await mkdir(join(repositoryDir, ".clarissimi", "drafts"), { recursive: true });
     await writeFile(
       draftPath,
-      JSON.stringify({ ...stagedDraft, maintainerApprovalStatus: "approved" }),
+      JSON.stringify({
+        ...stagedDraft,
+        maintainerApprovalStatus: "approved",
+        approvalSnapshot: createDraftApprovalSnapshot(stagedDraft, "2026-09-29T00:00:00.000Z"),
+      }),
       "utf8",
     );
     await git(repositoryDir, ["add", draftRelativePath]);

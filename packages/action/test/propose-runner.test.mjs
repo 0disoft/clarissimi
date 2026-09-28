@@ -864,7 +864,7 @@ test("merged event stages a draft before a reviewed file can be promoted", async
     const eventPath = join(dir, "event.json");
     const outputPath = join(dir, "github-output.txt");
     const summaryPath = join(dir, "step-summary.md");
-    const client = new FakePullRequestClient();
+    const client = new FakePullRequestClient({ upsert: true });
     const liveRequests = [];
     await initRepositoryWithRemote(repositoryDir, remoteDir);
     await writeFile(eventPath, JSON.stringify(pullRequestEvent()), "utf8");
@@ -1008,6 +1008,26 @@ test("merged event stages a draft before a reviewed file can be promoted", async
     assert.equal(record.source.repository, "sample/project");
     assert.equal(client.created.length, 2);
     assert.equal(await remoteBranchSha(repositoryDir, "main"), reviewedMainSha);
+
+    const rerunDir = join(dir, "promoted-rerun");
+    const rerun = await runActionPromoteDraft({
+      mode: "promote-draft",
+      draftPath,
+      repositoryDir,
+      stagingDir: rerunDir,
+      baseBranch: "main",
+      pullRequestClient: client,
+    });
+    assert.equal(rerun.proposalPullRequestAction, "updated");
+    assert.equal(rerun.proposalPullRequestNumber, promoted.proposalPullRequestNumber);
+    assert.equal(client.created.length, 2);
+    assert.equal(client.updated.length, 1);
+    assert.equal(client.updated[0].number, promoted.proposalPullRequestNumber);
+    assert.equal(await remoteBranchSha(repositoryDir, "main"), reviewedMainSha);
+    assert.equal(
+      await readFile(join(rerunDir, ".clarissimi", "contributions.jsonl"), "utf8"),
+      await readFile(join(promotedDir, ".clarissimi", "contributions.jsonl"), "utf8"),
+    );
   });
 });
 
@@ -1106,24 +1126,60 @@ function git(repositoryDir, args) {
 
 class FakePullRequestClient {
   created = [];
+  updated = [];
 
-  async findOpenPullRequest() {
-    return null;
+  constructor({ upsert = false } = {}) {
+    this.upsert = upsert;
+  }
+
+  async findOpenPullRequest(input) {
+    if (!this.upsert) {
+      return null;
+    }
+    const index = this.created.findIndex(
+      (created) =>
+        created.headBranch === input.headBranch && created.baseBranch === input.baseBranch,
+    );
+    if (index < 0) {
+      return null;
+    }
+    return {
+      number: index + 1,
+      url: `https://github.com/sample/project/pull/${index + 1}`,
+      headBranch: input.headBranch,
+      baseBranch: input.baseBranch,
+      title: this.created[index].title,
+    };
   }
 
   async createPullRequest(input) {
     this.created.push(input);
+    const number = this.upsert ? this.created.length : 1;
     return {
-      number: 1,
-      url: "https://github.com/sample/project/pull/1",
+      number,
+      url: `https://github.com/sample/project/pull/${number}`,
       headBranch: input.headBranch,
       baseBranch: input.baseBranch,
       title: input.title,
     };
   }
 
-  async updatePullRequest() {
-    throw new Error("updatePullRequest was not expected in this test.");
+  async updatePullRequest(input) {
+    if (!this.upsert) {
+      throw new Error("updatePullRequest was not expected in this test.");
+    }
+    const existing = this.created[input.number - 1];
+    if (existing === undefined) {
+      throw new Error(`Unknown pull request ${input.number}.`);
+    }
+    this.updated.push(input);
+    return {
+      number: input.number,
+      url: `https://github.com/sample/project/pull/${input.number}`,
+      headBranch: existing.headBranch,
+      baseBranch: existing.baseBranch,
+      title: input.title,
+    };
   }
 }
 

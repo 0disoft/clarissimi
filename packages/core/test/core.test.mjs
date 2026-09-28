@@ -6,6 +6,7 @@ import {
   PROVIDER_EVIDENCE_LIMITS,
   canPublishAssessment,
   checkDraftApprovalSnapshot,
+  checkExternalDraftApproval,
   createDraftApprovalSnapshot,
   findUnsafeRepositoryAssessmentFields,
   prepareEvidenceForProvider,
@@ -73,6 +74,12 @@ test("approval snapshot binds the draft content independently of JSON key order"
   assert.equal(
     checkDraftApprovalSnapshot({ ...draft, maintainerApprovalStatus: "auto_approved" }),
     "not_required",
+  );
+  assert.equal(checkExternalDraftApproval(approved), "valid");
+  assert.equal(checkExternalDraftApproval(draft), "not_required");
+  assert.equal(
+    checkExternalDraftApproval({ ...draft, maintainerApprovalStatus: "auto_approved" }),
+    "auto_approval_unconfigured",
   );
 });
 

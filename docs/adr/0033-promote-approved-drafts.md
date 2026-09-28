@@ -24,7 +24,8 @@ Add an explicit `promote-draft` Action mode and a `draft-path` input.
   file under `.clarissimi/drafts/`, and must stay inside `GITHUB_WORKSPACE`. Lexical and real-path
   containment checks reject traversal and symlink escapes before reading the draft.
 - The checked-in draft must validate as `clarissimi.assessment/v1` and have
-  `maintainerApprovalStatus` equal to `approved` or `auto_approved`.
+  `maintainerApprovalStatus` equal to `approved`. An external `auto_approved` draft is rejected
+  until a repository auto-approval policy exists; the legacy snapshot override does not change this.
 - Promotion does not read event or fixture inputs, execute repository config, call a provider, or
   read provider credentials.
 - Promotion renders the canonical ledger and derived recognition outputs, publishes the existing

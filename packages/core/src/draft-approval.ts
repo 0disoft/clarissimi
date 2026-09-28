@@ -14,6 +14,17 @@ export function createDraftApprovalSnapshot(
 
 export type DraftApprovalSnapshotCheck = "valid" | "missing" | "mismatch" | "not_required";
 
+export type ExternalDraftApprovalCheck = DraftApprovalSnapshotCheck | "auto_approval_unconfigured";
+
+export function checkExternalDraftApproval(
+  assessment: ContributionAssessment,
+): ExternalDraftApprovalCheck {
+  if (assessment.maintainerApprovalStatus === "auto_approved") {
+    return "auto_approval_unconfigured";
+  }
+  return checkDraftApprovalSnapshot(assessment);
+}
+
 export function checkDraftApprovalSnapshot(
   assessment: ContributionAssessment,
 ): DraftApprovalSnapshotCheck {

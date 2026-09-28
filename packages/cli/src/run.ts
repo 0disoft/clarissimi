@@ -1,7 +1,7 @@
 import { realpath, stat } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 
-import { checkDraftApprovalSnapshot, createDraftApprovalSnapshot } from "@clarissimi/core";
+import { checkExternalDraftApproval, createDraftApprovalSnapshot } from "@clarissimi/core";
 import {
   CONTRIBUTORS_JSON_PATH,
   CONTRIBUTORS_MARKDOWN_PATH,
@@ -438,7 +438,25 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
         validation.issues,
       );
     }
-    const approvalCheck = checkDraftApprovalSnapshot(validation.value);
+    const approvalCheck = checkExternalDraftApproval(validation.value);
+    if (approvalCheck === "not_required") {
+      throw new RendererValidationError("Draft requires manual approval before import.", [
+        {
+          path: "$.maintainerApprovalStatus",
+          code: "not_approved",
+          message: "Approve the draft manually before importing it.",
+        },
+      ]);
+    }
+    if (approvalCheck === "auto_approval_unconfigured") {
+      throw new RendererValidationError("Automatic draft approval has no configured policy.", [
+        {
+          path: "$.maintainerApprovalStatus",
+          code: "auto_approval_policy_unavailable",
+          message: "Review the draft and approve it manually before importing it.",
+        },
+      ]);
+    }
     if (approvalCheck === "missing" && !allowLegacyApproval) {
       throw new RendererValidationError("Approved draft requires an approval snapshot.", [
         {

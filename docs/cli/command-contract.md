@@ -173,8 +173,9 @@ recognition records.
 
 An `approved` draft must carry a matching `approvalSnapshot`. A missing snapshot is a policy
 rejection before any ledger write. `--allow-legacy-approval` explicitly permits an older approved
-draft with no snapshot; it never permits a mismatched snapshot. `auto_approved` assessments remain
-subject to their existing policy without a maintainer snapshot.
+draft with no snapshot; it never permits a mismatched snapshot. External `auto_approved` drafts
+are rejected because no repository auto-approval policy is configured; the override does not
+permit them.
 
 By default, `--ledger` is `.clarissimi/contributions.jsonl`. The override is for local validation,
 test fixtures, and recovery workflows; it is not an MVP monthly or yearly partition mode. Public

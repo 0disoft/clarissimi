@@ -887,6 +887,28 @@ test("import-draft requires a snapshot for manual approval unless legacy import 
   });
 });
 
+test("import-draft rejects unconfigured automatic approval even with legacy override", async () => {
+  await withTempDir(async (dir) => {
+    const draftPath = join(dir, "auto-approved.json");
+    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+    await writeFile(
+      draftPath,
+      JSON.stringify(assessment({ maintainerApprovalStatus: "auto_approved" })),
+      "utf8",
+    );
+
+    for (const flags of [[], ["--allow-legacy-approval"]]) {
+      const result = await run(
+        ["import-draft", "--draft", draftPath, "--ledger", ledger, ...flags, "--json"],
+        dir,
+      );
+      assert.equal(result.exitCode, 6);
+      assert.match(JSON.parse(result.stdout).message, /no configured policy/);
+      await assert.rejects(readFile(ledger, "utf8"));
+    }
+  });
+});
+
 test("draft approval and import preserve automation contributor kind", async () => {
   await withTempDir(async (dir) => {
     const draftPath = join(dir, "automation-draft.json");

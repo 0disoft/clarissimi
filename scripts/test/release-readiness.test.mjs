@@ -883,6 +883,7 @@ test("release readiness rejects CLI command contract drift", () => {
     )
     .replace("An `approved` draft must carry a matching `approvalSnapshot`.", "")
     .replace("`--allow-legacy-approval` explicitly permits an older approved", "")
+    .replace("are rejected because no repository auto-approval policy is configured", "")
     .replace(
       "Unexpected positional arguments fail as usage errors",
       "Unexpected positional arguments are ignored",
@@ -908,6 +909,7 @@ test("release readiness rejects CLI command contract drift", () => {
     "docs/cli/command-contract.md must include rejects non-public approval states, appends the sanitized public.",
     "docs/cli/command-contract.md must include An `approved` draft must carry a matching `approvalSnapshot`..",
     "docs/cli/command-contract.md must include `--allow-legacy-approval` explicitly permits an older approved.",
+    "docs/cli/command-contract.md must include are rejected because no repository auto-approval policy is configured.",
     "docs/cli/command-contract.md must include Unexpected positional arguments fail as usage errors.",
     "docs/cli/command-contract.md must include Unknown flags,.",
     "docs/cli/command-contract.md must include Repeating the same flag is.",
@@ -1037,7 +1039,7 @@ test("release readiness rejects agent-assisted drafts document drift", () => {
       "Public outputs may include ranking",
     )
     .replace(
-      "`import-draft` appends only approved or auto-approved records to `.clarissimi/contributions.jsonl`.",
+      "`import-draft` appends only manually approved records to `.clarissimi/contributions.jsonl`.",
       "`import-draft` appends records.",
     )
     .replace(
@@ -1051,7 +1053,7 @@ test("release readiness rejects agent-assisted drafts document drift", () => {
     "docs/cli/agent-assisted-drafts.md must include responsible for validating the resulting JSON.",
     "docs/cli/agent-assisted-drafts.md must include enforcing approval status, and rendering public.",
     "docs/cli/agent-assisted-drafts.md must include Public outputs must not include total score, average score, rank, leaderboard.",
-    "docs/cli/agent-assisted-drafts.md must include `import-draft` appends only approved or auto-approved records to `.clarissimi/contributions.jsonl`..",
+    "docs/cli/agent-assisted-drafts.md must include `import-draft` appends only manually approved records to `.clarissimi/contributions.jsonl`..",
     "docs/cli/agent-assisted-drafts.md must include The public ledger does not store AI agent, model, prompt, token, or.",
   ]);
 });
@@ -2973,6 +2975,7 @@ function createCliCommandContractText() {
     "recognition records.",
     "An `approved` draft must carry a matching `approvalSnapshot`.",
     "`--allow-legacy-approval` explicitly permits an older approved",
+    "are rejected because no repository auto-approval policy is configured",
     "By default, `--ledger` is `.clarissimi/contributions.jsonl`. The override is for local validation,",
     "test fixtures, and recovery workflows; it is not an MVP monthly or yearly partition mode.",
     "",
@@ -3105,7 +3108,8 @@ function createAgentAssistedDraftsDocumentText() {
     "node packages/cli/dist/bin/clarissimi.js approve-draft --draft .clarissimi/drafts/example-project-merged_pull_request-42.json --json",
     "node packages/cli/dist/bin/clarissimi.js import-draft --draft .clarissimi/drafts/example-project-merged_pull_request-42.json --out-dir . --json",
     "",
-    "`import-draft` appends only approved or auto-approved records to `.clarissimi/contributions.jsonl`.",
+    "`import-draft` appends only manually approved records to `.clarissimi/contributions.jsonl`.",
+    "External `auto_approved` drafts are rejected",
     "Derived files such as `.clarissimi/contributors.json`, `CONTRIBUTORS.md`, and static JSON are",
     "rebuilt from the ledger.",
     "",
@@ -3392,6 +3396,7 @@ function createActionContractDocumentText() {
     "creation or update. It accepts one approved JSON file under `.clarissimi/drafts/`, performs no provider or",
     "event collection work, renders public recognition outputs, and uses the normal recognition branch",
     "and pull request boundary. Draft, rejected, or skipped assessments fail before branch mutation.",
+    "External `auto_approved` drafts also fail before branch mutation",
     "",
     "Proposal branch commits use a Clarissimi-owned bot author instead of relying on runner-global git",
     "identity.",

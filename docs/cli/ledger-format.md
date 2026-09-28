@@ -160,8 +160,9 @@ Unapproved assessments belong in the draft inbox:
 Draft inbox files are maintainer review candidates. They are not public recognition truth and must
 not be treated as ledger records.
 
-Only `approved` or explicitly policy-backed `auto_approved` assessments can be imported into
-`.clarissimi/contributions.jsonl`.
+Only manually `approved` drafts can currently be imported into
+`.clarissimi/contributions.jsonl`. Historic `auto_approved` ledger records remain valid, but
+external automatic approval requires a repository policy that is not yet configured.
 
 ## Partitioning
 

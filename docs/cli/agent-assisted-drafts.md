@@ -93,7 +93,8 @@ Import the approved draft into the canonical ledger and rebuild derived outputs:
 node packages/cli/dist/bin/clarissimi.js import-draft --draft .clarissimi/drafts/example-project-merged_pull_request-42.json --out-dir . --json
 ```
 
-`import-draft` appends only approved or auto-approved records to `.clarissimi/contributions.jsonl`.
+`import-draft` appends only manually approved records to `.clarissimi/contributions.jsonl`.
+External `auto_approved` drafts are rejected until a repository auto-approval policy exists.
 Derived files such as `.clarissimi/contributors.json`, `CONTRIBUTORS.md`, and static JSON are
 rebuilt from the ledger.
 Stage, approval, and import reject repository-visible fields containing recognized secret, token,

@@ -36,8 +36,8 @@ credentials.
 
 `import-draft` is the agent-assisted path: a maintainer can ask Codex, Claude Code, Grok, OpenCode,
 or another already-running AI coding agent to inspect a PR and produce a Clarissimi assessment JSON
-document. The CLI validates that document and records it only when it already carries an approved
-or auto-approved maintainer status.
+document. The CLI validates that document and records it only when it carries a manually approved
+maintainer status.
 
 `stage-draft` is the review-inbox path: the same agent-authored JSON can be validated and copied to
 `.clarissimi/drafts/` while it still has `maintainerApprovalStatus: "draft"`. The staged copy strips

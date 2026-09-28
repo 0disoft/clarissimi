@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-09
+- Amended: 2026-09-29
 - Owner: Repository maintainers
 
 ## Context
@@ -30,7 +31,8 @@ The command must:
   `clarissimi.draft-envelope/v1` wrapper containing an `assessment`
 - validate it with `packages/schemas`
 - reject `draft`, `rejected`, or `skipped` assessments before public rendering
-- append the approved or auto-approved record to the selected ledger
+- append only a manually approved record to the selected ledger while no repository auto-approval
+  policy is configured; reject an external `auto_approved` draft even with a legacy override
 - refuse to import a duplicate contributor and source pull request already present in the selected
   ledger
 - rebuild derived contributors Markdown, contributors JSON, and static JSON from the resulting

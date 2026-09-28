@@ -358,9 +358,12 @@ steps:
 ```
 
 After the staged draft pull request is reviewed, its `maintainerApprovalStatus` is changed to
-`approved` or `auto_approved`, and that pull request is merged, `promote-draft` can render a normal
+`approved`, and that pull request is merged, `promote-draft` can render a normal
 public recognition proposal without another provider call. Use a manual workflow input so the
 maintainer chooses the exact checked-in draft:
+
+Current development source rejects external `auto_approved` drafts until a repository auto-approval
+policy is configured; `allow-legacy-approval` cannot bypass this requirement.
 
 Current development source requires the content digest produced by the CLI's `approve-draft`
 command. Edit and approve the draft again if its text changes after approval. For an older approved

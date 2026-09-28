@@ -607,7 +607,7 @@ test("promote-draft rejects an unapproved draft before branch mutation", async (
           baseBranch: "main",
           pullRequestClient: new FakePullRequestClient(),
         }),
-      /requires maintainerApprovalStatus approved or auto_approved/,
+      /requires a manually approved draft/,
     );
     assert.equal(
       await git(repositoryDir, [
@@ -615,6 +615,40 @@ test("promote-draft rejects an unapproved draft before branch mutation", async (
         "--list",
         "clarissimi/recognition/merged_pull_request-42",
       ]),
+      "",
+    );
+  });
+});
+
+test("promote-draft rejects unconfigured automatic approval before branch mutation", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const remoteDir = join(dir, "remote.git");
+    const draftPath = join(repositoryDir, ".clarissimi", "drafts", "sample-project-42.json");
+    const client = new FakePullRequestClient();
+    await initRepositoryWithRemote(repositoryDir, remoteDir);
+    await mkdir(join(repositoryDir, ".clarissimi", "drafts"), { recursive: true });
+    await writeFile(
+      draftPath,
+      JSON.stringify(approvedDraftAssessment({ maintainerApprovalStatus: "auto_approved" })),
+      "utf8",
+    );
+
+    await assert.rejects(
+      runActionPromoteDraft({
+        mode: "promote-draft",
+        draftPath,
+        allowLegacyApproval: true,
+        repositoryDir,
+        stagingDir: join(dir, "staged"),
+        baseBranch: "main",
+        pullRequestClient: client,
+      }),
+      /no configured policy/,
+    );
+    assert.equal(client.created.length, 0);
+    assert.equal(
+      await remoteBranchSha(repositoryDir, "clarissimi/recognition/merged_pull_request-42"),
       "",
     );
   });

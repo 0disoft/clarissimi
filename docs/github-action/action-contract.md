@@ -185,6 +185,8 @@ rejected unless `allow-legacy-approval: true` is explicit. A mismatched snapshot
 with that option. Draft, rejected, or skipped assessments fail before branch mutation. Malformed or
 internally duplicated ledgers and already-recorded contribution identities also fail before branch
 mutation.
+External `auto_approved` drafts also fail before branch mutation because no repository
+auto-approval policy is configured; `allow-legacy-approval` does not bypass this rule.
 
 Proposal branch commits use a Clarissimi-owned bot author instead of relying on runner-global git
 identity. This keeps maintainer workstations and GitHub-hosted runners from becoming part of the

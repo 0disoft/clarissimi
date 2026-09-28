@@ -138,6 +138,9 @@ Approval states are:
 
 Auto approval is allowed only when repository policy explicitly permits it. The default public write
 mode should still be `propose`.
+Until a repository auto-approval policy is configured and verified, external draft import and
+promotion accept only manual `approved` status; a legacy snapshot override cannot enable
+`auto_approved`.
 An approved draft may carry a content snapshot to detect edits after local approval. This snapshot
 does not establish the approver's identity and is omitted from the public recognition ledger.
 

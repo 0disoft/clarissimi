@@ -2,7 +2,7 @@ import { readFile, realpath } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
-import { checkDraftApprovalSnapshot, prepareEvidenceForProvider } from "@clarissimi/core";
+import { checkExternalDraftApproval, prepareEvidenceForProvider } from "@clarissimi/core";
 import { CONTRIBUTIONS_JSONL_PATH, parseContributionsJsonl } from "@clarissimi/renderers";
 import {
   collectMergedPullRequestEvidence,
@@ -795,13 +795,13 @@ async function readApprovedDraft(
     );
   }
 
-  if (
-    result.value.maintainerApprovalStatus !== "approved" &&
-    result.value.maintainerApprovalStatus !== "auto_approved"
-  ) {
-    throw new Error("promote-draft requires maintainerApprovalStatus approved or auto_approved.");
+  const approvalCheck = checkExternalDraftApproval(result.value);
+  if (approvalCheck === "not_required") {
+    throw new Error("promote-draft requires a manually approved draft.");
   }
-  const approvalCheck = checkDraftApprovalSnapshot(result.value);
+  if (approvalCheck === "auto_approval_unconfigured") {
+    throw new Error("Automatic draft approval has no configured policy.");
+  }
   if (approvalCheck === "missing" && !allowLegacyApproval) {
     throw new Error("Approved Clarissimi draft requires an approval snapshot.");
   }

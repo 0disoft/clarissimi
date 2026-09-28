@@ -34,6 +34,7 @@ be empty. Do not remove a lock based only on age or PID because processes can ov
 be reused. Once a maintainer has independently confirmed that no writer owns the lock, remove the
 stale file, validate the canonical ledger, run `rebuild --out-dir . --check`, and regenerate derived
 outputs from the ledger if the check reports drift.
+When `--ledger` names an alias, inspect the lock beside the resolved canonical ledger path.
 
 Integrity checks after restore:
 

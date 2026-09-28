@@ -180,6 +180,9 @@ permit them.
 By default, `--ledger` is `.clarissimi/contributions.jsonl`. The override is for local validation,
 test fixtures, and recovery workflows; it is not an MVP monthly or yearly partition mode. Public
 derived outputs still use the canonical Clarissimi output paths when `--out-dir` is explicit.
+Writing commands resolve ledger path aliases before taking the sibling lock; successful JSON output
+reports that canonical path. Import rejects a ledger with multiple hard links before replacement,
+so another link cannot silently retain an older record set.
 Import loads the selected or default Clarissimi config. `--markdown-summary none|table|gallery` overrides
 `markdownSummary` when derived files are rendered.
 

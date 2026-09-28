@@ -35,6 +35,8 @@ The command must:
   policy is configured; reject an external `auto_approved` draft even with a legacy override
 - refuse to import a duplicate contributor and source pull request already present in the selected
   ledger
+- resolve ledger path aliases before locking and replacing the selected file; refuse to atomically
+  replace a ledger with multiple hard links because the other alias would retain the old content
 - rebuild derived contributors Markdown, contributors JSON, and static JSON from the resulting
   ledger records
 - write files only when `--out-dir` is explicit

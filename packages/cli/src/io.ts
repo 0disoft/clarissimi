@@ -1,6 +1,6 @@
-import { open, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { open, mkdir, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { dirname, isAbsolute, join } from "node:path";
+import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 
 const LOCK_RETRY_DELAY_MS = 50;
 const LOCK_WAIT_TIMEOUT_MS = 30_000;
@@ -27,6 +27,35 @@ export interface CliIo {
 
 export function resolveFromCwd(cwd: string, path: string): string {
   return isAbsolute(path) ? path : join(cwd, path);
+}
+
+export async function canonicalFilePath(path: string): Promise<string> {
+  const absolutePath = resolve(path);
+  try {
+    return await realpath(absolutePath);
+  } catch (error) {
+    if (!isNodeError(error) || error.code !== "ENOENT") {
+      throw error;
+    }
+  }
+
+  const missingParts = [basename(absolutePath)];
+  let ancestor = dirname(absolutePath);
+  while (true) {
+    try {
+      return join(await realpath(ancestor), ...missingParts);
+    } catch (error) {
+      if (!isNodeError(error) || error.code !== "ENOENT") {
+        throw error;
+      }
+      const parent = dirname(ancestor);
+      if (parent === ancestor) {
+        throw error;
+      }
+      missingParts.unshift(basename(ancestor));
+      ancestor = parent;
+    }
+  }
 }
 
 export async function readTextFile(path: string): Promise<string> {

@@ -884,6 +884,8 @@ test("release readiness rejects CLI command contract drift", () => {
     .replace("An `approved` draft must carry a matching `approvalSnapshot`.", "")
     .replace("`--allow-legacy-approval` explicitly permits an older approved", "")
     .replace("are rejected because no repository auto-approval policy is configured", "")
+    .replace("Writing commands resolve ledger path aliases before taking the sibling lock", "")
+    .replace("Import rejects a ledger with multiple hard links before replacement", "")
     .replace(
       "Unexpected positional arguments fail as usage errors",
       "Unexpected positional arguments are ignored",
@@ -910,6 +912,8 @@ test("release readiness rejects CLI command contract drift", () => {
     "docs/cli/command-contract.md must include An `approved` draft must carry a matching `approvalSnapshot`..",
     "docs/cli/command-contract.md must include `--allow-legacy-approval` explicitly permits an older approved.",
     "docs/cli/command-contract.md must include are rejected because no repository auto-approval policy is configured.",
+    "docs/cli/command-contract.md must include Writing commands resolve ledger path aliases before taking the sibling lock.",
+    "docs/cli/command-contract.md must include Import rejects a ledger with multiple hard links before replacement.",
     "docs/cli/command-contract.md must include Unexpected positional arguments fail as usage errors.",
     "docs/cli/command-contract.md must include Unknown flags,.",
     "docs/cli/command-contract.md must include Repeating the same flag is.",
@@ -2976,6 +2980,8 @@ function createCliCommandContractText() {
     "An `approved` draft must carry a matching `approvalSnapshot`.",
     "`--allow-legacy-approval` explicitly permits an older approved",
     "are rejected because no repository auto-approval policy is configured",
+    "Writing commands resolve ledger path aliases before taking the sibling lock",
+    "Import rejects a ledger with multiple hard links before replacement",
     "By default, `--ledger` is `.clarissimi/contributions.jsonl`. The override is for local validation,",
     "test fixtures, and recovery workflows; it is not an MVP monthly or yearly partition mode.",
     "",

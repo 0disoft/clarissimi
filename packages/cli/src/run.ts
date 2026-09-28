@@ -49,6 +49,7 @@ import { CliConfigError, validateConfigFile, type CliConfig } from "./config.js"
 import { CLI_EXIT_CODES, type CliExitCode } from "./exit-codes.js";
 import { recognizeFixture, recognizeGitHubFixture } from "./fixture.js";
 import {
+  canonicalFilePath,
   fileExists,
   ExclusiveFileExistsError,
   parseJsonText,
@@ -417,10 +418,11 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
     throw new CliUsageError("import-draft requires --draft <path>.");
   }
 
-  const ledgerPath = resolveFromCwd(
+  const requestedLedgerPath = resolveFromCwd(
     io.cwd,
     getStringFlag(args, "ledger", CONTRIBUTIONS_JSONL_PATH) ?? CONTRIBUTIONS_JSONL_PATH,
   );
+  let ledgerPath = requestedLedgerPath;
   const outDir = getStringFlag(args, "out-dir");
   const allowLegacyApproval = getBooleanFlag(args, "allow-legacy-approval");
 
@@ -476,8 +478,15 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
       ]);
     }
 
+    ledgerPath = await canonicalFilePath(requestedLedgerPath);
     const outputDirectory = outDir === undefined ? undefined : resolveFromCwd(io.cwd, outDir);
     const recordCount = await withFileLock(`${ledgerPath}.lock`, async () => {
+      if (pathKey(await canonicalFilePath(requestedLedgerPath)) !== pathKey(ledgerPath)) {
+        throw new Error("Selected ledger path changed while acquiring its lock.");
+      }
+      if ((await fileExists(ledgerPath)) && (await stat(ledgerPath)).nlink > 1) {
+        throw new Error("Cannot atomically replace a ledger with multiple hard links.");
+      }
       const existingLedgerText = (await fileExists(ledgerPath))
         ? await readTextFile(ledgerPath)
         : "";
@@ -489,7 +498,10 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
       });
       const files = new Map<string, string>();
       if (outputDirectory !== undefined) {
-        files.set(join(outputDirectory, CONTRIBUTIONS_JSONL_PATH), outputs.contributionsJsonl);
+        const outputLedgerPath = join(outputDirectory, CONTRIBUTIONS_JSONL_PATH);
+        if (pathKey(await canonicalFilePath(outputLedgerPath)) !== pathKey(ledgerPath)) {
+          files.set(outputLedgerPath, outputs.contributionsJsonl);
+        }
         files.set(join(outputDirectory, CONTRIBUTORS_JSON_PATH), outputs.contributorsJson);
         files.set(join(outputDirectory, CONTRIBUTORS_MARKDOWN_PATH), outputs.contributorsMarkdown);
         files.set(join(outputDirectory, STATIC_DATA_JSON_PATH), outputs.staticDataJson);
@@ -610,10 +622,11 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
     throw new CliUsageError(positionalError);
   }
 
-  const ledgerPath = resolveFromCwd(
+  const requestedLedgerPath = resolveFromCwd(
     io.cwd,
     getStringFlag(args, "ledger", CONTRIBUTIONS_JSONL_PATH) ?? CONTRIBUTIONS_JSONL_PATH,
   );
+  let ledgerPath = requestedLedgerPath;
   const outDir = getStringFlag(args, "out-dir");
   const check = getBooleanFlag(args, "check");
   if (check && outDir === undefined) {
@@ -621,6 +634,9 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   }
 
   try {
+    if (outDir !== undefined) {
+      ledgerPath = await canonicalFilePath(requestedLedgerPath);
+    }
     const config = (await validateConfigFile(io.cwd, getStringFlag(args, "config"))).config;
     const rebuild = async (): Promise<{
       readonly recordCount: number;
@@ -819,10 +835,6 @@ async function findStaleRenderedOutputs(
 }
 
 async function pathsReferToSameFile(left: string, right: string): Promise<boolean> {
-  const pathKey = (path: string): string => {
-    const normalized = resolve(path);
-    return process.platform === "win32" ? normalized.toLowerCase() : normalized;
-  };
   if (pathKey(left) === pathKey(right)) {
     return true;
   }
@@ -839,4 +851,9 @@ async function pathsReferToSameFile(left: string, right: string): Promise<boolea
     pathKey(leftReal) === pathKey(rightReal) ||
     (leftStat.ino !== 0 && leftStat.dev === rightStat.dev && leftStat.ino === rightStat.ino)
   );
+}
+
+function pathKey(path: string): string {
+  const normalized = resolve(path);
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
 }

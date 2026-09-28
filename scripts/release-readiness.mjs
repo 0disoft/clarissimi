@@ -684,6 +684,8 @@ export const cliCommandContract = {
     "are rejected because no repository auto-approval policy is configured",
     "does not call providers, read provider tokens, fetch GitHub evidence",
     "it is not an MVP monthly or yearly partition mode",
+    "Writing commands resolve ledger path aliases before taking the sibling lock",
+    "Import rejects a ledger with multiple hard links before replacement",
     "Unexpected positional arguments fail as usage errors",
     "Unknown flags,",
     "Repeating the same flag is",

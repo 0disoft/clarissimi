@@ -1,5 +1,17 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, open, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import {
+  link,
+  mkdir,
+  mkdtemp,
+  open,
+  readFile,
+  readdir,
+  realpath,
+  rm,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
@@ -1206,6 +1218,133 @@ test("import-draft serializes concurrent ledger updates without losing successfu
       );
       await assert.rejects(() => readFile(`${ledger}.lock`, "utf8"));
     }
+  });
+});
+
+test("import-draft refuses a hard-linked ledger before replacing either alias", async () => {
+  await withTempDir(async (dir) => {
+    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+    const alias = join(dir, "ledger-alias.jsonl");
+    const draftPath = join(dir, "new-draft.json");
+    const original = `${JSON.stringify(assessment())}\n`;
+    await mkdir(join(dir, ".clarissimi"), { recursive: true });
+    await writeFile(ledger, original, "utf8");
+    await link(ledger, alias);
+    await writeFile(
+      draftPath,
+      JSON.stringify(
+        assessment({
+          source: {
+            repository: "example/project",
+            event: "merged_pull_request",
+            pullRequestNumber: 43,
+            mergedAt: "2026-07-08T00:00:00.000Z",
+          },
+        }),
+      ),
+      "utf8",
+    );
+
+    const result = await run(
+      [
+        "import-draft",
+        "--draft",
+        draftPath,
+        "--ledger",
+        alias,
+        "--allow-legacy-approval",
+        "--json",
+      ],
+      dir,
+    );
+    assert.equal(result.exitCode, 7);
+    assert.match(JSON.parse(result.stdout).message, /multiple hard links/);
+    assert.equal(await readFile(ledger, "utf8"), original);
+    assert.equal(await readFile(alias, "utf8"), original);
+  });
+});
+
+test("import-draft and rebuild resolve a directory alias to the canonical ledger path", async () => {
+  await withTempDir(async (dir) => {
+    const recordsDir = join(dir, "records");
+    const aliasDir = join(dir, "records-alias");
+    const draftPath = join(dir, "new-draft.json");
+    await mkdir(recordsDir);
+    await symlink(recordsDir, aliasDir, "junction");
+    await writeFile(draftPath, JSON.stringify(assessment()), "utf8");
+
+    const result = await run(
+      [
+        "import-draft",
+        "--draft",
+        draftPath,
+        "--ledger",
+        join(aliasDir, "contributions.jsonl"),
+        "--allow-legacy-approval",
+        "--json",
+      ],
+      dir,
+    );
+    const canonicalLedger = await realpath(join(recordsDir, "contributions.jsonl"));
+    assert.equal(result.exitCode, 0);
+    assert.equal(JSON.parse(result.stdout).ledgerPath, canonicalLedger);
+    assert.equal((await readFile(canonicalLedger, "utf8")).trim().split("\n").length, 1);
+
+    const rebuilt = await run(
+      [
+        "rebuild",
+        "--ledger",
+        join(aliasDir, "contributions.jsonl"),
+        "--out-dir",
+        join(dir, "out"),
+        "--json",
+      ],
+      dir,
+    );
+    assert.equal(rebuilt.exitCode, 0);
+    assert.equal(JSON.parse(rebuilt.stdout).ledgerPath, canonicalLedger);
+
+    const draftPaths = await Promise.all(
+      Array.from({ length: 6 }, async (_, index) => {
+        const path = join(dir, `concurrent-${index}.json`);
+        await writeFile(
+          path,
+          JSON.stringify(
+            assessment({
+              source: {
+                repository: "example/project",
+                event: "merged_pull_request",
+                pullRequestNumber: 100 + index,
+                mergedAt: "2026-07-08T00:00:00.000Z",
+              },
+            }),
+          ),
+          "utf8",
+        );
+        return path;
+      }),
+    );
+    const imports = await Promise.all(
+      draftPaths.map((path, index) =>
+        run(
+          [
+            "import-draft",
+            "--draft",
+            path,
+            "--ledger",
+            index % 2 === 0 ? canonicalLedger : join(aliasDir, "contributions.jsonl"),
+            "--allow-legacy-approval",
+            "--json",
+          ],
+          dir,
+        ),
+      ),
+    );
+    assert.equal(
+      imports.every((item) => item.exitCode === 0),
+      true,
+    );
+    assert.equal((await readFile(canonicalLedger, "utf8")).trim().split("\n").length, 7);
   });
 });
 

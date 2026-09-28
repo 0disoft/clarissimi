@@ -181,6 +181,9 @@ and appends to the canonical ledger. It stages a complete output generation in s
 temporary files, replaces derived outputs first, and replaces the canonical ledger last. The ledger
 rename is the commit point; if a process terminates during replacement, the ledger remains the
 recovery source and `rebuild` restores derived outputs.
+Import and writing rebuilds resolve path aliases before taking the lock, so directory junctions
+and file symlinks to one ledger coordinate on its canonical path. Import refuses a hard-linked
+ledger because an atomic replacement would leave another link pointing to the old generation.
 After an interrupted write, `rebuild --out-dir . --check` compares the three derived outputs with
 the canonical ledger without replacing them. A separate output directory also checks its ledger
 copy. The check reports mismatched file names with exit code `8`; run `rebuild --out-dir .` to

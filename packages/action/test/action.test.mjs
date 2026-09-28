@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { GitHubEvidenceCollectionError } from "../../github/dist/index.js";
-import { OpenAiCompatibleProviderError } from "../../providers/dist/index.js";
+import { OpenAiCompatibleProviderError, createFakeAssessment } from "../../providers/dist/index.js";
 import {
   ActionUsageError,
   resolveGitHubEventPayload,
@@ -155,6 +155,46 @@ test("creates a dry-run summary from a GitHub fixture path", async () => {
     assert.equal(summary.assessment.contributor.login, "octocat");
     assert.equal(JSON.stringify(summary).includes("Adds a failing parser case"), false);
     assert.equal(JSON.stringify(summary).includes("parses nested input"), false);
+  });
+});
+
+test("dry-run summary selects public fields and rejects sensitive narrative text", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "github-fixture.json");
+    const syntheticToken = `ghp_${"a".repeat(20)}`;
+    await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+
+    const summary = await runActionDryRun({
+      githubFixturePath: fixturePath,
+      provider: {
+        id: "test-provider",
+        async createAssessment(input) {
+          return { ...createFakeAssessment(input), diagnostic: syntheticToken };
+        },
+      },
+    });
+    assert.equal(JSON.stringify(summary).includes(syntheticToken), false);
+
+    await assert.rejects(
+      () =>
+        runActionDryRun({
+          githubFixturePath: fixturePath,
+          provider: {
+            id: "test-provider",
+            async createAssessment(input) {
+              return {
+                ...createFakeAssessment(input),
+                publicRecognitionText: `Recognized with ${syntheticToken}.`,
+              };
+            },
+          },
+        }),
+      (error) => {
+        assert.equal(error.issues?.[0]?.path, "$.publicRecognitionText");
+        assert.equal(JSON.stringify(error).includes(syntheticToken), false);
+        return true;
+      },
+    );
   });
 });
 

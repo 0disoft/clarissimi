@@ -160,6 +160,34 @@ test("rejects draft assessments before staging public files", async () => {
   });
 });
 
+test("rejects sensitive recognition and draft text before staging repository files", async () => {
+  await withTempDir(async (dir) => {
+    const syntheticToken = `ghp_${"a".repeat(20)}`;
+    const unsafeText = `Recognized with ${syntheticToken}.`;
+    for (const [stage, status] of [
+      [stageProposalRecognitionOutputs, "approved"],
+      [stageProposalDraftReviewOutput, "draft"],
+    ]) {
+      await assert.rejects(
+        () =>
+          stage({
+            outputDir: dir,
+            assessments: [
+              assessment({ maintainerApprovalStatus: status, publicRecognitionText: unsafeText }),
+            ],
+            redactionMatchCount: 0,
+          }),
+        (error) => {
+          assert.equal(error instanceof RendererValidationError, true);
+          assert.equal(JSON.stringify(error).includes(syntheticToken), false);
+          return true;
+        },
+      );
+    }
+    assert.deepEqual(await readdir(dir), []);
+  });
+});
+
 test("stages draft review output without public recognition files", async () => {
   await withTempDir(async (dir) => {
     const result = await stageProposalDraftReviewOutput({

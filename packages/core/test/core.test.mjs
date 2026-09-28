@@ -5,6 +5,7 @@ import {
   EvidencePreparationError,
   PROVIDER_EVIDENCE_LIMITS,
   canPublishAssessment,
+  findUnsafeRepositoryAssessmentFields,
   prepareEvidenceForProvider,
 } from "../dist/index.js";
 import { ASSESSMENT_SCHEMA_VERSION, REDACTION_PLACEHOLDER } from "./support.mjs";
@@ -44,6 +45,44 @@ function validAssessment(status = "approved") {
     source,
   };
 }
+
+test("repository safety rejects visible secrets without putting values in diagnostics", () => {
+  const syntheticToken = `ghp_${"a".repeat(20)}`;
+  const assessment = validAssessment();
+  const issues = findUnsafeRepositoryAssessmentFields({
+    ...assessment,
+    affectedArea: "See https://example.invalid/docs?access%5Ftoken=short",
+    publicRecognitionText: `Recognized with ${syntheticToken}.`,
+    evidenceRefs: [
+      {
+        ...assessment.evidenceRefs[0],
+        url: "https://github.com/example/project/pull/42?access%5Ftoken=encoded-value",
+      },
+    ],
+  });
+
+  assert.deepEqual(
+    issues.map(({ path, code }) => ({ path, code })),
+    [
+      { path: "$.affectedArea", code: "unsafe_url_parameter" },
+      { path: "$.publicRecognitionText", code: "unsafe_repository_text" },
+      { path: "$.evidenceRefs[].url", code: "unsafe_url_parameter" },
+    ],
+  );
+  assert.equal(JSON.stringify(issues).includes(syntheticToken), false);
+  const fragmentIssues = findUnsafeRepositoryAssessmentFields({
+    ...assessment,
+    contributor: {
+      ...assessment.contributor,
+      profileUrl: "https://github.com/octocat#/profile?access_token=short",
+    },
+  });
+  assert.deepEqual(
+    fragmentIssues.map(({ path, code }) => ({ path, code })),
+    [{ path: "$.contributor.profileUrl", code: "unsafe_url_parameter" }],
+  );
+  assert.deepEqual(findUnsafeRepositoryAssessmentFields(assessment), []);
+});
 
 test("prepares provider evidence by redacting all text-bearing fields", () => {
   const address = `contributor@${["example", "invalid"].join(".")}`;

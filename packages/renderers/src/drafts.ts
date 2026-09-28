@@ -1,3 +1,4 @@
+import { findUnsafeRepositoryAssessmentFields } from "@clarissimi/core";
 import { validateContributionAssessment } from "@clarissimi/schemas";
 import type { ContributionAssessment } from "@clarissimi/schemas";
 
@@ -27,7 +28,12 @@ export function toDraftReviewRecord(value: unknown): DraftReviewRecord {
     );
   }
 
-  return sanitizeDraftReviewRecord(result.value);
+  const record = sanitizeDraftReviewRecord(result.value);
+  const issues = findUnsafeRepositoryAssessmentFields(record);
+  if (issues.length > 0) {
+    throw new RendererValidationError("Draft contains unsafe repository-visible text.", issues);
+  }
+  return record;
 }
 
 export function renderDraftReviewJson(value: unknown): string {

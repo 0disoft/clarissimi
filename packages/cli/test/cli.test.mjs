@@ -1167,6 +1167,29 @@ test("import-draft rejects draft approval status before writing ledger output", 
   });
 });
 
+test("import-draft rejects sensitive public text without writing a ledger or echoing the value", async () => {
+  await withTempDir(async (dir) => {
+    const syntheticToken = `ghp_${"a".repeat(20)}`;
+    const draftPath = join(dir, "agent-draft.json");
+    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+    await writeFile(
+      draftPath,
+      JSON.stringify(assessment({ publicRecognitionText: `Recognized with ${syntheticToken}.` })),
+      "utf8",
+    );
+
+    const result = await run(
+      ["import-draft", "--draft", draftPath, "--ledger", ledger, "--json"],
+      dir,
+    );
+
+    assert.equal(result.exitCode, 6);
+    assert.equal(JSON.parse(result.stdout).ok, false);
+    assert.equal(`${result.stdout}${result.stderr}`.includes(syntheticToken), false);
+    await assert.rejects(readFile(ledger, "utf8"));
+  });
+});
+
 test("import-draft rejects duplicate contributor and source records", async () => {
   await withTempDir(async (dir) => {
     const draftPath = join(dir, "agent-draft.json");

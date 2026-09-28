@@ -88,6 +88,9 @@ node packages/cli/dist/bin/clarissimi.js import-draft --draft .clarissimi/drafts
 `import-draft` appends only approved or auto-approved records to `.clarissimi/contributions.jsonl`.
 Derived files such as `.clarissimi/contributors.json`, `CONTRIBUTORS.md`, and static JSON are
 rebuilt from the ledger.
+Stage, approval, and import reject repository-visible fields containing recognized secret, token,
+private-key, or email patterns. The error identifies the field without repeating the value. Edit the
+draft and approve that edited version before importing it; approval does not silently mask text.
 
 ## Delegated Model Envelope
 

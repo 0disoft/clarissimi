@@ -59,6 +59,9 @@ Failure behavior is fail-closed:
 - Privacy: raw evidence is untrusted and must be redacted before any live provider call.
 - Security: GitHub and provider tokens stay outside public output, logs, fixtures, and committed
   examples.
+- Repository output safety: public records, staged review drafts, and assessment-bearing CLI or
+  Action summaries reject sensitive strings after field selection. Existing ledger lines remain
+  structurally readable for diagnosis, but unsafe lines cannot be rendered into new public outputs.
 - Integrity: `.clarissimi/contributions.jsonl` is the MVP canonical approved ledger; derived JSON
   and Markdown outputs must be reproducible from it.
 - Maintainability: schema vocabulary stays in `packages/schemas`, package boundaries stay narrow,

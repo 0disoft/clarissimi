@@ -1,9 +1,16 @@
-import { canPublishAssessment } from "@clarissimi/core";
+import { canPublishAssessment, findUnsafeRepositoryAssessmentFields } from "@clarissimi/core";
 import type { ContributionAssessment } from "@clarissimi/schemas";
 
 import { RendererValidationError, type PublicContributionRecord } from "./types.js";
 
 export function toPublicContributionRecord(value: unknown): PublicContributionRecord {
+  return normalizePublicContributionRecord(value, true);
+}
+
+function normalizePublicContributionRecord(
+  value: unknown,
+  enforceRepositorySafety: boolean,
+): PublicContributionRecord {
   const result = canPublishAssessment(normalizeLegacyMergedAt(value));
 
   if (!result.ok) {
@@ -13,7 +20,17 @@ export function toPublicContributionRecord(value: unknown): PublicContributionRe
     );
   }
 
-  return sanitizePublicContributionRecord(result.value.assessment);
+  const record = sanitizePublicContributionRecord(result.value.assessment);
+  if (enforceRepositorySafety) {
+    const issues = findUnsafeRepositoryAssessmentFields(record);
+    if (issues.length > 0) {
+      throw new RendererValidationError(
+        "Assessment contains unsafe repository-visible text.",
+        issues,
+      );
+    }
+  }
+  return record;
 }
 
 function normalizeLegacyMergedAt(value: unknown): unknown {
@@ -171,7 +188,7 @@ export function parseContributionsJsonl(input: string): readonly PublicContribut
       );
     }
 
-    records.push(toPublicContributionRecord(parsed));
+    records.push(normalizePublicContributionRecord(parsed, false));
   });
 
   return records;

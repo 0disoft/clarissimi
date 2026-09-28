@@ -214,6 +214,9 @@ Tests for core correctness must use fake deterministic providers, not live LLM A
 - Private repository support is deferred.
 - Redaction runs before any provider call.
 - Secret, token, private key, email, and environment-file patterns are removed or masked.
+- Before a generated or imported assessment reaches repository files or machine-readable run
+  summaries, inspect its repository-visible fields for sensitive patterns. Reject unsafe content
+  with field-level diagnostics that omit the matched value; do not silently rewrite approved text.
 - Security contributions require maintainer confirmation, security label, advisory reference, or
   test evidence before strong impact is recorded.
 - Provider raw responses are not logged by default.

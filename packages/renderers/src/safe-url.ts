@@ -1,7 +1,5 @@
+import { isSensitiveUrlParameterName } from "@clarissimi/core";
 import { RendererValidationError } from "./types.js";
-
-const SENSITIVE_URL_PARAMETER_PATTERN =
-  /(?:^|[_-])(?:access[_-]?token|auth[_-]?token|token|secret|password|api[_-]?key|private[_-]?key)(?:$|[=_-])/i;
 
 export function normalizeSafeHttpsUrl(
   value: string,
@@ -51,12 +49,9 @@ export function normalizeSafeHttpsUrl(
   }
 
   const sensitiveParameter = [...parsed.searchParams.keys()].find((name) =>
-    SENSITIVE_URL_PARAMETER_PATTERN.test(name),
+    isSensitiveUrlParameterName(name),
   );
-  if (
-    sensitiveParameter !== undefined ||
-    SENSITIVE_URL_PARAMETER_PATTERN.test(parsed.hash.slice(1))
-  ) {
+  if (sensitiveParameter !== undefined || isSensitiveUrlParameterName(parsed.hash.slice(1))) {
     throw new RendererValidationError(
       `${surface} link destination must not include secret-bearing URL parameters.`,
       [

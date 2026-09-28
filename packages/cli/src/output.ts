@@ -1,5 +1,9 @@
 import { FakeProviderAssessmentError, OpenAiCompatibleProviderError } from "@clarissimi/providers";
-import { RendererValidationError } from "@clarissimi/renderers";
+import {
+  RendererValidationError,
+  toDraftReviewRecord,
+  toPublicContributionRecord,
+} from "@clarissimi/renderers";
 import type { ContributionAssessment, EvidenceRef } from "@clarissimi/schemas";
 
 import { getBooleanFlag, type ParsedArgs } from "./args.js";
@@ -85,11 +89,7 @@ type SanitizedContributionAssessment = Omit<ContributionAssessment, "evidenceRef
 export function sanitizeAssessmentForCliOutput(
   assessment: ContributionAssessment,
 ): SanitizedContributionAssessment {
-  return {
-    ...assessment,
-    evidenceRefs: assessment.evidenceRefs.map((ref) => {
-      const { excerpt: _excerpt, ...safeRef } = ref;
-      return safeRef;
-    }),
-  };
+  return assessment.maintainerApprovalStatus === "draft"
+    ? toDraftReviewRecord(assessment)
+    : toPublicContributionRecord(assessment);
 }

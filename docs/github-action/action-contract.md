@@ -153,10 +153,11 @@ Dry-run mode reads provider credentials only when `provider` is explicitly set t
 `openai-compatible`. The default provider is `fake`. The default Action mode is `propose`, which
 reads `GITHUB_TOKEN` for live GitHub collection and proposal pull request creation or update.
 Fixture-first `propose` succeeds only when the fixture explicitly carries an approved or
-auto-approved maintainer approval status. Normal provider drafts remain non-public and fail closed
-before branch mutation. Before rendering, propose mode parses the checked-out
-`.clarissimi/contributions.jsonl` when present, rejects malformed or duplicate existing records,
-and appends the new contribution identity. It rebuilds all derived outputs from that complete
+auto-approved maintainer approval status. `GITHUB_EVENT_PATH` and `event-path` payloads cannot
+grant approval, even if they contain a `maintainerApprovalStatus` property. Normal provider drafts
+remain non-public and fail closed before branch mutation. Before rendering, propose mode parses the
+checked-out `.clarissimi/contributions.jsonl` when present, rejects malformed or duplicate
+existing records, and appends the new contribution identity. It rebuilds all derived outputs from that complete
 ledger; it must never replace prior recognition history with only the new assessment.
 
 `commit` uses the same assessment and complete-ledger contract as `propose`, but writes the staged

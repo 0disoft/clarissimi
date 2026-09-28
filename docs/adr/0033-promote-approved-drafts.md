@@ -1,6 +1,7 @@
 # ADR 0033: Promote Approved Drafts Through the Action
 
 - Status: Accepted
+- Amended: 2026-09-29
 - Owner: Repository maintainers
 
 ## Context
@@ -12,6 +13,8 @@ public recognition change separately.
 
 Normal provider output remains a draft by design. Letting a provider silently change approval or
 publishing immediately after draft generation would violate the maintainer-approval boundary.
+An event payload is evidence about a pull request, not an approval authority. Only an explicit
+fixture input may override a provider draft's approval status for deterministic checks.
 
 ## Decision
 

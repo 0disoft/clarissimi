@@ -52,7 +52,6 @@ function githubFixture(overrides = {}) {
 
 function pullRequestEvent(overrides = {}) {
   return {
-    maintainerApprovalStatus: "approved",
     repository: {
       full_name: "sample/project",
     },
@@ -741,7 +740,7 @@ test("environment runner writes bounded stage-draft outputs and step summary", a
   });
 });
 
-test("environment propose mode routes merged pull request events through the live collector", async () => {
+test("environment stage-draft mode routes merged pull request events through the live collector", async () => {
   await withTempDir(async (dir) => {
     const repositoryDir = join(dir, "repo");
     const remoteDir = join(dir, "remote.git");
@@ -763,7 +762,7 @@ test("environment propose mode routes merged pull request events through the liv
         GITHUB_WORKSPACE: repositoryDir,
         INPUT_BASE_BRANCH: "main",
         GITHUB_EVENT_PATH: eventPath,
-        INPUT_MODE: "propose",
+        INPUT_MODE: "stage-draft",
         INPUT_STAGING_DIR: stagingDir,
         GITHUB_TOKEN: "live-token",
       },
@@ -835,16 +834,64 @@ test("environment propose mode routes merged pull request events through the liv
     assert.equal(exitCode, 0);
     assert.equal(stderr, "");
     assert.equal(parsed.inputSource, "github_event_path");
-    assert.equal(parsed.mode, "propose");
+    assert.equal(parsed.mode, "stage-draft");
+    assert.equal(parsed.approvalStatus, "draft");
+    assert.equal(parsed.publicOutputsRendered, false);
     assert.equal(liveRequests.length, 3);
     assert.equal(
       liveRequests.every((request) => request.authorization === "Bearer live-token"),
       true,
     );
     assert.equal(client.created.length, 1);
+    assert.equal(
+      (
+        await readFile(
+          join(stagingDir, ".clarissimi", "drafts", "sample-project-merged_pull_request-42.json"),
+          "utf8",
+        )
+      ).includes('"maintainerApprovalStatus": "draft"'),
+      true,
+    );
     assert.equal(outputText.includes("LIVE_BODY_SENTINEL"), false);
     assert.equal(summaryText.includes("PATCH_SENTINEL"), false);
     assert.equal(client.created[0].body.includes("REVIEW_SENTINEL"), false);
+  });
+});
+
+test("event payload approval field cannot publish a recognition proposal", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const remoteDir = join(dir, "remote.git");
+    const eventPath = join(dir, "event.json");
+    const client = new FakePullRequestClient();
+    await initRepositoryWithRemote(repositoryDir, remoteDir);
+    await writeFile(
+      eventPath,
+      JSON.stringify({ ...pullRequestEvent(), maintainerApprovalStatus: "approved" }),
+      "utf8",
+    );
+    const remoteMainSha = await git(repositoryDir, ["ls-remote", "origin", "refs/heads/main"]);
+
+    await assert.rejects(
+      runActionPropose({
+        mode: "propose",
+        eventPath,
+        repositoryDir,
+        stagingDir: join(dir, "staged"),
+        baseBranch: "main",
+        pullRequestClient: client,
+      }),
+      /Proposal output staging accepts only valid approved assessments/,
+    );
+    assert.equal(client.created.length, 0);
+    assert.equal(
+      await remoteBranchSha(repositoryDir, "clarissimi/recognition/merged_pull_request-42"),
+      "",
+    );
+    assert.equal(
+      await git(repositoryDir, ["ls-remote", "origin", "refs/heads/main"]),
+      remoteMainSha,
+    );
   });
 });
 

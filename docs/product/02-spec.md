@@ -292,6 +292,8 @@ only a normal fast-forward push. It must never infer approval, force-push, or be
 The Action may also support `stage-draft` mode. This mode creates a proposal pull request containing
 only sanitized `.clarissimi/drafts/*.json` review files for normal unapproved drafts. It must not
 write public recognition outputs or imply maintainer approval.
+An event payload must not grant maintainer approval to a provider draft; explicit approval status
+overrides are reserved for fixture inputs used in local and CI checks.
 
 The Action may support `promote-draft` for a checked-in draft that already carries explicit
 maintainer approval. Promotion must not call a provider or infer approval. It creates a normal

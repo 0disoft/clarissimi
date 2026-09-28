@@ -852,7 +852,10 @@ async function prepareActionAssessment(
   return {
     kind: "assessment",
     inputSource: source.kind,
-    assessment: applyFixtureApproval(draft, parseFixtureApprovalStatus(eventPayload)),
+    assessment: applyFixtureApproval(
+      draft,
+      source.kind === "github_fixture" ? parseFixtureApprovalStatus(eventPayload) : undefined,
+    ),
     redactionChanged: preparedEvidence.redactionReport.changed,
     redactionMatchCount: preparedEvidence.redactionReport.occurrences.length,
   };

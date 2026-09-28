@@ -679,6 +679,8 @@ export const cliCommandContract = {
     'with `maintainerApprovalStatus: "approved"`',
     "Use `import-draft` after this command to publish the approved",
     "rejects non-public approval states, appends the sanitized public",
+    "An `approved` draft must carry a matching `approvalSnapshot`.",
+    "`--allow-legacy-approval` explicitly permits an older approved",
     "does not call providers, read provider tokens, fetch GitHub evidence",
     "it is not an MVP monthly or yearly partition mode",
     "Unexpected positional arguments fail as usage errors",

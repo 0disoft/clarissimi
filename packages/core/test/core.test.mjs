@@ -5,9 +5,9 @@ import {
   EvidencePreparationError,
   PROVIDER_EVIDENCE_LIMITS,
   canPublishAssessment,
+  checkDraftApprovalSnapshot,
   createDraftApprovalSnapshot,
   findUnsafeRepositoryAssessmentFields,
-  matchesDraftApprovalSnapshot,
   prepareEvidenceForProvider,
 } from "../dist/index.js";
 import { ASSESSMENT_SCHEMA_VERSION, REDACTION_PLACEHOLDER } from "./support.mjs";
@@ -57,17 +57,22 @@ test("approval snapshot binds the draft content independently of JSON key order"
     approvalSnapshot: snapshot,
   };
   assert.match(snapshot.contentSha256, /^[0-9a-f]{64}$/);
-  assert.equal(matchesDraftApprovalSnapshot(approved), true);
+  assert.equal(checkDraftApprovalSnapshot(approved), "valid");
   assert.equal(
-    matchesDraftApprovalSnapshot(Object.fromEntries(Object.entries(approved).reverse())),
-    true,
+    checkDraftApprovalSnapshot(Object.fromEntries(Object.entries(approved).reverse())),
+    "valid",
   );
   assert.equal(
-    matchesDraftApprovalSnapshot({
+    checkDraftApprovalSnapshot({
       ...approved,
       publicRecognitionText: "A different recognition after approval.",
     }),
-    false,
+    "mismatch",
+  );
+  assert.equal(checkDraftApprovalSnapshot({ ...approved, approvalSnapshot: undefined }), "missing");
+  assert.equal(
+    checkDraftApprovalSnapshot({ ...draft, maintainerApprovalStatus: "auto_approved" }),
+    "not_required",
   );
 });
 

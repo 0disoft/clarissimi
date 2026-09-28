@@ -841,7 +841,49 @@ test("import-draft rejects content changed after approval without writing the le
     );
     assert.equal(imported.exitCode, 6);
     assert.match(JSON.parse(imported.stdout).message, /changed after approval/);
+    const legacyOverride = await run(
+      [
+        "import-draft",
+        "--draft",
+        draftPath,
+        "--ledger",
+        ledger,
+        "--allow-legacy-approval",
+        "--json",
+      ],
+      dir,
+    );
+    assert.equal(legacyOverride.exitCode, 6);
     await assert.rejects(readFile(ledger, "utf8"));
+  });
+});
+
+test("import-draft requires a snapshot for manual approval unless legacy import is explicit", async () => {
+  await withTempDir(async (dir) => {
+    const draftPath = join(dir, "legacy-approved.json");
+    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+    await writeFile(draftPath, JSON.stringify(assessment()), "utf8");
+    const rejected = await run(
+      ["import-draft", "--draft", draftPath, "--ledger", ledger, "--json"],
+      dir,
+    );
+    assert.equal(rejected.exitCode, 6);
+    assert.match(JSON.parse(rejected.stdout).message, /requires an approval snapshot/);
+    await assert.rejects(readFile(ledger, "utf8"));
+    const imported = await run(
+      [
+        "import-draft",
+        "--draft",
+        draftPath,
+        "--ledger",
+        ledger,
+        "--allow-legacy-approval",
+        "--json",
+      ],
+      dir,
+    );
+    assert.equal(imported.exitCode, 0);
+    assert.equal(JSON.parse(imported.stdout).records, 1);
   });
 });
 
@@ -906,7 +948,17 @@ test("import-draft appends an approved agent draft and writes derived outputs", 
     );
 
     const result = await run(
-      ["import-draft", "--draft", draftPath, "--ledger", ledger, "--out-dir", outDir, "--json"],
+      [
+        "import-draft",
+        "--draft",
+        draftPath,
+        "--ledger",
+        ledger,
+        "--out-dir",
+        outDir,
+        "--allow-legacy-approval",
+        "--json",
+      ],
       dir,
     );
     const output = JSON.parse(result.stdout);
@@ -1091,7 +1143,18 @@ test("import-draft serializes concurrent ledger updates without losing successfu
 
       const results = await Promise.all(
         draftPaths.map((draftPath) =>
-          run(["import-draft", "--draft", draftPath, "--ledger", ledger, "--json"], dir),
+          run(
+            [
+              "import-draft",
+              "--draft",
+              draftPath,
+              "--ledger",
+              ledger,
+              "--allow-legacy-approval",
+              "--json",
+            ],
+            dir,
+          ),
         ),
       );
       const records = (await readFile(ledger, "utf8"))
@@ -1133,7 +1196,17 @@ test("import-draft preserves the canonical ledger when a derived destination is 
     await mkdir(join(outDir, "CONTRIBUTORS.md"), { recursive: true });
 
     const result = await run(
-      ["import-draft", "--draft", draftPath, "--ledger", ledger, "--out-dir", outDir, "--json"],
+      [
+        "import-draft",
+        "--draft",
+        draftPath,
+        "--ledger",
+        ledger,
+        "--out-dir",
+        outDir,
+        "--allow-legacy-approval",
+        "--json",
+      ],
       dir,
     );
 
@@ -1163,7 +1236,15 @@ test("import-draft accepts a delegated LLM draft envelope without storing proven
     );
 
     const result = await run(
-      ["import-draft", "--draft", draftPath, "--ledger", ledger, "--json"],
+      [
+        "import-draft",
+        "--draft",
+        draftPath,
+        "--ledger",
+        ledger,
+        "--allow-legacy-approval",
+        "--json",
+      ],
       dir,
     );
     const output = JSON.parse(result.stdout);
@@ -1235,7 +1316,15 @@ test("import-draft rejects sensitive public text without writing a ledger or ech
     );
 
     const result = await run(
-      ["import-draft", "--draft", draftPath, "--ledger", ledger, "--json"],
+      [
+        "import-draft",
+        "--draft",
+        draftPath,
+        "--ledger",
+        ledger,
+        "--allow-legacy-approval",
+        "--json",
+      ],
       dir,
     );
 
@@ -1256,7 +1345,15 @@ test("import-draft rejects duplicate contributor and source records", async () =
     await writeFile(ledger, `${JSON.stringify(assessment())}\n`, "utf8");
 
     const result = await run(
-      ["import-draft", "--draft", draftPath, "--ledger", ledger, "--json"],
+      [
+        "import-draft",
+        "--draft",
+        draftPath,
+        "--ledger",
+        ledger,
+        "--allow-legacy-approval",
+        "--json",
+      ],
       dir,
     );
 

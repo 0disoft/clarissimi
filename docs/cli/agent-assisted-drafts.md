@@ -82,8 +82,10 @@ node packages/cli/dist/bin/clarissimi.js approve-draft --draft .clarissimi/draft
 `approve-draft` records a content digest and approval time in `approvalSnapshot`. If that
 snapshot is present, `import-draft` rejects later edits to the approved draft. To approve edited
 text, set its status back to `draft`, remove the old snapshot, review the content, and run
-`approve-draft` again. Legacy approved files without a snapshot remain accepted; the snapshot is
-an edit check, not proof of the approver's identity.
+`approve-draft` again. An approved legacy file without a snapshot is rejected by default; a
+maintainer may pass `--allow-legacy-approval` to `import-draft` after reviewing that file. This
+flag never bypasses a mismatched snapshot. The snapshot is an edit check, not proof of the
+approver's identity.
 
 Import the approved draft into the canonical ledger and rebuild derived outputs:
 

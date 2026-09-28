@@ -171,6 +171,11 @@ rebuilds derived outputs. It does not call providers, read provider tokens, fetc
 decide approval, mutate branches, create pull requests, or store AI/provider provenance in public
 recognition records.
 
+An `approved` draft must carry a matching `approvalSnapshot`. A missing snapshot is a policy
+rejection before any ledger write. `--allow-legacy-approval` explicitly permits an older approved
+draft with no snapshot; it never permits a mismatched snapshot. `auto_approved` assessments remain
+subject to their existing policy without a maintainer snapshot.
+
 By default, `--ledger` is `.clarissimi/contributions.jsonl`. The override is for local validation,
 test fixtures, and recovery workflows; it is not an MVP monthly or yearly partition mode. Public
 derived outputs still use the canonical Clarissimi output paths when `--out-dir` is explicit.

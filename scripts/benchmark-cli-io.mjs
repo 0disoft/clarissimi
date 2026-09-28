@@ -253,6 +253,7 @@ async function runFilesystemSample(options) {
             directory,
             "--markdown-summary",
             "table",
+            "--allow-legacy-approval",
             "--json",
           ];
     const startedAt = options.now();

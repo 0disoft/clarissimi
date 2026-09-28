@@ -233,16 +233,19 @@ See `docs/cli/shell-completion.md` for Zsh and fish examples and the full comple
 
 For the agent-assisted path, use an already-running AI coding agent to inspect a PR or issue and
 produce a `clarissimi.assessment/v1` JSON draft. The agent may draft directly or delegate that
-assessment to another LLM. Clarissimi can then validate and record the maintainer-approved draft
-without owning the agent's API key:
+assessment to another LLM. Review and approve the draft before importing it; Clarissimi does not
+need the agent's API key:
 
 ```powershell
+node packages/cli/dist/bin/clarissimi.js approve-draft --draft agent-draft.json --json
 node packages/cli/dist/bin/clarissimi.js import-draft --draft agent-draft.json --out-dir . --json
 ```
 
-`import-draft` rejects unapproved drafts and duplicate contributor/source records before writing
-the ledger. It also accepts a `clarissimi.draft-envelope/v1` wrapper for delegated LLM workflows,
-but public outputs record only the validated assessment.
+`import-draft` rejects unapproved drafts, missing approval snapshots, and duplicate
+contributor/source records before writing the ledger. Explicit
+`--allow-legacy-approval` permits an older approved draft without a snapshot after review. The
+command also accepts a `clarissimi.draft-envelope/v1` wrapper for delegated LLM workflows, but
+public outputs record only the validated assessment.
 
 Set `markdownSummary: "table"` in `clarissimi.config.ts` or `.clarissimi/config.json`, or pass
 `--markdown-summary table`, to add a compact contributor, total, and contribution-type table above

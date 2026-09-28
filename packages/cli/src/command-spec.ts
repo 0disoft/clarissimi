@@ -179,7 +179,7 @@ export const CLI_COMMAND_SPECS: readonly CliCommandSpec[] = [
     name: "import-draft",
     description: "Import an approved draft and rebuild outputs.",
     usage:
-      "clarissimi import-draft --draft <path> [--ledger <path>] [--out-dir <path>] [--config <path>] [--markdown-summary none|table|gallery] [--exclude-automation-contributors] [--json]",
+      "clarissimi import-draft --draft <path> [--ledger <path>] [--out-dir <path>] [--config <path>] [--markdown-summary none|table|gallery] [--exclude-automation-contributors] [--allow-legacy-approval] [--json]",
     flags: [
       {
         name: "draft",
@@ -195,6 +195,10 @@ export const CLI_COMMAND_SPECS: readonly CliCommandSpec[] = [
       CONFIG_FLAG,
       MARKDOWN_SUMMARY_FLAG,
       EXCLUDE_AUTOMATION_FLAG,
+      {
+        name: "allow-legacy-approval",
+        description: "Import an approved legacy draft without an approval snapshot.",
+      },
       JSON_FLAG,
       HELP_FLAG,
     ],

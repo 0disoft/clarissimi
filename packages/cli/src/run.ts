@@ -1,7 +1,7 @@
 import { realpath, stat } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 
-import { createDraftApprovalSnapshot, matchesDraftApprovalSnapshot } from "@clarissimi/core";
+import { checkDraftApprovalSnapshot, createDraftApprovalSnapshot } from "@clarissimi/core";
 import {
   CONTRIBUTORS_JSON_PATH,
   CONTRIBUTORS_MARKDOWN_PATH,
@@ -422,6 +422,7 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
     getStringFlag(args, "ledger", CONTRIBUTIONS_JSONL_PATH) ?? CONTRIBUTIONS_JSONL_PATH,
   );
   const outDir = getStringFlag(args, "out-dir");
+  const allowLegacyApproval = getBooleanFlag(args, "allow-legacy-approval");
 
   try {
     const config = (await validateConfigFile(io.cwd, getStringFlag(args, "config"))).config;
@@ -437,7 +438,17 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
         validation.issues,
       );
     }
-    if (!matchesDraftApprovalSnapshot(validation.value)) {
+    const approvalCheck = checkDraftApprovalSnapshot(validation.value);
+    if (approvalCheck === "missing" && !allowLegacyApproval) {
+      throw new RendererValidationError("Approved draft requires an approval snapshot.", [
+        {
+          path: "$.approvalSnapshot",
+          code: "approval_snapshot_required",
+          message: "Reapprove the legacy draft or pass --allow-legacy-approval explicitly.",
+        },
+      ]);
+    }
+    if (approvalCheck === "mismatch") {
       throw new RendererValidationError("Approved draft content changed after approval.", [
         {
           path: "$.approvalSnapshot.contentSha256",

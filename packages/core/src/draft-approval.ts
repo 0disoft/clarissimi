@@ -12,11 +12,24 @@ export function createDraftApprovalSnapshot(
   };
 }
 
+export type DraftApprovalSnapshotCheck = "valid" | "missing" | "mismatch" | "not_required";
+
+export function checkDraftApprovalSnapshot(
+  assessment: ContributionAssessment,
+): DraftApprovalSnapshotCheck {
+  if (assessment.maintainerApprovalStatus !== "approved") {
+    return "not_required";
+  }
+  if (assessment.approvalSnapshot === undefined) {
+    return "missing";
+  }
+  return assessment.approvalSnapshot.contentSha256 === draftContentSha256(assessment)
+    ? "valid"
+    : "mismatch";
+}
+
 export function matchesDraftApprovalSnapshot(assessment: ContributionAssessment): boolean {
-  return (
-    assessment.approvalSnapshot === undefined ||
-    assessment.approvalSnapshot.contentSha256 === draftContentSha256(assessment)
-  );
+  return checkDraftApprovalSnapshot(assessment) !== "mismatch";
 }
 
 function draftContentSha256(assessment: ContributionAssessment): string {

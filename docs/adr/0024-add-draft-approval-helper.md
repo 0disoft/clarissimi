@@ -60,9 +60,11 @@ in an optional `approvalSnapshot` field. The digest excludes the approval status
 itself. `import-draft` rejects a draft when its current content differs from that snapshot. The
 snapshot is not copied into the public ledger.
 
-The field remains optional for already approved legacy drafts. It detects edits while present, but
-does not authenticate a maintainer: anyone able to replace both the draft and snapshot can forge a
-matching pair. Git review and merge controls remain the authority for who approved a change.
+Legacy approved drafts may lack this field, but `import-draft` rejects them by default. An operator
+can pass `--allow-legacy-approval` after an explicit review of an older file. The flag never permits
+a mismatched snapshot. The digest detects edits while present, but does not authenticate a
+maintainer: anyone able to replace both the draft and snapshot can forge a matching pair. Git
+review and merge controls remain the authority for who approved a change.
 
 ## Validation
 

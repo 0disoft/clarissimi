@@ -123,6 +123,7 @@ await withTempDir("clarissimi-import-draft-smoke-", async (dir) => {
       ledgerPath,
       "--out-dir",
       outDir,
+      "--allow-legacy-approval",
       "--json",
     ],
     expectExitCode: 0,

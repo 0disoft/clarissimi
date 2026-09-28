@@ -881,6 +881,8 @@ test("release readiness rejects CLI command contract drift", () => {
       "rejects non-public approval states, appends the sanitized public",
       "imports assessments",
     )
+    .replace("An `approved` draft must carry a matching `approvalSnapshot`.", "")
+    .replace("`--allow-legacy-approval` explicitly permits an older approved", "")
     .replace(
       "Unexpected positional arguments fail as usage errors",
       "Unexpected positional arguments are ignored",
@@ -904,6 +906,8 @@ test("release readiness rejects CLI command contract drift", () => {
     "docs/cli/command-contract.md must include `rebuild --out-dir <path> --check` compares the existing output files byte-for-byte.",
     'docs/cli/command-contract.md must include accepts only `maintainerApprovalStatus: "draft"`.',
     "docs/cli/command-contract.md must include rejects non-public approval states, appends the sanitized public.",
+    "docs/cli/command-contract.md must include An `approved` draft must carry a matching `approvalSnapshot`..",
+    "docs/cli/command-contract.md must include `--allow-legacy-approval` explicitly permits an older approved.",
     "docs/cli/command-contract.md must include Unexpected positional arguments fail as usage errors.",
     "docs/cli/command-contract.md must include Unknown flags,.",
     "docs/cli/command-contract.md must include Repeating the same flag is.",
@@ -2967,6 +2971,8 @@ function createCliCommandContractText() {
     "rebuilds derived outputs. It does not call providers, read provider tokens, fetch GitHub evidence,",
     "decide approval, mutate branches, create pull requests, or store AI/provider provenance in public",
     "recognition records.",
+    "An `approved` draft must carry a matching `approvalSnapshot`.",
+    "`--allow-legacy-approval` explicitly permits an older approved",
     "By default, `--ledger` is `.clarissimi/contributions.jsonl`. The override is for local validation,",
     "test fixtures, and recovery workflows; it is not an MVP monthly or yearly partition mode.",
     "",

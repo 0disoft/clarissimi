@@ -1,5 +1,5 @@
 import { realpath, stat } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 
 import {
   CONTRIBUTORS_JSON_PATH,
@@ -575,11 +575,29 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
     getStringFlag(args, "ledger", CONTRIBUTIONS_JSONL_PATH) ?? CONTRIBUTIONS_JSONL_PATH,
   );
   const outDir = getStringFlag(args, "out-dir");
+  const check = getBooleanFlag(args, "check");
+  if (check && outDir === undefined) {
+    throw new CliUsageError("rebuild --check requires --out-dir <path>.");
+  }
 
   try {
     const config = (await validateConfigFile(io.cwd, getStringFlag(args, "config"))).config;
-    const rebuild = async (): Promise<number> => {
-      const ledgerText = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
+    const rebuild = async (): Promise<{
+      readonly recordCount: number;
+      readonly checkedFiles: readonly string[];
+      readonly staleFiles: readonly string[];
+    }> => {
+      const ledgerExists = await fileExists(ledgerPath);
+      if (check && !ledgerExists) {
+        throw new RendererValidationError("Cannot check outputs without the canonical ledger.", [
+          {
+            path: "$.ledger",
+            code: "missing_ledger",
+            message: "The selected canonical ledger does not exist.",
+          },
+        ]);
+      }
+      const ledgerText = ledgerExists ? await readTextFile(ledgerPath) : "";
       const records = parseContributionsJsonl(ledgerText);
       assertUniqueContributionRecords(records);
       const outputs = renderRecognitionOutputs(records, {
@@ -587,20 +605,44 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
         includeAutomationContributors: resolveIncludeAutomationContributors(args, config),
       });
 
+      let checkedFiles: readonly string[] = [];
+      let staleFiles: readonly string[] = [];
       if (outDir !== undefined) {
-        await writeRenderedOutputs(resolveFromCwd(io.cwd, outDir), ledgerPath, outputs);
+        const outputDirectory = resolveFromCwd(io.cwd, outDir);
+        const plan = await planRenderedOutputs(outputDirectory, ledgerPath, outputs);
+        if (check) {
+          checkedFiles = plan.entries.map((entry) =>
+            relative(outputDirectory, entry.path).replaceAll("\\", "/"),
+          );
+          staleFiles = await findStaleRenderedOutputs(plan.entries, outputDirectory);
+        } else {
+          await writeTextFilesAtomically(plan.entries, plan.commitPointPath);
+        }
       }
-      return records.length;
+      return { recordCount: records.length, checkedFiles, staleFiles };
     };
-    const recordCount =
+    const result =
       outDir === undefined ? await rebuild() : await withFileLock(`${ledgerPath}.lock`, rebuild);
+
+    if (result.staleFiles.length > 0) {
+      writeFailure(
+        io,
+        args,
+        "rebuild",
+        new Error(
+          `Derived outputs are missing or stale: ${result.staleFiles.join(", ")}. Run rebuild without --check to repair them.`,
+        ),
+      );
+      return CLI_EXIT_CODES.outputDrift;
+    }
 
     writeOutput(io, args, {
       ok: true,
       command: "rebuild",
       ledgerPath,
-      records: recordCount,
-      wroteFiles: outDir !== undefined,
+      records: result.recordCount,
+      ...(check ? { checked: true, checkedFiles: result.checkedFiles } : {}),
+      wroteFiles: outDir !== undefined && !check,
       outputDirectory: outDir ?? null,
       files: [
         CONTRIBUTIONS_JSONL_PATH,
@@ -611,7 +653,9 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
       message:
         outDir === undefined
           ? "Rebuild preview completed; pass --out-dir to write derived files."
-          : "Rebuild completed.",
+          : check
+            ? "Derived outputs match the canonical ledger."
+            : "Rebuild completed.",
     });
     return CLI_EXIT_CODES.success;
   } catch (error) {
@@ -691,7 +735,7 @@ function rejectUnexpectedPositionals(args: ParsedArgs, command: string): string 
   return `${command} does not accept positional arguments: ${args.positionals.join(" ")}`;
 }
 
-async function writeRenderedOutputs(
+async function planRenderedOutputs(
   outDir: string,
   sourceLedgerPath: string,
   outputs: {
@@ -700,7 +744,10 @@ async function writeRenderedOutputs(
     readonly contributorsMarkdown: string;
     readonly staticDataJson: string;
   },
-): Promise<void> {
+): Promise<{
+  readonly entries: readonly { readonly path: string; readonly value: string }[];
+  readonly commitPointPath: string;
+}> {
   const outputLedgerPath = join(outDir, CONTRIBUTIONS_JSONL_PATH);
   const sourceIsOutput = await pathsReferToSameFile(sourceLedgerPath, outputLedgerPath);
   const entries = [
@@ -711,10 +758,24 @@ async function writeRenderedOutputs(
   if (!sourceIsOutput) {
     entries.push({ path: outputLedgerPath, value: outputs.contributionsJsonl });
   }
-  await writeTextFilesAtomically(
+  return {
     entries,
-    sourceIsOutput ? join(outDir, STATIC_DATA_JSON_PATH) : outputLedgerPath,
-  );
+    commitPointPath: sourceIsOutput ? join(outDir, STATIC_DATA_JSON_PATH) : outputLedgerPath,
+  };
+}
+
+async function findStaleRenderedOutputs(
+  entries: readonly { readonly path: string; readonly value: string }[],
+  outDir: string,
+): Promise<readonly string[]> {
+  const staleFiles: string[] = [];
+  for (const entry of entries) {
+    const current = (await fileExists(entry.path)) ? await readTextFile(entry.path) : undefined;
+    if (current !== entry.value) {
+      staleFiles.push(relative(outDir, entry.path).replaceAll("\\", "/"));
+    }
+  }
+  return staleFiles;
 }
 
 async function pathsReferToSameFile(left: string, right: string): Promise<boolean> {

@@ -151,6 +151,8 @@ Approved recognition may update:
 
 `contributions.jsonl` is the source of truth. JSON and Markdown outputs are derived and must be
 rebuildable.
+The CLI may compare an existing output set with a fresh rendering of the ledger without rewriting
+the outputs. A missing or mismatched derived file must be reported so a maintainer can rebuild it.
 
 `CONTRIBUTORS.md` groups approved recognition by contributor and shows the contributor's total
 recognized contribution count plus deterministic per-type counts. These are event counts from the

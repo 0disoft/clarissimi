@@ -201,15 +201,20 @@ export const CLI_COMMAND_SPECS: readonly CliCommandSpec[] = [
   },
   {
     name: "rebuild",
-    description: "Rebuild derived outputs from the public ledger.",
+    description: "Rebuild or check derived outputs against the public ledger.",
     usage:
-      "clarissimi rebuild [--ledger <path>] [--out-dir <path>] [--config <path>] [--markdown-summary none|table|gallery] [--exclude-automation-contributors] [--json]",
+      "clarissimi rebuild [--ledger <path>] [--out-dir <path>] [--check] [--config <path>] [--markdown-summary none|table|gallery] [--exclude-automation-contributors] [--json]",
     flags: [
       LEDGER_FLAG,
       {
         name: "out-dir",
         description: "Write derived outputs to an explicit directory.",
         valueLabel: "path",
+      },
+      {
+        name: "check",
+        description:
+          "Compare existing outputs with the ledger without rewriting them; requires --out-dir.",
       },
       CONFIG_FLAG,
       MARKDOWN_SUMMARY_FLAG,

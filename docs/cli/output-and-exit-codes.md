@@ -41,6 +41,8 @@ failure contract above; it never wraps a successful completion script in JSON.
 
 `clarissimi render-page --json` reports `ledgerPath`, `outputDirectory`, `pagePath`, and the single
 `index.html` file name. It does not include the generated HTML in command output.
+`clarissimi rebuild --check --json` adds `checked: true` and `checkedFiles` with the compared path
+names; existing rebuild output fields retain their meanings.
 
 ## Exit Codes
 
@@ -52,6 +54,7 @@ failure contract above; it never wraps a successful completion script in JSON.
 - `5`: provider schema validation failure
 - `6`: policy rejection
 - `7`: write failure
+- `8`: derived output drift found by `rebuild --check`; no output files were replaced
 
 ## Review Blockers
 

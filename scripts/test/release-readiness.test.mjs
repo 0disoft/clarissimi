@@ -872,6 +872,10 @@ test("release readiness rejects CLI command contract drift", () => {
       "`--provider openai-compatible`: live provider path",
     )
     .replace("writes files only when `--out-dir`", "writes files by default")
+    .replace(
+      "`rebuild --out-dir <path> --check` compares the existing output files byte-for-byte",
+      "",
+    )
     .replace('accepts only `maintainerApprovalStatus: "draft"`', "accepts draft assessments")
     .replace(
       "rejects non-public approval states, appends the sanitized public",
@@ -889,13 +893,15 @@ test("release readiness rejects CLI command contract drift", () => {
       "content security policy denies other remote and executable content",
       "content security policy is optional",
     )
-    .replace("| `7`  | write failure", "| `7`  | failure");
+    .replace("| `7`  | write failure", "| `7`  | failure")
+    .replace("| `8`  | derived output drift", "");
 
   assert.deepEqual(validateCliCommandContract(text), [
     "docs/cli/command-contract.md must include Help output is informational and must not read.",
     "docs/cli/command-contract.md must include default config files exist, the command fails closed.",
     "docs/cli/command-contract.md must include `--provider openai-compatible`: explicit live provider path.",
     "docs/cli/command-contract.md must include writes files only when `--out-dir`.",
+    "docs/cli/command-contract.md must include `rebuild --out-dir <path> --check` compares the existing output files byte-for-byte.",
     'docs/cli/command-contract.md must include accepts only `maintainerApprovalStatus: "draft"`.',
     "docs/cli/command-contract.md must include rejects non-public approval states, appends the sanitized public.",
     "docs/cli/command-contract.md must include Unexpected positional arguments fail as usage errors.",
@@ -905,6 +911,7 @@ test("release readiness rejects CLI command contract drift", () => {
     "docs/cli/command-contract.md must include writes exactly `<out-dir>/index.html`.",
     "docs/cli/command-contract.md must include content security policy denies other remote and executable content.",
     "docs/cli/command-contract.md must include | `7`  | write failure.",
+    "docs/cli/command-contract.md must include | `8`  | derived output drift.",
   ]);
 });
 
@@ -951,6 +958,7 @@ test("release readiness rejects CLI output and exit codes drift", () => {
     )
     .replace("- `1`: usage error", "- `1`: error")
     .replace("- `7`: write failure", "- `7`: failure")
+    .replace("- `8`: derived output drift found by `rebuild --check`", "")
     .replace(
       "Output implies a recognition entry was approved when it is only a draft.",
       "Output says recognition is approved.",
@@ -967,6 +975,7 @@ test("release readiness rejects CLI output and exit codes drift", () => {
     "docs/cli/output-and-exit-codes.md must include does not include the generated HTML in command output.",
     "docs/cli/output-and-exit-codes.md must include - `1`: usage error.",
     "docs/cli/output-and-exit-codes.md must include - `7`: write failure.",
+    "docs/cli/output-and-exit-codes.md must include - `8`: derived output drift found by `rebuild --check`.",
     "docs/cli/output-and-exit-codes.md must include Output implies a recognition entry was approved when it is only a draft..",
     "docs/cli/output-and-exit-codes.md must include JSON output leaks raw evidence..",
   ]);
@@ -2937,6 +2946,7 @@ function createCliCommandContractText() {
     "",
     "The fixture-first implementation previews rebuilds by default and writes files only when `--out-dir`",
     "is explicit.",
+    "`rebuild --out-dir <path> --check` compares the existing output files byte-for-byte",
     "",
     "Calculates maintainer-only recent recognition share from approved ledger records.",
     "The command may report internal recognition weight and recognition share for maintainer review. It",
@@ -2974,6 +2984,7 @@ function createCliCommandContractText() {
     "content security policy denies other remote and executable content.",
     "",
     "| `7`  | write failure",
+    "| `8`  | derived output drift",
     "A command writes public recognition without approval or configured policy.",
     "",
   ].join("\n");
@@ -3012,6 +3023,7 @@ function createCliOutputExitCodesDocumentText() {
     "- `5`: provider schema validation failure",
     "- `6`: policy rejection",
     "- `7`: write failure",
+    "- `8`: derived output drift found by `rebuild --check`",
     "",
     "- Output implies a recognition entry was approved when it is only a draft.",
     "- Output calls a contributor high, medium, or low quality.",

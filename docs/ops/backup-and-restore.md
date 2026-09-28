@@ -31,6 +31,7 @@ RTO and RPO are repository-scoped:
 Integrity checks after restore:
 
 - `clarissimi validate-ledger`
+- `clarissimi rebuild --out-dir . --check` to detect derived output drift after restoration
 - `pnpm run docs`
 - `pnpm run release-readiness`
 - `pnpm run lint`

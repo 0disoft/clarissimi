@@ -91,6 +91,13 @@ Writing rebuilds share the ledger lock with `import-draft` so a concurrent impor
 by an older rebuild snapshot.
 Rebuild loads the selected or default Clarissimi config. `--markdown-summary none|table|gallery` overrides
 `markdownSummary` for that run.
+`rebuild --out-dir <path> --check` compares the existing output files byte-for-byte with a fresh
+rendering under the same configuration and exits without replacing them. It requires `--out-dir`
+and an existing canonical ledger. It uses the same temporary ledger lock as a writing rebuild and
+reports only missing or mismatched
+file names. When the output ledger is the selected canonical ledger, it checks only the derived
+files; a separate output directory also checks its ledger copy. Exit code `8` means output drift;
+run `rebuild --out-dir <path>` without `--check` to repair it.
 
 ### `clarissimi render-page --out-dir <path>`
 
@@ -217,9 +224,11 @@ The implemented CLI exit-code taxonomy is:
 | `5`  | provider schema validation failure      |
 | `6`  | policy rejection                        |
 | `7`  | write failure                           |
+| `8`  | derived output drift                    |
 
-The initial numeric values are recorded in `docs/adr/0014-add-fixture-first-cli-package.md` and
-implemented in `packages/cli/src/exit-codes.ts`.
+The initial numeric values `0` through `7` are recorded in
+`docs/adr/0014-add-fixture-first-cli-package.md`. Exit code `8` is the output consistency check;
+all values are implemented in `packages/cli/src/exit-codes.ts`.
 
 ## Review Blockers
 

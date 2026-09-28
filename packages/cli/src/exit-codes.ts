@@ -7,6 +7,7 @@ export const CLI_EXIT_CODES = {
   schemaValidationFailure: 5,
   policyRejection: 6,
   writeFailure: 7,
+  outputDrift: 8,
 } as const;
 
 export type CliExitCode = (typeof CLI_EXIT_CODES)[keyof typeof CLI_EXIT_CODES];

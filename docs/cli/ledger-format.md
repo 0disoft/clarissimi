@@ -177,6 +177,11 @@ and appends to the canonical ledger. It stages a complete output generation in s
 temporary files, replaces derived outputs first, and replaces the canonical ledger last. The ledger
 rename is the commit point; if a process terminates during replacement, the ledger remains the
 recovery source and `rebuild` restores derived outputs.
+After an interrupted write, `rebuild --out-dir . --check` compares the three derived outputs with
+the canonical ledger without replacing them. A separate output directory also checks its ledger
+copy. The check reports mismatched file names with exit code `8`; run `rebuild --out-dir .` to
+regenerate the output set, then repeat the check. An optional contributor page is checked and
+regenerated separately.
 
 The lock is local coordination, not a distributed lock. Clarissimi does not automatically delete a
 stale lock because it cannot safely prove that another writer is dead.

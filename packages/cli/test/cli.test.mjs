@@ -1738,6 +1738,88 @@ test("rebuild writes derived outputs only when out-dir is provided", async () =>
   });
 });
 
+test("rebuild --check requires an output directory", async () => {
+  await withTempDir(async (dir) => {
+    const result = await run(["rebuild", "--check", "--json"], dir);
+
+    assert.equal(result.exitCode, 1);
+    assert.match(JSON.parse(result.stdout).message, /requires --out-dir/);
+  });
+});
+
+test("rebuild --check rejects a missing canonical ledger", async () => {
+  await withTempDir(async (dir) => {
+    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+    const result = await run(["rebuild", "--out-dir", dir, "--check", "--json"], dir);
+
+    assert.equal(result.exitCode, 3);
+    assert.match(JSON.parse(result.stdout).message, /canonical ledger/);
+    await assert.rejects(() => readFile(ledger, "utf8"));
+    await assert.rejects(() => readFile(`${ledger}.lock`, "utf8"));
+  });
+});
+
+test("rebuild --check detects partial derived output without repairing or changing the ledger", async () => {
+  await withTempDir(async (dir) => {
+    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+    const sourceText = `${JSON.stringify(assessment())}\n`;
+    const markdown = join(dir, "CONTRIBUTORS.md");
+    await mkdir(join(dir, ".clarissimi"), { recursive: true });
+    await writeFile(ledger, sourceText, "utf8");
+
+    const write = await run(["rebuild", "--ledger", ledger, "--out-dir", dir, "--json"], dir);
+    assert.equal(write.exitCode, 0);
+    await writeFile(markdown, "stale marker\n", "utf8");
+
+    const stale = await run(
+      ["rebuild", "--ledger", ledger, "--out-dir", dir, "--check", "--json"],
+      dir,
+    );
+    assert.equal(stale.exitCode, 8);
+    assert.match(JSON.parse(stale.stdout).message, /CONTRIBUTORS\.md/);
+    assert.equal(await readFile(markdown, "utf8"), "stale marker\n");
+    assert.equal(await readFile(ledger, "utf8"), sourceText);
+    await assert.rejects(() => readFile(`${ledger}.lock`, "utf8"));
+
+    const repair = await run(["rebuild", "--ledger", ledger, "--out-dir", dir, "--json"], dir);
+    const healthy = await run(
+      ["rebuild", "--ledger", ledger, "--out-dir", dir, "--check", "--json"],
+      dir,
+    );
+    const output = JSON.parse(healthy.stdout);
+    assert.equal(repair.exitCode, 0);
+    assert.equal(healthy.exitCode, 0);
+    assert.equal(output.checked, true);
+    assert.equal(output.wroteFiles, false);
+    assert.equal(output.checkedFiles.includes(".clarissimi/contributions.jsonl"), false);
+    assert.equal(await readFile(ledger, "utf8"), sourceText);
+  });
+});
+
+test("rebuild --check detects a missing copied ledger without changing the canonical ledger", async () => {
+  await withTempDir(async (dir) => {
+    const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+    const sourceText = `${JSON.stringify(assessment())}\n`;
+    const outDir = join(dir, "out");
+    const copiedLedger = join(outDir, ".clarissimi", "contributions.jsonl");
+    await mkdir(join(dir, ".clarissimi"), { recursive: true });
+    await writeFile(ledger, sourceText, "utf8");
+
+    const write = await run(["rebuild", "--ledger", ledger, "--out-dir", outDir, "--json"], dir);
+    assert.equal(write.exitCode, 0);
+    await rm(copiedLedger);
+
+    const result = await run(
+      ["rebuild", "--ledger", ledger, "--out-dir", outDir, "--check", "--json"],
+      dir,
+    );
+    assert.equal(result.exitCode, 8);
+    assert.match(JSON.parse(result.stdout).message, /\.clarissimi\/contributions\.jsonl/);
+    await assert.rejects(() => readFile(copiedLedger, "utf8"));
+    assert.equal(await readFile(ledger, "utf8"), sourceText);
+  });
+});
+
 test("file locks keep rebuild from rewriting the source ledger", async () => {
   await withTempDir(async (dir) => {
     const ledgerDir = join(dir, ".clarissimi");

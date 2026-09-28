@@ -671,6 +671,7 @@ export const cliCommandContract = {
     "`--provider openai-compatible`: explicit live provider path",
     "`openai-compatible` requires `CLARISSIMI_PROVIDER_TOKEN` in the process environment.",
     "writes files only when `--out-dir`",
+    "`rebuild --out-dir <path> --check` compares the existing output files byte-for-byte",
     "Calculates maintainer-only recent recognition share from approved ledger records.",
     "must not write `.clarissimi/contributors.json`, `CONTRIBUTORS.md`, static public JSON",
     'accepts only `maintainerApprovalStatus: "draft"`',
@@ -690,6 +691,7 @@ export const cliCommandContract = {
     "writes exactly `<out-dir>/index.html`",
     "content security policy denies other remote and executable content",
     "| `7`  | write failure",
+    "| `8`  | derived output drift",
     "A command writes public recognition without approval or configured policy.",
   ],
 };
@@ -734,6 +736,7 @@ export const cliOutputExitCodesDocumentContract = {
     "- `5`: provider schema validation failure",
     "- `6`: policy rejection",
     "- `7`: write failure",
+    "- `8`: derived output drift found by `rebuild --check`",
     "Output implies a recognition entry was approved when it is only a draft.",
     "Output calls a contributor high, medium, or low quality.",
     "JSON output leaks raw evidence.",

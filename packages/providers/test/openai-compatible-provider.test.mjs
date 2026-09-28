@@ -107,11 +107,8 @@ test("creates a draft assessment from an OpenAI-compatible response", async () =
   assert.equal(requests[0].body.response_format.type, "json_object");
   assert.equal(requests[0].body.thinking, undefined);
   assert.equal(requests[0].body.messages[0].content.includes("score shares"), true);
-  assert.equal(
-    requests[0].body.messages[0].content.includes("explicit security-label evidence"),
-    true,
-  );
-  assert.equal(requests[0].body.messages[0].content.includes("at least four evidence items"), true);
+  assert.equal(requests[0].body.messages[0].content.includes("security-specific test"), true);
+  assert.equal(requests[0].body.messages[0].content.includes("trusted maintainer hint"), true);
   assert.equal(
     requests[0].body.messages[0].content.includes("recent time-window contribution percentages"),
     true,

@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-15
+- Amended: 2026-09-29
 - Owner: Repository maintainers
 
 ## Context
@@ -21,13 +22,14 @@ noise while unsupported claims could still pass if they happened to match an app
   validation.
 - Provider results must preserve the trusted contributor identity, recognition source, complete
   ordered evidence-reference set, and `draft` approval state supplied by Clarissimi.
-- Security recognition or security claims require advisory evidence, test evidence, or an explicit
-  security marker in prepared metadata.
-- `high` impact requires an explicit maintainer hint, at least four prepared evidence items,
-  advisory evidence, or supported security evidence.
+- Security recognition or security claims require advisory evidence, a security label, or a
+  security-specific test identified by its evidence ID or title. A generic test or arbitrary
+  metadata text does not establish security support.
+- `high` impact requires an explicit maintainer hint. Evidence count and advisory presence do not
+  establish severity or impact on their own; the fake provider defaults to at most `medium`.
 - Shared schema guardrails continue to reject public scores, ranks, tiers, point shares, impact
   shares, and time-window contribution percentages.
-- A versioned corpus contains 24 synthetic merged pull requests: 12 accepted cases and 12 rejected
+- A versioned corpus contains 28 synthetic merged pull requests: 14 accepted cases and 14 rejected
   boundary or adversarial cases. The oracle checks issue codes and invariants, not exact generated
   prose.
 - Fake and OpenAI-compatible adapters use the same validator. Correctness tests remain local and
@@ -44,7 +46,7 @@ noise while unsupported claims could still pass if they happened to match an app
 
 ## Validation
 
-- 24-case provider result quality corpus
+- 28-case provider result quality corpus
 - fake and OpenAI-compatible provider regressions
 - Action bundle regeneration and freshness check
 - repository `format`, `lint`, `docs`, `release-readiness`, `smoke`, `check`, and `contract` gates

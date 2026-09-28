@@ -35,6 +35,7 @@
       "items": [
         { "kind": "advisory", "id": "GHSA-example", "title": "validated advisory remediation" }
       ],
+      "hints": { "impactLevel": "high" },
       "candidate": {
         "contributionType": "security",
         "affectedArea": "advisory remediation",
@@ -42,6 +43,28 @@
         "evidenceSummary": "Addressed the behavior documented by the advisory.",
         "suggestedBadge": "Security Care",
         "publicRecognitionText": "Helped maintainers address an advisory-backed security issue."
+      },
+      "expectedIssueCodes": []
+    },
+    {
+      "id": "security-label-backed-fix",
+      "items": [{ "kind": "label", "id": "label:security", "title": "security" }],
+      "candidate": {
+        "contributionType": "security",
+        "affectedArea": "security review",
+        "impactLevel": "medium",
+        "publicRecognitionText": "Helped address an issue marked for security review."
+      },
+      "expectedIssueCodes": []
+    },
+    {
+      "id": "security-specific-regression-test",
+      "items": [{ "kind": "test", "id": "tests/security-regression.test.ts" }],
+      "candidate": {
+        "contributionType": "security",
+        "affectedArea": "security regression coverage",
+        "impactLevel": "medium",
+        "publicRecognitionText": "Added security regression coverage."
       },
       "expectedIssueCodes": []
     },
@@ -160,6 +183,7 @@
         { "kind": "test", "id": "tests/a.test.ts" },
         { "kind": "pull_request", "id": "PR-112" }
       ],
+      "hints": { "impactLevel": "high" },
       "candidate": {
         "affectedArea": "multi-surface maintenance",
         "impactLevel": "high",
@@ -189,7 +213,9 @@
     },
     {
       "id": "reject-unsupported-security-type",
-      "items": [{ "kind": "file", "id": "src/config.ts", "title": "configuration cleanup" }],
+      "items": [
+        { "kind": "file", "id": "src/config.ts", "title": "security configuration cleanup" }
+      ],
       "candidate": {
         "contributionType": "security",
         "affectedArea": "configuration handling",
@@ -206,8 +232,32 @@
     },
     {
       "id": "reject-unsupported-high-impact",
-      "items": [{ "kind": "file", "id": "src/one-line.ts", "title": "one-line cleanup" }],
+      "items": [
+        { "kind": "file", "id": "src/a.ts" },
+        { "kind": "file", "id": "src/b.ts" },
+        { "kind": "test", "id": "tests/a.test.ts" },
+        { "kind": "pull_request", "id": "PR-112" }
+      ],
       "candidate": { "impactLevel": "high" },
+      "expectedIssueCodes": ["provider_result_high_impact_support_missing"]
+    },
+    {
+      "id": "reject-generic-test-security-claim",
+      "items": [{ "kind": "test", "id": "tests/parser.test.ts", "title": "parser regression" }],
+      "candidate": {
+        "contributionType": "security",
+        "publicRecognitionText": "Fixed a security issue."
+      },
+      "expectedIssueCodes": ["provider_result_security_support_missing"]
+    },
+    {
+      "id": "reject-advisory-only-high-impact",
+      "items": [{ "kind": "advisory", "id": "GHSA-low-impact" }],
+      "candidate": {
+        "contributionType": "security",
+        "impactLevel": "high",
+        "publicRecognitionText": "Helped address an advisory-backed security issue."
+      },
       "expectedIssueCodes": ["provider_result_high_impact_support_missing"]
     },
     {

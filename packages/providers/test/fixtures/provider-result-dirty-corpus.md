@@ -26,4 +26,4 @@ account identifiers, and customer data are forbidden. Keep those values out rath
 them in place.
 
 The dirty corpus is diagnostic by default. Only `promoted` cases run as blocking provider-result
-regressions; the stable 24-case golden corpus remains the primary deterministic correctness gate.
+regressions; the stable 28-case golden corpus remains the primary deterministic correctness gate.

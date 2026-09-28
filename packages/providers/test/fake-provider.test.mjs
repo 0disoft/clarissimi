@@ -86,6 +86,35 @@ test("honors safe maintainer hints without changing source or evidence refs", ()
   assert.deepEqual(assessment.evidenceRefs, evidence.evidenceRefs);
 });
 
+test("keeps inferred impact below high for evidence count and advisories", () => {
+  const manyItems = preparedEvidence([
+    { kind: "file", id: "src/a.ts" },
+    { kind: "file", id: "src/b.ts" },
+    { kind: "test", id: "tests/a.test.ts" },
+    { kind: "pull_request", id: "PR-42" },
+  ]);
+  const advisory = preparedEvidence([{ kind: "advisory", id: "GHSA-example" }]);
+
+  assert.equal(
+    createFakeAssessment({ contributor, preparedEvidence: manyItems }).impactLevel,
+    "medium",
+  );
+  assert.equal(
+    createFakeAssessment({ contributor, preparedEvidence: advisory }).impactLevel,
+    "medium",
+  );
+});
+
+test("honors explicit high impact in fake provider defaults", () => {
+  const evidence = preparedEvidence([{ kind: "file", id: "src/maintenance.ts" }]);
+  const assessment = createFakeAssessment(
+    { contributor, preparedEvidence: evidence },
+    { impactLevel: "high" },
+  );
+
+  assert.equal(assessment.impactLevel, "high");
+});
+
 test("keeps ranking language out of generated public narrative fields", () => {
   const evidence = preparedEvidence([
     {

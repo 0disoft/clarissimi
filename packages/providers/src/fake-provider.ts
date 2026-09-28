@@ -90,7 +90,10 @@ export function createFakeAssessment(
     source: input.preparedEvidence.source,
   } satisfies ContributionAssessment;
 
-  const result = validateProviderAssessmentResult(input, assessment);
+  const result = validateProviderAssessmentResult(
+    { ...input, hints: { ...defaults, ...hints } },
+    assessment,
+  );
   if (!result.ok) {
     throw new FakeProviderAssessmentError(result.issues);
   }
@@ -121,11 +124,11 @@ function inferContributionType(evidence: PreparedProviderEvidence): Contribution
 function inferImpactLevel(evidence: PreparedProviderEvidence): ImpactLevel {
   const evidenceCount = evidence.items.length;
 
-  if (hasEvidenceKind(evidence, "advisory") || evidenceCount >= 4) {
-    return "high";
-  }
-
-  if (hasEvidenceKind(evidence, "test") || evidenceCount >= 2) {
+  if (
+    hasEvidenceKind(evidence, "advisory") ||
+    hasEvidenceKind(evidence, "test") ||
+    evidenceCount >= 2
+  ) {
     return "medium";
   }
 

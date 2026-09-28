@@ -61,15 +61,16 @@ export function validateProviderAssessmentResult(
     issues.push({
       path: "$.contributionType",
       code: "provider_result_security_support_missing",
-      message: "Security recognition requires advisory, test, or explicit security-label evidence.",
+      message:
+        "Security recognition requires an advisory, security label, or security-specific test.",
     });
   }
 
-  if (assessment.impactLevel === "high" && !hasHighImpactSupport(input, securityClaim)) {
+  if (assessment.impactLevel === "high" && input.hints?.impactLevel !== "high") {
     issues.push({
       path: "$.impactLevel",
       code: "provider_result_high_impact_support_missing",
-      message: "High impact requires explicit maintainer guidance or sufficiently strong evidence.",
+      message: "High impact requires an explicit maintainer hint.",
     });
   }
 
@@ -138,32 +139,10 @@ function hasSecurityClaim(assessment: ContributionAssessment): boolean {
 function hasSecuritySupport(input: ProviderAssessmentInput): boolean {
   return input.preparedEvidence.items.some(
     (item) =>
-      item.kind === "advisory" || item.kind === "test" || containsSecurityMarker(item.metadata),
+      item.kind === "advisory" ||
+      ((item.kind === "label" || item.kind === "test") &&
+        [item.id, item.title].some(
+          (value) => value !== undefined && SECURITY_CLAIM_PATTERN.test(value),
+        )),
   );
-}
-
-function containsSecurityMarker(value: unknown): boolean {
-  if (typeof value === "string") {
-    return SECURITY_CLAIM_PATTERN.test(value);
-  }
-  if (Array.isArray(value)) {
-    return value.some(containsSecurityMarker);
-  }
-  if (value !== null && typeof value === "object") {
-    return Object.values(value).some(containsSecurityMarker);
-  }
-  return false;
-}
-
-function hasHighImpactSupport(input: ProviderAssessmentInput, securityClaim: boolean): boolean {
-  if (input.hints?.impactLevel === "high") {
-    return true;
-  }
-  if (input.preparedEvidence.items.length >= 4) {
-    return true;
-  }
-  if (input.preparedEvidence.items.some((item) => item.kind === "advisory")) {
-    return true;
-  }
-  return securityClaim && hasSecuritySupport(input);
 }

@@ -10,12 +10,12 @@ import { validateProviderAssessmentResult } from "../dist/index.js";
 const corpusUrl = new URL("./fixtures/result-quality-corpus.json", import.meta.url);
 const corpus = JSON.parse(await readFile(corpusUrl, "utf8"));
 
-test("provider result quality corpus contains 24 balanced synthetic pull requests", () => {
+test("provider result quality corpus contains 28 balanced synthetic pull requests", () => {
   assert.equal(corpus.schemaVersion, "clarissimi.provider-result-quality-corpus/v1");
-  assert.equal(corpus.cases.length, 24);
-  assert.equal(new Set(corpus.cases.map((entry) => entry.id)).size, 24);
-  assert.equal(corpus.cases.filter((entry) => entry.expectedIssueCodes.length === 0).length, 12);
-  assert.equal(corpus.cases.filter((entry) => entry.expectedIssueCodes.length > 0).length, 12);
+  assert.equal(corpus.cases.length, 28);
+  assert.equal(new Set(corpus.cases.map((entry) => entry.id)).size, 28);
+  assert.equal(corpus.cases.filter((entry) => entry.expectedIssueCodes.length === 0).length, 14);
+  assert.equal(corpus.cases.filter((entry) => entry.expectedIssueCodes.length > 0).length, 14);
 });
 
 for (const [index, entry] of corpus.cases.entries()) {

@@ -58,14 +58,15 @@ key. See the [Action guide](docs/github-action/README.md) and
 | `stage-draft`   | Opens a draft-review pull request                       | Edit and approve the draft        |
 | `promote-draft` | Opens a recognition pull request from an approved draft | Approval must already be recorded |
 
-`propose` is the recommended default for shared repositories. `commit` is the convenience path for
+`propose` remains the default write mode and accepts an already approved assessment. For normal
+merged pull request events, use `stage-draft`, approve and merge the draft review pull request,
+then run `promote-draft` with that approved file. `commit` is the convenience path for
 automation-first repositories; it never force-pushes and still loses to branch protection or a
 concurrent update. Copy the complete least-privilege workflows from the
 [Action guide](docs/github-action/README.md).
 
-`gate` is available on the current development branch and is intended for the next immutable
-Action release. Do not point a consumer at `main`; use the release tag documented in the Action
-guide after it is published. The same stable job can begin in `advisory` mode and later switch to
+`gate` is available in immutable Action release `v0.6.2`. Do not point a consumer at `main`; use
+the release tag documented in the Action guide. The same stable job can begin in `advisory` mode and later switch to
 `required` without changing the check name used by a GitHub ruleset.
 
 Choose one optional `CONTRIBUTORS.md` summary without replacing the detailed recognition history:
@@ -73,7 +74,8 @@ Choose one optional `CONTRIBUTORS.md` summary without replacing the detailed rec
 ```yaml
 - uses: 0disoft/clarissimi@v0.6.2
   with:
-    mode: propose
+    mode: promote-draft
+    draft-path: .clarissimi/drafts/example-project-merged_pull_request-42.json # replace with an approved draft
     markdown-summary: gallery # use table for compact contribution counts
 ```
 
@@ -85,7 +87,7 @@ Proposal modes can also leave one durable pointer on the merged source pull requ
 
 ```yaml
 with:
-  mode: propose
+  mode: stage-draft
   comment-mode: upsert
 ```
 

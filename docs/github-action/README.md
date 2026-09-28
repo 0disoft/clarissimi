@@ -28,6 +28,9 @@ layer.
 
 This means the Action should open a pull request with recognition changes instead of directly
 committing to the default branch.
+`propose` needs an already approved assessment, such as an explicitly approved fixture. A normal
+merged pull request event produces an unapproved draft: use `stage-draft`, review and merge its
+draft pull request, then run `promote-draft` with the approved draft path.
 
 ## Security Boundary
 
@@ -243,11 +246,12 @@ steps:
       path: ${{ steps.clarissimi.outputs.summary-json-path }}
 ```
 
-Propose mode against a merged pull request event requires checkout, explicit write permissions, and
-repository settings that allow GitHub Actions to create pull requests:
+For a merged pull request event, stage the unapproved draft for review. This requires checkout,
+explicit write permissions, and repository settings that allow GitHub Actions to create pull
+requests:
 
 ```yaml
-name: Clarissimi propose
+name: Clarissimi stage draft
 
 on:
   pull_request:
@@ -269,7 +273,7 @@ jobs:
           fetch-depth: 0
       - uses: 0disoft/clarissimi@v0.6.2
         with:
-          mode: propose
+          mode: stage-draft
           base-branch: main
           comment-mode: upsert
 ```

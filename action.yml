@@ -8,7 +8,7 @@ branding:
 
 inputs:
   mode:
-    description: Action mode. Use gate for a pre-merge maintainer decision check, dry-run for summaries, propose for approved event drafts, commit for an explicit direct commit, stage-draft for draft review PRs, or promote-draft for an approved draft file.
+    description: Action mode. Use gate for a pre-merge maintainer decision check, dry-run for summaries, propose for already approved assessments, commit for an explicit direct commit, stage-draft for draft review PRs, or promote-draft for an approved draft file.
     required: false
     default: propose
   gate-mode:

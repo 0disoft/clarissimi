@@ -196,6 +196,7 @@ argv = [
   "packages",
   "docs",
   "README.md",
+  "action.yml",
   ".github/workflows/ci.yml",
 ]
 cwd = "."

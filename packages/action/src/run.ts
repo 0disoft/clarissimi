@@ -2,7 +2,7 @@ import { readFile, realpath } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
-import { prepareEvidenceForProvider } from "@clarissimi/core";
+import { matchesDraftApprovalSnapshot, prepareEvidenceForProvider } from "@clarissimi/core";
 import { CONTRIBUTIONS_JSONL_PATH, parseContributionsJsonl } from "@clarissimi/renderers";
 import {
   collectMergedPullRequestEvidence,
@@ -794,6 +794,9 @@ async function readApprovedDraft(
     result.value.maintainerApprovalStatus !== "auto_approved"
   ) {
     throw new Error("promote-draft requires maintainerApprovalStatus approved or auto_approved.");
+  }
+  if (!matchesDraftApprovalSnapshot(result.value)) {
+    throw new Error("Approved Clarissimi draft content changed after approval.");
   }
 
   return result.value;

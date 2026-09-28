@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { spawn } from "node:child_process";
 import test from "node:test";
 
+import { createDraftApprovalSnapshot } from "@clarissimi/core";
 import {
   runActionCommit,
   runActionFromEnvironment,
@@ -364,7 +365,18 @@ test("promotes an approved draft through a public recognition proposal", async (
     await mkdir(join(repositoryDir, ".clarissimi", "drafts"), {
       recursive: true,
     });
-    await writeFile(draftPath, JSON.stringify(approvedDraftAssessment()), "utf8");
+    const approvedAssessment = approvedDraftAssessment();
+    await writeFile(
+      draftPath,
+      JSON.stringify({
+        ...approvedAssessment,
+        approvalSnapshot: createDraftApprovalSnapshot(
+          approvedAssessment,
+          "2026-09-29T00:00:00.000Z",
+        ),
+      }),
+      "utf8",
+    );
     await git(repositoryDir, ["add", ".clarissimi/drafts/sample-project-42.json"]);
     await git(repositoryDir, ["commit", "-m", "Add approved Clarissimi draft"]);
     await git(repositoryDir, ["push", "origin", "main"]);
@@ -396,6 +408,59 @@ test("promotes an approved draft through a public recognition proposal", async (
     );
     assert.equal(client.created.length, 1);
     assert.equal(client.created[0].title, "Clarissimi recognition: sample/project#42");
+    assert.equal(
+      (await readFile(join(stagingDir, ".clarissimi", "contributions.jsonl"), "utf8")).includes(
+        "approvalSnapshot",
+      ),
+      false,
+    );
+  });
+});
+
+test("promote-draft rejects a changed approval snapshot before proposal publication", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    const remoteDir = join(dir, "remote.git");
+    const draftPath = join(repositoryDir, ".clarissimi", "drafts", "sample-project-42.json");
+    const client = new FakePullRequestClient();
+    await initRepositoryWithRemote(repositoryDir, remoteDir);
+    await mkdir(join(repositoryDir, ".clarissimi", "drafts"), { recursive: true });
+    const approvedAssessment = approvedDraftAssessment();
+    const snapshot = createDraftApprovalSnapshot(approvedAssessment, "2026-09-29T00:00:00.000Z");
+    await writeFile(
+      draftPath,
+      JSON.stringify({ ...approvedAssessment, approvalSnapshot: snapshot }),
+      "utf8",
+    );
+    await git(repositoryDir, ["add", ".clarissimi/drafts/sample-project-42.json"]);
+    await git(repositoryDir, ["commit", "-m", "Add approved Clarissimi draft"]);
+    await git(repositoryDir, ["push", "origin", "main"]);
+    await writeFile(
+      draftPath,
+      JSON.stringify({
+        ...approvedAssessment,
+        approvalSnapshot: snapshot,
+        publicRecognitionText: "Changed after approval.",
+      }),
+      "utf8",
+    );
+
+    await assert.rejects(
+      runActionPromoteDraft({
+        mode: "promote-draft",
+        draftPath,
+        repositoryDir,
+        stagingDir: join(dir, "staged"),
+        baseBranch: "main",
+        pullRequestClient: client,
+      }),
+      /content changed after approval/,
+    );
+    assert.equal(client.created.length, 0);
+    assert.equal(
+      await remoteBranchSha(repositoryDir, "clarissimi/recognition/merged_pull_request-42"),
+      "",
+    );
   });
 });
 

@@ -55,6 +55,11 @@ Maintainers can complete the safe path entirely through GitHub:
 The flow stays deliberately two-review. Approval of the draft and publication of public outputs are
 separate maintainer decisions.
 
+When an approved draft carries an `approvalSnapshot`, promotion checks its current content against
+the recorded SHA-256 before staging or publishing a proposal. Legacy approved drafts without the
+snapshot remain accepted for compatibility. This detects edits only while the snapshot is present;
+GitHub review and merge controls remain responsible for approval identity.
+
 `v0.1.0` remains immutable and does not gain this mode. A later immutable patch release requires
 external consumer smoke before advertising `promote-draft` as available.
 

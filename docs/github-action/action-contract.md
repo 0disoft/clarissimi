@@ -176,8 +176,11 @@ creation or update. It succeeds only for normal `draft` assessments and stages s
 or update. It accepts one approved JSON file under `.clarissimi/drafts/`, performs no provider or
 event collection work, renders public recognition outputs, and uses the normal recognition branch
 and pull request boundary. It follows the same existing-ledger validation, duplicate rejection,
-append, and full derived-output rebuild contract as propose mode. Draft, rejected, or skipped assessments fail before branch mutation. Malformed or internally duplicated ledgers and
-already-recorded contribution identities also fail before branch mutation.
+append, and full derived-output rebuild contract as propose mode. A draft with an
+`approvalSnapshot` must match its recorded content digest; legacy drafts without one remain
+accepted. Draft, rejected, or skipped assessments fail before branch mutation. Malformed or
+internally duplicated ledgers and already-recorded contribution identities also fail before branch
+mutation.
 
 Proposal branch commits use a Clarissimi-owned bot author instead of relying on runner-global git
 identity. This keeps maintainer workstations and GitHub-hosted runners from becoming part of the

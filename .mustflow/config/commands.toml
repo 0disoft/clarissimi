@@ -198,6 +198,7 @@ argv = [
   "scripts",
   "README.md",
   "action.yml",
+  "action-dist/index.js",
   ".github/workflows/ci.yml",
   ".github/workflows/clarissimi-promote-draft-fixture.yml",
 ]

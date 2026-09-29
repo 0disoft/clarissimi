@@ -2,7 +2,7 @@ import { redactText } from "@clarissimi/redaction";
 import type { ContributionAssessment, ValidationIssue } from "@clarissimi/schemas";
 
 const SENSITIVE_URL_PARAMETER_PATTERN =
-  /(?:^|[_-])(?:access[_-]?token|auth[_-]?token|token|secret|password|api[_-]?key|private[_-]?key)(?:$|[=_-])/i;
+  /(?:^|[_-])(?:access[_-]?token|auth[_-]?token|token|secret|password|api[_-]?key|private[_-]?key|signature|credential|authorization|cookie|session[_-]?(?:id|key|token))(?:$|[=_-])/i;
 const MAX_URL_DECODE_LAYERS = 6;
 const ENCODED_BYTE_PATTERN = /%[0-9a-f]{2}/i;
 
@@ -19,7 +19,10 @@ interface UnsafeMatch {
 
 export function isSensitiveUrlParameterName(name: string): boolean {
   const decoded = decodeNestedUrlComponent(name);
-  return decoded === undefined || SENSITIVE_URL_PARAMETER_PATTERN.test(decoded);
+  return (
+    decoded === undefined ||
+    SENSITIVE_URL_PARAMETER_PATTERN.test(decoded.replace(/([a-z0-9])([A-Z])/g, "$1_$2"))
+  );
 }
 
 export function findUnsafeRepositoryAssessmentFields(

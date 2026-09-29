@@ -3281,12 +3281,12 @@ function sortJsonValue(value) {
 }
 
 // packages/core/dist/repository-safety.js
-var SENSITIVE_URL_PARAMETER_PATTERN = /(?:^|[_-])(?:access[_-]?token|auth[_-]?token|token|secret|password|api[_-]?key|private[_-]?key)(?:$|[=_-])/i;
+var SENSITIVE_URL_PARAMETER_PATTERN = /(?:^|[_-])(?:access[_-]?token|auth[_-]?token|token|secret|password|api[_-]?key|private[_-]?key|signature|credential|authorization|cookie|session[_-]?(?:id|key|token))(?:$|[=_-])/i;
 var MAX_URL_DECODE_LAYERS = 6;
 var ENCODED_BYTE_PATTERN = /%[0-9a-f]{2}/i;
 function isSensitiveUrlParameterName(name) {
   const decoded = decodeNestedUrlComponent(name);
-  return decoded === void 0 || SENSITIVE_URL_PARAMETER_PATTERN.test(decoded);
+  return decoded === void 0 || SENSITIVE_URL_PARAMETER_PATTERN.test(decoded.replace(/([a-z0-9])([A-Z])/g, "$1_$2"));
 }
 function findUnsafeRepositoryAssessmentFields(assessment) {
   const fields = [

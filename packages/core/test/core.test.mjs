@@ -149,6 +149,45 @@ test("repository safety rejects nested URL encoding of secret names and values",
   assert.equal(JSON.stringify(issues).includes(syntheticToken), false);
 });
 
+test("repository safety rejects camel-case credentials and signed URL parameters", () => {
+  const assessment = validAssessment();
+  for (const name of [
+    "clientSecret",
+    "refreshToken",
+    "xAmzSignature",
+    "xAmzCredential",
+    "sessionId",
+  ]) {
+    const issues = findUnsafeRepositoryAssessmentFields({
+      ...assessment,
+      evidenceRefs: [
+        {
+          ...assessment.evidenceRefs[0],
+          url: `https://example.invalid/proof?${name}=synthetic-value`,
+        },
+      ],
+    });
+    assert.deepEqual(
+      issues.map(({ path, code }) => ({ path, code })),
+      [{ path: "$.evidenceRefs[].url", code: "unsafe_url_parameter" }],
+      name,
+    );
+    assert.equal(JSON.stringify(issues).includes("synthetic-value"), false);
+  }
+  assert.deepEqual(
+    findUnsafeRepositoryAssessmentFields({
+      ...assessment,
+      evidenceRefs: [
+        {
+          ...assessment.evidenceRefs[0],
+          url: "https://example.invalid/proof?referenceId=synthetic-value",
+        },
+      ],
+    }),
+    [],
+  );
+});
+
 test("prepares provider evidence by redacting all text-bearing fields", () => {
   const address = `contributor@${["example", "invalid"].join(".")}`;
   const keyName = ["OPENAI", "API", "KEY"].join("_");

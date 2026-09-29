@@ -107,6 +107,8 @@ engine.
   refresh the root formatter, linter, bundler, and Node type toolchain as one verified snapshot
 - `0060-add-cross-platform-toolchain-smoke.md`: verify the native TypeScript, Oxfmt, Oxlint, and
   esbuild toolchain on Linux, Windows, and macOS only when toolchain inputs change or on demand
+- `0061-link-public-claims-to-evidence.md`: preserve explicit links from public claims to ordered
+  evidence references while keeping historical assessment records readable
 
 ## Review Blockers
 

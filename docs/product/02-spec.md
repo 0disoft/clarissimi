@@ -83,6 +83,11 @@ An assessment draft must include:
 
 The draft is not a public record until policy or maintainer approval allows it.
 
+New provider-generated drafts must identify which sanitized evidence references support each
+ordered segment of `evidenceSummary` and `publicRecognitionText`. The link map is review evidence,
+not independent proof that a claim is true. Older ledger records and manually authored drafts may
+omit it; maintainers must inspect those claims against their references directly.
+
 ## Draft Inbox
 
 Unapproved agent-authored drafts may be staged under:

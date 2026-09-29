@@ -31,6 +31,8 @@ A ledger record contains the same public assessment fields validated by `package
 - `evidenceSummary`: short evidence-backed summary
 - `evidenceRefs`: bounded source references such as PRs, files, labels, reviews, issues, tests, or
   maintainer notes
+- `claimEvidenceLinks`: optional links from ordered public-prose segments to zero-based positions
+  in `evidenceRefs`; older records without links remain valid
 - `suggestedBadge`: recognition badge text
 - `publicRecognitionText`: maintainer-approved public recognition text
 - `confidence`: bounded draft confidence for the assessment

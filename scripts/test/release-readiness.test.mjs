@@ -601,7 +601,7 @@ test("release readiness accepts the README validation contract", () => {
 test("release readiness rejects missing or buried README onboarding", () => {
   const missing = createReadmeValidationText()
     .replace("## Start in 30 Seconds", "## Setup")
-    .replace("- uses: 0disoft/clarissimi@v0.6.2", "")
+    .replace("- uses: 0disoft/clarissimi@v0.7.0", "")
     .replace("mode: dry-run", "")
     .replace("## Choose How Results Are Written", "## Modes")
     .replace(
@@ -616,7 +616,7 @@ test("release readiness rejects missing or buried README onboarding", () => {
 
   assert.deepEqual(validateReadmeValidationContract(missing), [
     "README.md must include ## Start in 30 Seconds.",
-    "README.md must include - uses: 0disoft/clarissimi@v0.6.2.",
+    "README.md must include - uses: 0disoft/clarissimi@v0.7.0.",
     "README.md must include mode: dry-run.",
     "README.md must include ## Choose How Results Are Written.",
     "README.md must include `propose` remains the default write mode and accepts an already approved assessment..",
@@ -2769,7 +2769,7 @@ function createReadmeValidationText() {
     "",
     "## Start in 30 Seconds",
     "",
-    "- uses: 0disoft/clarissimi@v0.6.2",
+    "- uses: 0disoft/clarissimi@v0.7.0",
     "  with:",
     "    mode: dry-run",
     "",

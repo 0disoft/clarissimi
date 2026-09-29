@@ -197,6 +197,9 @@ argv = [
   "docs",
   "scripts",
   "README.md",
+  "SECURITY.md",
+  "distribution/npm/clarissimi/package.json",
+  "distribution/npm/clarissimi/README.md",
   "action.yml",
   "action-dist/index.js",
   ".github/workflows/ci.yml",
@@ -2539,3 +2542,114 @@ effects = [
 network = false
 destructive = false
 required_after = ["git_stage_v0_6_2_alias_authorization"]
+
+[intents.release_v0_7_0_marketplace_evidence]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["release"]
+description = "Validate the exact v0.7.0 candidate with hosted live-provider and external consumer runs, then create one release record."
+argv = [
+  "pnpm",
+  "run",
+  "release-candidate-evidence-orchestrator",
+  "--",
+  "--provider-model",
+  "gpt-4.1-mini",
+  "--release-type",
+  "marketplace-action-tag",
+  "--release-version",
+  "v0.7.0",
+  "--create-issue",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["hosted_ci_main", "user_authorized_v0_7_0_release"]
+
+[intents.release_v0_7_0_stable_publish]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["release"]
+description = "Publish the validated immutable v0.7.0 tag and stable GitHub Release."
+argv = [
+  "pnpm",
+  "run",
+  "publish-action-release",
+  "--",
+  "--version",
+  "v0.7.0",
+  "--release-kind",
+  "stable",
+]
+cwd = "."
+timeout_seconds = 600
+stdin = "closed"
+success_exit_codes = [0]
+writes = [".git/refs/tags/v0.7.0", ".git/logs/**", ".git/objects/**"]
+effects = [
+  { type = "write", mode = "replace", path = ".git/**", lock = "git_state", concurrency = "exclusive" },
+]
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["release_v0_7_0_marketplace_evidence", "user_authorized_v0_7_0_publication"]
+
+[intents.release_v0_7_0_post_tag_evidence]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["release"]
+description = "Revalidate the published v0.7.0 tag with hosted live-provider and external consumer runs."
+argv = [
+  "pnpm",
+  "run",
+  "release-candidate-evidence-orchestrator",
+  "--",
+  "--provider-model",
+  "gpt-4.1-mini",
+  "--release-type",
+  "marketplace-action-tag",
+  "--release-version",
+  "v0.7.0",
+  "--external-ref",
+  "v0.7.0",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["release_v0_7_0_stable_publish"]
+
+[intents.verify_marketplace_v0_7_0]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Verify Marketplace marks v0.7.0 as Latest and renders its immutable Action reference."
+argv = ["pnpm", "run", "verify-marketplace-release", "--", "--version", "v0.7.0"]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = ["release_v0_7_0_stable_publish", "marketplace_publication"]

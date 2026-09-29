@@ -40,7 +40,7 @@ code.
 ## Action Usage
 
 Use `0disoft/clarissimi@v0` for maintainer-approved `0.x` updates, or pin
-`0disoft/clarissimi@v0.6.2` when exact release reproducibility matters. The moving `main` ref is
+`0disoft/clarissimi@v0.7.0` when exact release reproducibility matters. The moving `main` ref is
 reserved for this repository's development and dogfood workflows. Immutable version tags never
 move.
 
@@ -108,11 +108,11 @@ implemented propose-mode sequencing is recorded in
 
 ## Pre-Merge Decision Gate
 
-The current development gate reads the pull request event, bounded issue comments, and repository
-permissions. The released `v0.6.2` gate reads only the event and comments. Neither checks out or
+The `v0.7.0` gate reads the pull request event, bounded issue comments, and current repository
+permissions. The earlier `v0.6.2` gate reads only the event and comments. Neither checks out or
 executes the pull request head, calls a provider, or changes repository state. Start with
-`gate-mode: advisory`; after a release includes current permission verification and the team has
-exercised the flow, switch the same job to `required` and make `Clarissimi review decision` a
+`gate-mode: advisory`; after the team has exercised the `v0.7.0` permission check, switch the
+same job to `required` and make `Clarissimi review decision` a
 required ruleset check.
 
 Gate mode is available from immutable release `v0.6.2`:
@@ -137,7 +137,7 @@ jobs:
     name: Clarissimi review decision
     runs-on: ubuntu-latest
     steps:
-      - uses: 0disoft/clarissimi@v0.6.2
+      - uses: 0disoft/clarissimi@v0.7.0
         with:
           mode: gate
           gate-mode: advisory
@@ -156,9 +156,9 @@ Clarissimi decision: approved for the current revision.
 ```
 
 Use `decision: skip` when the pull request must merge without recognition, such as a generated
-Clarissimi proposal. The current development source also requires the comment author to have
-current `write` or `admin` repository permission; a lookup failure blocks required mode. Immutable
-`v0.6.2` checks only the comment's `OWNER`, `MEMBER`, or `COLLABORATOR` association, so its gate
+Clarissimi proposal. `v0.7.0` requires the comment author to have current `write` or `admin`
+repository permission; a lookup failure blocks required mode. Immutable `v0.6.2` checks only
+the comment's `OWNER`, `MEMBER`, or `COLLABORATOR` association, so its gate
 cannot establish current write access in an organization repository. Keep that release in advisory
 mode where organization membership does not imply write access. After adding or editing the
 decision, rerun the existing gate job. A new push
@@ -185,7 +185,7 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - uses: 0disoft/clarissimi@v0.6.2
+      - uses: 0disoft/clarissimi@v0.7.0
         with:
           mode: dry-run
 ```
@@ -194,7 +194,7 @@ Example explicit OpenAI-compatible provider dry run:
 
 ```yaml
 steps:
-  - uses: 0disoft/clarissimi@v0.6.2
+  - uses: 0disoft/clarissimi@v0.7.0
     env:
       CLARISSIMI_PROVIDER_TOKEN: ${{ secrets.CLARISSIMI_PROVIDER_TOKEN }}
     with:
@@ -206,7 +206,7 @@ steps:
 For local fixture checks, pass `github-fixture`:
 
 ```yaml
-- uses: 0disoft/clarissimi@v0.6.2
+- uses: 0disoft/clarissimi@v0.7.0
   with:
     mode: dry-run
     github-fixture: fixtures/github-merged-pr-basic.json
@@ -215,7 +215,7 @@ For local fixture checks, pass `github-fixture`:
 For local or CI checks against a GitHub event payload file, pass `event-path`:
 
 ```yaml
-- uses: 0disoft/clarissimi@v0.6.2
+- uses: 0disoft/clarissimi@v0.7.0
   with:
     mode: dry-run
     event-path: fixtures/github-pull-request-merged-event.json
@@ -229,7 +229,7 @@ token in the workflow secret boundary:
 
 ```yaml
 steps:
-  - uses: 0disoft/clarissimi@v0.6.2
+  - uses: 0disoft/clarissimi@v0.7.0
     env:
       CLARISSIMI_PROVIDER_TOKEN: ${{ secrets.CLARISSIMI_PROVIDER_TOKEN }}
     with:
@@ -242,7 +242,7 @@ To upload the sanitized JSON summary as a workflow artifact:
 ```yaml
 steps:
   - id: clarissimi
-    uses: 0disoft/clarissimi@v0.6.2
+    uses: 0disoft/clarissimi@v0.7.0
     with:
       mode: dry-run
       summary-path: .clarissimi/run-summary.json
@@ -277,7 +277,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: 0disoft/clarissimi@v0.6.2
+      - uses: 0disoft/clarissimi@v0.7.0
         with:
           mode: stage-draft
           base-branch: main
@@ -307,7 +307,7 @@ steps:
   - uses: actions/checkout@v7
     with:
       fetch-depth: 0
-  - uses: 0disoft/clarissimi@v0.6.2
+  - uses: 0disoft/clarissimi@v0.7.0
     with:
       mode: propose
       github-fixture: fixtures/github-merged-pr-approved.json
@@ -328,7 +328,7 @@ steps:
   - uses: actions/checkout@v7
     with:
       fetch-depth: 0
-  - uses: 0disoft/clarissimi@v0.6.2
+  - uses: 0disoft/clarissimi@v0.7.0
     with:
       mode: commit
       base-branch: main
@@ -351,7 +351,7 @@ steps:
   - uses: actions/checkout@v7
     with:
       fetch-depth: 0
-  - uses: 0disoft/clarissimi@v0.6.2
+  - uses: 0disoft/clarissimi@v0.7.0
     with:
       mode: stage-draft
       base-branch: main
@@ -363,10 +363,10 @@ draft, including its `approvalSnapshot`, and merge the draft pull request after 
 exact version. `promote-draft` can then render a public recognition proposal without another
 provider call. Use a manual workflow input so the maintainer chooses the exact checked-in draft:
 
-Current development source rejects external `auto_approved` drafts until a repository auto-approval
+`v0.7.0` rejects external `auto_approved` drafts until a repository auto-approval
 policy is configured; `allow-legacy-approval` cannot bypass this requirement.
 
-Current development source requires the content digest produced by the CLI's `approve-draft`
+`v0.7.0` requires the content digest produced by the CLI's `approve-draft`
 command. Edit and approve the draft again if its text changes after approval. For an older approved
 draft without a digest, set `allow-legacy-approval: true` explicitly after reviewing the exact
 file; a digest mismatch cannot be bypassed. Immutable `v0.6.2` does not include this new check.
@@ -394,7 +394,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: 0disoft/clarissimi@v0.6.2
+      - uses: 0disoft/clarissimi@v0.7.0
         with:
           mode: promote-draft
           draft-path: ${{ inputs.draft-path }}

@@ -329,6 +329,14 @@ audit run `29325038208` found no residue. A complete new-correlation post-tag va
 on all three runners; the failed attempt is retained as a transient GitHub API reliability signal,
 not erased or counted as the final release result.
 
+Action `v0.7.0` is the next candidate for the approved-draft, public-output, reviewer-permission,
+and claim-to-evidence safeguards accumulated after `v0.6.2`. It keeps Action inputs, permissions,
+defaults, and readable v1 ledgers compatible. Its consumer documents and release notes identify
+`v0.7.0` before tagging; publication still requires candidate CI, hosted live-provider, external
+dry-run, full-write, cleanup, and orphan-audit results for one exact commit. After publication, run
+those checks again against the immutable tag, verify Marketplace `Latest`, then move `v0` with
+the separate compare-and-swap procedure. The standalone CLI version is independent.
+
 Current promotion validation record:
 
 - `v0.5.2` exact-tag hosted CI: <https://github.com/0disoft/clarissimi/actions/runs/29557974573>

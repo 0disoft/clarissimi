@@ -1539,8 +1539,7 @@ Completed scope:
 
 ### 44. Action v0.6.2 Correctness and Security Patch
 
-Status: Immutable `v0.6.2` is the selected Action release candidate. Publication and moving-`v0`
-promotion require fresh exact-SHA validation.
+Status: Immutable `v0.6.2` is published. The moving `v0` alias points to that release.
 
 Accepted scope:
 
@@ -1553,6 +1552,22 @@ Accepted scope:
 - retain existing Action inputs, permissions, defaults, persisted schemas, and maintainer approval
   authority
 - ship the refreshed tracked Action bundle without publishing a new standalone npm CLI version
+- require exact-SHA hosted CI, live-provider, external dry-run, full-write, cleanup, orphan-audit,
+  post-tag, Marketplace, and compare-and-swap moving-`v0` validation before completion
+
+### 45. Action v0.7.0 Release Candidate
+
+Status: Immutable `v0.7.0` is the selected Action release candidate. Publication and moving-`v0`
+promotion require fresh exact-SHA validation.
+
+Accepted scope:
+
+- preserve approved contribution records across competing CLI writes and rebuilds
+- require approved draft snapshots for CLI imports and Action promotion
+- reject unsafe public text and links before publication
+- verify current reviewer write permission for required pre-merge decisions
+- link provider-generated public claims to their supporting evidence references
+- preserve existing Action input names, defaults, permissions, and readable v1 ledgers
 - require exact-SHA hosted CI, live-provider, external dry-run, full-write, cleanup, orphan-audit,
   post-tag, Marketplace, and compare-and-swap moving-`v0` validation before completion
 

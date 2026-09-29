@@ -15,6 +15,11 @@ requires advisory, security-label, or security-specific test evidence for securi
 explicit maintainer hint for `high` impact; and is covered by a balanced 28-case synthetic
 pull-request corpus. The corpus checks invariants and issue codes rather than
 exact model prose, and it requires no provider credentials.
+New provider drafts also link ordered segments of `evidenceSummary` and `publicRecognitionText` to
+zero-based positions in the sanitized `evidenceRefs` list. Security, regression-prevention, and
+measured performance claims must point to a relevant reference; a reference elsewhere in the draft
+does not support an unlinked claim. The map helps maintainers review claims but does not prove the
+referenced evidence is accurate.
 
 Provider endpoints default to the `public` trust policy: credential-free HTTPS with a public-form
 hostname or address. Trusted self-hosted HTTP or private-network gateways require the explicit

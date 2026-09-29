@@ -36,6 +36,23 @@ pull request source:
       "id": "PR-42",
       "url": "https://github.com/example/project/pull/42",
       "title": "Add parser regression coverage"
+    },
+    {
+      "kind": "test",
+      "id": "tests/parser.test.ts",
+      "title": "Parser nested-input regression test"
+    }
+  ],
+  "claimEvidenceLinks": [
+    {
+      "field": "evidenceSummary",
+      "text": "Added a regression test for a parser crash triggered by nested input.",
+      "evidenceRefIndexes": [1]
+    },
+    {
+      "field": "publicRecognitionText",
+      "text": "Added regression coverage that protects the parser from a nested-input crash.",
+      "evidenceRefIndexes": [1]
     }
   ],
   "suggestedBadge": "Regression Shield",
@@ -64,6 +81,10 @@ pull request source:
   fields.
 - Raw evidence excerpts may be useful while drafting, but public ledger rendering strips
   `evidenceRefs[].excerpt`.
+- `claimEvidenceLinks` is optional for manual drafts and historical records. When present, each
+  field's ordered `text` segments joined with one space must exactly reproduce that public field,
+  and every index must point to an existing `evidenceRefs` entry. Review the link and the source
+  itself before approval; a link alone does not verify the claim.
 
 ## Review Flow
 

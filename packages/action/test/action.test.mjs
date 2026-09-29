@@ -4,6 +4,21 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+function providerClaimEvidenceLinks(index) {
+  return [
+    {
+      field: "evidenceSummary",
+      text: "Added regression coverage based on test evidence.",
+      evidenceRefIndexes: [index],
+    },
+    {
+      field: "publicRecognitionText",
+      text: "Added regression coverage for the parser.",
+      evidenceRefIndexes: [index],
+    },
+  ];
+}
+
 import { GitHubEvidenceCollectionError } from "../../github/dist/index.js";
 import { OpenAiCompatibleProviderError, createFakeAssessment } from "../../providers/dist/index.js";
 import {
@@ -438,6 +453,7 @@ test("environment runner can use the OpenAI-compatible provider when explicitly 
                     evidenceSummary: "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
                     publicRecognitionText: "Added regression coverage for the parser.",
+                    claimEvidenceLinks: providerClaimEvidenceLinks(2),
                     confidence: 0.8,
                   }),
                 },
@@ -516,6 +532,7 @@ test("environment runner can use OpenAI-compatible provider values from JSON con
                     evidenceSummary: "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
                     publicRecognitionText: "Added regression coverage for the parser.",
+                    claimEvidenceLinks: providerClaimEvidenceLinks(2),
                     confidence: 0.8,
                   }),
                 },
@@ -591,6 +608,7 @@ test("environment runner can use provider values from TypeScript config-path", a
                     evidenceSummary: "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
                     publicRecognitionText: "Added regression coverage for the parser.",
+                    claimEvidenceLinks: providerClaimEvidenceLinks(2),
                     confidence: 0.8,
                   }),
                 },
@@ -661,6 +679,7 @@ test("environment runner lets explicit provider inputs override config-path valu
                     evidenceSummary: "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
                     publicRecognitionText: "Added regression coverage for the parser.",
+                    claimEvidenceLinks: providerClaimEvidenceLinks(2),
                     confidence: 0.8,
                   }),
                 },

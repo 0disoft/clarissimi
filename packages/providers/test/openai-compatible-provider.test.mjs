@@ -66,6 +66,18 @@ test("creates a draft assessment from an OpenAI-compatible response", async () =
                   "Added regression coverage based on the merged pull request and test evidence.",
                 suggestedBadge: "Regression Shield",
                 publicRecognitionText: "Added regression coverage for the parser.",
+                claimEvidenceLinks: [
+                  {
+                    field: "evidenceSummary",
+                    text: "Added regression coverage based on the merged pull request and test evidence.",
+                    evidenceRefIndexes: [0, 1],
+                  },
+                  {
+                    field: "publicRecognitionText",
+                    text: "Added regression coverage for the parser.",
+                    evidenceRefIndexes: [1],
+                  },
+                ],
                 confidence: 0.82,
                 maintainerApprovalStatus: "approved",
                 contributor: {
@@ -100,11 +112,17 @@ test("creates a draft assessment from an OpenAI-compatible response", async () =
   assert.deepEqual(assessment.contributor, contributor);
   assert.deepEqual(assessment.source, source);
   assert.deepEqual(assessment.evidenceRefs, evidence.evidenceRefs);
+  assert.deepEqual(assessment.claimEvidenceLinks[1].evidenceRefIndexes, [1]);
   assert.equal(requests.length, 1);
   assert.equal(requests[0].url, "https://provider.example.com/v1/chat/completions");
   assert.equal(requests[0].headers.Authorization, "Bearer unit-token");
   assert.equal(requests[0].body.model, "clarissimi-test-model");
   assert.equal(requests[0].body.response_format.type, "json_object");
+  const providerPayload = JSON.parse(requests[0].body.messages[1].content);
+  assert.deepEqual(
+    providerPayload.evidenceRefs.map((ref) => ref.index),
+    [0, 1],
+  );
   assert.equal(requests[0].body.thinking, undefined);
   assert.equal(requests[0].body.messages[0].content.includes("score shares"), true);
   assert.equal(requests[0].body.messages[0].content.includes("security-specific test"), true);
@@ -126,6 +144,38 @@ test("creates a draft assessment from an OpenAI-compatible response", async () =
   assert.equal(requestText.includes("[REDACTED]"), true);
 });
 
+test("rejects an otherwise valid provider draft without claim evidence links", async () => {
+  const provider = createOpenAiCompatibleContributionDraftProvider({
+    model: "clarissimi-test-model",
+    token: "unit-token",
+    fetch: async () =>
+      jsonResponse({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                contributionType: "test",
+                affectedArea: "parser coverage",
+                impactLevel: "medium",
+                evidenceSummary: "Added parser coverage.",
+                suggestedBadge: "Regression Shield",
+                publicRecognitionText: "Added parser coverage.",
+                confidence: 0.8,
+              }),
+            },
+          },
+        ],
+      }),
+  });
+  await assert.rejects(
+    () => provider.createAssessment({ contributor, preparedEvidence: preparedEvidence() }),
+    (error) =>
+      error instanceof OpenAiCompatibleProviderError &&
+      error.code === "invalid_assessment" &&
+      error.issues.some((issue) => issue.code === "provider_result_claim_evidence_missing"),
+  );
+});
+
 test("keeps secret canaries out of the provider transport payload", async () => {
   const canary = "synthetic-secret-canary-123456789";
   let requestText = "";
@@ -145,6 +195,18 @@ test("keeps secret canaries out of the provider transport payload", async () => 
                 evidenceSummary: "Added coverage for the provider payload boundary.",
                 suggestedBadge: "Boundary Guard",
                 publicRecognitionText: "Protected provider payload handling.",
+                claimEvidenceLinks: [
+                  {
+                    field: "evidenceSummary",
+                    text: "Added coverage for the provider payload boundary.",
+                    evidenceRefIndexes: [0],
+                  },
+                  {
+                    field: "publicRecognitionText",
+                    text: "Protected provider payload handling.",
+                    evidenceRefIndexes: [0],
+                  },
+                ],
                 confidence: 0.9,
               }),
             },
@@ -206,6 +268,18 @@ test("can disable provider thinking for OpenAI-compatible providers that support
                 evidenceSummary: "Added regression coverage based on test evidence.",
                 suggestedBadge: "Regression Shield",
                 publicRecognitionText: "Added regression coverage for the parser.",
+                claimEvidenceLinks: [
+                  {
+                    field: "evidenceSummary",
+                    text: "Added regression coverage based on test evidence.",
+                    evidenceRefIndexes: [1],
+                  },
+                  {
+                    field: "publicRecognitionText",
+                    text: "Added regression coverage for the parser.",
+                    evidenceRefIndexes: [1],
+                  },
+                ],
                 confidence: 0.76,
               }),
             },
@@ -243,6 +317,18 @@ test("supports text-array message content", async () => {
                     evidenceSummary: "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
                     publicRecognitionText: "Added regression coverage for the parser.",
+                    claimEvidenceLinks: [
+                      {
+                        field: "evidenceSummary",
+                        text: "Added regression coverage based on test evidence.",
+                        evidenceRefIndexes: [1],
+                      },
+                      {
+                        field: "publicRecognitionText",
+                        text: "Added regression coverage for the parser.",
+                        evidenceRefIndexes: [1],
+                      },
+                    ],
                     confidence: 0.74,
                   }),
                 },
@@ -279,6 +365,18 @@ test("accepts markdown-fenced JSON message content from compatible providers", a
                   evidenceSummary: "Added regression coverage based on test evidence.",
                   suggestedBadge: "Regression Shield",
                   publicRecognitionText: "Added regression coverage for the parser.",
+                  claimEvidenceLinks: [
+                    {
+                      field: "evidenceSummary",
+                      text: "Added regression coverage based on test evidence.",
+                      evidenceRefIndexes: [1],
+                    },
+                    {
+                      field: "publicRecognitionText",
+                      text: "Added regression coverage for the parser.",
+                      evidenceRefIndexes: [1],
+                    },
+                  ],
                   confidence: 0.71,
                 }),
                 "```",
@@ -651,6 +749,18 @@ test("allows explicitly trusted private-network endpoints without URL credential
                 evidenceSummary: "Added regression coverage based on test evidence.",
                 suggestedBadge: "Regression Shield",
                 publicRecognitionText: "Added regression coverage for the parser.",
+                claimEvidenceLinks: [
+                  {
+                    field: "evidenceSummary",
+                    text: "Added regression coverage based on test evidence.",
+                    evidenceRefIndexes: [1],
+                  },
+                  {
+                    field: "publicRecognitionText",
+                    text: "Added regression coverage for the parser.",
+                    evidenceRefIndexes: [1],
+                  },
+                ],
                 confidence: 0.78,
               }),
             },

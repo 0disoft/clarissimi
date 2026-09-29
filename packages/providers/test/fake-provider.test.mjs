@@ -56,6 +56,33 @@ test("creates a deterministic draft assessment from prepared evidence", async ()
   assert.equal(validateContributionAssessment(assessment).ok, true);
 });
 
+test("links regression claims to test-like changed files", () => {
+  const evidence = preparedEvidence([
+    { kind: "pull_request", id: "PR-42", title: "Add parser regression coverage" },
+    { kind: "file", id: "tests/parser.spec.ts" },
+  ]);
+  const assessment = createFakeAssessment({ contributor, preparedEvidence: evidence });
+
+  assert.equal(assessment.claimEvidenceLinks[1].evidenceRefIndexes[0], 1);
+  assert.match(assessment.publicRecognitionText, /regression coverage/);
+});
+
+test("does not claim regression coverage without test evidence", () => {
+  const evidence = preparedEvidence([
+    { kind: "pull_request", id: "PR-42", title: "Add parser regression coverage" },
+    { kind: "file", id: "tests/fixtures/expected.json" },
+  ]);
+  const assessment = createFakeAssessment({
+    contributor,
+    preparedEvidence: evidence,
+    hints: { contributionType: "test" },
+  });
+
+  assert.equal(assessment.affectedArea, "repository maintenance");
+  assert.match(assessment.publicRecognitionText, /Contributed test work/);
+  assert.equal(assessment.publicRecognitionText.includes("regression coverage"), false);
+});
+
 test("honors safe maintainer hints without changing source or evidence refs", () => {
   const evidence = preparedEvidence([
     {

@@ -14,7 +14,13 @@ import type {
   ProviderAssessmentHints,
   ProviderAssessmentInput,
 } from "./types.js";
-import { validateProviderAssessmentResult } from "./result-quality.js";
+import {
+  isMeasurementEvidence,
+  isRegressionClaimText,
+  isRegressionEvidence,
+  isSecuritySupportItem,
+  validateProviderAssessmentResult,
+} from "./result-quality.js";
 
 const DEFAULT_PROVIDER_ID = "fake-deterministic";
 const DEFAULT_AFFECTED_AREA = "repository maintenance";
@@ -56,7 +62,8 @@ export function createFakeAssessment(
     hints.contributionType ??
     defaults.contributionType ??
     inferContributionType(input.preparedEvidence);
-  const affectedArea = safePublicNarrative(
+  const hasRegressionEvidence = input.preparedEvidence.items.some(isRegressionEvidence);
+  const inferredArea = safePublicNarrative(
     firstNonEmpty(
       hints.affectedArea,
       defaults.affectedArea,
@@ -64,6 +71,10 @@ export function createFakeAssessment(
     ),
     DEFAULT_AFFECTED_AREA,
   );
+  const affectedArea =
+    !hasRegressionEvidence && isRegressionClaimText(inferredArea)
+      ? DEFAULT_AFFECTED_AREA
+      : inferredArea;
   const impactLevel =
     hints.impactLevel ?? defaults.impactLevel ?? inferImpactLevel(input.preparedEvidence);
   const suggestedBadge = safePublicNarrative(
@@ -75,16 +86,45 @@ export function createFakeAssessment(
     inferSuggestedBadge(contributionType),
   );
   const confidence = clampConfidence(hints.confidence ?? defaults.confidence ?? DEFAULT_CONFIDENCE);
+  const evidenceSummary = buildEvidenceSummary(
+    input.preparedEvidence,
+    contributionType,
+    affectedArea,
+  );
+  const publicRecognitionText = buildPublicRecognitionText(
+    contributionType,
+    affectedArea,
+    hasRegressionEvidence,
+  );
+  const relevantIndex = input.preparedEvidence.items.findIndex((item) =>
+    contributionType === "security"
+      ? isSecuritySupportItem(item)
+      : contributionType === "test"
+        ? isRegressionEvidence(item)
+        : contributionType === "performance"
+          ? isMeasurementEvidence(item)
+          : false,
+  );
+  const publicIndexes = [relevantIndex < 0 ? 0 : relevantIndex];
+  const summaryIndexes = relevantIndex > 0 ? [0, relevantIndex] : [0];
   const assessment = {
     schemaVersion: ASSESSMENT_SCHEMA_VERSION,
     contributor: input.contributor,
     contributionType,
     affectedArea,
     impactLevel,
-    evidenceSummary: buildEvidenceSummary(input.preparedEvidence, contributionType, affectedArea),
+    evidenceSummary,
     evidenceRefs: input.preparedEvidence.evidenceRefs,
+    claimEvidenceLinks: [
+      { field: "evidenceSummary", text: evidenceSummary, evidenceRefIndexes: summaryIndexes },
+      {
+        field: "publicRecognitionText",
+        text: publicRecognitionText,
+        evidenceRefIndexes: publicIndexes,
+      },
+    ],
     suggestedBadge,
-    publicRecognitionText: buildPublicRecognitionText(contributionType, affectedArea),
+    publicRecognitionText,
     confidence,
     maintainerApprovalStatus: "draft",
     source: input.preparedEvidence.source,
@@ -102,7 +142,7 @@ export function createFakeAssessment(
 }
 
 function inferContributionType(evidence: PreparedProviderEvidence): ContributionType {
-  if (hasEvidenceKind(evidence, "test")) {
+  if (evidence.items.some(isRegressionEvidence)) {
     return "test";
   }
 
@@ -169,10 +209,13 @@ function buildEvidenceSummary(
 function buildPublicRecognitionText(
   contributionType: ContributionType,
   affectedArea: string,
+  hasRegressionEvidence: boolean,
 ): string {
   switch (contributionType) {
     case "test":
-      return `Added regression coverage for ${affectedArea}.`;
+      return hasRegressionEvidence
+        ? `Added regression coverage for ${affectedArea}.`
+        : `Contributed test work for ${affectedArea}.`;
     case "security":
       return `Helped maintainers confirm security-sensitive evidence for ${affectedArea}.`;
     case "bug_report":

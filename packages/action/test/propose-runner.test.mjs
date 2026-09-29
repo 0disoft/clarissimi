@@ -373,7 +373,20 @@ test("promotes an approved draft through a public recognition proposal", async (
     await mkdir(join(repositoryDir, ".clarissimi", "drafts"), {
       recursive: true,
     });
-    const approvedAssessment = approvedDraftAssessment();
+    const baseAssessment = approvedDraftAssessment();
+    const claimEvidenceLinks = [
+      {
+        field: "evidenceSummary",
+        text: baseAssessment.evidenceSummary,
+        evidenceRefIndexes: [0],
+      },
+      {
+        field: "publicRecognitionText",
+        text: baseAssessment.publicRecognitionText,
+        evidenceRefIndexes: [0],
+      },
+    ];
+    const approvedAssessment = approvedDraftAssessment({ claimEvidenceLinks });
     await writeFile(
       draftPath,
       JSON.stringify({
@@ -422,6 +435,13 @@ test("promotes an approved draft through a public recognition proposal", async (
       ),
       false,
     );
+    const [record] = (
+      await readFile(join(stagingDir, ".clarissimi", "contributions.jsonl"), "utf8")
+    )
+      .trim()
+      .split("\n")
+      .map(JSON.parse);
+    assert.deepEqual(record.claimEvidenceLinks, claimEvidenceLinks);
   });
 });
 

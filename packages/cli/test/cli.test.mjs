@@ -16,6 +16,21 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
 
+function providerClaimEvidenceLinks(index) {
+  return [
+    {
+      field: "evidenceSummary",
+      text: "Added regression coverage based on test evidence.",
+      evidenceRefIndexes: [index],
+    },
+    {
+      field: "publicRecognitionText",
+      text: "Added regression coverage for the parser.",
+      evidenceRefIndexes: [index],
+    },
+  ];
+}
+
 import { runCli } from "../dist/index.js";
 import {
   fileExists,
@@ -811,11 +826,16 @@ test("approve-draft output can be imported into the public ledger", async () => 
   await withTempDir(async (dir) => {
     const draftPath = join(dir, "agent-draft.json");
     const ledger = join(dir, ".clarissimi", "contributions.jsonl");
-    await writeFile(
-      draftPath,
-      JSON.stringify(assessment({ maintainerApprovalStatus: "draft" })),
-      "utf8",
-    );
+    const draft = assessment({ maintainerApprovalStatus: "draft" });
+    const claimEvidenceLinks = [
+      { field: "evidenceSummary", text: draft.evidenceSummary, evidenceRefIndexes: [0] },
+      {
+        field: "publicRecognitionText",
+        text: draft.publicRecognitionText,
+        evidenceRefIndexes: [0],
+      },
+    ];
+    await writeFile(draftPath, JSON.stringify({ ...draft, claimEvidenceLinks }), "utf8");
 
     const approvalResult = await run(["approve-draft", "--draft", draftPath, "--json"], dir);
     const importResult = await run(
@@ -829,6 +849,7 @@ test("approve-draft output can be imported into the public ledger", async () => 
     assert.equal(JSON.parse(importResult.stdout).records, 1);
     assert.equal(ledgerText.includes('"maintainerApprovalStatus":"approved"'), true);
     assert.equal(ledgerText.includes("approvalSnapshot"), false);
+    assert.deepEqual(JSON.parse(ledgerText).claimEvidenceLinks, claimEvidenceLinks);
   });
 });
 
@@ -1647,6 +1668,7 @@ test("recognize can use the OpenAI-compatible provider when explicitly selected"
                     evidenceSummary: "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
                     publicRecognitionText: "Added regression coverage for the parser.",
+                    claimEvidenceLinks: providerClaimEvidenceLinks(0),
                     confidence: 0.8,
                   }),
                 },
@@ -1757,6 +1779,7 @@ test("recognize uses JSON config provider values when flags are omitted", async 
                   evidenceSummary: "Added regression coverage based on test evidence.",
                   suggestedBadge: "Regression Shield",
                   publicRecognitionText: "Added regression coverage for the parser.",
+                  claimEvidenceLinks: providerClaimEvidenceLinks(0),
                   confidence: 0.8,
                 }),
               },
@@ -1818,6 +1841,7 @@ test("recognize uses TypeScript config provider values when flags are omitted", 
                   evidenceSummary: "Added regression coverage based on test evidence.",
                   suggestedBadge: "Regression Shield",
                   publicRecognitionText: "Added regression coverage for the parser.",
+                  claimEvidenceLinks: providerClaimEvidenceLinks(0),
                   confidence: 0.8,
                 }),
               },
@@ -1883,6 +1907,7 @@ test("recognize lets explicit provider flags override JSON config values", async
                     evidenceSummary: "Added regression coverage based on test evidence.",
                     suggestedBadge: "Regression Shield",
                     publicRecognitionText: "Added regression coverage for the parser.",
+                    claimEvidenceLinks: providerClaimEvidenceLinks(0),
                     confidence: 0.8,
                   }),
                 },

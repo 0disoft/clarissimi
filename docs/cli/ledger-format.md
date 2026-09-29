@@ -69,6 +69,18 @@ Example:
     }
   ],
   "evidenceSummary": "Added validation coverage so invalid provider endpoint configuration fails before provider execution.",
+  "claimEvidenceLinks": [
+    {
+      "field": "evidenceSummary",
+      "text": "Added validation coverage so invalid provider endpoint configuration fails before provider execution.",
+      "evidenceRefIndexes": [1]
+    },
+    {
+      "field": "publicRecognitionText",
+      "text": "Helped make provider configuration fail earlier and more clearly.",
+      "evidenceRefIndexes": [0, 1]
+    }
+  ],
   "impactLevel": "medium",
   "maintainerApprovalStatus": "approved",
   "publicRecognitionText": "Helped make provider configuration fail earlier and more clearly.",

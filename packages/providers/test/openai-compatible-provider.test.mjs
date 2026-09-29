@@ -166,18 +166,10 @@ test("uses strict structured output for the supported OpenAI release-smoke model
                 affectedArea: "parser coverage",
                 impactLevel: "medium",
                 evidenceSummary: "Added parser regression coverage.",
-                claimEvidenceLinks: [
-                  {
-                    field: "evidenceSummary",
-                    text: "Added parser regression coverage.",
-                    evidenceRefIndexes: [0, 1],
-                  },
-                  {
-                    field: "publicRecognitionText",
-                    text: "Added parser regression coverage.",
-                    evidenceRefIndexes: [0, 1],
-                  },
-                ],
+                claimEvidenceRefIndexes: {
+                  evidenceSummary: [0, 1],
+                  publicRecognitionText: [0, 1],
+                },
                 suggestedBadge: "Regression Shield",
                 publicRecognitionText: "Added parser regression coverage.",
                 confidence: 0.82,
@@ -194,14 +186,26 @@ test("uses strict structured output for the supported OpenAI release-smoke model
     preparedEvidence: preparedEvidence(),
   });
   assert.equal(assessment.maintainerApprovalStatus, "draft");
+  assert.deepEqual(assessment.claimEvidenceLinks, [
+    {
+      field: "evidenceSummary",
+      text: "Added parser regression coverage.",
+      evidenceRefIndexes: [0, 1],
+    },
+    {
+      field: "publicRecognitionText",
+      text: "Added parser regression coverage.",
+      evidenceRefIndexes: [0, 1],
+    },
+  ]);
   assert.equal(requestBody.response_format.type, "json_schema");
   assert.equal(requestBody.response_format.json_schema.strict, true);
   assert.equal(
-    requestBody.response_format.json_schema.schema.properties.claimEvidenceLinks.type,
-    "array",
+    requestBody.response_format.json_schema.schema.properties.claimEvidenceRefIndexes.type,
+    "object",
   );
   assert.equal(
-    requestBody.response_format.json_schema.schema.required.includes("claimEvidenceLinks"),
+    requestBody.response_format.json_schema.schema.required.includes("claimEvidenceRefIndexes"),
     true,
   );
 });

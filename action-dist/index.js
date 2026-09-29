@@ -4706,6 +4706,7 @@ var NON_PUBLIC_IPV6_SUBNETS = createIpv6Subnets();
 // packages/providers/dist/openai-compatible-provider.js
 var DEFAULT_PROVIDER_ID2 = "openai-compatible";
 var DEFAULT_ENDPOINT = "https://api.openai.com/v1/chat/completions";
+var OPENAI_STRUCTURED_OUTPUT_MODEL = /^gpt-4\.1-mini(?:-\d{4}-\d{2}-\d{2})?$/;
 var DEFAULT_TEMPERATURE = 0.2;
 var DEFAULT_MAX_TOKENS = 1200;
 var DEFAULT_REQUEST_TIMEOUT_MS3 = 12e4;
@@ -4771,9 +4772,7 @@ async function requestAssessmentDraft(options) {
     model: options.model,
     temperature: options.temperature,
     max_tokens: options.maxTokens,
-    response_format: {
-      type: "json_object"
-    },
+    response_format: options.endpoint.href === DEFAULT_ENDPOINT && OPENAI_STRUCTURED_OUTPUT_MODEL.test(options.model) ? structuredAssessmentResponseFormat() : { type: "json_object" },
     messages: [
       {
         role: "system",
@@ -4844,6 +4843,51 @@ async function requestAssessmentDraft(options) {
     throw new OpenAiCompatibleProviderError("invalid_response", "OpenAI-compatible provider returned a non-JSON response.");
   }
   return extractMessageContent(responseBody);
+}
+function structuredAssessmentResponseFormat() {
+  return {
+    type: "json_schema",
+    json_schema: {
+      name: "clarissimi_contribution_draft",
+      strict: true,
+      schema: {
+        type: "object",
+        properties: {
+          contributionType: { type: "string", enum: [...CONTRIBUTION_TYPES] },
+          affectedArea: { type: "string" },
+          impactLevel: { type: "string", enum: [...IMPACT_LEVELS] },
+          evidenceSummary: { type: "string" },
+          claimEvidenceLinks: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                field: { type: "string", enum: [...CLAIM_EVIDENCE_FIELDS] },
+                text: { type: "string" },
+                evidenceRefIndexes: { type: "array", items: { type: "integer" } }
+              },
+              required: ["field", "text", "evidenceRefIndexes"],
+              additionalProperties: false
+            }
+          },
+          suggestedBadge: { type: "string" },
+          publicRecognitionText: { type: "string" },
+          confidence: { type: "number" }
+        },
+        required: [
+          "contributionType",
+          "affectedArea",
+          "impactLevel",
+          "evidenceSummary",
+          "claimEvidenceLinks",
+          "suggestedBadge",
+          "publicRecognitionText",
+          "confidence"
+        ],
+        additionalProperties: false
+      }
+    }
+  };
 }
 async function readBoundedResponseText3(response, maxBytes) {
   const contentLength = response.headers?.get?.("content-length");

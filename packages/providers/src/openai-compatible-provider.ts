@@ -21,6 +21,7 @@ export type { OpenAiCompatibleEndpointTrust } from "./provider-endpoint-transpor
 
 const DEFAULT_PROVIDER_ID = "openai-compatible";
 const DEFAULT_ENDPOINT = "https://api.openai.com/v1/chat/completions";
+const OPENAI_STRUCTURED_OUTPUT_MODEL = /^gpt-4\.1-mini(?:-\d{4}-\d{2}-\d{2})?$/;
 const DEFAULT_TEMPERATURE = 0.2;
 const DEFAULT_MAX_TOKENS = 1200;
 const DEFAULT_REQUEST_TIMEOUT_MS = 120_000;
@@ -147,9 +148,11 @@ async function requestAssessmentDraft(options: RequestAssessmentDraftInput): Pro
     model: options.model,
     temperature: options.temperature,
     max_tokens: options.maxTokens,
-    response_format: {
-      type: "json_object",
-    },
+    response_format:
+      options.endpoint.href === DEFAULT_ENDPOINT &&
+      OPENAI_STRUCTURED_OUTPUT_MODEL.test(options.model)
+        ? structuredAssessmentResponseFormat()
+        : { type: "json_object" },
     messages: [
       {
         role: "system",
@@ -250,6 +253,52 @@ async function requestAssessmentDraft(options: RequestAssessmentDraftInput): Pro
   }
 
   return extractMessageContent(responseBody);
+}
+
+function structuredAssessmentResponseFormat(): Record<string, unknown> {
+  return {
+    type: "json_schema",
+    json_schema: {
+      name: "clarissimi_contribution_draft",
+      strict: true,
+      schema: {
+        type: "object",
+        properties: {
+          contributionType: { type: "string", enum: [...CONTRIBUTION_TYPES] },
+          affectedArea: { type: "string" },
+          impactLevel: { type: "string", enum: [...IMPACT_LEVELS] },
+          evidenceSummary: { type: "string" },
+          claimEvidenceLinks: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                field: { type: "string", enum: [...CLAIM_EVIDENCE_FIELDS] },
+                text: { type: "string" },
+                evidenceRefIndexes: { type: "array", items: { type: "integer" } },
+              },
+              required: ["field", "text", "evidenceRefIndexes"],
+              additionalProperties: false,
+            },
+          },
+          suggestedBadge: { type: "string" },
+          publicRecognitionText: { type: "string" },
+          confidence: { type: "number" },
+        },
+        required: [
+          "contributionType",
+          "affectedArea",
+          "impactLevel",
+          "evidenceSummary",
+          "claimEvidenceLinks",
+          "suggestedBadge",
+          "publicRecognitionText",
+          "confidence",
+        ],
+        additionalProperties: false,
+      },
+    },
+  };
 }
 
 async function readBoundedResponseText(response: Response, maxBytes: number): Promise<string> {

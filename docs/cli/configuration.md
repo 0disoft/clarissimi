@@ -46,6 +46,10 @@ The current config object supports:
 - `includeAutomationContributors`: optional boolean; defaults to `true` and controls whether
   approved `bot` and `ai_agent` identities appear in derived contributor displays
 
+The default OpenAI endpoint with `gpt-4.1-mini` uses strict structured output for the draft shape.
+Other compatible endpoints retain JSON mode. All responses still pass the same evidence and
+approval validators before a draft is accepted.
+
 TypeScript config files must be named `clarissimi.config.ts` and must export a default config
 object. They are loaded through the Node.js 24 runtime rather than a third-party loader dependency.
 

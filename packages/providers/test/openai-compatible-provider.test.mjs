@@ -150,6 +150,62 @@ test("creates a draft assessment from an OpenAI-compatible response", async () =
   assert.equal(requestText.includes("[REDACTED]"), true);
 });
 
+test("uses strict structured output for the supported OpenAI release-smoke model", async () => {
+  let requestBody;
+  const provider = createOpenAiCompatibleContributionDraftProvider({
+    model: "gpt-4.1-mini",
+    token: "unit-token",
+    fetch: async (_url, init) => {
+      requestBody = JSON.parse(init.body);
+      return jsonResponse({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                contributionType: "test",
+                affectedArea: "parser coverage",
+                impactLevel: "medium",
+                evidenceSummary: "Added parser regression coverage.",
+                claimEvidenceLinks: [
+                  {
+                    field: "evidenceSummary",
+                    text: "Added parser regression coverage.",
+                    evidenceRefIndexes: [0, 1],
+                  },
+                  {
+                    field: "publicRecognitionText",
+                    text: "Added parser regression coverage.",
+                    evidenceRefIndexes: [0, 1],
+                  },
+                ],
+                suggestedBadge: "Regression Shield",
+                publicRecognitionText: "Added parser regression coverage.",
+                confidence: 0.82,
+              }),
+            },
+          },
+        ],
+      });
+    },
+  });
+
+  const assessment = await provider.createAssessment({
+    contributor,
+    preparedEvidence: preparedEvidence(),
+  });
+  assert.equal(assessment.maintainerApprovalStatus, "draft");
+  assert.equal(requestBody.response_format.type, "json_schema");
+  assert.equal(requestBody.response_format.json_schema.strict, true);
+  assert.equal(
+    requestBody.response_format.json_schema.schema.properties.claimEvidenceLinks.type,
+    "array",
+  );
+  assert.equal(
+    requestBody.response_format.json_schema.schema.required.includes("claimEvidenceLinks"),
+    true,
+  );
+});
+
 test("rejects an otherwise valid provider draft without claim evidence links", async () => {
   const provider = createOpenAiCompatibleContributionDraftProvider({
     model: "clarissimi-test-model",

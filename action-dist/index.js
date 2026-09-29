@@ -2233,6 +2233,7 @@ var EVIDENCE_KINDS = [
   "maintainer_note",
   "advisory"
 ];
+var CLAIM_EVIDENCE_FIELDS = ["evidenceSummary", "publicRecognitionText"];
 
 // packages/schemas/dist/validation.js
 var RANKING_LANGUAGE_PATTERNS = [
@@ -2376,6 +2377,7 @@ function validateContributionAssessment(value) {
   expectEnum(value.impactLevel, isImpactLevel, "$.impactLevel", issues);
   expectPublicNarrativeText(value.evidenceSummary, "$.evidenceSummary", issues);
   validateEvidenceRefs(value.evidenceRefs, "$.evidenceRefs", issues);
+  validateClaimEvidenceLinks(value.claimEvidenceLinks, value, issues);
   expectPublicNarrativeText(value.suggestedBadge, "$.suggestedBadge", issues);
   expectPublicNarrativeText(value.publicRecognitionText, "$.publicRecognitionText", issues);
   expectConfidence(value.confidence, "$.confidence", issues);
@@ -2390,6 +2392,59 @@ function validateContributionAssessment(value) {
     value,
     issues: []
   };
+}
+function isClaimEvidenceField(value) {
+  return CLAIM_EVIDENCE_FIELDS.includes(value);
+}
+function validateClaimEvidenceLinks(value, assessment, issues) {
+  if (value === void 0) {
+    return;
+  }
+  if (!Array.isArray(value)) {
+    pushIssue(issues, "$.claimEvidenceLinks", "expected_array", "Claim evidence links must be an array.");
+    return;
+  }
+  const linksByField = /* @__PURE__ */ new Map();
+  value.forEach((link, index) => {
+    const path = `$.claimEvidenceLinks[${index}]`;
+    if (!isRecord4(link)) {
+      pushIssue(issues, path, "expected_object", "Claim evidence link must be an object.");
+      return;
+    }
+    if (typeof link.field !== "string" || !isClaimEvidenceField(link.field)) {
+      pushIssue(issues, `${path}.field`, "invalid_claim_field", "Claim evidence field is unknown.");
+      return;
+    }
+    expectNonEmptyString(link.text, `${path}.text`, issues);
+    if (typeof link.text === "string" && link.text.trim().length > 0) {
+      const texts = linksByField.get(link.field) ?? [];
+      texts.push(link.text);
+      linksByField.set(link.field, texts);
+    }
+    if (!Array.isArray(link.evidenceRefIndexes) || link.evidenceRefIndexes.length === 0) {
+      pushIssue(issues, `${path}.evidenceRefIndexes`, "empty_evidence_links", "A claim must link to at least one evidence reference.");
+      return;
+    }
+    const seen = /* @__PURE__ */ new Set();
+    link.evidenceRefIndexes.forEach((refIndex, refPosition) => {
+      const refPath = `${path}.evidenceRefIndexes[${refPosition}]`;
+      if (typeof refIndex !== "number" || !Number.isInteger(refIndex) || refIndex < 0 || !Array.isArray(assessment.evidenceRefs) || refIndex >= assessment.evidenceRefs.length) {
+        pushIssue(issues, refPath, "invalid_evidence_index", "Evidence reference index is invalid.");
+      } else if (seen.has(refIndex)) {
+        pushIssue(issues, refPath, "duplicate_evidence_index", "Evidence reference index is repeated.");
+      } else {
+        seen.add(refIndex);
+      }
+    });
+  });
+  for (const field of CLAIM_EVIDENCE_FIELDS) {
+    const texts = linksByField.get(field);
+    if (texts === void 0) {
+      pushIssue(issues, "$.claimEvidenceLinks", "missing_claim_field", `Claims must cover ${field}.`);
+    } else if (texts.join(" ") !== assessment[field]) {
+      pushIssue(issues, `$.${field}`, "claim_evidence_text_mismatch", `Claim evidence links must cover the complete ${field} text in order.`);
+    }
+  }
 }
 function validateDraftApprovalSnapshot(value, status, issues) {
   if (value === void 0) {
@@ -3302,6 +3357,9 @@ function findUnsafeRepositoryAssessmentFields(assessment) {
   assessment.evidenceRefs.forEach((ref, index) => {
     fields.push({ path: `$.evidenceRefs[${index}].id`, value: ref.id }, { path: "$.evidenceRefs[].url", value: ref.url, url: true }, { path: `$.evidenceRefs[${index}].title`, value: ref.title });
   });
+  assessment.claimEvidenceLinks?.forEach((link, index) => {
+    fields.push({ path: `$.claimEvidenceLinks[${index}].text`, value: link.text });
+  });
   const issues = [];
   for (const field of fields) {
     if (field.value === void 0) {
@@ -3392,6 +3450,17 @@ function findDirectSensitiveText(value, scanEmbeddedUrls = true) {
     }
   }
   return void 0;
+}
+
+// packages/renderers/dist/claim-evidence.js
+function copyClaimEvidenceLinks(assessment) {
+  return assessment.claimEvidenceLinks === void 0 ? {} : {
+    claimEvidenceLinks: assessment.claimEvidenceLinks.map((link) => ({
+      field: link.field,
+      text: link.text,
+      evidenceRefIndexes: [...link.evidenceRefIndexes]
+    }))
+  };
 }
 
 // packages/renderers/dist/ledger.js
@@ -3499,6 +3568,7 @@ function sanitizePublicContributionRecord(assessment) {
       ...ref.url === void 0 ? {} : { url: ref.url },
       ...ref.title === void 0 ? {} : { title: ref.title }
     })),
+    ...copyClaimEvidenceLinks(assessment),
     suggestedBadge: assessment.suggestedBadge,
     publicRecognitionText: assessment.publicRecognitionText,
     confidence: assessment.confidence,
@@ -3624,6 +3694,7 @@ function sanitizeDraftReviewRecord(assessment) {
       ...ref.url === void 0 ? {} : { url: ref.url },
       ...ref.title === void 0 ? {} : { title: ref.title }
     })),
+    ...copyClaimEvidenceLinks(assessment),
     suggestedBadge: assessment.suggestedBadge,
     publicRecognitionText: assessment.publicRecognitionText,
     confidence: assessment.confidence,

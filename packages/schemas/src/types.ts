@@ -79,6 +79,15 @@ export const EVIDENCE_KINDS = [
 
 export type EvidenceKind = (typeof EVIDENCE_KINDS)[number];
 
+export const CLAIM_EVIDENCE_FIELDS = ["evidenceSummary", "publicRecognitionText"] as const;
+export type ClaimEvidenceField = (typeof CLAIM_EVIDENCE_FIELDS)[number];
+
+export interface ClaimEvidenceLink {
+  readonly field: ClaimEvidenceField;
+  readonly text: string;
+  readonly evidenceRefIndexes: readonly number[];
+}
+
 export interface ClarissimiConfig {
   readonly provider?: ConfigProvider;
   readonly providerEndpoint?: string;
@@ -126,6 +135,7 @@ export interface ContributionAssessment {
   readonly impactLevel: ImpactLevel;
   readonly evidenceSummary: string;
   readonly evidenceRefs: readonly EvidenceRef[];
+  readonly claimEvidenceLinks?: readonly ClaimEvidenceLink[];
   readonly suggestedBadge: string;
   readonly publicRecognitionText: string;
   readonly confidence: number;

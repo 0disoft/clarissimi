@@ -45,6 +45,9 @@ export function findUnsafeRepositoryAssessmentFields(
       { path: `$.evidenceRefs[${index}].title`, value: ref.title },
     );
   });
+  assessment.claimEvidenceLinks?.forEach((link, index) => {
+    fields.push({ path: `$.claimEvidenceLinks[${index}].text`, value: link.text });
+  });
 
   const issues: ValidationIssue[] = [];
   for (const field of fields) {

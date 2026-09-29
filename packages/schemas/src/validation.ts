@@ -1,6 +1,7 @@
 import {
   APPROVAL_STATUSES,
   ASSESSMENT_SCHEMA_VERSION,
+  CLAIM_EVIDENCE_FIELDS,
   CONFIG_MODES,
   CONFIG_MARKDOWN_SUMMARIES,
   CONTRIBUTOR_KINDS,
@@ -15,6 +16,7 @@ import {
   REVIEW_GATE_MODES,
   type ApprovalStatus,
   type ClarissimiConfig,
+  type ClaimEvidenceField,
   type ContributionAssessment,
   type ConfigMode,
   type ConfigMarkdownSummary,
@@ -207,6 +209,7 @@ export function validateContributionAssessment(
   expectEnum(value.impactLevel, isImpactLevel, "$.impactLevel", issues);
   expectPublicNarrativeText(value.evidenceSummary, "$.evidenceSummary", issues);
   validateEvidenceRefs(value.evidenceRefs, "$.evidenceRefs", issues);
+  validateClaimEvidenceLinks(value.claimEvidenceLinks, value, issues);
   expectPublicNarrativeText(value.suggestedBadge, "$.suggestedBadge", issues);
   expectPublicNarrativeText(value.publicRecognitionText, "$.publicRecognitionText", issues);
   expectConfidence(value.confidence, "$.confidence", issues);
@@ -228,6 +231,101 @@ export function validateContributionAssessment(
     value: value as unknown as ContributionAssessment,
     issues: [],
   };
+}
+
+function isClaimEvidenceField(value: string): value is ClaimEvidenceField {
+  return (CLAIM_EVIDENCE_FIELDS as readonly string[]).includes(value);
+}
+
+function validateClaimEvidenceLinks(
+  value: unknown,
+  assessment: Record<string, unknown>,
+  issues: ValidationIssue[],
+): void {
+  if (value === undefined) {
+    return;
+  }
+  if (!Array.isArray(value)) {
+    pushIssue(
+      issues,
+      "$.claimEvidenceLinks",
+      "expected_array",
+      "Claim evidence links must be an array.",
+    );
+    return;
+  }
+  const linksByField = new Map<ClaimEvidenceField, string[]>();
+  value.forEach((link, index) => {
+    const path = `$.claimEvidenceLinks[${index}]`;
+    if (!isRecord(link)) {
+      pushIssue(issues, path, "expected_object", "Claim evidence link must be an object.");
+      return;
+    }
+    if (typeof link.field !== "string" || !isClaimEvidenceField(link.field)) {
+      pushIssue(issues, `${path}.field`, "invalid_claim_field", "Claim evidence field is unknown.");
+      return;
+    }
+    expectNonEmptyString(link.text, `${path}.text`, issues);
+    if (typeof link.text === "string" && link.text.trim().length > 0) {
+      const texts = linksByField.get(link.field) ?? [];
+      texts.push(link.text);
+      linksByField.set(link.field, texts);
+    }
+    if (!Array.isArray(link.evidenceRefIndexes) || link.evidenceRefIndexes.length === 0) {
+      pushIssue(
+        issues,
+        `${path}.evidenceRefIndexes`,
+        "empty_evidence_links",
+        "A claim must link to at least one evidence reference.",
+      );
+      return;
+    }
+    const seen = new Set<number>();
+    link.evidenceRefIndexes.forEach((refIndex, refPosition) => {
+      const refPath = `${path}.evidenceRefIndexes[${refPosition}]`;
+      if (
+        typeof refIndex !== "number" ||
+        !Number.isInteger(refIndex) ||
+        refIndex < 0 ||
+        !Array.isArray(assessment.evidenceRefs) ||
+        refIndex >= assessment.evidenceRefs.length
+      ) {
+        pushIssue(
+          issues,
+          refPath,
+          "invalid_evidence_index",
+          "Evidence reference index is invalid.",
+        );
+      } else if (seen.has(refIndex)) {
+        pushIssue(
+          issues,
+          refPath,
+          "duplicate_evidence_index",
+          "Evidence reference index is repeated.",
+        );
+      } else {
+        seen.add(refIndex);
+      }
+    });
+  });
+  for (const field of CLAIM_EVIDENCE_FIELDS) {
+    const texts = linksByField.get(field);
+    if (texts === undefined) {
+      pushIssue(
+        issues,
+        "$.claimEvidenceLinks",
+        "missing_claim_field",
+        `Claims must cover ${field}.`,
+      );
+    } else if (texts.join(" ") !== assessment[field]) {
+      pushIssue(
+        issues,
+        `$.${field}`,
+        "claim_evidence_text_mismatch",
+        `Claim evidence links must cover the complete ${field} text in order.`,
+      );
+    }
+  }
 }
 
 function validateDraftApprovalSnapshot(

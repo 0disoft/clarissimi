@@ -67,6 +67,25 @@ test("renders approved assessments as parseable JSONL", () => {
   assert.equal(parsed[0].publicRecognitionText, "Added regression coverage for the parser crash.");
 });
 
+test("preserves claim evidence links in sanitized drafts and public ledger records", () => {
+  const original = assessment({
+    claimEvidenceLinks: [
+      { field: "evidenceSummary", text: assessment().evidenceSummary, evidenceRefIndexes: [0] },
+      {
+        field: "publicRecognitionText",
+        text: assessment().publicRecognitionText,
+        evidenceRefIndexes: [0],
+      },
+    ],
+  });
+  const draft = JSON.parse(
+    renderDraftReviewJson({ ...original, maintainerApprovalStatus: "draft" }),
+  );
+  const [ledgerRecord] = parseContributionsJsonl(renderContributionsJsonl([original]));
+  assert.deepEqual(draft.claimEvidenceLinks, original.claimEvidenceLinks);
+  assert.deepEqual(ledgerRecord.claimEvidenceLinks, original.claimEvidenceLinks);
+});
+
 test("rejects an approved assessment with secret-bearing public text", () => {
   const syntheticToken = `ghp_${"a".repeat(20)}`;
   assert.throws(

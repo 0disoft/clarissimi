@@ -2,6 +2,7 @@ import { canPublishAssessment, findUnsafeRepositoryAssessmentFields } from "@cla
 import type { ContributionAssessment } from "@clarissimi/schemas";
 
 import { RendererValidationError, type PublicContributionRecord } from "./types.js";
+import { copyClaimEvidenceLinks } from "./claim-evidence.js";
 
 export function toPublicContributionRecord(value: unknown): PublicContributionRecord {
   return normalizePublicContributionRecord(value, true);
@@ -150,6 +151,7 @@ function sanitizePublicContributionRecord(
       ...(ref.url === undefined ? {} : { url: ref.url }),
       ...(ref.title === undefined ? {} : { title: ref.title }),
     })),
+    ...copyClaimEvidenceLinks(assessment),
     suggestedBadge: assessment.suggestedBadge,
     publicRecognitionText: assessment.publicRecognitionText,
     confidence: assessment.confidence,

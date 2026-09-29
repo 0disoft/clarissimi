@@ -55,6 +55,71 @@ test("accepts a valid contribution assessment draft", () => {
   assert.deepEqual(result.issues, []);
 });
 
+test("claim evidence links cover both public narratives with valid reference positions", () => {
+  const claimEvidenceLinks = [
+    {
+      field: "evidenceSummary",
+      text: validAssessment.evidenceSummary,
+      evidenceRefIndexes: [0],
+    },
+    {
+      field: "publicRecognitionText",
+      text: validAssessment.publicRecognitionText,
+      evidenceRefIndexes: [0],
+    },
+  ];
+  assert.equal(validateContributionAssessment({ ...validAssessment, claimEvidenceLinks }).ok, true);
+
+  const invalidCases = [
+    { links: claimEvidenceLinks.slice(0, 1), code: "missing_claim_field" },
+    {
+      links: [{ ...claimEvidenceLinks[0], evidenceRefIndexes: [1] }, claimEvidenceLinks[1]],
+      code: "invalid_evidence_index",
+    },
+    {
+      links: [{ ...claimEvidenceLinks[0], evidenceRefIndexes: [0, 0] }, claimEvidenceLinks[1]],
+      code: "duplicate_evidence_index",
+    },
+    {
+      links: [{ ...claimEvidenceLinks[0], text: "Unrelated summary." }, claimEvidenceLinks[1]],
+      code: "claim_evidence_text_mismatch",
+    },
+  ];
+  for (const { links, code } of invalidCases) {
+    const result = validateContributionAssessment({
+      ...validAssessment,
+      claimEvidenceLinks: links,
+    });
+    assert.equal(result.ok, false, code);
+    assert.equal(
+      result.issues.some((issue) => issue.code === code),
+      true,
+      code,
+    );
+  }
+
+  const segmentedSummary = "Added parser coverage. Documented nested input cases.";
+  const segmentedLinks = [
+    { field: "evidenceSummary", text: "Added parser coverage.", evidenceRefIndexes: [0] },
+    { field: "evidenceSummary", text: "Documented nested input cases.", evidenceRefIndexes: [1] },
+    claimEvidenceLinks[1],
+  ];
+  const segmented = {
+    ...validAssessment,
+    evidenceSummary: segmentedSummary,
+    evidenceRefs: [...validAssessment.evidenceRefs, { kind: "file", id: "docs/parser.md" }],
+    claimEvidenceLinks: segmentedLinks,
+  };
+  assert.equal(validateContributionAssessment(segmented).ok, true);
+  assert.equal(
+    validateContributionAssessment({
+      ...segmented,
+      claimEvidenceLinks: [segmentedLinks[1], segmentedLinks[0], segmentedLinks[2]],
+    }).issues.some((issue) => issue.code === "claim_evidence_text_mismatch"),
+    true,
+  );
+});
+
 test("validates an approval snapshot only on approved assessments", () => {
   const approvalSnapshot = {
     contentSha256: "a".repeat(64),

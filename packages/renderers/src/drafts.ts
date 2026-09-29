@@ -4,6 +4,7 @@ import type { ContributionAssessment } from "@clarissimi/schemas";
 
 import { DRAFTS_DIR_PATH, RendererValidationError, type DraftReviewRecord } from "./types.js";
 import { renderPrettyJson } from "./ledger.js";
+import { copyClaimEvidenceLinks } from "./claim-evidence.js";
 
 export function toDraftReviewRecord(value: unknown): DraftReviewRecord {
   const result = validateContributionAssessment(value);
@@ -72,6 +73,7 @@ function sanitizeDraftReviewRecord(assessment: ContributionAssessment): DraftRev
       ...(ref.url === undefined ? {} : { url: ref.url }),
       ...(ref.title === undefined ? {} : { title: ref.title }),
     })),
+    ...copyClaimEvidenceLinks(assessment),
     suggestedBadge: assessment.suggestedBadge,
     publicRecognitionText: assessment.publicRecognitionText,
     confidence: assessment.confidence,

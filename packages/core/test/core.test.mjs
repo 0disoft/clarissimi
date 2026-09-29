@@ -83,6 +83,37 @@ test("approval snapshot binds the draft content independently of JSON key order"
   );
 });
 
+test("approval snapshots bind claim evidence links as well as public prose", () => {
+  const draft = validAssessment("draft");
+  const linkedDraft = {
+    ...draft,
+    claimEvidenceLinks: [
+      { field: "evidenceSummary", text: draft.evidenceSummary, evidenceRefIndexes: [0] },
+      {
+        field: "publicRecognitionText",
+        text: draft.publicRecognitionText,
+        evidenceRefIndexes: [0],
+      },
+    ],
+  };
+  const approved = {
+    ...linkedDraft,
+    maintainerApprovalStatus: "approved",
+    approvalSnapshot: createDraftApprovalSnapshot(linkedDraft, "2026-09-29T00:00:00.000Z"),
+  };
+  assert.equal(checkDraftApprovalSnapshot(approved), "valid");
+  assert.equal(
+    checkDraftApprovalSnapshot({
+      ...approved,
+      claimEvidenceLinks: [
+        { ...linkedDraft.claimEvidenceLinks[0], evidenceRefIndexes: [1] },
+        linkedDraft.claimEvidenceLinks[1],
+      ],
+    }),
+    "mismatch",
+  );
+});
+
 test("repository safety rejects visible secrets without putting values in diagnostics", () => {
   const syntheticToken = `ghp_${"a".repeat(20)}`;
   const assessment = validAssessment();

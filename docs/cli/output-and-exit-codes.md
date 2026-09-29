@@ -32,6 +32,8 @@ stdout and leave stderr empty. Failure documents contain `ok: false`, the comman
 sanitized `message`; the process exit code remains the authoritative failure category. This also
 applies to argument parsing and usage errors. Without `--json`, failures remain human-readable on
 stderr.
+When provider assessment validation fails, JSON may add bounded `issueCodes` from Clarissimi's
+validators. These codes identify failed rules without exposing provider text or evidence.
 
 `clarissimi completion <shell>` is the deliberate exception to JSON success output: stdout is the
 generated shell program, and `--json` is rejected as an unsupported option. The program is static,

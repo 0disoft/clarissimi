@@ -1725,6 +1725,11 @@ test("recognize reports provider assessment schema failures with exit code 5", a
                   content: JSON.stringify({
                     contributionType: "test",
                     affectedArea: "parser regression coverage",
+                    impactLevel: "medium",
+                    evidenceSummary: "Added parser coverage.",
+                    suggestedBadge: "Regression Shield",
+                    publicRecognitionText: "Added parser coverage.",
+                    confidence: 0.8,
                   }),
                 },
               },
@@ -1735,6 +1740,9 @@ test("recognize reports provider assessment schema failures with exit code 5", a
 
     assert.equal(result.exitCode, 5);
     assert.match(JSON.parse(result.stdout).message, /invalid contribution assessment/);
+    assert.deepEqual(JSON.parse(result.stdout).issueCodes, [
+      "provider_result_claim_evidence_missing",
+    ]);
     assert.equal(result.stderr, "");
   });
 });

@@ -75,7 +75,13 @@ export function writeFailure(io: CliIo, args: ParsedArgs, command: string, error
   const message = error instanceof Error ? error.message : String(error);
 
   if (getBooleanFlag(args, "json")) {
-    io.stdout(`${JSON.stringify({ ok: false, command, message }, null, 2)}\n`);
+    const issueCodes =
+      error instanceof OpenAiCompatibleProviderError && error.code === "invalid_assessment"
+        ? [...new Set(error.issues?.map((issue) => issue.code) ?? [])].slice(0, 8)
+        : [];
+    io.stdout(
+      `${JSON.stringify({ ok: false, command, message, ...(issueCodes.length > 0 ? { issueCodes } : {}) }, null, 2)}\n`,
+    );
     return;
   }
 

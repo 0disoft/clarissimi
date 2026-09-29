@@ -1514,13 +1514,13 @@ network = true
 destructive = false
 required_after = ["validated_commit_on_main", "user_authorized_push"]
 
-[intents.git_push_clarissimi_improvements]
+[intents.git_push_clarissimi_improvements_to_main]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
 approval_actions = ["git_push"]
-description = "Push only the validated task/clarissimi-improvements branch to origin without force."
-argv = ["git", "push", "origin", "task/clarissimi-improvements:refs/heads/task/clarissimi-improvements"]
+description = "Fast-forward validated Clarissimi improvements from the isolated checkout to origin/main without force."
+argv = ["git", "push", "origin", "task/clarissimi-improvements:refs/heads/main"]
 cwd = "."
 timeout_seconds = 180
 stdin = "closed"
@@ -1529,7 +1529,7 @@ writes = []
 effects = []
 network = true
 destructive = false
-required_after = ["validated_commit_on_task_branch", "user_authorized_push"]
+required_after = ["validated_commit_on_task_branch", "user_authorized_main_push"]
 
 [intents.release_v0_4_0_post_tag_evidence]
 status = "manual_only"

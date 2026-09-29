@@ -1534,8 +1534,8 @@ Completed scope:
   duplicate rejection, JSON output, and explicit output-path handling
 - keep hosting and deployment consumer-owned; README mutation, custom themes, JavaScript apps,
   organization aggregation, and hosted dashboards remain outside this boundary
-- keep the public manifest at verified npm `latest=0.1.2`; the additive command warrants a future
-  `0.2.0` candidate only when the independent publication gates are intentionally started
+- prepare the public manifest as npm `0.2.0` candidate for the additive command; npm `latest`
+  remains `0.1.2` until staging, maintainer approval, and external-consumer verification complete
 
 ### 44. Action v0.6.2 Correctness and Security Patch
 

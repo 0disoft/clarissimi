@@ -118,6 +118,12 @@ test("creates a draft assessment from an OpenAI-compatible response", async () =
   assert.equal(requests[0].headers.Authorization, "Bearer unit-token");
   assert.equal(requests[0].body.model, "clarissimi-test-model");
   assert.equal(requests[0].body.response_format.type, "json_object");
+  assert.equal(
+    requests[0].body.messages[0].content.includes(
+      "Never leave a link text empty or omit either field",
+    ),
+    true,
+  );
   const providerPayload = JSON.parse(requests[0].body.messages[1].content);
   assert.deepEqual(
     providerPayload.evidenceRefs.map((ref) => ref.index),

@@ -1743,6 +1743,7 @@ test("recognize reports provider assessment schema failures with exit code 5", a
     assert.deepEqual(JSON.parse(result.stdout).issueCodes, [
       "provider_result_claim_evidence_missing",
     ]);
+    assert.deepEqual(JSON.parse(result.stdout).issuePaths, ["$.claimEvidenceLinks"]);
     assert.equal(result.stderr, "");
   });
 });

@@ -2560,6 +2560,10 @@ argv = [
   "marketplace-action-tag",
   "--release-version",
   "v0.7.0",
+  "--sha",
+  "fed30422f548f70791a6481bec33232bfa7ba2e3",
+  "--live-ref",
+  "fed30422f548f70791a6481bec33232bfa7ba2e3",
   "--create-issue",
 ]
 cwd = "."
@@ -2587,6 +2591,8 @@ argv = [
   "--",
   "--version",
   "v0.7.0",
+  "--sha",
+  "fed30422f548f70791a6481bec33232bfa7ba2e3",
   "--release-kind",
   "stable",
 ]
@@ -2621,6 +2627,10 @@ argv = [
   "marketplace-action-tag",
   "--release-version",
   "v0.7.0",
+  "--sha",
+  "fed30422f548f70791a6481bec33232bfa7ba2e3",
+  "--live-ref",
+  "v0.7.0",
   "--external-ref",
   "v0.7.0",
 ]
@@ -2653,3 +2663,172 @@ env_allowlist = ["APPDATA", "USERPROFILE"]
 network = true
 destructive = false
 required_after = ["release_v0_7_0_stable_publish", "marketplace_publication"]
+
+[intents.stage_cli_v0_2_0_hosted]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["release"]
+description = "Dispatch stage-only OIDC publication of CLI 0.2.0 from the verified candidate; final npm approval remains interactive."
+argv = [
+  "gh",
+  "workflow",
+  "run",
+  "npm-publish.yml",
+  "--repo",
+  "0disoft/clarissimi",
+  "--ref",
+  "main",
+  "-f",
+  "version=0.2.0",
+  "-f",
+  "sha=fed30422f548f70791a6481bec33232bfa7ba2e3",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+required_after = [
+  "verify_standalone_cli_package",
+  "exact_candidate_hosted_ci_passed",
+  "user_authorized_cli_publication",
+]
+
+[intents.cli_v0_2_0_stage_status]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Inspect recent stage-only CLI workflow runs without dispatching another publication."
+argv = [
+  "gh",
+  "run",
+  "list",
+  "--repo",
+  "0disoft/clarissimi",
+  "--workflow",
+  "npm-publish.yml",
+  "--limit",
+  "3",
+  "--json",
+  "databaseId,status,conclusion,headSha,url,createdAt",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+
+[intents.promote_v0_to_v0_7_0]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["release", "destructive_command"]
+description = "Promote v0 to verified immutable v0.7.0 with compare-and-swap rollback and hosted validation."
+argv = [
+  "pnpm",
+  "run",
+  "promote-action-major-alias",
+  "--",
+  "--release-version",
+  "v0.7.0",
+  "--sha",
+  "fed30422f548f70791a6481bec33232bfa7ba2e3",
+]
+cwd = "."
+timeout_seconds = 3600
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = true
+required_after = [
+  "release_v0_7_0_post_tag_evidence",
+  "verify_marketplace_v0_7_0",
+  "user_authorized_release",
+]
+
+[intents.resume_v0_7_0_orphan_audit]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["release"]
+description = "Retry only the unstarted audit after Actions billing is resolved, preserving the passed candidate evidence."
+argv = ["gh", "run", "rerun", "36678622284", "--repo", "0disoft/integration-lab"]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+
+[intents.inspect_v0_7_0_orphan_audit]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+description = "Inspect the exact candidate orphan audit; evidence recording separately requires success."
+argv = [
+  "gh",
+  "run",
+  "view",
+  "36678622284",
+  "--repo",
+  "0disoft/integration-lab",
+  "--json",
+  "status,conclusion,jobs,url",
+]
+cwd = "."
+timeout_seconds = 120
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false
+
+[intents.record_v0_7_0_completed_evidence]
+status = "configured"
+lifecycle = "oneshot"
+run_policy = "agent_allowed"
+approval_actions = ["release"]
+description = "Create candidate evidence only after the exact orphan audit succeeds, revalidating every existing hosted run."
+argv = [
+  "node",
+  "--input-type=module",
+  "--eval",
+  '''
+import { execFileSync } from 'node:child_process';
+const audit=JSON.parse(execFileSync('gh',['run','view','36678622284','--repo','0disoft/integration-lab','--json','status,conclusion,workflowName,displayTitle'],{encoding:'utf8'}));
+if(audit.status!=='completed'||audit.conclusion!=='success'||audit.workflowName!=='Clarissimi smoke orphan audit'||!audit.displayTitle.includes('4e9d73adc6ec5e4bb04426dadfefa41e'))throw Error('Exact candidate orphan audit has not passed');
+execFileSync(process.execPath,['scripts/release-candidate-evidence-issue.mjs','--release-type','marketplace-action-tag','--release-version','v0.7.0','--sha','fed30422f548f70791a6481bec33232bfa7ba2e3','--ci-run','36551528224','--live-run','36678413051','--external-run','36678457044','--external-write-run','36678504592','--evidence-id','4e9d73adc6ec5e4bb04426dadfefa41e','--provider-model','gpt-4.1-mini','--live-ref','main','--external-ref','fed30422f548f70791a6481bec33232bfa7ba2e3'],{stdio:'inherit'});
+''',
+]
+cwd = "."
+timeout_seconds = 300
+stdin = "closed"
+success_exit_codes = [0]
+writes = []
+effects = []
+env_policy = "allowlist"
+env_allowlist = ["APPDATA", "USERPROFILE"]
+network = true
+destructive = false

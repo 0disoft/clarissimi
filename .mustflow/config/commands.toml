@@ -2664,7 +2664,7 @@ network = true
 destructive = false
 required_after = ["release_v0_7_0_stable_publish", "marketplace_publication"]
 
-[intents.stage_cli_v0_2_0_hosted]
+[intents.stage_cli_candidate_hosted]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"
@@ -2700,7 +2700,7 @@ required_after = [
   "user_authorized_cli_publication",
 ]
 
-[intents.cli_v0_2_0_stage_status]
+[intents.cli_candidate_stage_status]
 status = "configured"
 lifecycle = "oneshot"
 run_policy = "agent_allowed"

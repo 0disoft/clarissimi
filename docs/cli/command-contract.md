@@ -242,6 +242,10 @@ including flags that belong to another command, must fail as usage errors before
 ledger reads, provider resolution, draft writes, or rebuild work begins. Repeating the same flag is
 also a usage error instead of silently selecting the first or last value.
 
+Options with a fixed set of values are validated before config loading, evidence reads,
+provider calls, or output writes, even with `--help` or when the selected provider would not use
+them. Invalid values return usage code `1`, list allowed choices, and never echo the rejected value.
+
 ## Exit Codes
 
 The implemented CLI exit-code taxonomy is:

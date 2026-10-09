@@ -1996,7 +1996,8 @@ test("recognize rejects unsupported provider thinking values", async () => {
     );
 
     assert.equal(result.exitCode, 1);
-    assert.equal(result.stderr.includes("provider thinking"), true);
+    assert.match(result.stderr, /--provider-thinking/);
+    assert.match(result.stderr, /Allowed values: disabled/);
   });
 });
 

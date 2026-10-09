@@ -116,3 +116,52 @@ test("global help rejects assigned values instead of silently succeeding", async
     assert.equal(result.stderr, "--help does not accept a value.\n");
   });
 });
+
+for (const flag of [
+  "provider",
+  "provider-thinking",
+  "provider-endpoint-trust",
+  "mode",
+  "markdown-summary",
+]) {
+  test(`unsupported --${flag} fails before config execution, including help`, async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(
+        join(dir, "clarissimi.config.ts"),
+        [
+          'import { writeFileSync } from "node:fs";',
+          'writeFileSync(new URL("./config-ran.txt", import.meta.url), "loaded");',
+          "export default {};",
+        ].join("\n"),
+      );
+      const fixture = JSON.parse(
+        await readFile(new URL("../../../fixtures/merged-pr-basic.json", import.meta.url), "utf8"),
+      );
+      fixture.maintainerApprovalStatus = "draft";
+      await writeFile(join(dir, "fixture.json"), JSON.stringify(fixture));
+      const before = await snapshot(dir);
+      for (const extra of [[], ["--help"]]) {
+        const result = await run(
+          [
+            "recognize",
+            "--fixture",
+            "fixture.json",
+            `--${flag}`,
+            "UNSUPPORTED_FLAG_CANARY",
+            ...extra,
+            "--json",
+          ],
+          dir,
+        );
+        assert.equal(result.exitCode, 1, result.stdout + result.stderr);
+        assert.equal(result.stderr, "");
+        const output = JSON.parse(result.stdout);
+        assert.equal(output.ok, false);
+        assert.ok(output.message.includes(`--${flag}`));
+        assert.ok(output.message.includes("Allowed values:"));
+        assert.ok(!result.stdout.includes("UNSUPPORTED_FLAG_CANARY"));
+        assert.deepEqual(await snapshot(dir), before);
+      }
+    });
+  });
+}

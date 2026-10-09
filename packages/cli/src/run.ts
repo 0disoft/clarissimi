@@ -163,7 +163,12 @@ function validateFlags(args: ParsedArgs): void {
     if (spec.valueLabel === undefined) {
       getBooleanFlag(args, spec.name);
     } else {
-      getStringFlag(args, spec.name);
+      const value = getStringFlag(args, spec.name);
+      if (spec.values !== undefined && value !== undefined && !spec.values.includes(value)) {
+        throw new CliUsageError(
+          `Unsupported value for --${spec.name}. Allowed values: ${spec.values.join(", ")}.`,
+        );
+      }
     }
   }
 }

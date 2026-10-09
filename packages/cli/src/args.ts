@@ -1,3 +1,5 @@
+import { CLI_GLOBAL_FLAGS, findCliCommandSpec, type CliFlagSpec } from "./command-spec.js";
+
 export interface ParsedArgs {
   readonly command?: string;
   readonly flags: ReadonlyMap<string, string | true>;
@@ -16,6 +18,11 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
   const hasCommand = first !== undefined && !first.startsWith("--");
   const command = hasCommand ? first : undefined;
   const tokens = hasCommand ? remaining : argv;
+  const specs: readonly CliFlagSpec[] =
+    command === undefined ? CLI_GLOBAL_FLAGS : (findCliCommandSpec(command)?.flags ?? []);
+  const booleanFlags = new Set(
+    specs.filter((spec) => spec.valueLabel === undefined).map((spec) => spec.name),
+  );
   const flags = new Map<string, string | true>();
   const positionals: string[] = [];
 
@@ -47,6 +54,11 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
     }
 
     rejectDuplicateFlag(flags, flag);
+
+    if (booleanFlags.has(flag)) {
+      flags.set(flag, true);
+      continue;
+    }
 
     const next = tokens[index + 1];
     if (next !== undefined && !next.startsWith("--")) {

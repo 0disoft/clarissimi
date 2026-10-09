@@ -228,6 +228,12 @@ program itself. Missing, unknown, or extra shell arguments and unsupported flags
 Current CLI commands are flag-only except for the `analytics recent-share` subcommand selector and
 the single required shell selector accepted by `completion`.
 
+The command must remain the first argument, and supported boolean flags consume no value,
+appearing before or after positional selectors, so `analytics --json recent-share` is accepted.
+Valued options consume their next argument or use `--flag=value`. Explicit assigned values on
+boolean flags like `--json=false` and unexpected positionals on flag-only commands, including
+when `--help` is supplied, remain usage errors.
+
 Unexpected positional arguments fail as usage errors before config loading, ledger reads, provider
 resolution, draft writes, completion generation, or rebuild work begins.
 

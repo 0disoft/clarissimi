@@ -85,13 +85,13 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExi
     validateFlags(args);
 
     if (args.command === undefined || args.command === "help" || getBooleanFlag(args, "help")) {
-      if (args.command === "help") {
-        const positionalError = rejectUnexpectedPositionals(args, "help");
+      const spec = args.command === undefined ? undefined : findCliCommandSpec(args.command);
+      if (spec?.positionals === undefined) {
+        const positionalError = rejectUnexpectedPositionals(args, args.command ?? "clarissimi");
         if (positionalError !== undefined) {
           throw new CliUsageError(positionalError);
         }
       }
-      const spec = args.command === undefined ? undefined : findCliCommandSpec(args.command);
       io.stdout(
         spec === undefined || args.command === "help"
           ? renderCliHelp()

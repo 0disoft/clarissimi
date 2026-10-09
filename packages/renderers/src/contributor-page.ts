@@ -89,17 +89,21 @@ function renderContributorKind(kind: ContributorRecognitionProfile["contributor"
 }
 
 function renderRecognition(recognition: PublicRecognitionSummary): string {
-  const evidence = recognition.evidenceRefs.find((candidate) => candidate.url !== undefined);
-  const evidenceLink =
-    evidence?.url === undefined
-      ? ""
-      : ` <a class="evidence" href="${escapeHtmlAttribute(
-          normalizeSafeHttpsUrl(evidence.url, "$.evidenceRefs[].url", "HTML"),
-        )}">${escapeHtml(evidence.title ?? `${evidence.kind} ${evidence.id}`)}</a>`;
+  const evidenceLinks = recognition.evidenceRefs
+    .flatMap((evidence) =>
+      evidence.url === undefined
+        ? []
+        : [
+            ` <a class="evidence" href="${escapeHtmlAttribute(
+              normalizeSafeHttpsUrl(evidence.url, "$.evidenceRefs[].url", "HTML"),
+            )}">${escapeHtml(evidence.title ?? `${evidence.kind} ${evidence.id}`)}</a>`,
+          ],
+    )
+    .join("");
 
   return `<li>
           <p>${escapeHtml(recognition.publicRecognitionText)}</p>
-          <p class="meta"><span>${escapeHtml(recognition.affectedArea)}</span><span>${escapeHtml(recognition.suggestedBadge)}</span>${evidenceLink}</p>
+          <p class="meta"><span>${escapeHtml(recognition.affectedArea)}</span><span>${escapeHtml(recognition.suggestedBadge)}</span>${evidenceLinks}</p>
         </li>`;
 }
 

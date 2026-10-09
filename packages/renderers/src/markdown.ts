@@ -160,24 +160,26 @@ function renderRecognitionLine(recognition: PublicRecognitionSummary): string {
   const text = escapeMarkdown(recognition.publicRecognitionText);
   const badge = escapeMarkdown(recognition.suggestedBadge);
   const area = escapeMarkdown(recognition.affectedArea);
-  const evidenceLink = firstEvidenceLink(recognition);
+  const evidenceLinks = renderEvidenceLinks(recognition);
 
-  if (evidenceLink === undefined) {
+  if (evidenceLinks.length === 0) {
     return `${text} _${badge}_ in ${area}.`;
   }
 
-  return `${text} _${badge}_ in ${area}. ${evidenceLink}`;
+  return `${text} _${badge}_ in ${area}. ${evidenceLinks}`;
 }
 
-function firstEvidenceLink(recognition: PublicRecognitionSummary): string | undefined {
-  const ref = recognition.evidenceRefs.find((candidate) => candidate.url !== undefined);
-  if (ref === undefined || ref.url === undefined) {
-    return undefined;
-  }
-
-  const label = ref.title ?? `${ref.kind} ${ref.id}`;
-  const destination = normalizeMarkdownLinkDestination(ref.url, "$.evidenceRefs[].url");
-  return `[${escapeMarkdown(label)}](${destination})`;
+function renderEvidenceLinks(recognition: PublicRecognitionSummary): string {
+  return recognition.evidenceRefs
+    .flatMap((ref) => {
+      if (ref.url === undefined) {
+        return [];
+      }
+      const label = ref.title ?? `${ref.kind} ${ref.id}`;
+      const destination = normalizeMarkdownLinkDestination(ref.url, "$.evidenceRefs[].url");
+      return [`[${escapeMarkdown(label)}](${destination})`];
+    })
+    .join(" ");
 }
 
 function normalizeMarkdownLinkDestination(value: string, path: string): string {

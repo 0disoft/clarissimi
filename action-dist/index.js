@@ -3992,20 +3992,21 @@ function renderRecognitionLine(recognition) {
   const text = escapeMarkdown(recognition.publicRecognitionText);
   const badge = escapeMarkdown(recognition.suggestedBadge);
   const area = escapeMarkdown(recognition.affectedArea);
-  const evidenceLink = firstEvidenceLink(recognition);
-  if (evidenceLink === void 0) {
+  const evidenceLinks = renderEvidenceLinks(recognition);
+  if (evidenceLinks.length === 0) {
     return `${text} _${badge}_ in ${area}.`;
   }
-  return `${text} _${badge}_ in ${area}. ${evidenceLink}`;
+  return `${text} _${badge}_ in ${area}. ${evidenceLinks}`;
 }
-function firstEvidenceLink(recognition) {
-  const ref = recognition.evidenceRefs.find((candidate) => candidate.url !== void 0);
-  if (ref === void 0 || ref.url === void 0) {
-    return void 0;
-  }
-  const label = ref.title ?? `${ref.kind} ${ref.id}`;
-  const destination = normalizeMarkdownLinkDestination(ref.url, "$.evidenceRefs[].url");
-  return `[${escapeMarkdown(label)}](${destination})`;
+function renderEvidenceLinks(recognition) {
+  return recognition.evidenceRefs.flatMap((ref) => {
+    if (ref.url === void 0) {
+      return [];
+    }
+    const label = ref.title ?? `${ref.kind} ${ref.id}`;
+    const destination = normalizeMarkdownLinkDestination(ref.url, "$.evidenceRefs[].url");
+    return [`[${escapeMarkdown(label)}](${destination})`];
+  }).join(" ");
 }
 function normalizeMarkdownLinkDestination(value, path) {
   return normalizeSafeHttpsUrl(value, path, "Markdown").replaceAll("(", "%28").replaceAll(")", "%29");

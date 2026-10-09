@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import {
   lstat,
+  chmod,
+  stat,
   mkdtemp,
   readFile,
   readdir,
@@ -212,5 +214,100 @@ test("atomic writes report a cleanup failure when replacement succeeded", async 
       (error) => error === cleanupFailure,
     );
     assert.equal(await readFile(ledger, "utf8"), "next ledger generation");
+  });
+});
+
+test("atomic replacement restores existing access bits before rename and keeps new files private", async () => {
+  await withTempDir(async (dir) => {
+    const existing = join(dir, "index.html");
+    const fresh = join(dir, "new-ledger.jsonl");
+    await writeFile(existing, "old page");
+    const previousMode = (await stat(existing)).mode & 0o777;
+    const modes = [];
+    await writeTextFilesAtomically(
+      [
+        { path: existing, value: "next page" },
+        { path: fresh, value: "new ledger" },
+      ],
+      fresh,
+      {
+        writeFile: async (path, value, options) => {
+          assert.equal(options.mode, 0o600);
+          return writeFile(path, value, options);
+        },
+        chmod: async (path, mode) => {
+          modes.push(mode);
+          assert.equal(await readFile(path, "utf8"), "next page");
+          await chmod(path, mode);
+        },
+        rename: async (from, to) => {
+          if (to === existing) assert.deepEqual(modes, [previousMode]);
+          return rename(from, to);
+        },
+      },
+    );
+    assert.deepEqual(modes, [previousMode]);
+    assert.equal((await stat(existing)).mode & 0o777, previousMode);
+    assert.equal(await readFile(existing, "utf8"), "next page");
+    assert.equal(await readFile(fresh, "utf8"), "new ledger");
+  });
+});
+for (const mode of [0o644, 0o640, 0o600, 0o444]) {
+  test(
+    `POSIX atomic replacement preserves ${mode.toString(8)} even with a restrictive umask`,
+    { skip: process.platform === "win32" },
+    async () => {
+      await withTempDir(async (dir) => {
+        const page = join(dir, "index.html");
+        const fresh = join(dir, "new-ledger.jsonl");
+        await writeFile(page, "old page");
+        await chmod(page, mode);
+        const previousUmask = process.umask(0o077);
+        try {
+          await writeTextFilesAtomically(
+            [
+              { path: page, value: "next page" },
+              { path: fresh, value: "new ledger" },
+            ],
+            fresh,
+          );
+        } finally {
+          process.umask(previousUmask);
+        }
+        assert.equal((await stat(page)).mode & 0o777, mode);
+        assert.equal((await stat(fresh)).mode & 0o777, 0o600);
+        assert.equal(await readFile(page, "utf8"), "next page");
+      });
+    },
+  );
+}
+test("chmod failure preserves every original output and removes staged files", async () => {
+  await withTempDir(async (dir) => {
+    const page = join(dir, "index.html");
+    const ledger = join(dir, "ledger.jsonl");
+    await writeFile(page, "old page");
+    await writeFile(ledger, "old ledger");
+    const failure = new Error("Permission update failed.");
+    let modes = 0;
+    await assert.rejects(
+      writeTextFilesAtomically(
+        [
+          { path: page, value: "next page" },
+          { path: ledger, value: "next ledger" },
+        ],
+        ledger,
+        {
+          chmod: async (path, mode) => {
+            modes++;
+            if (modes === 2) throw failure;
+            return chmod(path, mode);
+          },
+        },
+      ),
+      (error) => error === failure,
+    );
+    assert.equal(await readFile(page, "utf8"), "old page");
+    assert.equal(await readFile(ledger, "utf8"), "old ledger");
+    assert.deepEqual((await readdir(dir)).sort(), ["index.html", "ledger.jsonl"]);
   });
 });

@@ -22,6 +22,11 @@ ledger had already changed, leaving public outputs on different generations.
 - Writing rebuilds require an existing source; a missing default is allowed only for a preview.
 - Every destination is preflighted and every new file is written to a same-directory temporary
   file before replacement begins.
+- Existing regular files retain their POSIX access permission bits after replacement, including
+  public pages and restricted ledgers. Temporary files start at mode 0600; after a complete write,
+  existing access bits are applied explicitly before any rename so umask cannot narrow them.
+  New destinations retain the private 0600 default. Permission-setting failures abort preparation
+  and preserve all existing outputs. File ownership, ACLs, and special mode bits are not copied.
 - Derived outputs are replaced before the canonical ledger. The ledger rename is the generation's
   final commit point.
 - Temporary files and the lock are removed on normal failure paths.

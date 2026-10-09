@@ -1,5 +1,6 @@
 import {
   open,
+  chmod,
   lstat,
   mkdir,
   readFile,
@@ -215,6 +216,7 @@ export async function writeTextFilesAtomically(
     }
   }
 
+  const destinationModes = new Map<string, number>();
   for (const entry of uniqueEntries.values()) {
     await mkdir(dirname(entry.path), { recursive: true });
     try {
@@ -227,6 +229,7 @@ export async function writeTextFilesAtomically(
           `Cannot atomically replace a file with multiple hard links: ${entry.path}. Copy it to a separate file before writing.`,
         );
       }
+      destinationModes.set(entry.path, result.mode & 0o777);
     } catch (error) {
       if (!isNodeError(error) || error.code !== "ENOENT") {
         throw error;
@@ -236,6 +239,7 @@ export async function writeTextFilesAtomically(
 
   const staged: { destination: string; temporaryPath: string }[] = [];
   const writeTemporaryFile = options.writeFile ?? writeFile;
+  const setFileMode = options.chmod ?? chmod;
   const renameFile = options.rename ?? rename;
   const removeFile = options.rm ?? rm;
   let generationFailure: { readonly error: unknown } | undefined;
@@ -249,6 +253,10 @@ export async function writeTextFilesAtomically(
           flag: "wx",
           mode: 0o600,
         });
+        const mode = destinationModes.get(entry.path);
+        if (mode !== undefined) {
+          await retryTransientFileOperation(() => setFileMode(temporaryPath, mode));
+        }
       } catch (error) {
         if (isNodeError(error) && error.code === "EEXIST") {
           staged.pop();
@@ -281,6 +289,7 @@ export async function writeTextFilesAtomically(
 
 export interface AtomicWriteOptions {
   readonly writeFile?: typeof writeFile;
+  readonly chmod?: typeof chmod;
   readonly rename?: typeof rename;
   readonly rm?: typeof rm;
 }

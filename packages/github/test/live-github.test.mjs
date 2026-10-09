@@ -161,33 +161,82 @@ test("keeps cross-repository issue candidates distinct from local references", a
 });
 
 test("rejects unmerged live pull requests before returning evidence", async () => {
+  const client = new FakeLiveClient({ pullRequest: livePullRequest({ mergedAt: null }) });
   await assert.rejects(
     () =>
       collectLiveMergedPullRequestEvidence({
-        client: new FakeLiveClient({
-          pullRequest: livePullRequest({ mergedAt: null }),
-        }),
+        client,
         repository: "sample/project",
         pullRequestNumber: 42,
       }),
     (error) =>
       error instanceof LiveGitHubCollectionError && error.code === "pull_request_not_merged",
   );
+  assert.deepEqual(
+    client.calls.map(([method]) => method),
+    ["getPullRequest"],
+  );
 });
 
 test("rejects live pull request number mismatches", async () => {
+  const client = new FakeLiveClient({ pullRequest: livePullRequest({ number: 41 }) });
   await assert.rejects(
     () =>
       collectLiveMergedPullRequestEvidence({
-        client: new FakeLiveClient({
-          pullRequest: livePullRequest({ number: 41 }),
-        }),
+        client,
         repository: "sample/project",
         pullRequestNumber: 42,
       }),
     (error) =>
       error instanceof LiveGitHubCollectionError && error.code === "pull_request_number_mismatch",
   );
+  assert.deepEqual(
+    client.calls.map(([method]) => method),
+    ["getPullRequest"],
+  );
+});
+
+test("does not fetch disabled review comments even when that endpoint would fail", async () => {
+  const client = new FakeLiveClient();
+  client.listPullRequestReviewComments = async () => {
+    throw new Error("Review comments endpoint must not be requested.");
+  };
+  const collected = await collectLiveMergedPullRequestEvidence({
+    client,
+    repository: "sample/project",
+    pullRequestNumber: 42,
+    reviewCommentLimit: 0,
+  });
+  assert.equal(
+    collected.evidence.items.some((item) => item.kind === "review"),
+    false,
+  );
+  assert.equal(
+    collected.evidence.items.some((item) => item.kind === "file"),
+    true,
+  );
+  assert.deepEqual(
+    client.calls.map(([method]) => method),
+    ["getPullRequest", "listPullRequestFiles"],
+  );
+});
+
+test("does not start auxiliary evidence requests when pull request lookup fails", async () => {
+  const client = new FakeLiveClient();
+  const lookupFailure = new Error("Pull request lookup failed.");
+  client.getPullRequest = async () => {
+    throw lookupFailure;
+  };
+  await assert.rejects(
+    () =>
+      collectLiveMergedPullRequestEvidence({
+        client,
+        repository: "sample/project",
+        pullRequestNumber: 42,
+      }),
+    (error) => error === lookupFailure,
+  );
+  assert.deepEqual(client.calls, []);
 });
 
 test("fails closed when live changed files exceed the configured bound", async () => {

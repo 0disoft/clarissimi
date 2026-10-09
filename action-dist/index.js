@@ -1247,17 +1247,18 @@ async function collectLiveMergedPullRequestEvidence(input) {
     repository: input.repository,
     pullRequestNumber: input.pullRequestNumber
   };
-  const [pullRequest, files, reviewComments] = await Promise.all([
-    input.client.getPullRequest(lookup),
-    input.client.listPullRequestFiles(lookup, DEFAULT_CHANGED_FILE_LIMIT),
-    input.client.listPullRequestReviewComments(lookup)
-  ]);
+  const pullRequest = await input.client.getPullRequest(lookup);
   if (pullRequest.number !== input.pullRequestNumber) {
     throw new LiveGitHubCollectionError("pull_request_number_mismatch", "Live GitHub collector received a pull request for a different number.");
   }
   if (normalizeOptionalString2(pullRequest.mergedAt) === void 0) {
     throw new LiveGitHubCollectionError("pull_request_not_merged", "Live GitHub collector requires a merged pull request.");
   }
+  const reviewCommentLimit = input.reviewCommentLimit ?? DEFAULT_REVIEW_COMMENT_LIMIT;
+  const [files, reviewComments] = await Promise.all([
+    input.client.listPullRequestFiles(lookup, DEFAULT_CHANGED_FILE_LIMIT),
+    reviewCommentLimit === 0 ? Promise.resolve([]) : input.client.listPullRequestReviewComments(lookup)
+  ]);
   if (files.length > DEFAULT_CHANGED_FILE_LIMIT) {
     throw new LiveGitHubCollectionError("changed_file_limit", `Live GitHub collector changed files must not exceed ${DEFAULT_CHANGED_FILE_LIMIT} items.`);
   }
@@ -1265,7 +1266,7 @@ async function collectLiveMergedPullRequestEvidence(input) {
   const collected = collectMergedPullRequestEvidence(fixture);
   const extraItems = [
     ...buildLinkedIssueItems(pullRequest, input.repository, input.linkedIssueLimit ?? DEFAULT_LINKED_ISSUE_LIMIT),
-    ...buildReviewCommentItems(reviewComments, input.reviewCommentLimit ?? DEFAULT_REVIEW_COMMENT_LIMIT)
+    ...buildReviewCommentItems(reviewComments, reviewCommentLimit)
   ];
   return {
     contributor: collected.contributor,

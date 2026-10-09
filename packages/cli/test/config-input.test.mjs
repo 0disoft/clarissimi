@@ -82,3 +82,65 @@ test("an explicitly selected config directory is rejected instead of using defau
     assert.match(JSON.parse(result.stdout).message, /regular file/i);
   });
 });
+
+for (const configPath of ["clarissimi.config.ts", ".clarissimi/config.json"]) {
+  for (const command of configCommands) {
+    test(`${command[0]} rejects a default config directory at ${configPath} without changing outputs`, async () => {
+      await withTempDir(async (dir) => {
+        await mkdir(join(dir, configPath), { recursive: true });
+        const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+        const markdown = join(dir, "CONTRIBUTORS.md");
+        const page = join(dir, "index.html");
+        await mkdir(join(dir, ".clarissimi"), { recursive: true });
+        await writeFile(ledger, "\n");
+        await writeFile(markdown, "existing contributor history\n");
+        await writeFile(page, "existing contributor page\n");
+        const before = await readdir(dir);
+        const clarissimiBefore = await readdir(join(dir, ".clarissimi"));
+
+        for (const jsonFlags of [[], ["--json"]]) {
+          const result = await run([...command, ...jsonFlags], dir);
+          assert.equal(result.exitCode, 2, result.stdout + result.stderr);
+          const message = jsonFlags.length > 0 ? JSON.parse(result.stdout).message : result.stderr;
+          assert.match(message, /config.*regular file/i);
+          assert.ok(message.includes(configPath), message);
+          assert.equal(jsonFlags.length > 0 ? result.stderr : result.stdout, "");
+        }
+
+        assert.equal(await readFile(ledger, "utf8"), "\n");
+        assert.equal(await readFile(markdown, "utf8"), "existing contributor history\n");
+        assert.equal(await readFile(page, "utf8"), "existing contributor page\n");
+        assert.deepEqual(await readdir(dir), before);
+        assert.deepEqual(await readdir(join(dir, ".clarissimi")), clarissimiBefore);
+      });
+    });
+  }
+}
+
+test("an explicit config bypasses a default config directory", async () => {
+  await withTempDir(async (dir) => {
+    await mkdir(join(dir, "clarissimi.config.ts"));
+    await writeFile(join(dir, "selected.json"), "{}");
+    const result = await run(["validate-config", "--config", "selected.json", "--json"], dir);
+    assert.equal(result.exitCode, 0, result.stdout + result.stderr);
+    assert.equal(JSON.parse(result.stdout).configPath, "selected.json");
+  });
+});
+
+test("a default config directory and a valid default config require explicit selection", async () => {
+  await withTempDir(async (dir) => {
+    await mkdir(join(dir, "clarissimi.config.ts"));
+    await mkdir(join(dir, ".clarissimi"));
+    await writeFile(join(dir, ".clarissimi", "config.json"), "{}");
+    const ambiguous = await run(["validate-config", "--json"], dir);
+    assert.equal(ambiguous.exitCode, 2, ambiguous.stdout + ambiguous.stderr);
+    assert.match(JSON.parse(ambiguous.stdout).message, /Multiple.*--config/);
+
+    const selected = await run(
+      ["validate-config", "--config", ".clarissimi/config.json", "--json"],
+      dir,
+    );
+    assert.equal(selected.exitCode, 0, selected.stdout + selected.stderr);
+    assert.equal(JSON.parse(selected.stdout).configPath, ".clarissimi/config.json");
+  });
+});

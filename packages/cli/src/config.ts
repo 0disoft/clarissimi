@@ -3,6 +3,7 @@ import {
   type ClarissimiConfig,
   type ValidationIssue,
 } from "@clarissimi/schemas";
+import { lstat } from "node:fs/promises";
 import { basename } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -70,8 +71,18 @@ export async function validateConfigFile(
 async function resolveDefaultConfigPath(cwd: string): Promise<string | undefined> {
   const existing = [];
   for (const path of defaultConfigPaths) {
-    if (await fileExists(resolveFromCwd(cwd, path))) {
+    try {
+      // Discover invalid entries too; file validation must not silently fall back to defaults.
+      await lstat(resolveFromCwd(cwd, path));
       existing.push(path);
+    } catch (error) {
+      if (
+        !(error instanceof Error) ||
+        !("code" in error) ||
+        (error.code !== "ENOENT" && error.code !== "ENOTDIR")
+      ) {
+        throw error;
+      }
     }
   }
 

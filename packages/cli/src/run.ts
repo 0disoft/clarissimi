@@ -443,13 +443,11 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
   let ledgerPath = requestedLedgerPath;
   const outDir = getStringFlag(args, "out-dir");
   const allowLegacyApproval = getBooleanFlag(args, "allow-legacy-approval");
+  const resolvedDraftPath = resolveFromCwd(io.cwd, draftPath);
 
   try {
     const config = (await validateConfigFile(io.cwd, getStringFlag(args, "config"))).config;
-    const parsedDraftInput = parseJsonText(
-      await readTextFile(resolveFromCwd(io.cwd, draftPath)),
-      draftPath,
-    );
+    const parsedDraftInput = parseJsonText(await readTextFile(resolvedDraftPath), draftPath);
     const draftInput = parseDraftImportInput(parsedDraftInput);
     const validation = validateContributionAssessment(draftInput.assessment);
     if (!validation.ok) {
@@ -522,10 +520,13 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
         }
       }
       files.set(ledgerPath, outputs.contributionsJsonl);
-      await writeTextFilesAtomically(
-        Array.from(files, ([path, value]) => ({ path, value })),
-        ledgerPath,
-      );
+      const entries = Array.from(files, ([path, value]) => ({ path, value }));
+      for (const entry of entries) {
+        if (await pathsReferToSameFile(resolvedDraftPath, entry.path)) {
+          throw new CliUsageError("An import output path overlaps the reviewed draft.");
+        }
+      }
+      await writeTextFilesAtomically(entries, ledgerPath);
       return nextRecords.length;
     });
 

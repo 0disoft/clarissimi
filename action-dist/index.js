@@ -1313,20 +1313,29 @@ function toChangedFileFixture(file) {
 function buildLinkedIssueItems(pullRequest, repository, limit) {
   const references = collectLinkedIssueRefs(`${pullRequest.title}
 ${pullRequest.body ?? ""}`, repository, limit);
-  return references.map((reference) => ({
-    kind: "issue",
-    id: reference,
-    title: `Linked issue candidate ${reference}`
-  }));
+  return references.map((reference) => {
+    const separator = reference.lastIndexOf("#");
+    const issueRepository = separator === 0 ? repository : reference.slice(0, separator);
+    const issueNumber = reference.slice(separator + 1);
+    return {
+      kind: "issue",
+      id: reference,
+      title: `Linked issue candidate ${reference}`,
+      url: `https://github.com/${issueRepository}/issues/${issueNumber}`
+    };
+  });
 }
 function collectLinkedIssueRefs(value, repository, limit) {
   const refs = [];
   const seen = /* @__PURE__ */ new Set();
-  const pattern = /(?:^|[\s([:{])([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)?#([1-9][0-9]{0,8})\b/g;
+  const pattern = /(?:^|[\s([:{])([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)?#([1-9][0-9]{0,8})\b|\bhttps:\/\/github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)\/issues\/([1-9][0-9]{0,8})\/?(?=$|[\s)#?>\],.;:])/gi;
   let match;
-  while ((match = pattern.exec(value)) !== null && refs.length < limit) {
-    const qualifiedRepository = match[1];
-    const number = match[2];
+  while (refs.length < limit && (match = pattern.exec(value)) !== null) {
+    const qualifiedRepository = match[1] ?? match[3];
+    const number = match[2] ?? match[4];
+    if (number === void 0) {
+      continue;
+    }
     const ref = qualifiedRepository === void 0 || qualifiedRepository.toLowerCase() === repository.toLowerCase() ? `#${number}` : `${qualifiedRepository}#${number}`;
     const key = ref.toLowerCase();
     if (!seen.has(key)) {

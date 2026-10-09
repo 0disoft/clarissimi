@@ -160,6 +160,74 @@ test("keeps cross-repository issue candidates distinct from local references", a
   );
 });
 
+test("collects GitHub issue URLs in textual order and deduplicates shorthand references", async () => {
+  const collected = await collectLiveMergedPullRequestEvidence({
+    client: new FakeLiveClient({
+      pullRequest: livePullRequest({
+        title: "Fix [reported issue](https://github.com/SAMPLE/PROJECT/issues/8)",
+        body: "Also closes https://github.com/other/project/issues/9#issuecomment-10 and #7. See #8 and Other/Project#9.",
+      }),
+    }),
+    repository: "sample/project",
+    pullRequestNumber: 42,
+  });
+  const issues = collected.evidence.items.filter((item) => item.kind === "issue");
+  assert.deepEqual(
+    issues.map((item) => item.id),
+    ["#8", "other/project#9", "#7"],
+  );
+  assert.deepEqual(
+    issues.map((item) => item.url),
+    [
+      "https://github.com/sample/project/issues/8",
+      "https://github.com/other/project/issues/9",
+      "https://github.com/sample/project/issues/7",
+    ],
+  );
+});
+
+test("issue URL collection honors the shared candidate limit", async () => {
+  const collected = await collectLiveMergedPullRequestEvidence({
+    client: new FakeLiveClient({
+      pullRequest: livePullRequest({
+        title: "Fix https://github.com/sample/project/issues/1/ and #2",
+        body: "Also fixes https://github.com/other/project/issues/3?context=4 and #4",
+      }),
+    }),
+    repository: "sample/project",
+    pullRequestNumber: 42,
+    linkedIssueLimit: 2,
+  });
+  assert.deepEqual(
+    collected.evidence.items.filter((item) => item.kind === "issue").map((item) => item.id),
+    ["#1", "#2"],
+  );
+});
+
+test("does not treat unrelated URLs or incomplete issue paths as issue candidates", async () => {
+  const collected = await collectLiveMergedPullRequestEvidence({
+    client: new FakeLiveClient({
+      pullRequest: livePullRequest({
+        title: "Reference URL examples",
+        body: [
+          "https://github.com.example.test/sample/project/issues/8",
+          "https://example.test/sample/project/issues/8",
+          "https://github.com/sample/project/pull/8",
+          "https://github.com/sample/project/issues/0",
+          "https://github.com/sample/project/issues/8extra",
+          "https://github.com/sample/project/issues/8/not-an-issue",
+        ].join("\n"),
+      }),
+    }),
+    repository: "sample/project",
+    pullRequestNumber: 42,
+  });
+  assert.deepEqual(
+    collected.evidence.items.filter((item) => item.kind === "issue"),
+    [],
+  );
+});
+
 test("rejects unmerged live pull requests before returning evidence", async () => {
   const client = new FakeLiveClient({ pullRequest: livePullRequest({ mergedAt: null }) });
   await assert.rejects(

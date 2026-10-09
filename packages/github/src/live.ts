@@ -208,11 +208,17 @@ function buildLinkedIssueItems(
     limit,
   );
 
-  return references.map((reference) => ({
-    kind: "issue",
-    id: reference,
-    title: `Linked issue candidate ${reference}`,
-  }));
+  return references.map((reference) => {
+    const separator = reference.lastIndexOf("#");
+    const issueRepository = separator === 0 ? repository : reference.slice(0, separator);
+    const issueNumber = reference.slice(separator + 1);
+    return {
+      kind: "issue",
+      id: reference,
+      title: `Linked issue candidate ${reference}`,
+      url: `https://github.com/${issueRepository}/issues/${issueNumber}`,
+    };
+  });
 }
 
 function collectLinkedIssueRefs(
@@ -222,12 +228,16 @@ function collectLinkedIssueRefs(
 ): readonly string[] {
   const refs: string[] = [];
   const seen = new Set<string>();
-  const pattern = /(?:^|[\s([:{])([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)?#([1-9][0-9]{0,8})\b/g;
+  const pattern =
+    /(?:^|[\s([:{])([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)?#([1-9][0-9]{0,8})\b|\bhttps:\/\/github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)\/issues\/([1-9][0-9]{0,8})\/?(?=$|[\s)#?>\],.;:])/gi;
   let match: RegExpExecArray | null;
 
-  while ((match = pattern.exec(value)) !== null && refs.length < limit) {
-    const qualifiedRepository = match[1];
-    const number = match[2];
+  while (refs.length < limit && (match = pattern.exec(value)) !== null) {
+    const qualifiedRepository = match[1] ?? match[3];
+    const number = match[2] ?? match[4];
+    if (number === undefined) {
+      continue;
+    }
     const ref =
       qualifiedRepository === undefined ||
       qualifiedRepository.toLowerCase() === repository.toLowerCase()

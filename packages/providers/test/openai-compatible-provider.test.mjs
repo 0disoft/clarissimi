@@ -617,6 +617,79 @@ test("classifies provider HTTP failures by retryability", async () => {
   }
 });
 
+test("preserves HTTP failure classification for oversized error bodies", async () => {
+  for (const [status, retryable] of [
+    [401, false],
+    [429, true],
+    [503, true],
+  ]) {
+    const response = new Response("RAW_PROVIDER_ERROR_BODY", {
+      status,
+      headers: { "content-length": "1024" },
+    });
+    const provider = createOpenAiCompatibleContributionDraftProvider({
+      model: "clarissimi-test-model",
+      token: "unit-token",
+      maxResponseBytes: 16,
+      fetch: async () => response,
+    });
+    await assert.rejects(
+      () => provider.createAssessment({ contributor, preparedEvidence: preparedEvidence() }),
+      (error) =>
+        error instanceof OpenAiCompatibleProviderError &&
+        error.code === "http_error" &&
+        error.retryable === retryable &&
+        error.message.includes(String(status)) &&
+        !error.message.includes("RAW_PROVIDER_ERROR_BODY"),
+    );
+    assert.equal(response.bodyUsed, true);
+  }
+});
+
+test("cancels unread HTTP error streams without waiting for cleanup", async () => {
+  for (const cleanup of ["complete", "reject", "stall"]) {
+    let cancelled = false;
+    let read = false;
+    const response = new Response(
+      new ReadableStream(
+        {
+          pull() {
+            read = true;
+          },
+          cancel() {
+            cancelled = true;
+            if (cleanup === "reject") {
+              return Promise.reject(new Error("RAW_PROVIDER_ERROR_BODY"));
+            }
+            if (cleanup === "stall") {
+              return new Promise(() => {});
+            }
+          },
+        },
+        { highWaterMark: 0 },
+      ),
+      { status: 401 },
+    );
+    const provider = createOpenAiCompatibleContributionDraftProvider({
+      model: "clarissimi-test-model",
+      token: "unit-token",
+      timeoutMs: 100,
+      fetch: async () => response,
+    });
+    await assert.rejects(
+      () => provider.createAssessment({ contributor, preparedEvidence: preparedEvidence() }),
+      (error) =>
+        error instanceof OpenAiCompatibleProviderError &&
+        error.code === "http_error" &&
+        error.retryable === false &&
+        error.message.includes("401") &&
+        !error.message.includes("RAW_PROVIDER_ERROR_BODY"),
+    );
+    assert.equal(cancelled, true);
+    assert.equal(read, false);
+  }
+});
+
 test("rejects invalid model drafts after schema validation", async () => {
   const provider = createOpenAiCompatibleContributionDraftProvider({
     model: "clarissimi-test-model",

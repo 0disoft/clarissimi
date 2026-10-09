@@ -181,10 +181,9 @@ async function requestAssessmentDraft(options: RequestAssessmentDraftInput): Pro
     );
   }
 
-  let response: Response;
   let text: string;
   try {
-    ({ response, text } = await withTimeout(options.timeoutMs, async (signal) => {
+    text = await withTimeout(options.timeoutMs, async (signal) => {
       const headers = {
         Accept: "application/json",
         Authorization: `Bearer ${options.token}`,
@@ -207,11 +206,17 @@ async function requestAssessmentDraft(options: RequestAssessmentDraftInput): Pro
               signal,
               redirect: "error",
             });
-      return {
-        response: result,
-        text: await readBoundedResponseText(result, options.maxResponseBytes),
-      };
-    }));
+      if (!result.ok) {
+        // Error bodies are unused; cleanup must not replace the HTTP failure or delay it.
+        void result.body?.cancel().catch(() => {});
+        throw providerTransportError(
+          "http_error",
+          `OpenAI-compatible provider request failed with status ${result.status}.`,
+          result.status === 429 || result.status >= 500,
+        );
+      }
+      return await readBoundedResponseText(result, options.maxResponseBytes);
+    });
   } catch (error) {
     if (error instanceof OpenAiCompatibleProviderError) {
       throw error;
@@ -233,14 +238,6 @@ async function requestAssessmentDraft(options: RequestAssessmentDraftInput): Pro
       "network_error",
       "OpenAI-compatible provider request failed before a response.",
       true,
-    );
-  }
-
-  if (!response.ok) {
-    throw providerTransportError(
-      "http_error",
-      `OpenAI-compatible provider request failed with status ${response.status}.`,
-      response.status === 429 || response.status >= 500,
     );
   }
 

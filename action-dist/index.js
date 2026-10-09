@@ -4857,10 +4857,9 @@ async function requestAssessmentDraft(options) {
   if (new TextEncoder().encode(requestBodyText).byteLength > MAX_REQUEST_BODY_BYTES) {
     throw new OpenAiCompatibleProviderError("invalid_options", `OpenAI-compatible provider request body exceeded ${MAX_REQUEST_BODY_BYTES} bytes.`);
   }
-  let response;
   let text;
   try {
-    ({ response, text } = await withTimeout3(options.timeoutMs, async (signal) => {
+    text = await withTimeout3(options.timeoutMs, async (signal) => {
       const headers = {
         Accept: "application/json",
         Authorization: `Bearer ${options.token}`,
@@ -4880,11 +4879,13 @@ async function requestAssessmentDraft(options) {
         signal,
         redirect: "error"
       });
-      return {
-        response: result,
-        text: await readBoundedResponseText3(result, options.maxResponseBytes)
-      };
-    }));
+      if (!result.ok) {
+        void result.body?.cancel().catch(() => {
+        });
+        throw providerTransportError("http_error", `OpenAI-compatible provider request failed with status ${result.status}.`, result.status === 429 || result.status >= 500);
+      }
+      return await readBoundedResponseText3(result, options.maxResponseBytes);
+    });
   } catch (error) {
     if (error instanceof OpenAiCompatibleProviderError) {
       throw error;
@@ -4896,9 +4897,6 @@ async function requestAssessmentDraft(options) {
       throw providerTransportError("timeout", "OpenAI-compatible provider request timed out.", true);
     }
     throw providerTransportError("network_error", "OpenAI-compatible provider request failed before a response.", true);
-  }
-  if (!response.ok) {
-    throw providerTransportError("http_error", `OpenAI-compatible provider request failed with status ${response.status}.`, response.status === 429 || response.status >= 500);
   }
   let responseBody;
   try {

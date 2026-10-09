@@ -80,7 +80,12 @@ import {
   readLedgerRecords,
   readLedgerText,
 } from "./ledger.js";
-import { assertLedgerIsSeparateFromOutputs, pathKey, pathsReferToSameFile } from "./paths.js";
+import {
+  assertConfigIsSeparateFromOutputs,
+  assertLedgerIsSeparateFromOutputs,
+  pathKey,
+  pathsReferToSameFile,
+} from "./paths.js";
 
 export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExitCode> {
   let args: ParsedArgs | undefined;
@@ -493,7 +498,8 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
   const resolvedDraftPath = resolveFromCwd(io.cwd, draftPath);
 
   try {
-    const config = (await validateConfigFile(io.cwd, getStringFlag(args, "config"))).config;
+    const configResult = await validateConfigFile(io.cwd, getStringFlag(args, "config"));
+    const config = configResult.config;
     const parsedDraftInput = parseJsonText(await readTextFile(resolvedDraftPath), draftPath);
     const draftInput = parseDraftImportInput(parsedDraftInput);
     const validation = validateContributionAssessment(draftInput.assessment);
@@ -565,6 +571,11 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
       }
       files.set(ledgerPath, outputs.contributionsJsonl);
       const entries = Array.from(files, ([path, value]) => ({ path, value }));
+      await assertConfigIsSeparateFromOutputs(
+        io.cwd,
+        configResult.path,
+        entries.map((entry) => entry.path),
+      );
       for (const entry of entries) {
         if (await pathsReferToSameFile(resolvedDraftPath, entry.path)) {
           throw new CliUsageError("An import output path overlaps the reviewed draft.");
@@ -711,7 +722,8 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
       await assertLedgerDirectoryParents(requestedLedgerPath);
       ledgerPath = await canonicalFilePath(requestedLedgerPath);
     }
-    const config = (await validateConfigFile(io.cwd, getStringFlag(args, "config"))).config;
+    const configResult = await validateConfigFile(io.cwd, getStringFlag(args, "config"));
+    const config = configResult.config;
     const rebuild = async (): Promise<{
       readonly recordCount: number;
       readonly checkedFiles: readonly string[];
@@ -738,6 +750,11 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
           );
           staleFiles = await findStaleRenderedOutputs(plan.entries, outputDirectory);
         } else {
+          await assertConfigIsSeparateFromOutputs(
+            io.cwd,
+            configResult.path,
+            plan.entries.map((entry) => entry.path),
+          );
           await writeTextFilesAtomically(plan.entries, plan.commitPointPath);
         }
       }
@@ -814,7 +831,8 @@ async function runRenderPage(args: ParsedArgs, io: CliIo): Promise<CliExitCode> 
   const pagePath = join(outputDirectory, CONTRIBUTOR_PAGE_HTML_PATH);
 
   try {
-    const config = (await validateConfigFile(io.cwd, getStringFlag(args, "config"))).config;
+    const configResult = await validateConfigFile(io.cwd, getStringFlag(args, "config"));
+    const config = configResult.config;
     const ledgerText = await readLedgerText(ledgerPath, {
       allowMissing: !args.flags.has("ledger"),
     });
@@ -826,6 +844,7 @@ async function runRenderPage(args: ParsedArgs, io: CliIo): Promise<CliExitCode> 
 
     const resolvedPagePath = await canonicalFilePath(pagePath);
     await assertLedgerIsSeparateFromOutputs(ledgerPath, [resolvedPagePath]);
+    await assertConfigIsSeparateFromOutputs(io.cwd, configResult.path, [resolvedPagePath]);
     if ((await fileExists(resolvedPagePath)) && (await stat(resolvedPagePath)).nlink > 1) {
       throw new Error(
         "Cannot atomically replace a page with multiple hard links. Use a separate output directory or copy the page to a separate file before rendering.",

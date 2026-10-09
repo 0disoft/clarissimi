@@ -2,7 +2,25 @@ import { stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { CliUsageError } from "./args.js";
-import { canonicalFilePath, fileExists } from "./io.js";
+import { canonicalFilePath, fileExists, resolveFromCwd } from "./io.js";
+
+export async function assertConfigIsSeparateFromOutputs(
+  cwd: string,
+  configPath: string | undefined,
+  outputPaths: readonly string[],
+): Promise<void> {
+  if (configPath === undefined) {
+    return;
+  }
+  const resolvedConfigPath = resolveFromCwd(cwd, configPath);
+  for (const outputPath of outputPaths) {
+    if (await pathsReferToSameFile(resolvedConfigPath, outputPath)) {
+      throw new CliUsageError(
+        "An output path overlaps the selected config file. Select a separate --out-dir or --config file before writing.",
+      );
+    }
+  }
+}
 
 export async function assertLedgerIsSeparateFromOutputs(
   ledgerPath: string,

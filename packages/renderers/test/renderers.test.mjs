@@ -203,6 +203,33 @@ test("reports one-based physical line numbers for invalid JSONL", () => {
   }
 });
 
+test("ledger schema errors identify the physical line and first field without echoing input", () => {
+  const validRecord = renderContributionsJsonl([assessment()]).trimEnd();
+  const rejectedValue = "INVALID_FIELD_VALUE_SENTINEL";
+  for (const [invalidRecord, field] of [
+    [assessment({ confidence: rejectedValue }), "$.confidence"],
+    [assessment({ source: { ...source, mergedAt: rejectedValue } }), "$.source.mergedAt"],
+    [null, "$"],
+  ]) {
+    for (const newline of ["\n", "\r\n"]) {
+      assert.throws(
+        () =>
+          parseContributionsJsonl(
+            `\uFEFF${[validRecord, "", JSON.stringify(invalidRecord)].join(newline)}`,
+          ),
+        (error) => {
+          assert.equal(error instanceof RendererValidationError, true);
+          assert.match(error.message, /line 3/);
+          assert.ok(error.message.includes(field), error.message);
+          assert.equal(error.issues[0].path, field);
+          assert.ok(!error.message.includes(rejectedValue));
+          return true;
+        },
+      );
+    }
+  }
+});
+
 test("appends a contribution without replacing existing ledger records", () => {
   const existing = assessment({
     contributor: {

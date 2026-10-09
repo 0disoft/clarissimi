@@ -3666,7 +3666,15 @@ function parseContributionsJsonl(input) {
         }
       ]);
     }
-    records.push(normalizePublicContributionRecord(parsed, false));
+    try {
+      records.push(normalizePublicContributionRecord(parsed, false));
+    } catch (error) {
+      if (!(error instanceof RendererValidationError)) {
+        throw error;
+      }
+      const field = error.issues[0]?.path;
+      throw new RendererValidationError(`Ledger record on line ${lineNumber} is invalid${field === void 0 ? "" : ` at ${field}`}. ${error.message}`, error.issues);
+    }
   });
   return records;
 }

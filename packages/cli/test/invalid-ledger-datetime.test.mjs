@@ -44,6 +44,9 @@ for (const command of [
       assert.equal(exitCode, 3, stdout + stderr);
       assert.equal(stderr, "");
       assert.equal(JSON.parse(stdout).ok, false);
+      assert.match(JSON.parse(stdout).message, /line 1/);
+      assert.ok(JSON.parse(stdout).message.includes("$.source.mergedAt"));
+      assert.ok(!stdout.includes(record.source.mergedAt));
       assert.doesNotMatch(stdout, /Invalid time value/);
       for (const [path, contents] of files) {
         assert.equal(await readFile(path, "utf8"), contents, path);

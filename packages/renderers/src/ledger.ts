@@ -195,7 +195,18 @@ export function parseContributionsJsonl(input: string): readonly PublicContribut
       );
     }
 
-    records.push(normalizePublicContributionRecord(parsed, false));
+    try {
+      records.push(normalizePublicContributionRecord(parsed, false));
+    } catch (error) {
+      if (!(error instanceof RendererValidationError)) {
+        throw error;
+      }
+      const field = error.issues[0]?.path;
+      throw new RendererValidationError(
+        `Ledger record on line ${lineNumber} is invalid${field === undefined ? "" : ` at ${field}`}. ${error.message}`,
+        error.issues,
+      );
+    }
   });
 
   return records;

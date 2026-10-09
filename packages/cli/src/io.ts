@@ -302,8 +302,14 @@ export async function fileExists(path: string, statFile: typeof stat = stat): Pr
 export function parseJsonText(input: string, path: string): unknown {
   try {
     return JSON.parse(input.replace(/^\uFEFF/, ""));
-  } catch {
-    throw new Error(`Invalid JSON in ${path}.`);
+  } catch (error) {
+    // V8 may include input excerpts; expose only its numeric location suffix.
+    const location =
+      error instanceof SyntaxError
+        ? /\(line ([1-9]\d*) column ([1-9]\d*)\)$/.exec(error.message)
+        : null;
+    const detail = location === null ? "" : ` at line ${location[1]}, column ${location[2]}`;
+    throw new Error(`Invalid JSON in ${path}${detail}.`);
   }
 }
 

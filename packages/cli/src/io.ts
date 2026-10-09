@@ -1,4 +1,14 @@
-import { open, mkdir, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
+import {
+  open,
+  lstat,
+  mkdir,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 
@@ -37,6 +47,7 @@ export async function canonicalFilePath(path: string): Promise<string> {
     if (!isNodeError(error) || error.code !== "ENOENT") {
       throw error;
     }
+    await assertSymlinkTargetExists(absolutePath);
   }
 
   const missingParts = [basename(absolutePath)];
@@ -48,6 +59,7 @@ export async function canonicalFilePath(path: string): Promise<string> {
       if (!isNodeError(error) || error.code !== "ENOENT") {
         throw error;
       }
+      await assertSymlinkTargetExists(ancestor);
       const parent = dirname(ancestor);
       if (parent === ancestor) {
         throw error;
@@ -55,6 +67,23 @@ export async function canonicalFilePath(path: string): Promise<string> {
       missingParts.unshift(basename(ancestor));
       ancestor = parent;
     }
+  }
+}
+
+async function assertSymlinkTargetExists(path: string): Promise<void> {
+  let entry;
+  try {
+    entry = await lstat(path);
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      return;
+    }
+    throw error;
+  }
+  if (entry.isSymbolicLink()) {
+    throw new Error(
+      `Cannot resolve a symbolic link whose target does not exist: ${path}. Restore its target or select a regular file.`,
+    );
   }
 }
 

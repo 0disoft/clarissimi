@@ -168,7 +168,8 @@ function sanitizePublicContributionRecord(
 export function parseContributionsJsonl(input: string): readonly PublicContributionRecord[] {
   const records: PublicContributionRecord[] = [];
 
-  input.split(/\r?\n/).forEach((line, index) => {
+  const text = input.replace(/^\uFEFF/, "");
+  text.split(/\r?\n/).forEach((line, index) => {
     if (line.trim().length === 0) {
       return;
     }

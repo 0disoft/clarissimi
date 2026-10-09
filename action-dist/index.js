@@ -3594,7 +3594,8 @@ function sanitizePublicContributionRecord(assessment) {
 }
 function parseContributionsJsonl(input) {
   const records = [];
-  input.split(/\r?\n/).forEach((line, index) => {
+  const text = input.replace(/^\uFEFF/, "");
+  text.split(/\r?\n/).forEach((line, index) => {
     if (line.trim().length === 0) {
       return;
     }
@@ -5192,7 +5193,6 @@ function isRecord7(value) {
 }
 
 // packages/action/dist/config.js
-import { readFile as readFile3 } from "node:fs/promises";
 import { basename, isAbsolute as isAbsolute3, join as join3 } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -5217,6 +5217,13 @@ function requireEnvInput(value, name) {
     throw new ActionUsageError(`${name} is required for write modes.`);
   }
   return normalized;
+}
+
+// packages/action/dist/json-input.js
+import { readFile as readFile3 } from "node:fs/promises";
+async function readActionJsonFile(path) {
+  const text = await readFile3(path, "utf8");
+  return JSON.parse(text.replace(/^\uFEFF/, ""));
 }
 
 // packages/action/dist/config.js
@@ -5257,7 +5264,7 @@ function resolveActionIncludeAutomationContributors(env, config) {
 async function loadActionConfigValue(configPath, resolvedPath) {
   if (resolvedPath.endsWith(".json")) {
     try {
-      return JSON.parse(await readFile3(resolvedPath, "utf8"));
+      return await readActionJsonFile(resolvedPath);
     } catch (error) {
       if (error instanceof SyntaxError) {
         throw new ActionUsageError(`Invalid JSON in Action config ${configPath}.`);
@@ -6019,7 +6026,7 @@ async function readApprovedDraft(path, repositoryDir, allowLegacyApproval) {
   }
   let parsed;
   try {
-    parsed = JSON.parse(await readFile4(realDraftPath, "utf8"));
+    parsed = await readActionJsonFile(realDraftPath);
   } catch (error) {
     if (error instanceof SyntaxError) {
       throw new Error("Approved Clarissimi draft contains invalid JSON.");
@@ -6058,7 +6065,7 @@ function parseLegacyApprovalInput(value) {
 }
 async function prepareActionAssessment(input) {
   const source = selectInputSource(input);
-  const eventPayload = JSON.parse(await readFile4(source.path, "utf8"));
+  const eventPayload = await readActionJsonFile(source.path);
   const resolution = source.kind === "github_fixture" ? {
     kind: "merged_pull_request",
     fixture: parseGitHubMergedPullRequestFixture(eventPayload)

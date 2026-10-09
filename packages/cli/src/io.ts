@@ -263,7 +263,7 @@ export async function fileExists(path: string, statFile: typeof stat = stat): Pr
 
 export function parseJsonText(input: string, path: string): unknown {
   try {
-    return JSON.parse(input);
+    return JSON.parse(input.replace(/^\uFEFF/, ""));
   } catch {
     throw new Error(`Invalid JSON in ${path}.`);
   }

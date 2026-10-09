@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import { basename, isAbsolute, join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -11,6 +10,7 @@ import {
 
 import { readEnvInput } from "./environment.js";
 import { ActionUsageError } from "./errors.js";
+import { readActionJsonFile } from "./json-input.js";
 
 export async function loadActionConfigFromEnvironment(
   env: NodeJS.ProcessEnv,
@@ -66,7 +66,7 @@ export function resolveActionIncludeAutomationContributors(
 async function loadActionConfigValue(configPath: string, resolvedPath: string): Promise<unknown> {
   if (resolvedPath.endsWith(".json")) {
     try {
-      return JSON.parse(await readFile(resolvedPath, "utf8")) as unknown;
+      return await readActionJsonFile(resolvedPath);
     } catch (error) {
       if (error instanceof SyntaxError) {
         throw new ActionUsageError(`Invalid JSON in Action config ${configPath}.`);

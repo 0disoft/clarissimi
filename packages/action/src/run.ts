@@ -55,6 +55,7 @@ import {
 import { sanitizeAssessmentForActionSummary } from "./summary.js";
 import { isPathInside, resolveActionSummaryPath } from "./path-security.js";
 import { resolveActionProvider } from "./provider.js";
+import { readActionJsonFile } from "./json-input.js";
 import {
   writeActionSummaryJson,
   writeGitHubOutputs,
@@ -776,7 +777,7 @@ async function readApprovedDraft(
 
   let parsed: unknown;
   try {
-    parsed = JSON.parse(await readFile(realDraftPath, "utf8")) as unknown;
+    parsed = await readActionJsonFile(realDraftPath);
   } catch (error) {
     if (error instanceof SyntaxError) {
       throw new Error("Approved Clarissimi draft contains invalid JSON.");
@@ -841,7 +842,7 @@ async function prepareActionAssessment(
   input: ActionDryRunInput,
 ): Promise<PreparedActionAssessment> {
   const source = selectInputSource(input);
-  const eventPayload = JSON.parse(await readFile(source.path, "utf8")) as unknown;
+  const eventPayload = await readActionJsonFile(source.path);
   const resolution =
     source.kind === "github_fixture"
       ? {

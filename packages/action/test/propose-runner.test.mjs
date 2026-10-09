@@ -362,7 +362,7 @@ test("runs fixture-first stage-draft mode through draft branch and pull request 
   });
 });
 
-test("promotes an approved draft through a public recognition proposal", async () => {
+test("promotes a BOM-prefixed approved draft through a public recognition proposal", async () => {
   await withTempDir(async (dir) => {
     const repositoryDir = join(dir, "repo");
     const remoteDir = join(dir, "remote.git");
@@ -389,13 +389,14 @@ test("promotes an approved draft through a public recognition proposal", async (
     const approvedAssessment = approvedDraftAssessment({ claimEvidenceLinks });
     await writeFile(
       draftPath,
-      JSON.stringify({
-        ...approvedAssessment,
-        approvalSnapshot: createDraftApprovalSnapshot(
-          approvedAssessment,
-          "2026-09-29T00:00:00.000Z",
-        ),
-      }),
+      "\uFEFF" +
+        JSON.stringify({
+          ...approvedAssessment,
+          approvalSnapshot: createDraftApprovalSnapshot(
+            approvedAssessment,
+            "2026-09-29T00:00:00.000Z",
+          ),
+        }),
       "utf8",
     );
     await git(repositoryDir, ["add", ".clarissimi/drafts/sample-project-42.json"]);

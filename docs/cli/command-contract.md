@@ -165,6 +165,12 @@ outputs, decide approval without maintainer intent, call providers, fetch GitHub
 branches, or create pull requests. Use `import-draft` after this command to publish the approved
 record into the ledger.
 
+Approval resolves file symlinks and directory aliases to the canonical target before rewriting,
+preserves file symlinks, and reports that canonical target in `approvedDraftPath`. Drafts with
+multiple hard links are refused, exit code `7` (write failure), before either alias changes,
+since atomic replacement would leave another alias unapproved. Copy the draft to a separate
+file before approving.
+
 ### `clarissimi import-draft --draft <path>`
 
 Imports an agent-authored `clarissimi.assessment/v1` JSON draft. This command is for workflows

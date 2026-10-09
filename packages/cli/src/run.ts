@@ -401,9 +401,15 @@ async function runApproveDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode
     throw new CliUsageError("approve-draft requires --draft <path>.");
   }
 
-  const resolvedDraftPath = resolveFromCwd(io.cwd, draftPath);
+  const requestedDraftPath = resolveFromCwd(io.cwd, draftPath);
 
   try {
+    const resolvedDraftPath = await canonicalFilePath(requestedDraftPath);
+    if ((await stat(resolvedDraftPath)).nlink > 1) {
+      throw new Error(
+        "Cannot atomically replace a draft with multiple hard links. Copy it to a separate file before approving.",
+      );
+    }
     const parsedDraftInput = parseJsonText(await readTextFile(resolvedDraftPath), draftPath);
     const draftInput = parseDraftImportInput(parsedDraftInput);
     const draftReview = toDraftReviewRecord(draftInput.assessment);

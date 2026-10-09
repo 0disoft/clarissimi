@@ -3546,7 +3546,11 @@ function normalizeLegacyMergedAt(value) {
   if (typeof mergedAt !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(mergedAt)) {
     return value;
   }
-  const canonical = new Date(mergedAt).toISOString();
+  const parsed = new Date(mergedAt);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  const canonical = parsed.toISOString();
   if (canonical !== mergedAt.replace(/Z$/, ".000Z")) {
     return value;
   }

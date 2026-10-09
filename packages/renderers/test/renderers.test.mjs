@@ -118,6 +118,35 @@ test("normalizes historic v1 UTC timestamps while rejecting impossible dates", (
   );
 });
 
+test("reports invalid historic timestamps as validation errors instead of throwing RangeError", () => {
+  for (const mergedAt of [
+    "2026-00-08T00:00:00Z",
+    "2026-13-08T00:00:00Z",
+    "2026-07-00T00:00:00Z",
+    "2026-07-32T00:00:00Z",
+    "2026-07-08T25:00:00Z",
+    "2026-07-08T00:60:00Z",
+    "2026-07-08T00:00:60Z",
+  ]) {
+    const invalid = assessment({ source: { ...source, mergedAt } });
+    for (const operation of [
+      () => renderContributionsJsonl([invalid]),
+      () => parseContributionsJsonl(`${JSON.stringify(invalid)}\n`),
+    ]) {
+      assert.throws(operation, (error) => {
+        assert.ok(error instanceof RendererValidationError, mergedAt);
+        assert.ok(
+          error.issues.some(
+            (issue) => issue.path === "$.source.mergedAt" && issue.code === "invalid_datetime",
+          ),
+          mergedAt,
+        );
+        return true;
+      });
+    }
+  }
+});
+
 test("keeps approved ledger output on the MVP single-file path", () => {
   assert.equal(CONTRIBUTIONS_JSONL_PATH, ".clarissimi/contributions.jsonl");
   assert.equal(RENDERED_OUTPUT_PATHS.contributionsJsonl, CONTRIBUTIONS_JSONL_PATH);

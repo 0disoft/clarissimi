@@ -309,25 +309,37 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
         }
       : null;
 
-    writeOutput(io, args, {
-      ok: true,
-      command: "recognize",
-      mode,
-      provider: provider.id,
-      fixtureKind: result.fixtureKind,
-      fixturePath: selectedFixturePath,
-      draftCreated: true,
-      approvalStatus: result.assessment.maintainerApprovalStatus,
-      publicOutputsRendered: outputs !== null,
-      redactionChanged: result.redactionChanged,
-      redactionMatchCount: result.redactionMatchCount,
-      assessment: sanitizeAssessmentForCliOutput(result.assessment),
-      outputPreview: outputs,
-      message:
-        outputs === null
-          ? "Draft created; public outputs were not rendered because the assessment is not approved."
-          : "Approved fixture rendered public output previews.",
-    });
+    writeOutput(
+      io,
+      args,
+      {
+        ok: true,
+        command: "recognize",
+        mode,
+        provider: provider.id,
+        fixtureKind: result.fixtureKind,
+        fixturePath: selectedFixturePath,
+        draftCreated: true,
+        approvalStatus: result.assessment.maintainerApprovalStatus,
+        publicOutputsRendered: outputs !== null,
+        redactionChanged: result.redactionChanged,
+        redactionMatchCount: result.redactionMatchCount,
+        assessment: sanitizeAssessmentForCliOutput(result.assessment),
+        outputPreview: outputs,
+        message:
+          outputs === null
+            ? "Draft created; public outputs were not rendered because the assessment is not approved."
+            : "Approved fixture rendered public output previews.",
+      },
+      [
+        `Fixture: ${resolveFromCwd(io.cwd, selectedFixturePath)} (${result.fixtureKind})`,
+        `Provider: ${provider.id}`,
+        `Approval status: ${result.assessment.maintainerApprovalStatus}`,
+        `Redaction matches: ${result.redactionMatchCount}`,
+        "Files written: none (dry-run)",
+        "Next: use --json to inspect the assessment and output previews.",
+      ],
+    );
     return CLI_EXIT_CODES.success;
   } catch (error) {
     if (error instanceof CliUsageError) {

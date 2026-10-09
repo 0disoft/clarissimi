@@ -1,3 +1,6 @@
+import { stat } from "node:fs/promises";
+import { dirname } from "node:path";
+
 import { RendererValidationError } from "@clarissimi/renderers";
 
 import { readTextFile } from "./io.js";
@@ -7,11 +10,22 @@ export async function readLedgerText(
   options: { readonly allowMissing?: boolean } = {},
 ): Promise<string> {
   try {
+    if (!(await stat(path)).isFile()) {
+      throw invalidLedgerPath();
+    }
     return await readTextFile(path);
   } catch (error) {
-    if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") {
+    if (!(error instanceof Error) || !("code" in error)) {
       throw error;
     }
+    if (error.code === "EISDIR" || error.code === "ENOTDIR") {
+      throw invalidLedgerPath();
+    }
+    if (error.code !== "ENOENT") {
+      throw error;
+    }
+    // Windows can report ENOENT when a parent component is a file.
+    await assertLedgerDirectoryParents(path);
     if (options.allowMissing === true) {
       return "";
     }
@@ -23,4 +37,45 @@ export async function readLedgerText(
       },
     ]);
   }
+}
+
+export async function assertLedgerDirectoryParents(path: string): Promise<void> {
+  let ancestor = dirname(path);
+  while (true) {
+    try {
+      if (!(await stat(ancestor)).isDirectory()) {
+        throw invalidLedgerPath();
+      }
+      return;
+    } catch (error) {
+      if (!(error instanceof Error) || !("code" in error)) {
+        throw error;
+      }
+      if (error.code === "ENOTDIR") {
+        throw invalidLedgerPath();
+      }
+      if (error.code !== "ENOENT") {
+        throw error;
+      }
+    }
+    const parent = dirname(ancestor);
+    if (parent === ancestor) {
+      return;
+    }
+    ancestor = parent;
+  }
+}
+
+function invalidLedgerPath(): RendererValidationError {
+  return new RendererValidationError(
+    "The selected canonical ledger path must be a regular file with directory parents.",
+    [
+      {
+        path: "$.ledger",
+        code: "invalid_ledger_path",
+        message:
+          "Select a JSONL ledger file inside a directory, rather than a directory or a path through a file.",
+      },
+    ],
+  );
 }

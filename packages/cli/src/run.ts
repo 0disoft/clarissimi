@@ -75,7 +75,7 @@ import {
   writeUsageFailure,
 } from "./output.js";
 import { resolveRecognitionProvider } from "./provider.js";
-import { readLedgerText } from "./ledger.js";
+import { assertLedgerDirectoryParents, readLedgerText } from "./ledger.js";
 import { assertLedgerIsSeparateFromOutputs, pathKey, pathsReferToSameFile } from "./paths.js";
 
 export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExitCode> {
@@ -688,6 +688,7 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
 
   try {
     if (outDir !== undefined) {
+      await assertLedgerDirectoryParents(requestedLedgerPath);
       ledgerPath = await canonicalFilePath(requestedLedgerPath);
     }
     const config = (await validateConfigFile(io.cwd, getStringFlag(args, "config"))).config;

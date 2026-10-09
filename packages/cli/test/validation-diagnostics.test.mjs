@@ -6,6 +6,7 @@ import test from "node:test";
 import { validateContributionAssessment } from "../../schemas/dist/index.js";
 import { OpenAiCompatibleProviderError } from "../../providers/dist/index.js";
 import { writeGitHubProviderFailureStepSummary } from "../../action/dist/output.js";
+import { RendererValidationError } from "../../renderers/dist/index.js";
 import { writeFailure } from "../dist/output.js";
 import { runCli } from "../dist/index.js";
 
@@ -97,6 +98,29 @@ test("draft errors expose the editable field and the reapproval procedure", asyn
       assert.ok(output.includes("approvalSnapshot"));
       assert.ok(output.includes("approve-draft again"));
     }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("Action draft diagnostics identify the validation context and reapproval recovery", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "clarissimi-action-draft-error-"));
+  try {
+    const path = join(dir, "summary.md");
+    await writeGitHubProviderFailureStepSummary(
+      path,
+      new RendererValidationError("Approved draft content changed.", [
+        {
+          path: "$.approvalSnapshot.contentSha256",
+          code: "approval_snapshot_mismatch",
+          message: "Reapprove.",
+        },
+      ]),
+    );
+    const text = await readFile(path, "utf8");
+    assert.ok(text.includes("Clarissimi draft validation rejected"));
+    assert.ok(text.includes("$.approvalSnapshot.contentSha256"));
+    assert.ok(text.includes("approve-draft again"));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

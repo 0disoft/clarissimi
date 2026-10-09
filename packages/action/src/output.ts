@@ -1,4 +1,5 @@
 import { appendFile, mkdir, writeFile } from "node:fs/promises";
+import { OpenAiCompatibleProviderError } from "@clarissimi/providers";
 import { dirname } from "node:path";
 
 import {
@@ -175,10 +176,16 @@ export async function writeGitHubProviderFailureStepSummary(
   }
 
   const issues = error.issues.slice(0, MAX_PROVIDER_FAILURE_ISSUES);
+  const providerFailure = error instanceof OpenAiCompatibleProviderError;
+  const diagnostics = publicValidationDiagnostics(error.issues);
   const markdown = [
-    "## Clarissimi provider result rejected",
+    providerFailure
+      ? "## Clarissimi provider result rejected"
+      : "## Clarissimi draft validation rejected",
     "",
-    "The provider output failed Clarissimi's result-quality contract. Raw provider content is intentionally omitted.",
+    providerFailure
+      ? "The provider output failed Clarissimi's result-quality contract. Raw provider content is intentionally omitted."
+      : "The assessment failed validation. Review the fields below before retrying; raw draft content is omitted.",
     "",
     "| Rule | Path |",
     "| --- | --- |",
@@ -190,9 +197,7 @@ export async function writeGitHubProviderFailureStepSummary(
       ? [`| additional_issues_omitted | ${error.issues.length - issues.length} |`]
       : []),
     "",
-    ...(publicValidationDiagnostics(error.issues).recoveryHint === undefined
-      ? []
-      : [publicValidationDiagnostics(error.issues).recoveryHint!]),
+    ...(diagnostics.recoveryHint === undefined ? [] : [diagnostics.recoveryHint]),
   ].join("\n");
 
   await appendFile(summaryPath, markdown, "utf8");

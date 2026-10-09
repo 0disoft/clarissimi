@@ -43,6 +43,11 @@ clarissimi completion powershell | Out-String | Invoke-Expression
 - Output uses LF line endings and ends with a newline.
 - The command does not support `--json`; its successful stdout is already the generated program.
 
+Clarissimi's PowerShell completion resolves enum values for both `--option value` and
+`--option=value`. After boolean or valued options, analytics subcommand suggestions stay available.
+Token parsing uses shared static flag metadata to skip option values and avoid re-suggesting an
+already supplied selector.
+
 Completion does not read config, ledgers, `.clarissimi`, environment variables, provider tokens,
 GitHub tokens, repository evidence, or generated output. It performs no provider, GitHub, or network
 request.

@@ -16,16 +16,39 @@ const cases = [
   { input: "clarissimi recognize --provider ", expected: [...CONFIG_PROVIDERS] },
   { input: "clarissimi recognize --provider o", expected: ["openai-compatible"] },
   {
+    input: "clarissimi recognize --provider=",
+    expected: CONFIG_PROVIDERS.map((provider) => `--provider=${provider}`),
+  },
+  { input: "clarissimi recognize --provider=o", expected: ["--provider=openai-compatible"] },
+  { input: "clarissimi recognize --PROVIDER=o", expected: ["--provider=openai-compatible"] },
+  { input: "clarissimi rebuild --markdown-summary=g", expected: ["--markdown-summary=gallery"] },
+  {
     input: "clarissimi recognize --provider-endpoint-trust ",
     expected: ["public", "private-network"],
   },
   { input: "clarissimi analytics ", expected: ["recent-share"] },
+  { input: "clarissimi analytics --json re", expected: ["recent-share"] },
+  {
+    input: "clarissimi analytics --as-of 2026-10-09 --json re",
+    expected: ["recent-share"],
+  },
+  {
+    input: "clarissimi analytics --as-of=2026-10-09 --json re",
+    expected: ["recent-share"],
+  },
+  { input: "clarissimi analytics --as-of recent-", expected: [] },
+  { input: "clarissimi analytics recent-share --json re", expected: [] },
   { input: "clarissimi completion po", expected: ["powershell"] },
   { input: "clarissimi rebuild --ch", expected: ["--check"] },
   {
     input: "clarissimi recognize --provider  --json",
     cursor: "clarissimi recognize --provider ".length,
     expected: [...CONFIG_PROVIDERS],
+  },
+  {
+    input: "clarissimi recognize --provider=o --json",
+    cursor: "clarissimi recognize --provider=o".length,
+    expected: ["--provider=openai-compatible"],
   },
 ];
 
@@ -71,7 +94,7 @@ for (const shell of shells) {
           "-File",
           scriptPath,
         ],
-        { encoding: "utf8", timeout: 30_000 },
+        { cwd: dir, encoding: "utf8", timeout: 30_000 },
       );
       assert.equal(result.status, 0, result.error?.message ?? result.stderr);
       const actual = JSON.parse(result.stdout.trim());

@@ -16,7 +16,8 @@ suite and consume runner capacity without improving most changes.
 ## Decision
 
 Add `.github/workflows/toolchain-platform-smoke.yml` with read-only permissions and a Linux,
-Windows, and macOS matrix on Node.js 24.
+Windows, and macOS matrix on Node.js 24 for manual workflow_dispatch. Automatic events run only
+Windows and macOS; the primary CI Validation job supplies Linux coverage for the same SHA.
 
 Each job must install the frozen pnpm lockfile and run the workspace build, Oxfmt check, Oxlint
 check, and Action bundle freshness check. This exercises the native TypeScript compiler, formatter,

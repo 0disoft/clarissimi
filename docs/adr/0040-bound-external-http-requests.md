@@ -23,6 +23,9 @@ failures without adding automatic retries inside packages that do not own retry 
   runtimes and tests. CLI and Action inputs do not expose these tuning values in this milestone.
 - Response readers reject an oversized declared `Content-Length` before reading the body and stop
   streamed reads as soon as the byte budget is exceeded.
+- When the Content-Length check or streamed byte counter exceeds the response budget, all three
+  HTTP clients cancel the unread body or reader without awaiting cleanup, catching cleanup errors
+  to preserve the original permanent `response_too_large` error and avoid retries.
 - Timeout, network, rate-limit, and server failures are marked retryable. Authentication,
   authorization, not-found, invalid option, invalid response, and oversized response failures are
   permanent. Provider HTTP 429 and 5xx failures are retryable; other provider HTTP failures are

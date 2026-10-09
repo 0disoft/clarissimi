@@ -301,6 +301,7 @@ async function readBoundedResponseText(response: Response, maxBytes: number): Pr
   if (contentLength !== null && contentLength !== undefined) {
     const declaredBytes = Number(contentLength);
     if (Number.isFinite(declaredBytes) && declaredBytes > maxBytes) {
+      void response.body?.cancel().catch(() => {});
       throw new OpenAiCompatibleProviderError(
         "response_too_large",
         `OpenAI-compatible provider response exceeded ${maxBytes} bytes.`,
@@ -331,7 +332,7 @@ async function readBoundedResponseText(response: Response, maxBytes: number): Pr
       }
       bytes += value.byteLength;
       if (bytes > maxBytes) {
-        await reader.cancel();
+        void reader.cancel().catch(() => {});
         throw new OpenAiCompatibleProviderError(
           "response_too_large",
           `OpenAI-compatible provider response exceeded ${maxBytes} bytes.`,

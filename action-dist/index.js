@@ -810,6 +810,8 @@ async function readBoundedResponseText(response, maxBytes) {
   if (contentLength !== null && contentLength !== void 0) {
     const declaredBytes = Number(contentLength);
     if (Number.isFinite(declaredBytes) && declaredBytes > maxBytes) {
+      void response.body?.cancel().catch(() => {
+      });
       throw new GitHubApiClientError("response_too_large", `GitHub API response exceeded ${maxBytes} bytes.`);
     }
   }
@@ -832,7 +834,8 @@ async function readBoundedResponseText(response, maxBytes) {
       }
       bytes += value.byteLength;
       if (bytes > maxBytes) {
-        await reader.cancel();
+        void reader.cancel().catch(() => {
+        });
         throw new GitHubApiClientError("response_too_large", `GitHub API response exceeded ${maxBytes} bytes.`);
       }
       text += decoder.decode(value, { stream: true });
@@ -2053,6 +2056,8 @@ async function readBoundedResponseText2(response, maxBytes) {
   if (contentLength !== null && contentLength !== void 0) {
     const declaredBytes = Number(contentLength);
     if (Number.isFinite(declaredBytes) && declaredBytes > maxBytes) {
+      void response.body?.cancel().catch(() => {
+      });
       throw responseTooLargeError(maxBytes);
     }
   }
@@ -2075,7 +2080,8 @@ async function readBoundedResponseText2(response, maxBytes) {
       }
       bytes += value.byteLength;
       if (bytes > maxBytes) {
-        await reader.cancel();
+        void reader.cancel().catch(() => {
+        });
         throw responseTooLargeError(maxBytes);
       }
       text += decoder.decode(value, { stream: true });
@@ -4952,6 +4958,8 @@ async function readBoundedResponseText3(response, maxBytes) {
   if (contentLength !== null && contentLength !== void 0) {
     const declaredBytes = Number(contentLength);
     if (Number.isFinite(declaredBytes) && declaredBytes > maxBytes) {
+      void response.body?.cancel().catch(() => {
+      });
       throw new OpenAiCompatibleProviderError("response_too_large", `OpenAI-compatible provider response exceeded ${maxBytes} bytes.`);
     }
   }
@@ -4974,7 +4982,8 @@ async function readBoundedResponseText3(response, maxBytes) {
       }
       bytes += value.byteLength;
       if (bytes > maxBytes) {
-        await reader.cancel();
+        void reader.cancel().catch(() => {
+        });
         throw new OpenAiCompatibleProviderError("response_too_large", `OpenAI-compatible provider response exceeded ${maxBytes} bytes.`);
       }
       text += decoder.decode(value, { stream: true });

@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { prepareEvidenceForProvider } from "@clarissimi/core";
+import { collectMergedPullRequestEvidence } from "../../github/dist/index.js";
 import { ASSESSMENT_SCHEMA_VERSION } from "@clarissimi/schemas";
 
 import { validateProviderAssessmentResult } from "../dist/index.js";
@@ -187,4 +188,55 @@ function overrideEvidenceRefs(evidenceRefs, mode) {
     return [...evidenceRefs, { kind: "file", id: "invented-by-provider.ts" }];
   }
   return evidenceRefs;
+}
+
+for (const [filename, accepted] of [
+  ["benchmarks/parser.ts", true],
+  ["benchmarks/results/parser.json", true],
+  ["benches/parser.rs", true],
+  ["src/parser.ts", false],
+  ["benchmarks/README.md", false],
+]) {
+  test(`measurement claims linked to collected ${filename} are ${accepted ? "accepted" : "rejected"}`, async () => {
+    const fixture = JSON.parse(
+      await readFile(
+        new URL("../../../fixtures/github-merged-pr-basic.json", import.meta.url),
+        "utf8",
+      ),
+    );
+    fixture.pullRequest.changedFiles = [{ filename, status: "added", additions: 1, deletions: 0 }];
+    const collected = collectMergedPullRequestEvidence(fixture);
+    const preparedEvidence = prepareEvidenceForProvider(collected.evidence);
+    const index = preparedEvidence.evidenceRefs.findIndex((ref) => ref.id === filename);
+    assert.ok(index >= 0);
+    const claim = "Reduced latency.";
+    const candidate = {
+      schemaVersion: ASSESSMENT_SCHEMA_VERSION,
+      contributor: collected.contributor,
+      contributionType: "performance",
+      affectedArea: "parser",
+      impactLevel: "medium",
+      evidenceSummary: claim,
+      publicRecognitionText: claim,
+      suggestedBadge: "Parser Care",
+      confidence: 0.75,
+      maintainerApprovalStatus: "draft",
+      source: collected.evidence.source,
+      evidenceRefs: preparedEvidence.evidenceRefs,
+      claimEvidenceLinks: ["evidenceSummary", "publicRecognitionText"].map((field) => ({
+        field,
+        text: claim,
+        evidenceRefIndexes: [index],
+      })),
+    };
+    const result = validateProviderAssessmentResult(
+      { contributor: collected.contributor, preparedEvidence },
+      candidate,
+    );
+    assert.equal(result.ok, accepted, JSON.stringify(result.issues));
+    if (!accepted)
+      assert.ok(
+        result.issues.some((issue) => issue.code === "provider_result_performance_claim_unlinked"),
+      );
+  });
 }

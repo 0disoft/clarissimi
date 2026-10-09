@@ -37,6 +37,11 @@ security, measured performance, and regression-prevention claims, rather than ac
 references elsewhere in the draft. An unsupported claim fails draft generation for maintainer
 review instead of being silently rewritten or auto-approved.
 
+Measurement candidates also include source and result files under explicit benchmark, benchmarks,
+or benches directories. They keep the existing file evidence kind. An ordinary source file or a
+benchmark README is not a measurement candidate. Claim-specific links and maintainer review remain
+required; the path identifies a candidate and does not prove that a performance claim is true.
+
 Older `assessment/v1` records and manually authored drafts without links remain valid. Their
 missing map means support cannot be inferred, and maintainers must review the prose and references
 directly. Existing ledgers need no rewrite or migration edge; the migration compatibility fixture

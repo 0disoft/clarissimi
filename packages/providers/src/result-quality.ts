@@ -16,6 +16,8 @@ const MEASURED_PERFORMANCE_CLAIM_PATTERN =
   /\b(?:faster|speedup|lower latency|reduced latency|improved throughput|benchmark(?:ed)?)\b/i;
 const MEASUREMENT_EVIDENCE_PATTERN =
   /\b(?:bench(?:mark)?|perf(?:ormance)?|latency|throughput|memory)\b/i;
+const BENCHMARK_FILE_PATTERN =
+  /(?:^|[/\\])(?:benchmarks?|benches)[/\\].+\.(?:[cm]?[jt]sx?|py|rs|go|java|kt|cs|rb|php|swift|c|cc|cpp|json|csv|tsv|txt)$/i;
 const TEST_FILE_PATTERN =
   /(?:^|[/\\])[^/\\]+\.(?:test|spec)\.(?:[cm]?[jt]sx?|py|rs|go|java|kt|cs|rb|php|swift)$|(?:^|[/\\])[^/\\]+_test\.go$|(?:^|[/\\])(?:test_[^/\\]+|[^/\\]+_test)\.py$/i;
 
@@ -246,10 +248,11 @@ export function isMeasurementEvidence(
   item: ProviderAssessmentInput["preparedEvidence"]["items"][number],
 ): boolean {
   return (
-    (item.kind === "test" || item.kind === "maintainer_note") &&
-    [item.id, item.title].some(
-      (value) => value !== undefined && MEASUREMENT_EVIDENCE_PATTERN.test(value),
-    )
+    (item.kind === "file" && BENCHMARK_FILE_PATTERN.test(item.id)) ||
+    ((item.kind === "test" || item.kind === "maintainer_note") &&
+      [item.id, item.title].some(
+        (value) => value !== undefined && MEASUREMENT_EVIDENCE_PATTERN.test(value),
+      ))
   );
 }
 

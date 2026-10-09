@@ -270,6 +270,59 @@ for (const existingLedger of [false, true]) {
   });
 }
 
+for (const startingRef of ["main", "proposal"]) {
+  test(`preserves an existing proposal commit when rewriting fails from ${startingRef}`, async () => {
+    await withTempDir(async (dir) => {
+      const repositoryDir = join(dir, "repo");
+      const stagedOutputDir = join(dir, "staged");
+      await initRepository(repositoryDir);
+      const staging = await stageProposalRecognitionOutputs({
+        outputDir: stagedOutputDir,
+        assessments: [assessment()],
+        redactionMatchCount: 0,
+      });
+      const first = await writeProposalBranch({
+        repositoryDir,
+        stagedOutputDir,
+        manifest: staging.manifest,
+        baseBranch: "main",
+      });
+      const originalRef = startingRef === "main" ? "main" : first.branchName;
+      await git(repositoryDir, ["checkout", originalRef]);
+      const originalSha = await git(repositoryDir, ["rev-parse", "HEAD"]);
+      const files = staging.manifest.files.map((file, index) =>
+        index === 1 ? { ...file, sha256: "0".repeat(64) } : file,
+      );
+
+      await assert.rejects(
+        () =>
+          writeProposalBranch({
+            repositoryDir,
+            stagedOutputDir,
+            manifest: { ...staging.manifest, files },
+            baseBranch: "main",
+          }),
+        (error) =>
+          error instanceof ProposalBranchWriterError && error.code === "staged_file_hash_mismatch",
+      );
+
+      assert.equal(await git(repositoryDir, ["rev-parse", first.branchName]), first.commitSha);
+      assert.equal(await git(repositoryDir, ["branch", "--show-current"]), originalRef);
+      assert.equal(await git(repositoryDir, ["rev-parse", "HEAD"]), originalSha);
+      assert.equal(
+        await git(repositoryDir, ["status", "--porcelain", "--untracked-files=all"]),
+        "",
+      );
+      if (startingRef === "proposal") {
+        assert.equal(
+          await readFile(join(repositoryDir, "CONTRIBUTORS.md"), "utf8"),
+          await readFile(join(stagedOutputDir, "CONTRIBUTORS.md"), "utf8"),
+        );
+      }
+    });
+  });
+}
+
 test("refuses to overwrite existing proposal branches with unowned changes", async () => {
   await withTempDir(async (dir) => {
     const repositoryDir = join(dir, "repo");

@@ -183,14 +183,18 @@ async function writeProposalBranch(input) {
     `${input.baseBranch}^{commit}`
   ]);
   const originalRef = await currentRef(input.repositoryDir);
+  const originalCommitSha = await git2(input.repositoryDir, ["rev-parse", "HEAD"]);
   for (const file of input.manifest.files) {
     await assertSafeRepositoryOutputPath(input.repositoryDir, file.path);
   }
   await assertCleanWorktree(input.repositoryDir);
-  await assertExistingProposalBranchIsOwned(input.repositoryDir, input.baseBranch, branchName, input.manifest.files);
+  const previousProposalSha = await assertExistingProposalBranchIsOwned(input.repositoryDir, input.baseBranch, branchName, input.manifest.files);
   let writeSucceeded = false;
+  let branchReset = false;
+  let proposalHeadSha = baseCommitSha;
   try {
     await git2(input.repositoryDir, ["checkout", "-B", branchName, input.baseBranch]);
+    branchReset = true;
     await writeStagedFilesToRepository(input);
     await git2(input.repositoryDir, ["add", "--", ...input.manifest.files.map((file) => file.path)]);
     const hasChanges = await hasCachedChanges(input.repositoryDir);
@@ -208,6 +212,7 @@ async function writeProposalBranch(input) {
       ]);
     }
     const commitSha = await git2(input.repositoryDir, ["rev-parse", "HEAD"]);
+    proposalHeadSha = commitSha;
     const changedFiles = await changedFilesFromBase(input.repositoryDir, input.baseBranch, branchName);
     assertChangedFilesAreOwned(changedFiles, input.manifest.files);
     writeSucceeded = true;
@@ -220,8 +225,16 @@ async function writeProposalBranch(input) {
       rollbackHint: `Delete branch ${branchName} before merge to discard this proposal.`
     };
   } finally {
-    if (!writeSucceeded) {
-      await restoreOwnedPaths(input.repositoryDir, originalRef, input.manifest.files);
+    if (!writeSucceeded && branchReset) {
+      await restoreOwnedPaths(input.repositoryDir, originalCommitSha, input.manifest.files);
+      if (previousProposalSha !== void 0) {
+        await git2(input.repositoryDir, [
+          "update-ref",
+          `refs/heads/${branchName}`,
+          previousProposalSha,
+          proposalHeadSha
+        ]);
+      }
     }
     await restoreRef(input.repositoryDir, originalRef);
   }
@@ -252,7 +265,7 @@ function validateBranchWriterInput(input) {
 async function assertExistingProposalBranchIsOwned(repositoryDir, baseBranch, branchName, files) {
   const exists = await gitOk(repositoryDir, ["rev-parse", "--verify", `${branchName}^{commit}`]);
   if (!exists) {
-    return;
+    return void 0;
   }
   const changedFiles = await changedFilesFromBase(repositoryDir, baseBranch, branchName);
   const ownedPaths = new Set(files.map((file) => file.path));
@@ -260,6 +273,7 @@ async function assertExistingProposalBranchIsOwned(repositoryDir, baseBranch, br
   if (outsideOwnedFiles.length > 0) {
     throw new ProposalBranchWriterError("existing_branch_has_unowned_changes", "Existing proposal branch has changes outside the staged Clarissimi output manifest.");
   }
+  return git2(repositoryDir, ["rev-parse", "--verify", `${branchName}^{commit}`]);
 }
 async function assertCleanWorktree(repositoryDir) {
   const status = await git2(repositoryDir, ["status", "--porcelain", "--untracked-files=all"]);

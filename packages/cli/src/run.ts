@@ -367,15 +367,20 @@ async function runStageDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode> 
       ]);
     }
 
-    writeOutput(io, args, {
-      ok: true,
-      command: "stage-draft",
-      draftFormat: draftInput.format,
-      draftPath,
-      stagedDraftPath,
-      approvalStatus: draftReview.maintainerApprovalStatus,
-      message: "Draft staged for maintainer review; approve it before importing into the ledger.",
-    });
+    writeOutput(
+      io,
+      args,
+      {
+        ok: true,
+        command: "stage-draft",
+        draftFormat: draftInput.format,
+        draftPath,
+        stagedDraftPath,
+        approvalStatus: draftReview.maintainerApprovalStatus,
+        message: "Draft staged for maintainer review; approve it before importing into the ledger.",
+      },
+      [`Staged draft: ${stagedDraftPath}`],
+    );
     return CLI_EXIT_CODES.success;
   } catch (error) {
     writeFailure(io, args, "stage-draft", error);
@@ -413,15 +418,20 @@ async function runApproveDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode
       resolvedDraftPath,
     );
 
-    writeOutput(io, args, {
-      ok: true,
-      command: "approve-draft",
-      draftFormat: draftInput.format,
-      draftPath,
-      approvedDraftPath: resolvedDraftPath,
-      approvalStatus: approvedDraft.maintainerApprovalStatus,
-      message: "Draft approved; import it to publish the recognition record.",
-    });
+    writeOutput(
+      io,
+      args,
+      {
+        ok: true,
+        command: "approve-draft",
+        draftFormat: draftInput.format,
+        draftPath,
+        approvedDraftPath: resolvedDraftPath,
+        approvalStatus: approvedDraft.maintainerApprovalStatus,
+        message: "Draft approved; import it to publish the recognition record.",
+      },
+      [`Approved draft: ${resolvedDraftPath}`],
+    );
     return CLI_EXIT_CODES.success;
   } catch (error) {
     writeFailure(io, args, "approve-draft", error);
@@ -536,31 +546,41 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
       return nextRecords.length;
     });
 
-    writeOutput(io, args, {
-      ok: true,
-      command: "import-draft",
-      draftFormat: draftInput.format,
-      draftPath,
-      ledgerPath,
-      records: recordCount,
-      imported: 1,
-      approvalStatus: validation.value.maintainerApprovalStatus,
-      wroteDerivedFiles: outDir !== undefined,
-      outputDirectory: outDir ?? null,
-      files:
-        outDir === undefined
-          ? [CONTRIBUTIONS_JSONL_PATH]
-          : [
-              CONTRIBUTIONS_JSONL_PATH,
-              CONTRIBUTORS_JSON_PATH,
-              CONTRIBUTORS_MARKDOWN_PATH,
-              STATIC_DATA_JSON_PATH,
-            ],
-      message:
-        outDir === undefined
-          ? "Approved draft imported into the ledger; pass --out-dir to write derived files."
-          : "Approved draft imported and derived files rebuilt.",
-    });
+    writeOutput(
+      io,
+      args,
+      {
+        ok: true,
+        command: "import-draft",
+        draftFormat: draftInput.format,
+        draftPath,
+        ledgerPath,
+        records: recordCount,
+        imported: 1,
+        approvalStatus: validation.value.maintainerApprovalStatus,
+        wroteDerivedFiles: outDir !== undefined,
+        outputDirectory: outDir ?? null,
+        files:
+          outDir === undefined
+            ? [CONTRIBUTIONS_JSONL_PATH]
+            : [
+                CONTRIBUTIONS_JSONL_PATH,
+                CONTRIBUTORS_JSON_PATH,
+                CONTRIBUTORS_MARKDOWN_PATH,
+                STATIC_DATA_JSON_PATH,
+              ],
+        message:
+          outDir === undefined
+            ? "Approved draft already imported into the ledger; run clarissimi rebuild to write derived files."
+            : "Approved draft imported and derived files rebuilt.",
+      },
+      [
+        `Ledger: ${ledgerPath}`,
+        ...(outDir === undefined
+          ? ["Next: clarissimi rebuild --ledger <ledger-path> --out-dir <output-dir>"]
+          : []),
+      ],
+    );
     return CLI_EXIT_CODES.success;
   } catch (error) {
     if (error instanceof CliUsageError) {

@@ -47,6 +47,14 @@ failure contract above; it never wraps a successful completion script in JSON.
 `clarissimi rebuild --check --json` adds `checked: true` and `checkedFiles` with the compared path
 names; existing rebuild output fields retain their meanings.
 
+On success, human `stage-draft` and `approve-draft` output includes the absolute staged or approved
+draft path, and `import-draft` includes the selected canonical ledger path. When import runs
+without `--out-dir`, it recommends
+`clarissimi rebuild --ledger <ledger-path> --out-dir <output-dir>` using the reported ledger,
+since re-importing the same record fails duplicate detection. JSON keeps its existing fields and
+reports paths via `stagedDraftPath`, `approvedDraftPath` and `ledgerPath`; the new human path lines
+are omitted from JSON.
+
 ## Exit Codes
 
 - `0`: success

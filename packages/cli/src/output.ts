@@ -11,13 +11,18 @@ import { CliConfigError } from "./config.js";
 import { CLI_EXIT_CODES, type CliExitCode } from "./exit-codes.js";
 import type { CliIo } from "./io.js";
 
-export function writeOutput(io: CliIo, args: ParsedArgs, value: Record<string, unknown>): void {
+export function writeOutput(
+  io: CliIo,
+  args: ParsedArgs,
+  value: Record<string, unknown>,
+  humanDetails: readonly string[] = [],
+): void {
   if (getBooleanFlag(args, "json")) {
     io.stdout(`${JSON.stringify(value, null, 2)}\n`);
     return;
   }
 
-  io.stdout(`${value.message ?? "Command completed."}\n`);
+  io.stdout([value.message ?? "Command completed.", ...humanDetails, ""].join("\n"));
 }
 
 export function classifyRecognitionFailure(error: unknown): CliExitCode {

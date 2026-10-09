@@ -41,10 +41,9 @@ export async function validateConfigFile(
     const resolvedPath = resolveFromCwd(cwd, path);
 
     if (!(await fileExists(resolvedPath))) {
-      return {
-        ok: true,
-        config: {},
-      };
+      throw new CliConfigError(
+        `Selected config file does not exist or is not a regular file: ${path}.`,
+      );
     }
 
     const parsed = await loadConfigValue(path, resolvedPath);

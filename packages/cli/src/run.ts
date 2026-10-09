@@ -40,9 +40,12 @@ import {
 } from "./args.js";
 import { runAnalytics } from "./analytics.js";
 import {
+  CLI_GLOBAL_FLAGS,
+  findCliCommandSpec,
   getSupportedCliFlagNames,
   isSupportedCompletionShell,
   renderCliHelp,
+  type CliFlagSpec,
 } from "./command-spec.js";
 import { renderShellCompletion } from "./completion.js";
 import { CliConfigError, validateConfigFile, type CliConfig } from "./config.js";
@@ -78,7 +81,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExi
   let args: ParsedArgs | undefined;
   try {
     args = parseArgs(argv);
-    rejectUnsupportedFlags(args);
+    validateFlags(args);
 
     if (args.command === undefined || args.command === "help" || getBooleanFlag(args, "help")) {
       if (args.command === "help") {
@@ -132,7 +135,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExi
   }
 }
 
-function rejectUnsupportedFlags(args: ParsedArgs): void {
+function validateFlags(args: ParsedArgs): void {
   const supported = getSupportedCliFlagNames(args.command);
   if (supported === undefined) {
     return;
@@ -142,6 +145,19 @@ function rejectUnsupportedFlags(args: ParsedArgs): void {
     if (!supported.has(name)) {
       const scope = args.command === undefined ? "global CLI" : args.command;
       throw new CliUsageError(`Unknown option for ${scope}: --${name}.`);
+    }
+  }
+
+  const specs: readonly CliFlagSpec[] =
+    args.command === undefined ? CLI_GLOBAL_FLAGS : (findCliCommandSpec(args.command)?.flags ?? []);
+  for (const spec of specs) {
+    if (!args.flags.has(spec.name)) {
+      continue;
+    }
+    if (spec.valueLabel === undefined) {
+      getBooleanFlag(args, spec.name);
+    } else {
+      getStringFlag(args, spec.name);
     }
   }
 }

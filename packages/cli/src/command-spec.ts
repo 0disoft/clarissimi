@@ -320,3 +320,45 @@ export function renderCliHelp(): string {
     "",
   ].join("\n");
 }
+
+export function renderCliCommandHelp(spec: CliCommandSpec): string {
+  const options = spec.flags.map((flag) => ({
+    label: `--${flag.name}${flag.valueLabel === undefined ? "" : ` <${flag.valueLabel}>`}`,
+    description: flag.description,
+    values: flag.values,
+  }));
+  const arguments_ = (spec.positionals ?? []).map((positional) => ({
+    label: `<${positional.name}>`,
+    description: positional.description,
+    values: positional.values,
+  }));
+  return [
+    `Clarissimi CLI: ${spec.name}`,
+    "",
+    spec.description,
+    "",
+    "Usage:",
+    `  ${spec.usage}`,
+    ...(arguments_.length === 0 ? [] : ["", "Arguments:", ...renderHelpEntries(arguments_)]),
+    "",
+    "Options:",
+    ...renderHelpEntries(options),
+    "",
+  ].join("\n");
+}
+
+function renderHelpEntries(
+  entries: readonly {
+    readonly label: string;
+    readonly description: string;
+    readonly values: readonly string[] | undefined;
+  }[],
+): string[] {
+  const width = Math.max(0, ...entries.map((entry) => entry.label.length));
+  return entries.flatMap((entry) => [
+    `  ${entry.label.padEnd(width)}  ${entry.description}`,
+    ...(entry.values === undefined
+      ? []
+      : [`  ${"".padEnd(width)}  Choices: ${entry.values.join(", ")}.`]),
+  ]);
+}

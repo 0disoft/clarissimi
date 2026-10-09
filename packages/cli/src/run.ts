@@ -44,6 +44,7 @@ import {
   findCliCommandSpec,
   getSupportedCliFlagNames,
   isSupportedCompletionShell,
+  renderCliCommandHelp,
   renderCliHelp,
   type CliFlagSpec,
 } from "./command-spec.js";
@@ -90,7 +91,12 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExi
           throw new CliUsageError(positionalError);
         }
       }
-      io.stdout(renderCliHelp());
+      const spec = args.command === undefined ? undefined : findCliCommandSpec(args.command);
+      io.stdout(
+        spec === undefined || args.command === "help"
+          ? renderCliHelp()
+          : renderCliCommandHelp(spec),
+      );
       return CLI_EXIT_CODES.success;
     }
 
@@ -138,7 +144,7 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExi
 function validateFlags(args: ParsedArgs): void {
   const supported = getSupportedCliFlagNames(args.command);
   if (supported === undefined) {
-    return;
+    throw new CliUsageError(`Unknown command: ${args.command}`);
   }
 
   for (const name of args.flags.keys()) {

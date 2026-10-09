@@ -159,8 +159,11 @@ test("global and command help advertise completion without generating a script",
 
     assert.equal(globalHelp.exitCode, 0);
     assert.equal(commandHelp.exitCode, 0);
-    assert.equal(globalHelp.stdout, commandHelp.stdout);
+    assert.notEqual(globalHelp.stdout, commandHelp.stdout);
     assert.ok(globalHelp.stdout.includes("clarissimi completion <bash|zsh|fish|powershell>"));
+    assert.ok(commandHelp.stdout.includes("clarissimi completion <bash|zsh|fish|powershell>"));
+    assert.ok(commandHelp.stdout.includes("Select the target shell."));
+    assert.ok(!commandHelp.stdout.includes("clarissimi recognize"));
     assert.ok(!globalHelp.stdout.includes("Register-ArgumentCompleter"));
   });
 });

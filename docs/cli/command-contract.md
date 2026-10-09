@@ -27,6 +27,11 @@
 Prints the current command list and common flags. Help output is informational and must not read
 configuration files, ledger files, provider credentials, GitHub tokens, or repository evidence.
 
+`clarissimi <command> --help` shows only that command's description, usage, options, positional
+arguments where present, and allowed choices, generated from the shared command descriptor.
+Global `clarissimi help`, `clarissimi --help` and no command keep the overview. Unknown commands
+with `--help` are usage errors with exit code `1`.
+
 ### `clarissimi validate-config`
 
 Validates Clarissimi configuration without collecting GitHub evidence or calling a provider.
@@ -196,7 +201,8 @@ environment variables or credentials, call a provider or GitHub, or make network
 supported-option rejection, and completion consume one typed command descriptor. Schema-owned
 provider and presentation values remain imported from `packages/schemas`.
 
-`--help` prints normal CLI help. `--json` is unsupported because successful stdout is the shell
+`completion --help` shows the completion command's usage, shell choices and supported options.
+`--json` is unsupported because successful stdout is the shell
 program itself. Missing, unknown, or extra shell arguments and unsupported flags are usage errors.
 
 ## Modes

@@ -59,7 +59,6 @@ import {
   parseJsonText,
   readTextFile,
   resolveFromCwd,
-  withFileLock,
   writeTextFilesAtomically,
   writeTextFileExclusive,
   type CliIo,
@@ -79,6 +78,7 @@ import {
   assertLedgerDirectoryParents,
   readLedgerRecords,
   readLedgerText,
+  withLedgerOutputLocks,
 } from "./ledger.js";
 import {
   assertConfigIsSeparateFromOutputs,
@@ -549,41 +549,45 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
 
     ledgerPath = await canonicalFilePath(requestedLedgerPath);
     const outputDirectory = outDir === undefined ? undefined : resolveFromCwd(io.cwd, outDir);
-    const recordCount = await withFileLock(`${ledgerPath}.lock`, async () => {
-      if (pathKey(await canonicalFilePath(requestedLedgerPath)) !== pathKey(ledgerPath)) {
-        throw new Error("Selected ledger path changed while acquiring its lock.");
-      }
-      if ((await fileExists(ledgerPath)) && (await stat(ledgerPath)).nlink > 1) {
-        throw new Error("Cannot atomically replace a ledger with multiple hard links.");
-      }
-      const existingRecords = await readLedgerRecords(ledgerPath, { allowMissing: true });
-      const nextRecords = appendPublicContributionRecord(existingRecords, validation.value);
-      const outputs = renderRecognitionOutputs(nextRecords, {
-        summary: resolveMarkdownSummary(args, config),
-        includeAutomationContributors: resolveIncludeAutomationContributors(args, config),
-      });
-      const files = new Map<string, string>();
-      if (outputDirectory !== undefined) {
-        const plan = await planRenderedOutputs(outputDirectory, ledgerPath, outputs);
-        for (const entry of plan.entries) {
-          files.set(entry.path, entry.value);
+    const recordCount = await withLedgerOutputLocks(
+      ledgerPath,
+      outputDirectory === undefined ? undefined : join(outputDirectory, CONTRIBUTIONS_JSONL_PATH),
+      async () => {
+        if (pathKey(await canonicalFilePath(requestedLedgerPath)) !== pathKey(ledgerPath)) {
+          throw new Error("Selected ledger path changed while acquiring its lock.");
         }
-      }
-      files.set(ledgerPath, outputs.contributionsJsonl);
-      const entries = Array.from(files, ([path, value]) => ({ path, value }));
-      await assertConfigIsSeparateFromOutputs(
-        io.cwd,
-        configResult.path,
-        entries.map((entry) => entry.path),
-      );
-      for (const entry of entries) {
-        if (await pathsReferToSameFile(resolvedDraftPath, entry.path)) {
-          throw new CliUsageError("An import output path overlaps the reviewed draft.");
+        if ((await fileExists(ledgerPath)) && (await stat(ledgerPath)).nlink > 1) {
+          throw new Error("Cannot atomically replace a ledger with multiple hard links.");
         }
-      }
-      await writeTextFilesAtomically(entries, ledgerPath);
-      return nextRecords.length;
-    });
+        const existingRecords = await readLedgerRecords(ledgerPath, { allowMissing: true });
+        const nextRecords = appendPublicContributionRecord(existingRecords, validation.value);
+        const outputs = renderRecognitionOutputs(nextRecords, {
+          summary: resolveMarkdownSummary(args, config),
+          includeAutomationContributors: resolveIncludeAutomationContributors(args, config),
+        });
+        const files = new Map<string, string>();
+        if (outputDirectory !== undefined) {
+          const plan = await planRenderedOutputs(outputDirectory, ledgerPath, outputs);
+          for (const entry of plan.entries) {
+            files.set(entry.path, entry.value);
+          }
+        }
+        files.set(ledgerPath, outputs.contributionsJsonl);
+        const entries = Array.from(files, ([path, value]) => ({ path, value }));
+        await assertConfigIsSeparateFromOutputs(
+          io.cwd,
+          configResult.path,
+          entries.map((entry) => entry.path),
+        );
+        for (const entry of entries) {
+          if (await pathsReferToSameFile(resolvedDraftPath, entry.path)) {
+            throw new CliUsageError("An import output path overlaps the reviewed draft.");
+          }
+        }
+        await writeTextFilesAtomically(entries, ledgerPath);
+        return nextRecords.length;
+      },
+    );
 
     writeOutput(
       io,
@@ -718,6 +722,9 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   }
 
   try {
+    await readLedgerText(requestedLedgerPath, {
+      allowMissing: outDir === undefined && !args.flags.has("ledger"),
+    });
     if (outDir !== undefined) {
       await assertLedgerDirectoryParents(requestedLedgerPath);
       ledgerPath = await canonicalFilePath(requestedLedgerPath);
@@ -730,7 +737,7 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
       readonly staleFiles: readonly string[];
     }> => {
       const ledgerText = await readLedgerText(ledgerPath, {
-        allowMissing: !check && !args.flags.has("ledger"),
+        allowMissing: outDir === undefined && !args.flags.has("ledger"),
       });
       const records = parseContributionsJsonl(ledgerText);
       assertUniqueContributionRecords(records);
@@ -743,7 +750,7 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
       let staleFiles: readonly string[] = [];
       if (outDir !== undefined) {
         const outputDirectory = resolveFromCwd(io.cwd, outDir);
-        const plan = await planRenderedOutputs(outputDirectory, ledgerPath, outputs);
+        const plan = await planRenderedOutputs(outputDirectory, ledgerPath, outputs, !check);
         if (check) {
           checkedFiles = plan.entries.map((entry) =>
             relative(outputDirectory, entry.path).replaceAll("\\", "/"),
@@ -761,7 +768,13 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
       return { recordCount: records.length, checkedFiles, staleFiles };
     };
     const result =
-      outDir === undefined ? await rebuild() : await withFileLock(`${ledgerPath}.lock`, rebuild);
+      outDir === undefined
+        ? await rebuild()
+        : await withLedgerOutputLocks(
+            ledgerPath,
+            join(resolveFromCwd(io.cwd, outDir), CONTRIBUTIONS_JSONL_PATH),
+            rebuild,
+          );
 
     if (result.staleFiles.length > 0) {
       writeFailure(
@@ -831,6 +844,7 @@ async function runRenderPage(args: ParsedArgs, io: CliIo): Promise<CliExitCode> 
   const pagePath = join(outputDirectory, CONTRIBUTOR_PAGE_HTML_PATH);
 
   try {
+    await readLedgerText(ledgerPath, { allowMissing: !args.flags.has("ledger") });
     const configResult = await validateConfigFile(io.cwd, getStringFlag(args, "config"));
     const config = configResult.config;
     const ledgerText = await readLedgerText(ledgerPath, {
@@ -894,6 +908,7 @@ async function planRenderedOutputs(
     readonly contributorsMarkdown: string;
     readonly staticDataJson: string;
   },
+  protectDestination = true,
 ): Promise<{
   readonly entries: readonly { readonly path: string; readonly value: string }[];
   readonly commitPointPath: string;
@@ -910,6 +925,26 @@ async function planRenderedOutputs(
     entries.map((entry) => entry.path),
   );
   if (!sourceIsOutput) {
+    if (protectDestination) {
+      const existing = await readLedgerRecords(outputLedgerPath, { allowMissing: true });
+      const next = new Set(
+        parseContributionsJsonl(outputs.contributionsJsonl).map((record) =>
+          renderContributionsJsonl([record]),
+        ),
+      );
+      if (existing.some((record) => !next.has(renderContributionsJsonl([record])))) {
+        throw new RendererValidationError(
+          "The output ledger contains records absent or changed in the selected input. Select the correct --ledger or a separate --out-dir; existing records were preserved.",
+          [
+            {
+              path: "$.ledger",
+              code: "output_ledger_conflict",
+              message: "Rebuild cannot remove or change records in another ledger.",
+            },
+          ],
+        );
+      }
+    }
     entries.push({ path: outputLedgerPath, value: outputs.contributionsJsonl });
   }
   return {

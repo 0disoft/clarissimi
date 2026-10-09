@@ -91,9 +91,13 @@ is explicit. Rebuild fails before writing derived outputs when the selected ledg
 duplicate contribution identities.
 When `<out-dir>/.clarissimi/contributions.jsonl` is the selected ledger, rebuild leaves that
 canonical ledger unchanged and writes only derived files. A different output directory also receives
-a ledger copy.
+a ledger copy. Writing rebuilds require an existing input ledger, including the default path.
+An export refuses to remove or change records already in the destination ledger. Select the
+correct input or a separate empty output directory instead of replacing another repository's history.
 Writing rebuilds share the ledger lock with `import-draft` so a concurrent import cannot be replaced
-by an older rebuild snapshot.
+by an older rebuild snapshot. Exports and imports lock both input and destination ledgers in
+canonical path order, including directory aliases. Ledger path errors take precedence over
+default configuration path errors when reading or rebuilding outputs.
 Rebuild loads the selected or default Clarissimi config. `--markdown-summary none|table|gallery` overrides
 `markdownSummary` for that run.
 `rebuild --out-dir <path> --check` compares the existing output files byte-for-byte with a fresh

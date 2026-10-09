@@ -17,6 +17,9 @@ ledger had already changed, leaving public outputs on different generations.
 - `import-draft` acquires an exclusive sibling lock file before reading or changing the ledger.
 - Lock acquisition is bounded and fails instead of silently proceeding after the timeout.
 - The command renders a complete generation while holding the lock.
+- Exports acquire source and destination canonical ledger locks in deterministic path order,
+  recheck path resolution after acquisition, and preserve every existing destination record.
+- Writing rebuilds require an existing source; a missing default is allowed only for a preview.
 - Every destination is preflighted and every new file is written to a same-directory temporary
   file before replacement begins.
 - Derived outputs are replaced before the canonical ledger. The ledger rename is the generation's

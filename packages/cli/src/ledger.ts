@@ -2,12 +2,51 @@ import { lstat, stat } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import {
+  CONTRIBUTORS_JSON_PATH,
+  CONTRIBUTORS_MARKDOWN_PATH,
+  STATIC_DATA_JSON_PATH,
   RendererValidationError,
   assertUniqueContributionRecords,
   parseContributionsJsonl,
 } from "@clarissimi/renderers";
 
-import { readTextFile } from "./io.js";
+import { canonicalFilePath, readTextFile, withFileLock } from "./io.js";
+import { assertLedgerIsSeparateFromOutputs, pathKey } from "./paths.js";
+import { join } from "node:path";
+
+export async function withLedgerOutputLocks<T>(
+  source: string,
+  destination: string | undefined,
+  task: () => Promise<T>,
+): Promise<T> {
+  await readLedgerRecords(source, { allowMissing: true });
+  if (destination !== undefined) {
+    const outDir = dirname(dirname(destination));
+    await assertLedgerIsSeparateFromOutputs(source, [
+      join(outDir, CONTRIBUTORS_JSON_PATH),
+      join(outDir, CONTRIBUTORS_MARKDOWN_PATH),
+      join(outDir, STATIC_DATA_JSON_PATH),
+    ]);
+  }
+  const paths = destination === undefined ? [source] : [source, destination];
+  const canonical = await Promise.all(paths.map(canonicalFilePath));
+  const ordered = [...new Map(canonical.map((path) => [pathKey(path), path])).values()].sort(
+    (left, right) => pathKey(left).localeCompare(pathKey(right)),
+  );
+  const acquire = async (index: number): Promise<T> => {
+    const path = ordered[index];
+    if (path !== undefined) {
+      return withFileLock(`${path}.lock`, () => acquire(index + 1));
+    }
+    for (const [i, requested] of paths.entries()) {
+      if (pathKey(await canonicalFilePath(requested)) !== pathKey(canonical[i]!)) {
+        throw new Error("Selected ledger path changed while acquiring its lock.");
+      }
+    }
+    return task();
+  };
+  return acquire(0);
+}
 
 export class CliLedgerValidationError extends RendererValidationError {
   constructor(error: RendererValidationError) {

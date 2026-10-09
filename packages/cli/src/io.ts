@@ -186,12 +186,19 @@ export async function writeTextFilesAtomically(
   try {
     for (const entry of uniqueEntries.values()) {
       const temporaryPath = join(dirname(entry.path), `.${randomUUID()}.clarissimi-tmp`);
-      await writeTemporaryFile(temporaryPath, entry.value, {
-        encoding: "utf8",
-        flag: "wx",
-        mode: 0o600,
-      });
       staged.push({ destination: entry.path, temporaryPath });
+      try {
+        await writeTemporaryFile(temporaryPath, entry.value, {
+          encoding: "utf8",
+          flag: "wx",
+          mode: 0o600,
+        });
+      } catch (error) {
+        if (isNodeError(error) && error.code === "EEXIST") {
+          staged.pop();
+        }
+        throw error;
+      }
     }
     const ordered = staged
       .filter((entry) => entry.destination !== commitPointPath)

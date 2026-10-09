@@ -549,6 +549,22 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
 
     ledgerPath = await canonicalFilePath(requestedLedgerPath);
     const outputDirectory = outDir === undefined ? undefined : resolveFromCwd(io.cwd, outDir);
+    const requestedOutputs = [
+      ledgerPath,
+      ...(outputDirectory === undefined
+        ? []
+        : [
+            join(outputDirectory, CONTRIBUTIONS_JSONL_PATH),
+            join(outputDirectory, CONTRIBUTORS_JSON_PATH),
+            join(outputDirectory, CONTRIBUTORS_MARKDOWN_PATH),
+            join(outputDirectory, STATIC_DATA_JSON_PATH),
+          ]),
+    ];
+    for (const output of requestedOutputs) {
+      if (await pathsReferToSameFile(resolvedDraftPath, output)) {
+        throw new CliUsageError("An import output path overlaps the reviewed draft.");
+      }
+    }
     const recordCount = await withLedgerOutputLocks(
       ledgerPath,
       outputDirectory === undefined ? undefined : join(outputDirectory, CONTRIBUTIONS_JSONL_PATH),

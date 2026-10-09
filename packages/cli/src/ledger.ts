@@ -1,5 +1,5 @@
 import { lstat, stat } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 
 import {
   CONTRIBUTORS_JSON_PATH,
@@ -12,7 +12,6 @@ import {
 
 import { canonicalFilePath, readTextFile, withFileLock } from "./io.js";
 import { assertLedgerIsSeparateFromOutputs, pathKey } from "./paths.js";
-import { join } from "node:path";
 
 export async function withLedgerOutputLocks<T>(
   source: string,
@@ -31,7 +30,7 @@ export async function withLedgerOutputLocks<T>(
   const paths = destination === undefined ? [source] : [source, destination];
   const canonical = await Promise.all(paths.map(canonicalFilePath));
   const ordered = [...new Map(canonical.map((path) => [pathKey(path), path])).values()].sort(
-    (left, right) => pathKey(left).localeCompare(pathKey(right)),
+    (left, right) => (pathKey(left) < pathKey(right) ? -1 : pathKey(left) > pathKey(right) ? 1 : 0),
   );
   const acquire = async (index: number): Promise<T> => {
     const path = ordered[index];

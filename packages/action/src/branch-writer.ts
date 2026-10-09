@@ -13,6 +13,7 @@ export interface ProposalBranchWriterInput {
   readonly stagedOutputDir: string;
   readonly manifest: ProposalOutputStagingManifest;
   readonly baseBranch: string;
+  readonly expectedBaseCommitSha?: string;
   readonly commitMessage?: string;
 }
 
@@ -48,6 +49,15 @@ export async function writeProposalBranch(
   ]);
   const originalRef = await currentRef(input.repositoryDir);
   const originalCommitSha = await git(input.repositoryDir, ["rev-parse", "HEAD"]);
+  if (
+    input.expectedBaseCommitSha !== undefined &&
+    (baseCommitSha !== input.expectedBaseCommitSha || originalCommitSha !== baseCommitSha)
+  ) {
+    throw new ProposalBranchWriterError(
+      "proposal_base_changed",
+      "Checkout or proposal base changed during generation. Check out the selected base revision and rerun; no proposal files were written.",
+    );
+  }
 
   for (const file of input.manifest.files) {
     await assertSafeRepositoryOutputPath(input.repositoryDir, file.path);
@@ -136,11 +146,7 @@ export async function writeProposalBranch(
 
     const commitSha = await git(input.repositoryDir, ["rev-parse", "HEAD"]);
     proposalHeadSha = commitSha;
-    const changedFiles = await changedFilesFromBase(
-      input.repositoryDir,
-      input.baseBranch,
-      branchName,
-    );
+    const changedFiles = await changedFilesFromBase(input.repositoryDir, baseCommitSha, branchName);
     assertChangedFilesAreOwned(changedFiles, input.manifest.files);
     writeSucceeded = true;
 
@@ -166,6 +172,21 @@ export async function writeProposalBranch(
     }
     await restoreRef(input.repositoryDir, originalRef);
   }
+}
+
+export async function assertProposalBaseCheckout(
+  repositoryDir: string,
+  baseBranch: string,
+): Promise<string> {
+  const base = await git(repositoryDir, ["rev-parse", "--verify", `${baseBranch}^{commit}`]);
+  const head = await git(repositoryDir, ["rev-parse", "HEAD"]);
+  if (head !== base) {
+    throw new ProposalBranchWriterError(
+      "proposal_base_checkout_mismatch",
+      "Current checkout differs from the selected proposal base. Check out that base revision before generating a proposal; its existing ledger must be retained.",
+    );
+  }
+  return base;
 }
 
 export function proposalBranchName(manifest: ProposalOutputStagingManifest): string {

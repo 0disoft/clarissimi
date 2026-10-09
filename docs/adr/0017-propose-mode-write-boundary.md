@@ -114,3 +114,11 @@ mode remain separate decisions.
 - GitHub workflow `permissions`: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#permissions
 - GitHub token least-permission guidance: https://docs.github.com/en/actions/tutorials/authenticate-with-github_token
 - GitHub Actions pull request creation setting: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository
+
+
+## Checkout Consistency
+
+Proposal, draft staging, and draft promotion require checkout HEAD to equal the resolved base
+commit before reading inputs or calling a provider. The writer receives that pinned SHA and
+rechecks HEAD and the base before mutation. Different revisions fail with instructions to check
+out the selected base, preventing a proposal from replacing its base ledger with an older snapshot.

@@ -23,7 +23,7 @@ import {
 } from "@clarissimi/schemas";
 
 import { publishProposalBranch } from "./branch-publisher.js";
-import { writeProposalBranch } from "./branch-writer.js";
+import { assertProposalBaseCheckout, writeProposalBranch } from "./branch-writer.js";
 import { createDirectCommit, publishDirectCommit } from "./direct-commit.js";
 import {
   loadActionConfigFromEnvironment,
@@ -120,6 +120,7 @@ export async function runActionDryRun(input: ActionDryRunInput): Promise<ActionD
 }
 
 export async function runActionPropose(input: ActionProposeInput): Promise<ActionProposeSummary> {
+  const baseCommitSha = await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
   validateSourceCommentInput(input);
   const prepared = await prepareActionAssessment(input);
   if (prepared.kind === "skipped") {
@@ -141,6 +142,7 @@ export async function runActionPropose(input: ActionProposeInput): Promise<Actio
     stagedOutputDir: input.stagingDir,
     manifest: staging.manifest,
     baseBranch: input.baseBranch,
+    expectedBaseCommitSha: baseCommitSha,
   });
   const publishInput: Parameters<typeof publishProposalBranch>[0] = {
     repositoryDir: input.repositoryDir,
@@ -242,6 +244,7 @@ export async function runActionCommit(input: ActionCommitInput): Promise<ActionC
 export async function runActionStageDraft(
   input: ActionStageDraftInput,
 ): Promise<ActionProposeSummary> {
+  const baseCommitSha = await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
   validateSourceCommentInput(input);
   const prepared = await prepareActionAssessment(input);
   if (prepared.kind === "skipped") {
@@ -258,6 +261,7 @@ export async function runActionStageDraft(
     stagedOutputDir: input.stagingDir,
     manifest: staging.manifest,
     baseBranch: input.baseBranch,
+    expectedBaseCommitSha: baseCommitSha,
   });
   const publishInput: Parameters<typeof publishProposalBranch>[0] = {
     repositoryDir: input.repositoryDir,
@@ -310,6 +314,7 @@ export async function runActionStageDraft(
 export async function runActionPromoteDraft(
   input: ActionPromoteDraftInput,
 ): Promise<ActionProposeSummary> {
+  const baseCommitSha = await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
   validateSourceCommentInput(input);
   const assessment = await readApprovedDraft(
     input.draftPath,
@@ -331,6 +336,7 @@ export async function runActionPromoteDraft(
     stagedOutputDir: input.stagingDir,
     manifest: staging.manifest,
     baseBranch: input.baseBranch,
+    expectedBaseCommitSha: baseCommitSha,
   });
   const publishInput: Parameters<typeof publishProposalBranch>[0] = {
     repositoryDir: input.repositoryDir,

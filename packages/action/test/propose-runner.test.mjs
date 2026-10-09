@@ -1246,3 +1246,56 @@ function jsonResponse(body, status = 200) {
     },
   };
 }
+
+for (const mode of ["propose", "stage-draft", "promote-draft"]) {
+  test(`${mode} rejects a checkout older than its base before provider or staging writes`, async () => {
+    await withTempDir(async (dir) => {
+      const repositoryDir = join(dir, "repo");
+      await initRepositoryWithRemote(repositoryDir, join(dir, "remote.git"));
+      const older = await git(repositoryDir, ["rev-parse", "HEAD"]);
+      await mkdir(join(repositoryDir, ".clarissimi"));
+      const record = approvedDraftAssessment({
+        source: { ...approvedDraftAssessment().source, pullRequestNumber: 7 },
+      });
+      await writeFile(
+        join(repositoryDir, ".clarissimi/contributions.jsonl"),
+        `${JSON.stringify(record)}\n`,
+      );
+      await git(repositoryDir, ["add", ".clarissimi/contributions.jsonl"]);
+      await git(repositoryDir, ["commit", "-m", "Recognize earlier contribution"]);
+      const base = await git(repositoryDir, ["rev-parse", "main"]);
+      await git(repositoryDir, ["checkout", "--detach", older]);
+      let calls = 0;
+      const stagingDir = join(dir, "staged");
+      const input = {
+        repositoryDir,
+        stagingDir,
+        baseBranch: "main",
+        githubFixturePath: join(dir, "unused-fixture.json"),
+        draftPath: ".clarissimi/drafts/unused.json",
+        provider: {
+          id: "mock",
+          createAssessment: async () => {
+            calls++;
+            throw new Error("must not call");
+          },
+        },
+        pullRequestClient: new FakePullRequestClient(),
+      };
+      const execute =
+        mode === "propose"
+          ? runActionPropose
+          : mode === "stage-draft"
+            ? runActionStageDraft
+            : runActionPromoteDraft;
+      await assert.rejects(
+        execute(input),
+        (error) => error.code === "proposal_base_checkout_mismatch",
+      );
+      assert.equal(calls, 0);
+      await assert.rejects(readFile(join(stagingDir, "CONTRIBUTORS.md")), { code: "ENOENT" });
+      assert.equal(await git(repositoryDir, ["rev-parse", "main"]), base);
+      assert.equal(await git(repositoryDir, ["rev-parse", "HEAD"]), older);
+    });
+  });
+}

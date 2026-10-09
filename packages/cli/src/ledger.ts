@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { lstat, stat } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import {
@@ -51,6 +51,7 @@ export async function readLedgerText(
     if (error.code !== "ENOENT") {
       throw error;
     }
+    await assertLedgerLinkTargetExists(path);
     // Windows can report ENOENT when a parent component is a file.
     await assertLedgerDirectoryParents(path);
     if (options.allowMissing === true) {
@@ -84,12 +85,37 @@ export async function assertLedgerDirectoryParents(path: string): Promise<void> 
       if (error.code !== "ENOENT") {
         throw error;
       }
+      await assertLedgerLinkTargetExists(ancestor);
     }
     const parent = dirname(ancestor);
     if (parent === ancestor) {
       return;
     }
     ancestor = parent;
+  }
+}
+
+async function assertLedgerLinkTargetExists(path: string): Promise<void> {
+  let entry;
+  try {
+    entry = await lstat(path);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return;
+    }
+    throw error;
+  }
+  if (entry.isSymbolicLink()) {
+    throw new RendererValidationError(
+      "The selected canonical ledger uses a symbolic link whose target does not exist. Restore its target or select a regular ledger file.",
+      [
+        {
+          path: "$.ledger",
+          code: "missing_ledger_link_target",
+          message: "Restore the symbolic link target or select an existing JSONL ledger file.",
+        },
+      ],
+    );
   }
 }
 

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -37,6 +37,52 @@ const readCommands = [
   ["render-page"],
   ["analytics", "recent-share"],
 ];
+
+for (const linkKind of ["file", "directory"]) {
+  test(`ledger readers reject a dangling ${linkKind} link instead of treating it as an empty ledger`, async (context) => {
+    await withTempDir(async (dir) => {
+      const target = join(dir, "missing-target");
+      const alias =
+        linkKind === "file"
+          ? join(dir, ".clarissimi", "contributions.jsonl")
+          : join(dir, ".clarissimi");
+      if (linkKind === "file") {
+        await mkdir(join(dir, ".clarissimi"));
+      }
+      try {
+        await symlink(
+          target,
+          alias,
+          linkKind === "file" ? "file" : process.platform === "win32" ? "junction" : "dir",
+        );
+      } catch (error) {
+        if (process.platform === "win32" && error.code === "EPERM") {
+          context.skip("File symlinks require Windows developer mode or symlink privileges.");
+          return;
+        }
+        throw error;
+      }
+      const page = join(dir, "index.html");
+      await writeFile(page, "existing contributor page\n");
+      const before = await readdir(dir);
+      for (const command of readCommands) {
+        const outputFlags = command[0] === "render-page" ? ["--out-dir", dir] : [];
+        for (const ledgerFlags of [[], ["--ledger", ".clarissimi/contributions.jsonl"]]) {
+          const result = await run([...command, ...ledgerFlags, ...outputFlags, "--json"], dir);
+          assert.equal(result.exitCode, 3, result.stdout + result.stderr);
+          assert.equal(result.stderr, "");
+          const output = JSON.parse(result.stdout);
+          assert.equal(output.ok, false);
+          assert.match(output.message, /ledger.*symbolic link.*target.*does not exist/i);
+          assert.match(output.message, /restore|select/i);
+        }
+      }
+      assert.equal((await lstat(alias)).isSymbolicLink(), true);
+      assert.equal(await readFile(page, "utf8"), "existing contributor page\n");
+      assert.deepEqual(await readdir(dir), before);
+    });
+  });
+}
 
 for (const invalidLedger of ["invalid-json", "invalid-schema", "duplicate-records", "directory"]) {
   test(`import-draft reports ${invalidLedger} as an invalid ledger and preserves outputs`, async () => {

@@ -13,6 +13,7 @@ export interface ProposalBranchWriterInput {
   readonly stagedOutputDir: string;
   readonly manifest: ProposalOutputStagingManifest;
   readonly baseBranch: string;
+  readonly remoteName?: string;
   readonly expectedBaseCommitSha?: string;
   readonly commitMessage?: string;
 }
@@ -42,11 +43,11 @@ export async function writeProposalBranch(
   validateBranchWriterInput(input);
 
   const branchName = proposalBranchName(input.manifest);
-  const baseCommitSha = await git(input.repositoryDir, [
-    "rev-parse",
-    "--verify",
-    `${input.baseBranch}^{commit}`,
-  ]);
+  const baseCommitSha = await resolveProposalBase(
+    input.repositoryDir,
+    input.baseBranch,
+    input.remoteName,
+  );
   const originalRef = await currentRef(input.repositoryDir);
   const originalCommitSha = await git(input.repositoryDir, ["rev-parse", "HEAD"]);
   if (
@@ -66,7 +67,7 @@ export async function writeProposalBranch(
 
   const previousProposalSha = await assertExistingProposalBranchIsOwned(
     input.repositoryDir,
-    input.baseBranch,
+    baseCommitSha,
     branchName,
     input.manifest.files,
   );
@@ -177,8 +178,9 @@ export async function writeProposalBranch(
 export async function assertProposalBaseCheckout(
   repositoryDir: string,
   baseBranch: string,
+  remoteName?: string,
 ): Promise<string> {
-  const base = await git(repositoryDir, ["rev-parse", "--verify", `${baseBranch}^{commit}`]);
+  const base = await resolveProposalBase(repositoryDir, baseBranch, remoteName);
   const head = await git(repositoryDir, ["rev-parse", "HEAD"]);
   if (head !== base) {
     throw new ProposalBranchWriterError(
@@ -187,6 +189,17 @@ export async function assertProposalBaseCheckout(
     );
   }
   return base;
+}
+
+async function resolveProposalBase(
+  repositoryDir: string,
+  baseBranch: string,
+  remoteName = "origin",
+): Promise<string> {
+  const remoteRef = `refs/remotes/${remoteName}/${baseBranch}^{commit}`;
+  const remote = await runGit(repositoryDir, ["rev-parse", "--verify", remoteRef]);
+  if (remote.exitCode === 0) return remote.stdout.trim();
+  return git(repositoryDir, ["rev-parse", "--verify", `${baseBranch}^{commit}`]);
 }
 
 export function proposalBranchName(manifest: ProposalOutputStagingManifest): string {

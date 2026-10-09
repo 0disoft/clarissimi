@@ -126,7 +126,11 @@ export async function runActionDryRun(input: ActionDryRunInput): Promise<ActionD
 }
 
 async function runActionProposeInStaging(input: ActionProposeInput): Promise<ActionProposeSummary> {
-  const baseCommitSha = await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
+  const baseCommitSha = await assertProposalBaseCheckout(
+    input.repositoryDir,
+    input.baseBranch,
+    input.remoteName,
+  );
   validateSourceCommentInput(input);
   const prepared = await prepareActionAssessment(input);
   if (prepared.kind === "skipped") {
@@ -149,6 +153,7 @@ async function runActionProposeInStaging(input: ActionProposeInput): Promise<Act
     manifest: staging.manifest,
     baseBranch: input.baseBranch,
     expectedBaseCommitSha: baseCommitSha,
+    ...(input.remoteName === undefined ? {} : { remoteName: input.remoteName }),
   });
   const publishInput: Parameters<typeof publishProposalBranch>[0] = {
     repositoryDir: input.repositoryDir,
@@ -250,7 +255,11 @@ async function runActionCommitInStaging(input: ActionCommitInput): Promise<Actio
 async function runActionStageDraftInStaging(
   input: ActionStageDraftInput,
 ): Promise<ActionProposeSummary> {
-  const baseCommitSha = await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
+  const baseCommitSha = await assertProposalBaseCheckout(
+    input.repositoryDir,
+    input.baseBranch,
+    input.remoteName,
+  );
   validateSourceCommentInput(input);
   const prepared = await prepareActionAssessment(input);
   if (prepared.kind === "skipped") {
@@ -268,6 +277,7 @@ async function runActionStageDraftInStaging(
     manifest: staging.manifest,
     baseBranch: input.baseBranch,
     expectedBaseCommitSha: baseCommitSha,
+    ...(input.remoteName === undefined ? {} : { remoteName: input.remoteName }),
   });
   const publishInput: Parameters<typeof publishProposalBranch>[0] = {
     repositoryDir: input.repositoryDir,
@@ -320,7 +330,11 @@ async function runActionStageDraftInStaging(
 async function runActionPromoteDraftInStaging(
   input: ActionPromoteDraftInput,
 ): Promise<ActionProposeSummary> {
-  const baseCommitSha = await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
+  const baseCommitSha = await assertProposalBaseCheckout(
+    input.repositoryDir,
+    input.baseBranch,
+    input.remoteName,
+  );
   validateSourceCommentInput(input);
   const assessment = await readApprovedDraft(
     input.draftPath,
@@ -343,6 +357,7 @@ async function runActionPromoteDraftInStaging(
     manifest: staging.manifest,
     baseBranch: input.baseBranch,
     expectedBaseCommitSha: baseCommitSha,
+    ...(input.remoteName === undefined ? {} : { remoteName: input.remoteName }),
   });
   const publishInput: Parameters<typeof publishProposalBranch>[0] = {
     repositoryDir: input.repositoryDir,
@@ -973,21 +988,21 @@ function assignOptional<T extends object, K extends keyof T>(
 }
 
 export async function runActionPropose(input: ActionProposeInput): Promise<ActionProposeSummary> {
-  await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
+  await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch, input.remoteName);
   return withActionStaging(input, runActionProposeInStaging);
 }
 
 export async function runActionStageDraft(
   input: ActionStageDraftInput,
 ): Promise<ActionProposeSummary> {
-  await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
+  await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch, input.remoteName);
   return withActionStaging(input, runActionStageDraftInStaging);
 }
 
 export async function runActionPromoteDraft(
   input: ActionPromoteDraftInput,
 ): Promise<ActionProposeSummary> {
-  await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
+  await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch, input.remoteName);
   return withActionStaging(input, runActionPromoteDraftInStaging);
 }
 

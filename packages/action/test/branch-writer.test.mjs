@@ -7,6 +7,7 @@ import test from "node:test";
 
 import {
   ProposalBranchWriterError,
+  assertProposalBaseCheckout,
   proposalBranchName,
   stageProposalDraftReviewOutput,
   stageProposalRecognitionOutputs,
@@ -470,3 +471,62 @@ test("preserves edits in an existing local owned proposal without resetting it",
     assert.equal(await git(repositoryDir, ["branch", "--show-current"]), "main");
   });
 });
+
+for (const remoteName of ["origin", "upstream"]) {
+  test(`uses the fetched ${remoteName} base when the local branch is stale`, async () => {
+    await withTempDir(async (dir) => {
+      const repositoryDir = join(dir, "repo");
+      await initRepository(repositoryDir);
+      const staleSha = await git(repositoryDir, ["rev-parse", "main"]);
+      await git(repositoryDir, ["checkout", "-b", "refreshed-base"]);
+      await writeFile(join(repositoryDir, "README.md"), "Reviewed base.\n");
+      await git(repositoryDir, ["add", "README.md"]);
+      await git(repositoryDir, ["commit", "-m", "Advance reviewed base"]);
+      const baseSha = await git(repositoryDir, ["rev-parse", "HEAD"]);
+      const remoteRef = `refs/remotes/${remoteName}/main`;
+      await git(repositoryDir, ["update-ref", remoteRef, baseSha]);
+      const selectedRemote = remoteName === "origin" ? undefined : remoteName;
+      assert.equal(
+        await assertProposalBaseCheckout(repositoryDir, "main", selectedRemote),
+        baseSha,
+      );
+      const staging = await stageProposalRecognitionOutputs({
+        outputDir: join(dir, "staged"),
+        assessments: [assessment()],
+        redactionMatchCount: 0,
+      });
+      const input = {
+        repositoryDir,
+        stagedOutputDir: staging.outputDir,
+        manifest: staging.manifest,
+        baseBranch: "main",
+        expectedBaseCommitSha: baseSha,
+        ...(selectedRemote === undefined ? {} : { remoteName: selectedRemote }),
+      };
+      const proposal = await writeProposalBranch(input);
+      assert.equal(proposal.baseCommitSha, baseSha);
+      assert.equal(await git(repositoryDir, ["rev-parse", "main"]), staleSha);
+      assert.equal(await git(repositoryDir, ["branch", "--show-current"]), "refreshed-base");
+      assert.equal((await writeProposalBranch(input)).commitSha, proposal.commitSha);
+
+      await git(repositoryDir, ["checkout", "main"]);
+      await assert.rejects(
+        assertProposalBaseCheckout(repositoryDir, "main", selectedRemote),
+        (error) => error.code === "proposal_base_checkout_mismatch",
+      );
+      await git(repositoryDir, ["checkout", "refreshed-base"]);
+      await git(repositoryDir, ["commit", "--allow-empty", "-m", "Concurrent base update"]);
+      const advancedSha = await git(repositoryDir, ["rev-parse", "HEAD"]);
+      await git(repositoryDir, ["update-ref", remoteRef, advancedSha]);
+      await assert.rejects(
+        writeProposalBranch(input),
+        (error) => error.code === "proposal_base_changed",
+      );
+      assert.equal(
+        await git(repositoryDir, ["rev-parse", proposal.branchName]),
+        proposal.commitSha,
+      );
+      assert.equal(await git(repositoryDir, ["rev-parse", "main"]), staleSha);
+    });
+  });
+}

@@ -121,6 +121,12 @@ Proposal, draft staging, and draft promotion require checkout HEAD to equal the 
 commit before reading inputs or calling a provider. The writer receives that pinned SHA and
 rechecks HEAD and the base before mutation. Different revisions fail with instructions to check
 out the selected base, preventing a proposal from replacing its base ledger with an older snapshot.
+When a fetched remote-tracking base exists, it takes precedence over a same-named local branch.
+The configured remote-name selects that tracking ref (origin by default); a local base is used only
+when no tracking ref exists. Callers must fetch and check out the selected base before generation.
+This supports promotion after an approved draft is merged without requiring the old local branch
+to be reset. The writer rechecks the same remote-aware resolution against the pinned SHA and uses
+that SHA for existing-proposal comparisons, so a base update during generation still stops writing.
 
 ## Staging Isolation
 

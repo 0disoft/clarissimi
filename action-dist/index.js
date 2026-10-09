@@ -186,11 +186,7 @@ var ProposalBranchWriterError = class extends Error {
 async function writeProposalBranch(input) {
   validateBranchWriterInput(input);
   const branchName = proposalBranchName(input.manifest);
-  const baseCommitSha = await git2(input.repositoryDir, [
-    "rev-parse",
-    "--verify",
-    `${input.baseBranch}^{commit}`
-  ]);
+  const baseCommitSha = await resolveProposalBase(input.repositoryDir, input.baseBranch, input.remoteName);
   const originalRef = await currentRef(input.repositoryDir);
   const originalCommitSha = await git2(input.repositoryDir, ["rev-parse", "HEAD"]);
   if (input.expectedBaseCommitSha !== void 0 && (baseCommitSha !== input.expectedBaseCommitSha || originalCommitSha !== baseCommitSha)) {
@@ -200,7 +196,7 @@ async function writeProposalBranch(input) {
     await assertSafeRepositoryOutputPath(input.repositoryDir, file.path);
   }
   await assertCleanWorktree(input.repositoryDir);
-  const previousProposalSha = await assertExistingProposalBranchIsOwned(input.repositoryDir, input.baseBranch, branchName, input.manifest.files);
+  const previousProposalSha = await assertExistingProposalBranchIsOwned(input.repositoryDir, baseCommitSha, branchName, input.manifest.files);
   if (previousProposalSha !== void 0) {
     for (const file of input.manifest.files) {
       const content = await readFile(join(input.stagedOutputDir, file.path));
@@ -280,13 +276,20 @@ async function writeProposalBranch(input) {
     await restoreRef(input.repositoryDir, originalRef);
   }
 }
-async function assertProposalBaseCheckout(repositoryDir, baseBranch) {
-  const base = await git2(repositoryDir, ["rev-parse", "--verify", `${baseBranch}^{commit}`]);
+async function assertProposalBaseCheckout(repositoryDir, baseBranch, remoteName) {
+  const base = await resolveProposalBase(repositoryDir, baseBranch, remoteName);
   const head = await git2(repositoryDir, ["rev-parse", "HEAD"]);
   if (head !== base) {
     throw new ProposalBranchWriterError("proposal_base_checkout_mismatch", "Current checkout differs from the selected proposal base. Check out that base revision before generating a proposal; its existing ledger must be retained.");
   }
   return base;
+}
+async function resolveProposalBase(repositoryDir, baseBranch, remoteName = "origin") {
+  const remoteRef = `refs/remotes/${remoteName}/${baseBranch}^{commit}`;
+  const remote = await runGit2(repositoryDir, ["rev-parse", "--verify", remoteRef]);
+  if (remote.exitCode === 0)
+    return remote.stdout.trim();
+  return git2(repositoryDir, ["rev-parse", "--verify", `${baseBranch}^{commit}`]);
 }
 function proposalBranchName(manifest) {
   const sourceKind = normalizeBranchSegment(manifest.source.event);
@@ -5891,7 +5894,7 @@ async function runActionDryRun(input) {
   };
 }
 async function runActionProposeInStaging(input) {
-  const baseCommitSha = await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
+  const baseCommitSha = await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch, input.remoteName);
   validateSourceCommentInput(input);
   const prepared = await prepareActionAssessment(input);
   if (prepared.kind === "skipped") {
@@ -5910,7 +5913,8 @@ async function runActionProposeInStaging(input) {
     stagedOutputDir: input.stagingDir,
     manifest: staging.manifest,
     baseBranch: input.baseBranch,
-    expectedBaseCommitSha: baseCommitSha
+    expectedBaseCommitSha: baseCommitSha,
+    ...input.remoteName === void 0 ? {} : { remoteName: input.remoteName }
   });
   const publishInput = {
     repositoryDir: input.repositoryDir,
@@ -5996,7 +6000,7 @@ async function runActionCommitInStaging(input) {
   };
 }
 async function runActionStageDraftInStaging(input) {
-  const baseCommitSha = await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
+  const baseCommitSha = await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch, input.remoteName);
   validateSourceCommentInput(input);
   const prepared = await prepareActionAssessment(input);
   if (prepared.kind === "skipped") {
@@ -6012,7 +6016,8 @@ async function runActionStageDraftInStaging(input) {
     stagedOutputDir: input.stagingDir,
     manifest: staging.manifest,
     baseBranch: input.baseBranch,
-    expectedBaseCommitSha: baseCommitSha
+    expectedBaseCommitSha: baseCommitSha,
+    ...input.remoteName === void 0 ? {} : { remoteName: input.remoteName }
   });
   const publishInput = {
     repositoryDir: input.repositoryDir,
@@ -6053,7 +6058,7 @@ async function runActionStageDraftInStaging(input) {
   };
 }
 async function runActionPromoteDraftInStaging(input) {
-  const baseCommitSha = await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
+  const baseCommitSha = await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch, input.remoteName);
   validateSourceCommentInput(input);
   const assessment = await readApprovedDraft(input.draftPath, input.repositoryDir, input.allowLegacyApproval ?? false);
   const staging = await stageProposalRecognitionOutputs({
@@ -6069,7 +6074,8 @@ async function runActionPromoteDraftInStaging(input) {
     stagedOutputDir: input.stagingDir,
     manifest: staging.manifest,
     baseBranch: input.baseBranch,
-    expectedBaseCommitSha: baseCommitSha
+    expectedBaseCommitSha: baseCommitSha,
+    ...input.remoteName === void 0 ? {} : { remoteName: input.remoteName }
   });
   const publishInput = {
     repositoryDir: input.repositoryDir,
@@ -6490,15 +6496,15 @@ function assignOptional6(target, key, value) {
   }
 }
 async function runActionPropose(input) {
-  await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
+  await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch, input.remoteName);
   return withActionStaging(input, runActionProposeInStaging);
 }
 async function runActionStageDraft(input) {
-  await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
+  await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch, input.remoteName);
   return withActionStaging(input, runActionStageDraftInStaging);
 }
 async function runActionPromoteDraft(input) {
-  await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
+  await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch, input.remoteName);
   return withActionStaging(input, runActionPromoteDraftInStaging);
 }
 async function runActionCommit(input) {

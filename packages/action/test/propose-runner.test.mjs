@@ -1026,9 +1026,12 @@ test("merged event stages a draft before a reviewed file can be promoted", async
       "utf8",
     );
     await git(repositoryDir, ["add", draftRelativePath]);
+    const staleBaseSha = await git(repositoryDir, ["rev-parse", "main"]);
     await git(repositoryDir, ["commit", "-m", "Approve reviewed Clarissimi draft"]);
     await git(repositoryDir, ["push", "origin", "main"]);
     const reviewedMainSha = await remoteBranchSha(repositoryDir, "main");
+    await git(repositoryDir, ["checkout", "-b", "refreshed-base", "origin/main"]);
+    await git(repositoryDir, ["branch", "-f", "main", staleBaseSha]);
 
     const promotedDir = join(dir, "promoted");
     const promoted = await runActionPromoteDraft({
@@ -1051,6 +1054,8 @@ test("merged event stages a draft before a reviewed file can be promoted", async
     assert.equal(promoted.proposedEntryCount, 1);
     assert.equal(record.source.pullRequestNumber, 42);
     assert.equal(record.source.repository, "sample/project");
+    assert.equal(await git(repositoryDir, ["rev-parse", "main"]), staleBaseSha);
+    assert.equal(await git(repositoryDir, ["branch", "--show-current"]), "refreshed-base");
     assert.equal(client.created.length, 2);
     assert.equal(await remoteBranchSha(repositoryDir, "main"), reviewedMainSha);
 
@@ -1293,6 +1298,7 @@ for (const mode of ["propose", "stage-draft", "promote-draft"]) {
       );
       await git(repositoryDir, ["add", ".clarissimi/contributions.jsonl"]);
       await git(repositoryDir, ["commit", "-m", "Recognize earlier contribution"]);
+      await git(repositoryDir, ["push", "origin", "main"]);
       const base = await git(repositoryDir, ["rev-parse", "main"]);
       await git(repositoryDir, ["checkout", "--detach", older]);
       let calls = 0;

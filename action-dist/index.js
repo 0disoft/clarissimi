@@ -5355,7 +5355,7 @@ function formatActionConfigValidationIssue(issue) {
 
 // packages/action/dist/path-security.js
 import { lstat as lstat2, realpath as realpath2 } from "node:fs/promises";
-import { isAbsolute as isAbsolute4, join as join4, relative as relative2, resolve } from "node:path";
+import { isAbsolute as isAbsolute4, join as join4, relative as relative2, resolve, sep as sep3 } from "node:path";
 async function resolveActionSummaryPath(env) {
   const inputPath = readEnvInput(env.INPUT_SUMMARY_PATH);
   if (inputPath === void 0) {
@@ -5372,12 +5372,20 @@ async function resolveActionSummaryPath(env) {
   const workspaceRoot = await realpath2(workspace);
   let currentPath = workspaceRoot;
   const relativePath = relative2(workspace, resolvedPath);
-  for (const segment of relativePath.split(/[\\/]+/).filter((value) => value.length > 0)) {
+  const segments = relativePath.split(/[\\/]+/).filter((value) => value.length > 0);
+  if (segments.length === 0) {
+    throw new ActionUsageError("INPUT_SUMMARY_PATH must point to a file inside GITHUB_WORKSPACE.");
+  }
+  for (const [index, segment] of segments.entries()) {
     currentPath = join4(currentPath, segment);
     try {
       const stats = await lstat2(currentPath);
       if (stats.isSymbolicLink() || stats.isFile() && stats.nlink > 1) {
         throw new ActionUsageError("INPUT_SUMMARY_PATH must not traverse symbolic links, junctions, or hard links.");
+      }
+      const isDestination = index === segments.length - 1;
+      if (isDestination ? !stats.isFile() : !stats.isDirectory()) {
+        throw new ActionUsageError("INPUT_SUMMARY_PATH must point to a file whose parent paths are directories.");
       }
       const resolvedCurrentPath = await realpath2(currentPath);
       if (!isPathInside(workspaceRoot, resolvedCurrentPath)) {
@@ -5394,7 +5402,7 @@ async function resolveActionSummaryPath(env) {
 }
 function isPathInside(basePath, targetPath) {
   const relativePath = relative2(basePath, targetPath);
-  return relativePath.length === 0 || !relativePath.startsWith("..") && !isAbsolute4(relativePath);
+  return relativePath.length === 0 || relativePath !== ".." && !relativePath.startsWith(`..${sep3}`) && !isAbsolute4(relativePath);
 }
 function isNodeError2(error) {
   return error instanceof Error && "code" in error;

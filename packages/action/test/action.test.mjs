@@ -834,6 +834,80 @@ test("environment runner writes a sanitized JSON summary artifact inside the wor
   });
 });
 
+for (const summaryPath of [".", "artifacts", "parent-file/summary.json"]) {
+  test(`environment runner rejects a non-file summary destination before drafting: ${summaryPath}`, async () => {
+    await withTempDir(async (dir) => {
+      const fixturePath = join(dir, "github-fixture.json");
+      await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+      await mkdir(join(dir, "artifacts"));
+      await writeFile(join(dir, "parent-file"), "preserve parent file\n", "utf8");
+      let calls = 0;
+      let stdout = "";
+      let stderr = "";
+      const exitCode = await runActionFromEnvironment(
+        {
+          GITHUB_WORKSPACE: dir,
+          INPUT_GITHUB_FIXTURE: fixturePath,
+          INPUT_MODE: "dry-run",
+          INPUT_SUMMARY_PATH: summaryPath,
+        },
+        {
+          stdout: (value) => {
+            stdout += value;
+          },
+          stderr: (value) => {
+            stderr += value;
+          },
+        },
+        {
+          provider: {
+            id: "summary-preflight-test",
+            async createAssessment(input) {
+              calls += 1;
+              return createFakeAssessment(input);
+            },
+          },
+        },
+      );
+
+      assert.equal(calls, 0, stderr);
+      assert.equal(exitCode, 1, stderr);
+      assert.equal(stdout, "");
+      assert.match(stderr, /INPUT_SUMMARY_PATH must point to a file/);
+      assert.equal(await readFile(join(dir, "parent-file"), "utf8"), "preserve parent file\n");
+      assert.equal(await readFile(fixturePath, "utf8"), JSON.stringify(githubFixture()));
+    });
+  });
+}
+
+test("environment runner accepts an in-workspace summary folder whose name starts with two dots", async () => {
+  await withTempDir(async (dir) => {
+    const fixturePath = join(dir, "github-fixture.json");
+    await writeFile(fixturePath, JSON.stringify(githubFixture()), "utf8");
+    let stderr = "";
+    const env = {
+      GITHUB_WORKSPACE: dir,
+      INPUT_GITHUB_FIXTURE: fixturePath,
+      INPUT_MODE: "dry-run",
+      INPUT_SUMMARY_PATH: "..reports/summary.json",
+    };
+    for (let run = 0; run < 2; run += 1) {
+      const exitCode = await runActionFromEnvironment(env, {
+        stdout: () => {},
+        stderr: (value) => {
+          stderr += value;
+        },
+      });
+
+      assert.equal(exitCode, 0, stderr);
+      assert.equal(stderr, "");
+      const summary = JSON.parse(await readFile(join(dir, "..reports", "summary.json"), "utf8"));
+      assert.equal(summary.mode, "dry-run");
+      assert.equal(summary.draftCount, 1);
+    }
+  });
+});
+
 test("environment runner rejects summary artifact paths outside the workspace before provider calls", async () => {
   await withTempDir(async (dir) => {
     const fixturePath = join(dir, "github-fixture.json");

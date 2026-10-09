@@ -1,4 +1,8 @@
-import { prepareEvidenceForProvider, type EvidenceBundleInput } from "@clarissimi/core";
+import {
+  PROVIDER_EVIDENCE_LIMITS,
+  prepareEvidenceForProvider,
+  type EvidenceBundleInput,
+} from "@clarissimi/core";
 import {
   collectMergedPullRequestEvidence,
   parseGitHubMergedPullRequestFixture,
@@ -10,6 +14,7 @@ import {
 } from "@clarissimi/providers";
 import {
   isApprovalStatus,
+  isEvidenceKind,
   validateContributorIdentity,
   validateRecognitionSource,
   type ApprovalStatus,
@@ -119,6 +124,7 @@ function parseRecognitionFixture(value: unknown): RecognitionFixture {
 
   assertRecord(value.contributor, "contributor");
   assertRecord(value.evidence, "evidence");
+  assertEvidenceItems(value.evidence.items);
 
   const hints = parseOptionalRecord(value.hints, "hints") as ProviderAssessmentHints | undefined;
   const maintainerApprovalStatus = parseOptionalApprovalStatus(value.maintainerApprovalStatus);
@@ -136,6 +142,40 @@ function parseRecognitionFixture(value: unknown): RecognitionFixture {
   }
 
   return fixture;
+}
+
+function assertEvidenceItems(value: unknown): void {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error("Recognition fixture field evidence.items must be a non-empty array.");
+  }
+  if (value.length > PROVIDER_EVIDENCE_LIMITS.maxItems) {
+    throw new Error(
+      `Recognition fixture field evidence.items must not exceed ${PROVIDER_EVIDENCE_LIMITS.maxItems} items.`,
+    );
+  }
+  for (const [index, item] of value.entries()) {
+    const path = `evidence.items[${index}]`;
+    assertRecord(item, path);
+    if (typeof item.kind !== "string" || !isEvidenceKind(item.kind)) {
+      throw new Error(`Recognition fixture field ${path}.kind must be a known evidence kind.`);
+    }
+    for (const field of ["id", "url", "title", "excerpt", "text"] as const) {
+      const input = item[field];
+      if (field !== "id" && input === undefined) {
+        continue;
+      }
+      if (typeof input !== "string" || input.trim().length === 0) {
+        throw new Error(`Recognition fixture field ${path}.${field} must be a non-empty string.`);
+      }
+      if (field === "url") {
+        try {
+          new URL(input);
+        } catch {
+          throw new Error(`Recognition fixture field ${path}.url must be a valid URL.`);
+        }
+      }
+    }
+  }
 }
 
 function applyFixtureApproval(

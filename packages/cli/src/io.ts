@@ -189,9 +189,25 @@ export async function writeTextFilesAtomically(
   commitPointPath: string,
   options: AtomicWriteOptions = {},
 ): Promise<void> {
-  const uniqueEntries = new Map(entries.map((entry) => [entry.path, entry]));
-  if (uniqueEntries.size !== entries.length || !uniqueEntries.has(commitPointPath)) {
+  const requestedEntries = new Map(entries.map((entry) => [entry.path, entry]));
+  if (requestedEntries.size !== entries.length || !requestedEntries.has(commitPointPath)) {
     throw new Error("Atomic text generation requires unique paths and one commit point.");
+  }
+
+  const uniqueEntries = new Map<string, { readonly path: string; readonly value: string }>();
+  let resolvedCommitPointPath = commitPointPath;
+  for (const entry of requestedEntries.values()) {
+    const path = await canonicalFilePath(entry.path);
+    const key = process.platform === "win32" ? path.toLowerCase() : path;
+    if (uniqueEntries.has(key)) {
+      throw new Error(
+        "Atomic text generation outputs refer to the same destination. Select separate files for each output.",
+      );
+    }
+    uniqueEntries.set(key, { path, value: entry.value });
+    if (entry.path === commitPointPath) {
+      resolvedCommitPointPath = path;
+    }
   }
 
   for (const entry of uniqueEntries.values()) {
@@ -200,6 +216,11 @@ export async function writeTextFilesAtomically(
       const result = await stat(entry.path);
       if (!result.isFile()) {
         throw new Error(`Atomic text generation destination must be a file: ${entry.path}`);
+      }
+      if (result.nlink > 1) {
+        throw new Error(
+          `Cannot atomically replace a file with multiple hard links: ${entry.path}. Copy it to a separate file before writing.`,
+        );
       }
     } catch (error) {
       if (!isNodeError(error) || error.code !== "ENOENT") {
@@ -231,8 +252,8 @@ export async function writeTextFilesAtomically(
       }
     }
     const ordered = staged
-      .filter((entry) => entry.destination !== commitPointPath)
-      .concat(staged.filter((entry) => entry.destination === commitPointPath));
+      .filter((entry) => entry.destination !== resolvedCommitPointPath)
+      .concat(staged.filter((entry) => entry.destination === resolvedCommitPointPath));
     for (const entry of ordered) {
       await retryTransientFileOperation(() => renameFile(entry.temporaryPath, entry.destination));
     }

@@ -1,5 +1,14 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import {
+  lstat,
+  mkdtemp,
+  readFile,
+  readdir,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -15,6 +24,50 @@ async function withTempDir(callback) {
     await rm(dir, { recursive: true, force: true });
   }
 }
+
+test("atomic writes keep a symlinked ledger as the final commit point", async (context) => {
+  await withTempDir(async (dir) => {
+    const ledger = join(dir, "ledger.jsonl");
+    const alias = join(dir, "ledger-alias.jsonl");
+    const derived = join(dir, "derived.json");
+    await writeFile(ledger, "previous ledger\n");
+    await writeFile(derived, "previous derived output\n");
+    try {
+      await symlink(ledger, alias, "file");
+    } catch (error) {
+      if (process.platform === "win32" && error.code === "EPERM") {
+        context.skip("File symlinks require Windows developer mode or symlink privileges.");
+        return;
+      }
+      throw error;
+    }
+    const before = await readdir(dir);
+    const failure = new Error("Derived replacement failed before ledger commit.");
+    await assert.rejects(
+      () =>
+        writeTextFilesAtomically(
+          [
+            { path: alias, value: "next ledger\n" },
+            { path: derived, value: "next output\n" },
+          ],
+          alias,
+          {
+            rename: async (from, to) => {
+              if (to === derived) {
+                throw failure;
+              }
+              return rename(from, to);
+            },
+          },
+        ),
+      (error) => error === failure,
+    );
+    assert.equal(await readFile(ledger, "utf8"), "previous ledger\n");
+    assert.equal(await readFile(derived, "utf8"), "previous derived output\n");
+    assert.equal((await lstat(alias)).isSymbolicLink(), true);
+    assert.deepEqual(await readdir(dir), before);
+  });
+});
 
 test("atomic writes remove partially written temporary files without replacing existing outputs", async () => {
   await withTempDir(async (dir) => {

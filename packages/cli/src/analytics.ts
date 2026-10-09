@@ -32,14 +32,23 @@ export async function runAnalytics(args: ParsedArgs, io: CliIo): Promise<CliExit
     assertUniqueContributionRecords(records);
     const analytics = buildMaintainerRecentRecognitionShareDocument(records, analyticsOptions);
 
-    writeOutput(io, args, {
-      ok: true,
-      command: "analytics",
-      subcommand: "recent-share",
-      ledgerPath,
-      analytics,
-      message: renderRecentShareMessage(analytics),
-    });
+    writeOutput(
+      io,
+      args,
+      {
+        ok: true,
+        command: "analytics",
+        subcommand: "recent-share",
+        ledgerPath,
+        analytics,
+        message: renderRecentShareMessage(analytics),
+      },
+      analytics.window.excludedRecordsWithoutMergedAt > 0
+        ? [
+            `Excluded records without merge dates: ${analytics.window.excludedRecordsWithoutMergedAt}`,
+          ]
+        : [],
+    );
     return CLI_EXIT_CODES.success;
   } catch (error) {
     if (error instanceof CliUsageError) {

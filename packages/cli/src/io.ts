@@ -183,6 +183,7 @@ export async function writeTextFilesAtomically(
   const writeTemporaryFile = options.writeFile ?? writeFile;
   const renameFile = options.rename ?? rename;
   const removeFile = options.rm ?? rm;
+  let generationFailure: { readonly error: unknown } | undefined;
   try {
     for (const entry of uniqueEntries.values()) {
       const temporaryPath = join(dirname(entry.path), `.${randomUUID()}.clarissimi-tmp`);
@@ -206,12 +207,20 @@ export async function writeTextFilesAtomically(
     for (const entry of ordered) {
       await retryTransientFileOperation(() => renameFile(entry.temporaryPath, entry.destination));
     }
-  } finally {
-    await Promise.all(
-      staged.map((entry) =>
-        retryTransientFileOperation(() => removeFile(entry.temporaryPath, { force: true })),
-      ),
-    );
+  } catch (error) {
+    generationFailure = { error };
+  }
+  const cleanupResults = await Promise.allSettled(
+    staged.map((entry) =>
+      retryTransientFileOperation(() => removeFile(entry.temporaryPath, { force: true })),
+    ),
+  );
+  if (generationFailure !== undefined) {
+    throw generationFailure.error;
+  }
+  const cleanupFailure = cleanupResults.find((result) => result.status === "rejected");
+  if (cleanupFailure?.status === "rejected") {
+    throw cleanupFailure.reason;
   }
 }
 

@@ -438,3 +438,35 @@ function git(repositoryDir, args) {
     });
   });
 }
+
+test("preserves edits in an existing local owned proposal without resetting it", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo");
+    await initRepository(repositoryDir);
+    const staging = await stageProposalRecognitionOutputs({
+      outputDir: join(dir, "stage"),
+      assessments: [assessment()],
+      redactionMatchCount: 0,
+    });
+    const input = {
+      repositoryDir,
+      stagedOutputDir: staging.outputDir,
+      manifest: staging.manifest,
+      baseBranch: "main",
+    };
+    const first = await writeProposalBranch(input);
+    assert.equal((await writeProposalBranch(input)).commitSha, first.commitSha);
+    await git(repositoryDir, ["checkout", first.branchName]);
+    await writeFile(join(repositoryDir, "CONTRIBUTORS.md"), "Reviewed text.\n");
+    await git(repositoryDir, ["add", "CONTRIBUTORS.md"]);
+    await git(repositoryDir, ["commit", "-m", "Review recognition"]);
+    const reviewedSha = await git(repositoryDir, ["rev-parse", "HEAD"]);
+    await git(repositoryDir, ["checkout", "main"]);
+    await assert.rejects(
+      writeProposalBranch(input),
+      (error) => error.code === "existing_branch_content_changed",
+    );
+    assert.equal(await git(repositoryDir, ["rev-parse", first.branchName]), reviewedSha);
+    assert.equal(await git(repositoryDir, ["branch", "--show-current"]), "main");
+  });
+});

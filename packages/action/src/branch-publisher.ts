@@ -53,6 +53,27 @@ export async function publishProposalBranch(
 
   const remoteRef = `refs/heads/${input.branch.branchName}`;
   const remoteSha = await remoteBranchSha(runtime, input.repositoryDir, remoteName, remoteRef);
+  if (remoteSha !== undefined) {
+    const equivalentSha = await reconcileEquivalentLeaseWinner(
+      runtime,
+      input,
+      remoteName,
+      remoteRef,
+      localSha,
+    );
+    if (equivalentSha === undefined) {
+      throw new ProposalBranchPublisherError(
+        "existing_remote_proposal_changed",
+        "Existing remote proposal differs from this generation or base. Review or close that proposal before regenerating it; maintainer edits and approval were preserved.",
+      );
+    }
+    return {
+      remoteName,
+      branchName: input.branch.branchName,
+      commitSha: equivalentSha,
+      rollbackHint: `Delete remote branch ${remoteName}/${input.branch.branchName} before merge to discard this proposal.`,
+    };
+  }
   const pushResult = await runtime.runGit(input.repositoryDir, [
     "push",
     `--force-with-lease=${remoteRef}:${remoteSha ?? ""}`,
@@ -97,10 +118,6 @@ async function reconcileEquivalentLeaseWinner(
     if (winnerSha === undefined) {
       return undefined;
     }
-    if (winnerSha === localSha) {
-      return winnerSha;
-    }
-
     const fetchResult = await runtime.runGit(input.repositoryDir, [
       "fetch",
       "--no-tags",

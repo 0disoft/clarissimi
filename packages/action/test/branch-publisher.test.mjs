@@ -130,7 +130,7 @@ test("rejects publishing when the local branch no longer matches the writer resu
   });
 });
 
-test("updates an existing proposal branch from a fresh clone with an explicit lease", async () => {
+test("reuses an identical remote proposal from a fresh clone without replacing its commit", async () => {
   await withTempDir(async (dir) => {
     const remoteDir = join(dir, "remote.git");
     const firstRepositoryDir = join(dir, "first");
@@ -169,7 +169,7 @@ test("updates an existing proposal branch from a fresh clone with an explicit le
     await publishProposalBranch({ repositoryDir: secondRepositoryDir, branch: secondBranch });
     assert.equal(
       await remoteBranchSha(secondRepositoryDir, secondBranch.branchName),
-      secondBranch.commitSha,
+      firstBranch.commitSha,
     );
   });
 });
@@ -291,6 +291,48 @@ test("rejects a concurrent proposal branch lease winner with different output", 
     );
   });
 });
+
+for (const edit of ["recognition text", "approval snapshot", "extra file"]) {
+  test(`fresh clone preserves remote maintainer ${edit}`, async () => {
+    await withTempDir(async (dir) => {
+      const remoteDir = join(dir, "remote.git");
+      const repositoryDir = join(dir, "repo");
+      await initRepositoryWithRemote(repositoryDir, remoteDir);
+      const staging = await stageProposalRecognitionOutputs({
+        outputDir: join(dir, "stage"),
+        assessments: [assessment()],
+        redactionMatchCount: 0,
+      });
+      const first = await writeProposalBranch({
+        repositoryDir,
+        stagedOutputDir: staging.outputDir,
+        manifest: staging.manifest,
+        baseBranch: "main",
+      });
+      await publishProposalBranch({ repositoryDir, branch: first });
+      await git(repositoryDir, ["checkout", first.branchName]);
+      const path = edit === "extra file" ? "review-notes.txt" : ".clarissimi/contributions.jsonl";
+      await writeFile(join(repositoryDir, path), `Maintainer ${edit} must survive.\n`);
+      await git(repositoryDir, ["add", path]);
+      await git(repositoryDir, ["commit", "-m", "Maintainer review"]);
+      await git(repositoryDir, ["push", "origin", first.branchName]);
+      const reviewedSha = await remoteBranchSha(repositoryDir, first.branchName);
+      const clone = join(dir, "clone");
+      await git(dir, ["clone", "--branch", "main", remoteDir, clone]);
+      const generated = await writeProposalBranch({
+        repositoryDir: clone,
+        stagedOutputDir: staging.outputDir,
+        manifest: staging.manifest,
+        baseBranch: "main",
+      });
+      await assert.rejects(
+        publishProposalBranch({ repositoryDir: clone, branch: generated }),
+        (error) => error.code === "existing_remote_proposal_changed",
+      );
+      assert.equal(await remoteBranchSha(clone, first.branchName), reviewedSha);
+    });
+  });
+}
 
 test("rejects missing publisher metadata before git push", async () => {
   await assert.rejects(

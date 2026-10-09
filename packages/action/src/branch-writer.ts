@@ -61,11 +61,60 @@ export async function writeProposalBranch(
     input.manifest.files,
   );
 
+  if (previousProposalSha !== undefined) {
+    for (const file of input.manifest.files) {
+      const content = await readFile(join(input.stagedOutputDir, file.path));
+      if (createHash("sha256").update(content).digest("hex") !== file.sha256) {
+        throw new ProposalBranchWriterError(
+          "staged_file_hash_mismatch",
+          `Staged file hash does not match manifest for ${file.path}.`,
+        );
+      }
+      if (content.byteLength !== file.bytes) {
+        throw new ProposalBranchWriterError(
+          "staged_file_size_mismatch",
+          `Staged file byte count does not match manifest for ${file.path}.`,
+        );
+      }
+      const existing = await runGit(input.repositoryDir, [
+        "show",
+        `${previousProposalSha}:${file.path}`,
+      ]);
+      if (existing.exitCode !== 0 || existing.stdout !== content.toString("utf8")) {
+        throw new ProposalBranchWriterError(
+          "existing_branch_content_changed",
+          "Existing proposal differs from the generated output. Review or close that proposal before regenerating it; maintainer edits and approval were preserved.",
+        );
+      }
+    }
+    if (
+      (await git(input.repositoryDir, ["merge-base", baseCommitSha, previousProposalSha])) !==
+      baseCommitSha
+    ) {
+      throw new ProposalBranchWriterError(
+        "existing_branch_base_changed",
+        "Existing proposal has a different base. Review or close that proposal before regenerating it.",
+      );
+    }
+    return {
+      branchName,
+      baseBranch: input.baseBranch,
+      baseCommitSha,
+      commitSha: previousProposalSha,
+      changedFiles: await changedFilesFromBase(
+        input.repositoryDir,
+        baseCommitSha,
+        previousProposalSha,
+      ),
+      rollbackHint: `Delete branch ${branchName} before merge to discard this proposal.`,
+    };
+  }
+
   let writeSucceeded = false;
   let branchReset = false;
   let proposalHeadSha = baseCommitSha;
   try {
-    await git(input.repositoryDir, ["checkout", "-B", branchName, input.baseBranch]);
+    await git(input.repositoryDir, ["checkout", "-b", branchName, baseCommitSha]);
     branchReset = true;
     await writeStagedFilesToRepository(input);
     await git(input.repositoryDir, ["add", "--", ...input.manifest.files.map((file) => file.path)]);

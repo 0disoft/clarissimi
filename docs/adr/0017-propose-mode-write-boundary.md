@@ -84,7 +84,12 @@ event should update the existing proposal branch and pull request instead of cre
 If a proposal pull request already exists and contains maintainer edits, Clarissimi must avoid
 overwriting those edits unless the edited files are wholly Clarissimi-owned and the renderer can
 prove an idempotent rebuild. When that cannot be proven, the Action should stop and ask for manual
-maintenance rather than force-pushing over review state.
+maintenance rather than force-pushing over review state. An existing local proposal is reused
+only when its complete owned output matches the staged manifest and its base is compatible;
+it is never reset before that check. Publication fetches an existing remote proposal, checks its
+base and full tree against the generated proposal, and confirms the inspected SHA before reuse.
+Different content, approval edits, or extra files stop publication without updating the remote.
+Creation uses an empty-ref lease so a concurrent proposal cannot be overwritten.
 
 ## Rollback And Recovery
 

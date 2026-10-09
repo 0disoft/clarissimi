@@ -50,6 +50,41 @@ const configCommands = [
   ["render-page", "--out-dir", "."],
 ];
 
+for (const [field, value] of [
+  ["includeAutomationContributors", "private-invalid-value"],
+  ["providerEndpoint", "private-invalid-value"],
+  ["providerModel", 42],
+  ["mode", "private-invalid-value"],
+]) {
+  test(`invalid ${field} config identifies the file and field without echoing its value`, async () => {
+    await withTempDir(async (dir) => {
+      const configPath = "selected-settings.json";
+      await writeFile(join(dir, configPath), JSON.stringify({ [field]: value }));
+      await mkdir(join(dir, ".clarissimi"));
+      const ledger = join(dir, ".clarissimi", "contributions.jsonl");
+      const markdown = join(dir, "CONTRIBUTORS.md");
+      await writeFile(ledger, "\n");
+      await writeFile(markdown, "existing contributor history\n");
+      const before = await readdir(dir);
+      for (const command of configCommands) {
+        for (const jsonFlags of [[], ["--json"]]) {
+          const result = await run([...command, "--config", configPath, ...jsonFlags], dir);
+          assert.equal(result.exitCode, 2, result.stdout + result.stderr);
+          const message = jsonFlags.length > 0 ? JSON.parse(result.stdout).message : result.stderr;
+          assert.ok(message.includes(configPath), message);
+          assert.ok(message.includes(`Config field ${field}`), message);
+          assert.ok(!message.includes("private-invalid-value"), message);
+          assert.equal(jsonFlags.length > 0 ? result.stderr : result.stdout, "");
+        }
+      }
+      assert.equal(await readFile(ledger, "utf8"), "\n");
+      assert.equal(await readFile(markdown, "utf8"), "existing contributor history\n");
+      assert.deepEqual(await readdir(dir), before);
+      assert.deepEqual(await readdir(join(dir, ".clarissimi")), ["contributions.jsonl"]);
+    });
+  });
+}
+
 for (const parentKind of ["file", "dangling-link"]) {
   test(`default config discovery rejects a ${parentKind} parent instead of accepting defaults`, async (context) => {
     await withTempDir(async (dir) => {

@@ -50,7 +50,9 @@ export async function validateConfigFile(
     const parsed = await loadConfigValue(path, resolvedPath);
     const result = validateClarissimiConfig(parsed);
     if (!result.ok) {
-      throw new CliConfigError(formatConfigValidationIssue(result.issues[0]));
+      throw new CliConfigError(
+        `Invalid config in ${path}: ${formatConfigValidationIssue(result.issues[0])}`,
+      );
     }
 
     return {
@@ -172,5 +174,5 @@ function formatConfigValidationIssue(issue: ValidationIssue | undefined): string
     return `Config field ${field} must be a non-empty string.`;
   }
 
-  return issue.message;
+  return `Config field ${field}: ${issue.message}`;
 }

@@ -125,6 +125,53 @@ test("analytics recent-share rejects invalid window-day values as usage errors",
   });
 });
 
+test("analytics validates date and window options before reading a missing or invalid ledger", async () => {
+  await withTempDir(async (dir) => {
+    await writeFile(join(dir, "invalid.jsonl"), "not a ledger\n");
+    for (const ledger of ["missing.jsonl", "invalid.jsonl"]) {
+      for (const [flag, value] of [
+        ["--as-of", "not-a-date"],
+        ["--window-days", "0"],
+        ["--window-days", "100000001"],
+      ]) {
+        const result = await run(
+          [
+            "analytics",
+            "recent-share",
+            "--ledger",
+            ledger,
+            ...(flag === "--as-of" ? [] : ["--as-of", "1970-01-01T00:00:00.000Z"]),
+            flag,
+            value,
+            "--json",
+          ],
+          dir,
+        );
+        assert.equal(result.exitCode, 1, result.stdout + result.stderr);
+        assert.equal(result.stderr, "");
+        const output = JSON.parse(result.stdout);
+        assert.equal(output.ok, false);
+        assert.ok(output.message.includes(flag), output.message);
+      }
+    }
+  });
+});
+
+test("analytics rejects an unrepresentable window instead of reporting a write failure", async () => {
+  await withTempDir(async (dir) => {
+    for (const options of [
+      ["--window-days", String(Number.MAX_SAFE_INTEGER)],
+      ["--as-of", "-271821-04-20T00:00:00.000Z", "--window-days", "1"],
+    ]) {
+      const result = await run(["analytics", "recent-share", ...options], dir);
+      assert.equal(result.exitCode, 1);
+      assert.equal(result.stdout, "");
+      assert.match(result.stderr, /--window-days/);
+      assert.ok(!result.stderr.includes("Invalid time value"));
+    }
+  });
+});
+
 function assessment(overrides = {}) {
   return {
     schemaVersion: "clarissimi.assessment/v1",

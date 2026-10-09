@@ -22,6 +22,7 @@ export async function runAnalytics(args: ParsedArgs, io: CliIo): Promise<CliExit
     io.cwd,
     getStringFlag(args, "ledger", CONTRIBUTIONS_JSONL_PATH) ?? CONTRIBUTIONS_JSONL_PATH,
   );
+  const analyticsOptions = resolveAnalyticsOptions(args);
 
   try {
     const ledgerText = await readLedgerText(ledgerPath, {
@@ -29,10 +30,6 @@ export async function runAnalytics(args: ParsedArgs, io: CliIo): Promise<CliExit
     });
     const records = parseContributionsJsonl(ledgerText);
     assertUniqueContributionRecords(records);
-    const analyticsOptions: Parameters<typeof buildMaintainerRecentRecognitionShareDocument>[1] =
-      {};
-    assignOptional(analyticsOptions, "asOf", parseIsoDateTimeFlag(args, "as-of"));
-    assignOptional(analyticsOptions, "windowDays", parsePositiveIntegerFlag(args, "window-days"));
     const analytics = buildMaintainerRecentRecognitionShareDocument(records, analyticsOptions);
 
     writeOutput(io, args, {
@@ -53,6 +50,26 @@ export async function runAnalytics(args: ParsedArgs, io: CliIo): Promise<CliExit
     return error instanceof RendererValidationError
       ? CLI_EXIT_CODES.invalidLedger
       : CLI_EXIT_CODES.writeFailure;
+  }
+}
+
+function resolveAnalyticsOptions(
+  args: ParsedArgs,
+): Parameters<typeof buildMaintainerRecentRecognitionShareDocument>[1] {
+  const options: Parameters<typeof buildMaintainerRecentRecognitionShareDocument>[1] = {};
+  assignOptional(options, "asOf", parseIsoDateTimeFlag(args, "as-of"));
+  assignOptional(options, "windowDays", parsePositiveIntegerFlag(args, "window-days"));
+  try {
+    // Reuse renderer validation and freeze the default cutoff before any ledger I/O.
+    const { window } = buildMaintainerRecentRecognitionShareDocument([], options);
+    return { asOf: window.asOf, windowDays: window.windowDays };
+  } catch (error) {
+    if (error instanceof RendererValidationError) {
+      throw new CliUsageError(
+        "--window-days and --as-of must define a window within the supported date range. Use a shorter window or a later cutoff.",
+      );
+    }
+    throw error;
   }
 }
 

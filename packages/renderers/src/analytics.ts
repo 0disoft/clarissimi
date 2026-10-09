@@ -27,8 +27,22 @@ export function buildMaintainerRecentRecognitionShareDocument(
   const records = toPublicContributionRecords(values);
   const windowDays = normalizeWindowDays(options.windowDays);
   const asOf = normalizeAsOf(options.asOf);
-  const startsAtMs = Date.parse(asOf) - windowDays * DAY_IN_MILLISECONDS;
-  const startsAt = new Date(startsAtMs).toISOString();
+  const asOfMs = Date.parse(asOf);
+  const startsAtMs = asOfMs - windowDays * DAY_IN_MILLISECONDS;
+  const startsAtDate = new Date(startsAtMs);
+  if (Number.isNaN(startsAtDate.getTime())) {
+    throw new RendererValidationError(
+      "Recent recognition share requires a window within the supported date range.",
+      [
+        {
+          path: "$.windowDays",
+          code: "invalid_window_days",
+          message: "windowDays and asOf must define a window within the supported date range.",
+        },
+      ],
+    );
+  }
+  const startsAt = startsAtDate.toISOString();
   const grouped = new Map<string, ContributorAccumulator>();
   let includedRecords = 0;
   let excludedRecordsWithoutMergedAt = 0;
@@ -42,7 +56,7 @@ export function buildMaintainerRecentRecognitionShareDocument(
     }
 
     const mergedAtMs = Date.parse(mergedAt);
-    if (mergedAtMs < startsAtMs || mergedAtMs > Date.parse(asOf)) {
+    if (mergedAtMs < startsAtMs || mergedAtMs > asOfMs) {
       return;
     }
 

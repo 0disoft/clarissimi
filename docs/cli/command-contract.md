@@ -127,6 +127,11 @@ By default, the command reads `.clarissimi/contributions.jsonl`, uses a 90-day w
 current time, and writes only to stdout. `--as-of <iso-date>` makes the window deterministic for
 release retrospectives or tests. `--window-days <days>` changes the lookback window.
 
+`analytics recent-share` validates `--as-of` and `--window-days` before reading the ledger;
+invalid options are usage errors (exit code `1`) even when the ledger is missing or malformed.
+A positive integer `--window-days` must also yield a starting date within JavaScript's supported
+Date range relative to `--as-of`; otherwise, use a shorter window or a later cutoff.
+
 The command may report internal recognition weight and recognition share for maintainer review. It
 must not write `.clarissimi/contributors.json`, `CONTRIBUTORS.md`, static public JSON, or any public
 scoreboard artifact.

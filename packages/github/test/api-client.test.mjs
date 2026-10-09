@@ -320,3 +320,51 @@ function jsonResponse(body, status = 200) {
     },
   };
 }
+
+for (const total of [250, 1000]) {
+  test(`partial comment collection takes 25 of ${total} comments in one request`, async () => {
+    const requests = [];
+    const client = createGitHubApiClient({
+      fetch: async (url) => {
+        requests.push(String(url));
+        const parsed = new URL(url);
+        const size = Number(parsed.searchParams.get("per_page"));
+        const page = Number(parsed.searchParams.get("page"));
+        return jsonResponse(
+          Array.from({ length: Math.min(size, total - (page - 1) * size) }, (_, i) => ({
+            id: (page - 1) * size + i,
+            body: "Review evidence.",
+          })),
+        );
+      },
+    });
+    const lookup = { repository: "sample/project", pullRequestNumber: 42 };
+    assert.equal((await client.listPullRequestReviewComments(lookup, 25)).length, 25);
+    assert.equal(requests.length, 1);
+    assert.ok(requests[0].includes("per_page=25&page=1"));
+    assert.deepEqual(await client.listPullRequestReviewComments(lookup, 0), []);
+    assert.equal(requests.length, 1);
+  });
+}
+test("partial pagination uses stable page sizes and stops at the requested count", async () => {
+  const requests = [];
+  const client = createGitHubApiClient({
+    fetch: async (url) => {
+      requests.push(String(url));
+      const page = Number(new URL(url).searchParams.get("page"));
+      return jsonResponse(
+        Array.from({ length: 100 }, (_, i) => ({
+          id: (page - 1) * 100 + i,
+          body: "Review evidence.",
+        })),
+      );
+    },
+  });
+  const comments = await client.listPullRequestReviewComments(
+    { repository: "sample/project", pullRequestNumber: 42 },
+    125,
+  );
+  assert.equal(comments.length, 125);
+  assert.equal(comments[124].id, 124);
+  assert.equal(requests.length, 2);
+});

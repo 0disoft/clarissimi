@@ -88,7 +88,9 @@ export function createGitHubApiClient(options: GitHubApiClientOptions = {}): Liv
 
     async listPullRequestReviewComments(
       input: LiveGitHubPullRequestLookup,
+      limit?: number,
     ): Promise<readonly LiveGitHubReviewComment[]> {
+      if (limit === 0) return [];
       const response = await requestPaginatedArray(
         fetchImpl,
         options.token,
@@ -96,6 +98,8 @@ export function createGitHubApiClient(options: GitHubApiClientOptions = {}): Liv
         "GitHub pull request review comments response must be an array.",
         timeoutMs,
         maxResponseBytes,
+        limit ?? MAX_LIST_PAGES * DEFAULT_PAGE_SIZE,
+        limit !== undefined,
       );
 
       return response.map(parseReviewComment);
@@ -111,15 +115,17 @@ async function requestPaginatedArray(
   timeoutMs: number,
   maxResponseBytes: number,
   maxItems = MAX_LIST_PAGES * DEFAULT_PAGE_SIZE,
+  partial = false,
 ): Promise<readonly unknown[]> {
   positiveIntegerOption(maxItems, "listLimit");
   const entries: unknown[] = [];
 
   for (let page = 1; page <= MAX_LIST_PAGES; page += 1) {
+    const pageSize = partial ? Math.min(DEFAULT_PAGE_SIZE, maxItems) : DEFAULT_PAGE_SIZE;
     const response = await requestJson(
       fetchImpl,
       token,
-      `${baseUrl}?per_page=${DEFAULT_PAGE_SIZE}&page=${page}`,
+      `${baseUrl}?per_page=${pageSize}&page=${page}`,
       timeoutMs,
       maxResponseBytes,
     );
@@ -127,14 +133,15 @@ async function requestPaginatedArray(
       throw new GitHubApiClientError("unexpected_response", invalidResponseMessage);
     }
 
-    entries.push(...response);
+    entries.push(...(partial ? response.slice(0, maxItems - entries.length) : response));
+    if (partial && entries.length >= maxItems) return entries;
     if (entries.length > maxItems) {
       throw new GitHubApiClientError(
         "response_too_large",
         `GitHub list response exceeded ${maxItems} items.`,
       );
     }
-    if (response.length < DEFAULT_PAGE_SIZE) {
+    if (response.length < pageSize) {
       return entries;
     }
   }

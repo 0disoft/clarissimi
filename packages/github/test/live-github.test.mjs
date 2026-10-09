@@ -365,3 +365,21 @@ class FakeLiveClient {
     return this.#reviewComments;
   }
 }
+
+test("live collector forwards the comment budget and skips zero-budget calls", async () => {
+  const calls = [];
+  const client = new FakeLiveClient();
+  client.listPullRequestReviewComments = async (_lookup, limit) => {
+    calls.push(limit);
+    return reviewComments;
+  };
+  for (const limit of [undefined, 1, 0]) {
+    await collectLiveMergedPullRequestEvidence({
+      client,
+      repository: "sample/project",
+      pullRequestNumber: 42,
+      ...(limit === undefined ? {} : { reviewCommentLimit: limit }),
+    });
+  }
+  assert.deepEqual(calls, [25, 1]);
+});

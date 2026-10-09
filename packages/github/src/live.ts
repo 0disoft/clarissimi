@@ -29,6 +29,7 @@ export interface LiveGitHubClient {
   ): Promise<readonly LiveGitHubPullRequestFile[]>;
   listPullRequestReviewComments(
     input: LiveGitHubPullRequestLookup,
+    limit?: number,
   ): Promise<readonly LiveGitHubReviewComment[]>;
 }
 
@@ -116,7 +117,7 @@ export async function collectLiveMergedPullRequestEvidence(
     input.client.listPullRequestFiles(lookup, DEFAULT_CHANGED_FILE_LIMIT),
     reviewCommentLimit === 0
       ? Promise.resolve([])
-      : input.client.listPullRequestReviewComments(lookup),
+      : input.client.listPullRequestReviewComments(lookup, reviewCommentLimit),
   ]);
 
   if (files.length > DEFAULT_CHANGED_FILE_LIMIT) {

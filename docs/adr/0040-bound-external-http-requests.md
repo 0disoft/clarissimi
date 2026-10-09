@@ -32,6 +32,9 @@ failures without adding automatic retries inside packages that do not own retry 
   permanent.
 - Packages return structured errors but do not retry automatically. Retry count, delay, jitter,
   rate-limit headers, and workflow policy remain a future orchestration decision.
+- Review evidence collection forwards its requested comment count to the transport, which uses
+  bounded partial pagination and stops when enough comments are collected. A zero limit makes
+  no comment request. Changed-file collection and approval-gate scans retain complete-scan rules.
 - Provider transport errors must not include raw response bodies, request bodies, or credentials.
 
 ## Consequences

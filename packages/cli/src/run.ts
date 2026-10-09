@@ -61,7 +61,6 @@ import {
   resolveFromCwd,
   withFileLock,
   writeTextFilesAtomically,
-  writeTextFile,
   writeTextFileExclusive,
   type CliIo,
 } from "./io.js";
@@ -813,8 +812,14 @@ async function runRenderPage(args: ParsedArgs, io: CliIo): Promise<CliExitCode> 
       includeAutomationContributors: resolveIncludeAutomationContributors(args, config),
     });
 
-    await assertLedgerIsSeparateFromOutputs(ledgerPath, [pagePath]);
-    await writeTextFile(pagePath, page);
+    const resolvedPagePath = await canonicalFilePath(pagePath);
+    await assertLedgerIsSeparateFromOutputs(ledgerPath, [resolvedPagePath]);
+    if ((await fileExists(resolvedPagePath)) && (await stat(resolvedPagePath)).nlink > 1) {
+      throw new Error(
+        "Cannot atomically replace a page with multiple hard links. Use a separate output directory or copy the page to a separate file before rendering.",
+      );
+    }
+    await writeTextFilesAtomically([{ path: resolvedPagePath, value: page }], resolvedPagePath);
     writeOutput(io, args, {
       ok: true,
       command: "render-page",

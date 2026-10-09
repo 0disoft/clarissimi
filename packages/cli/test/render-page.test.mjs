@@ -1,5 +1,16 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import fs, {
+  link,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
+import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -156,5 +167,89 @@ test("render-page rejects duplicate ledger identities before writing", async () 
 
     assert.equal(result.exitCode, 3);
     await assert.rejects(readFile(join(outDir, "index.html"), "utf8"));
+  });
+});
+
+for (const failureStage of ["write", "rename"]) {
+  test(`render-page preserves its previous page when ${failureStage} fails`, async () => {
+    await withTempDir(async (dir) => {
+      const ledger = join(dir, "ledger.jsonl");
+      const page = join(dir, "index.html");
+      const previous = "previous published page\n";
+      await writeFile(ledger, "\n");
+      await writeFile(page, previous);
+      const before = await readdir(dir);
+      const originalWrite = fs.writeFile;
+      const originalRename = fs.rename;
+      const failure = Object.assign(new Error(`Injected page ${failureStage} failure.`), {
+        code: failureStage === "write" ? "ENOSPC" : "EIO",
+      });
+      let result;
+      try {
+        fs.writeFile = async (path, value, options) => {
+          if (failureStage === "write" && typeof path === "string" && path.startsWith(dir)) {
+            await originalWrite(path, value.slice(0, 8), options);
+            throw failure;
+          }
+          return originalWrite(path, value, options);
+        };
+        fs.rename = async (from, to) => {
+          if (failureStage === "rename" && to === page) {
+            throw failure;
+          }
+          return originalRename(from, to);
+        };
+        syncBuiltinESMExports();
+        result = await run(["render-page", "--ledger", ledger, "--out-dir", dir, "--json"], dir);
+      } finally {
+        fs.writeFile = originalWrite;
+        fs.rename = originalRename;
+        syncBuiltinESMExports();
+      }
+      assert.equal(result.exitCode, 7, result.stdout + result.stderr);
+      assert.equal(result.stderr, "");
+      assert.match(JSON.parse(result.stdout).message, /Injected page/);
+      assert.equal(await readFile(page, "utf8"), previous);
+      assert.equal(await readFile(ledger, "utf8"), "\n");
+      assert.deepEqual(await readdir(dir), before);
+    });
+  });
+}
+
+test("render-page preserves an existing file symlink while replacing its target", async (context) => {
+  await withTempDir(async (dir) => {
+    const target = join(dir, "published.html");
+    const alias = join(dir, "index.html");
+    await writeFile(target, "previous published page\n");
+    try {
+      await symlink(target, alias, "file");
+    } catch (error) {
+      if (process.platform === "win32" && error.code === "EPERM") {
+        context.skip("File symlinks require Windows developer mode or symlink privileges.");
+        return;
+      }
+      throw error;
+    }
+    const result = await run(["render-page", "--out-dir", dir, "--json"], dir);
+    assert.equal(result.exitCode, 0, result.stdout + result.stderr);
+    assert.equal(JSON.parse(result.stdout).pagePath, alias);
+    assert.equal((await lstat(alias)).isSymbolicLink(), true);
+    assert.match(await readFile(target, "utf8"), /^<!doctype html>/);
+    assert.deepEqual((await readdir(dir)).sort(), ["index.html", "published.html"]);
+  });
+});
+
+test("render-page refuses a hard-linked page before changing either alias", async () => {
+  await withTempDir(async (dir) => {
+    const page = join(dir, "index.html");
+    const alias = join(dir, "published.html");
+    const previous = "previous published page\n";
+    await writeFile(page, previous);
+    await link(page, alias);
+    const result = await run(["render-page", "--out-dir", dir, "--json"], dir);
+    assert.equal(result.exitCode, 7, result.stdout + result.stderr);
+    assert.match(JSON.parse(result.stdout).message, /multiple hard links/);
+    assert.equal(await readFile(page, "utf8"), previous);
+    assert.equal(await readFile(alias, "utf8"), previous);
   });
 });

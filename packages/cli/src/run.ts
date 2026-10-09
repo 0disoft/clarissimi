@@ -1,5 +1,5 @@
-import { realpath, stat } from "node:fs/promises";
-import { join, relative, resolve } from "node:path";
+import { stat } from "node:fs/promises";
+import { join, relative } from "node:path";
 
 import { checkExternalDraftApproval, createDraftApprovalSnapshot } from "@clarissimi/core";
 import {
@@ -72,6 +72,7 @@ import {
 } from "./output.js";
 import { resolveRecognitionProvider } from "./provider.js";
 import { readLedgerText } from "./ledger.js";
+import { assertLedgerIsSeparateFromOutputs, pathKey, pathsReferToSameFile } from "./paths.js";
 
 export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExitCode> {
   let args: ParsedArgs | undefined;
@@ -499,13 +500,10 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
       });
       const files = new Map<string, string>();
       if (outputDirectory !== undefined) {
-        const outputLedgerPath = join(outputDirectory, CONTRIBUTIONS_JSONL_PATH);
-        if (pathKey(await canonicalFilePath(outputLedgerPath)) !== pathKey(ledgerPath)) {
-          files.set(outputLedgerPath, outputs.contributionsJsonl);
+        const plan = await planRenderedOutputs(outputDirectory, ledgerPath, outputs);
+        for (const entry of plan.entries) {
+          files.set(entry.path, entry.value);
         }
-        files.set(join(outputDirectory, CONTRIBUTORS_JSON_PATH), outputs.contributorsJson);
-        files.set(join(outputDirectory, CONTRIBUTORS_MARKDOWN_PATH), outputs.contributorsMarkdown);
-        files.set(join(outputDirectory, STATIC_DATA_JSON_PATH), outputs.staticDataJson);
       }
       files.set(ledgerPath, outputs.contributionsJsonl);
       await writeTextFilesAtomically(
@@ -751,6 +749,7 @@ async function runRenderPage(args: ParsedArgs, io: CliIo): Promise<CliExitCode> 
       includeAutomationContributors: resolveIncludeAutomationContributors(args, config),
     });
 
+    await assertLedgerIsSeparateFromOutputs(ledgerPath, [pagePath]);
     await writeTextFile(pagePath, page);
     writeOutput(io, args, {
       ok: true,
@@ -806,6 +805,10 @@ async function planRenderedOutputs(
     { path: join(outDir, CONTRIBUTORS_MARKDOWN_PATH), value: outputs.contributorsMarkdown },
     { path: join(outDir, STATIC_DATA_JSON_PATH), value: outputs.staticDataJson },
   ];
+  await assertLedgerIsSeparateFromOutputs(
+    sourceLedgerPath,
+    entries.map((entry) => entry.path),
+  );
   if (!sourceIsOutput) {
     entries.push({ path: outputLedgerPath, value: outputs.contributionsJsonl });
   }
@@ -827,28 +830,4 @@ async function findStaleRenderedOutputs(
     }
   }
   return staleFiles;
-}
-
-async function pathsReferToSameFile(left: string, right: string): Promise<boolean> {
-  if (pathKey(left) === pathKey(right)) {
-    return true;
-  }
-  if (!(await fileExists(left)) || !(await fileExists(right))) {
-    return false;
-  }
-  const [leftReal, rightReal, leftStat, rightStat] = await Promise.all([
-    realpath(left),
-    realpath(right),
-    stat(left),
-    stat(right),
-  ]);
-  return (
-    pathKey(leftReal) === pathKey(rightReal) ||
-    (leftStat.ino !== 0 && leftStat.dev === rightStat.dev && leftStat.ino === rightStat.ino)
-  );
-}
-
-function pathKey(path: string): string {
-  const normalized = resolve(path);
-  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
 }

@@ -170,14 +170,19 @@ export async function withFileLock<T>(
   } catch (error) {
     outcome = { ok: false, error };
   }
-  await handle.close();
-  if (ownerWritten) {
-    const currentOwner = await retryTransientFileOperation(() => readFile(path, "utf8"), options);
-    if (currentOwner !== owner) {
-      throw new Error(`File lock ownership changed before release: ${path}.`);
+  try {
+    await handle.close();
+    if (ownerWritten) {
+      const currentOwner = await retryTransientFileOperation(() => readFile(path, "utf8"), options);
+      if (currentOwner !== owner) {
+        throw new Error(`File lock ownership changed before release: ${path}.`);
+      }
     }
+    await retryTransientFileOperation(() => rm(path, { force: true }), options);
+  } catch (error) {
+    // Preserve the original error instance so cleanup cannot change the CLI failure category.
+    throw outcome.ok ? error : outcome.error;
   }
-  await retryTransientFileOperation(() => rm(path, { force: true }), options);
   if (!outcome.ok) {
     throw outcome.error;
   }

@@ -262,6 +262,45 @@ test("GitHub API client classifies rate limits and server failures as retryable"
   }
 });
 
+test("GitHub API client recognizes primary and secondary rate limits returned as 403", async () => {
+  const cases = [
+    { message: "API rate limit exceeded", headers: { "x-ratelimit-remaining": "0" } },
+    { message: "Please wait before retrying", headers: { "retry-after": "60" } },
+    { message: "You have exceeded a secondary rate limit. Please wait a few minutes." },
+  ];
+  for (const { message, headers } of cases) {
+    const client = createGitHubApiClient({
+      fetch: async () => new Response(JSON.stringify({ message }), { status: 403, headers }),
+    });
+    await assert.rejects(
+      () => client.getPullRequest({ repository: "sample/project", pullRequestNumber: 42 }),
+      (error) =>
+        error instanceof GitHubApiClientError &&
+        error.code === "rate_limited" &&
+        error.retryable === true,
+    );
+  }
+});
+
+test("GitHub API client keeps ordinary 403 and invalid credentials non-retryable", async () => {
+  for (const status of [401, 403]) {
+    const client = createGitHubApiClient({
+      fetch: async () =>
+        new Response(JSON.stringify({ message: "Resource not accessible by integration" }), {
+          status,
+          headers: status === 401 ? { "x-ratelimit-remaining": "0" } : undefined,
+        }),
+    });
+    await assert.rejects(
+      () => client.getPullRequest({ repository: "sample/project", pullRequestNumber: 42 }),
+      (error) =>
+        error instanceof GitHubApiClientError &&
+        error.code === "permission_denied" &&
+        error.retryable === false,
+    );
+  }
+});
+
 test("GitHub API client validates transport budgets before requests", () => {
   assert.throws(
     () => createGitHubApiClient({ timeoutMs: 0 }),

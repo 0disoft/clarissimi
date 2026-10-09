@@ -174,7 +174,7 @@ async function requestJson(
         return body;
       }
 
-      throw mapGitHubApiError(response.status, body);
+      throw mapGitHubApiError(response, body);
     });
   } catch (error) {
     if (error instanceof GitHubApiClientError) {
@@ -303,18 +303,25 @@ function parseLabels(value: unknown): readonly { readonly name: string }[] {
   });
 }
 
-function mapGitHubApiError(status: number, body: unknown): GitHubApiClientError {
+function mapGitHubApiError(response: Response, body: unknown): GitHubApiClientError {
+  const status = response.status;
   const message = githubMessage(body);
+  if (
+    status === 429 ||
+    (status === 403 &&
+      (response.headers?.get?.("x-ratelimit-remaining") === "0" ||
+        Boolean(response.headers?.get?.("retry-after")?.trim()) ||
+        /\bsecondary rate limit\b/i.test(message)))
+  ) {
+    return new GitHubApiClientError("rate_limited", message);
+  }
+
   if (status === 401 || status === 403) {
     return new GitHubApiClientError("permission_denied", message);
   }
 
   if (status === 404) {
     return new GitHubApiClientError("not_found", message);
-  }
-
-  if (status === 429) {
-    return new GitHubApiClientError("rate_limited", message);
   }
 
   if (status >= 500) {

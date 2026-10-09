@@ -652,7 +652,7 @@ async function requestJson(fetchImpl, token, url, timeoutMs, maxResponseBytes) {
       if (response.ok) {
         return body;
       }
-      throw mapGitHubApiError(response.status, body);
+      throw mapGitHubApiError(response, body);
     });
   } catch (error) {
     if (error instanceof GitHubApiClientError) {
@@ -742,16 +742,17 @@ function parseLabels(value) {
     };
   });
 }
-function mapGitHubApiError(status, body) {
+function mapGitHubApiError(response, body) {
+  const status = response.status;
   const message = githubMessage(body);
+  if (status === 429 || status === 403 && (response.headers?.get?.("x-ratelimit-remaining") === "0" || Boolean(response.headers?.get?.("retry-after")?.trim()) || /\bsecondary rate limit\b/i.test(message))) {
+    return new GitHubApiClientError("rate_limited", message);
+  }
   if (status === 401 || status === 403) {
     return new GitHubApiClientError("permission_denied", message);
   }
   if (status === 404) {
     return new GitHubApiClientError("not_found", message);
-  }
-  if (status === 429) {
-    return new GitHubApiClientError("rate_limited", message);
   }
   if (status >= 500) {
     return new GitHubApiClientError("server_error", message);

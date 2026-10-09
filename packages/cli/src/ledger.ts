@@ -1,9 +1,36 @@
 import { stat } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import { RendererValidationError } from "@clarissimi/renderers";
+import {
+  RendererValidationError,
+  assertUniqueContributionRecords,
+  parseContributionsJsonl,
+} from "@clarissimi/renderers";
 
 import { readTextFile } from "./io.js";
+
+export class CliLedgerValidationError extends RendererValidationError {
+  constructor(error: RendererValidationError) {
+    super(error.message, error.issues);
+    this.name = "CliLedgerValidationError";
+  }
+}
+
+export async function readLedgerRecords(
+  path: string,
+  options: { readonly allowMissing?: boolean } = {},
+): Promise<ReturnType<typeof parseContributionsJsonl>> {
+  try {
+    const records = parseContributionsJsonl(await readLedgerText(path, options));
+    assertUniqueContributionRecords(records);
+    return records;
+  } catch (error) {
+    if (error instanceof RendererValidationError) {
+      throw new CliLedgerValidationError(error);
+    }
+    throw error;
+  }
+}
 
 export async function readLedgerText(
   path: string,

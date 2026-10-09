@@ -75,7 +75,12 @@ import {
   writeUsageFailure,
 } from "./output.js";
 import { resolveRecognitionProvider } from "./provider.js";
-import { assertLedgerDirectoryParents, readLedgerText } from "./ledger.js";
+import {
+  CliLedgerValidationError,
+  assertLedgerDirectoryParents,
+  readLedgerRecords,
+  readLedgerText,
+} from "./ledger.js";
 import { assertLedgerIsSeparateFromOutputs, pathKey, pathsReferToSameFile } from "./paths.js";
 
 export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExitCode> {
@@ -534,10 +539,7 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
       if ((await fileExists(ledgerPath)) && (await stat(ledgerPath)).nlink > 1) {
         throw new Error("Cannot atomically replace a ledger with multiple hard links.");
       }
-      const existingLedgerText = (await fileExists(ledgerPath))
-        ? await readTextFile(ledgerPath)
-        : "";
-      const existingRecords = parseContributionsJsonl(existingLedgerText);
+      const existingRecords = await readLedgerRecords(ledgerPath, { allowMissing: true });
       const nextRecords = appendPublicContributionRecord(existingRecords, validation.value);
       const outputs = renderRecognitionOutputs(nextRecords, {
         summary: resolveMarkdownSummary(args, config),
@@ -603,6 +605,9 @@ async function runImportDraft(args: ParsedArgs, io: CliIo): Promise<CliExitCode>
     }
 
     writeFailure(io, args, "import-draft", error);
+    if (error instanceof CliLedgerValidationError) {
+      return CLI_EXIT_CODES.invalidLedger;
+    }
     if (error instanceof CliConfigError) {
       return CLI_EXIT_CODES.invalidConfig;
     }

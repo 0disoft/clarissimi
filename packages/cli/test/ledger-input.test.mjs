@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import { runCli } from "../dist/index.js";
@@ -36,6 +37,67 @@ const readCommands = [
   ["render-page"],
   ["analytics", "recent-share"],
 ];
+
+for (const invalidLedger of ["invalid-json", "invalid-schema", "duplicate-records", "directory"]) {
+  test(`import-draft reports ${invalidLedger} as an invalid ledger and preserves outputs`, async () => {
+    await withTempDir(async (dir) => {
+      const draftPath = fileURLToPath(
+        new URL("../../../fixtures/approved-draft.json", import.meta.url),
+      );
+      const record = JSON.parse(await readFile(draftPath, "utf8"));
+      const ledger = join(dir, "ledger.jsonl");
+      const ledgerText =
+        invalidLedger === "invalid-json"
+          ? "not JSON\n"
+          : invalidLedger === "invalid-schema"
+            ? "{}\n"
+            : `${JSON.stringify(record)}\n${JSON.stringify(record)}\n`;
+      if (invalidLedger === "directory") {
+        await mkdir(ledger);
+        await writeFile(join(ledger, "keep.txt"), "existing directory contents\n");
+      } else {
+        await writeFile(ledger, ledgerText);
+      }
+      await writeFile(join(dir, "CONTRIBUTORS.md"), "existing contributor history\n");
+      const before = await readdir(dir);
+
+      for (const jsonFlags of [[], ["--json"]]) {
+        const result = await run(
+          [
+            "import-draft",
+            "--draft",
+            draftPath,
+            "--allow-legacy-approval",
+            "--ledger",
+            ledger,
+            "--out-dir",
+            dir,
+            ...jsonFlags,
+          ],
+          dir,
+        );
+        assert.equal(result.exitCode, 3, result.stdout + result.stderr);
+        assert.equal(jsonFlags.length > 0 ? result.stderr : result.stdout, "");
+        const message = jsonFlags.length > 0 ? JSON.parse(result.stdout).message : result.stderr;
+        assert.match(message, /ledger/i);
+      }
+
+      assert.equal(
+        await readFile(join(dir, "CONTRIBUTORS.md"), "utf8"),
+        "existing contributor history\n",
+      );
+      if (invalidLedger === "directory") {
+        assert.equal(
+          await readFile(join(ledger, "keep.txt"), "utf8"),
+          "existing directory contents\n",
+        );
+      } else {
+        assert.equal(await readFile(ledger, "utf8"), ledgerText);
+      }
+      assert.deepEqual(await readdir(dir), before);
+    });
+  });
+}
 
 for (const command of readCommands) {
   test(`${command[0]} rejects an explicitly selected missing ledger and preserves outputs`, async () => {

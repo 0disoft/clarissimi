@@ -34,6 +34,18 @@ async function publishProposalBranch(input, runtime = { runGit }) {
   }
   const remoteRef = `refs/heads/${input.branch.branchName}`;
   const remoteSha = await remoteBranchSha(runtime, input.repositoryDir, remoteName, remoteRef);
+  if (remoteSha !== void 0) {
+    const equivalentSha = await reconcileEquivalentLeaseWinner(runtime, input, remoteName, remoteRef, localSha);
+    if (equivalentSha === void 0) {
+      throw new ProposalBranchPublisherError("existing_remote_proposal_changed", "Existing remote proposal differs from this generation or base. Review or close that proposal before regenerating it; maintainer edits and approval were preserved.");
+    }
+    return {
+      remoteName,
+      branchName: input.branch.branchName,
+      commitSha: equivalentSha,
+      rollbackHint: `Delete remote branch ${remoteName}/${input.branch.branchName} before merge to discard this proposal.`
+    };
+  }
   const pushResult = await runtime.runGit(input.repositoryDir, [
     "push",
     `--force-with-lease=${remoteRef}:${remoteSha ?? ""}`,
@@ -60,9 +72,6 @@ async function reconcileEquivalentLeaseWinner(runtime, input, remoteName, remote
     const winnerSha = await remoteBranchSha(runtime, input.repositoryDir, remoteName, remoteRef);
     if (winnerSha === void 0) {
       return void 0;
-    }
-    if (winnerSha === localSha) {
-      return winnerSha;
     }
     const fetchResult = await runtime.runGit(input.repositoryDir, [
       "fetch",
@@ -133,7 +142,7 @@ async function git(runtime, repositoryDir, args) {
   return result.stdout.trim();
 }
 function runGit(repositoryDir, args) {
-  return new Promise((resolve3, reject) => {
+  return new Promise((resolve4, reject) => {
     const child = spawn("git", args, {
       cwd: repositoryDir,
       stdio: ["ignore", "pipe", "pipe"]
@@ -150,7 +159,7 @@ function runGit(repositoryDir, args) {
     });
     child.on("error", reject);
     child.on("close", (exitCode2) => {
-      resolve3({
+      resolve4({
         exitCode: exitCode2 ?? 1,
         stdout,
         stderr
@@ -184,16 +193,48 @@ async function writeProposalBranch(input) {
   ]);
   const originalRef = await currentRef(input.repositoryDir);
   const originalCommitSha = await git2(input.repositoryDir, ["rev-parse", "HEAD"]);
+  if (input.expectedBaseCommitSha !== void 0 && (baseCommitSha !== input.expectedBaseCommitSha || originalCommitSha !== baseCommitSha)) {
+    throw new ProposalBranchWriterError("proposal_base_changed", "Checkout or proposal base changed during generation. Check out the selected base revision and rerun; no proposal files were written.");
+  }
   for (const file of input.manifest.files) {
     await assertSafeRepositoryOutputPath(input.repositoryDir, file.path);
   }
   await assertCleanWorktree(input.repositoryDir);
   const previousProposalSha = await assertExistingProposalBranchIsOwned(input.repositoryDir, input.baseBranch, branchName, input.manifest.files);
+  if (previousProposalSha !== void 0) {
+    for (const file of input.manifest.files) {
+      const content = await readFile(join(input.stagedOutputDir, file.path));
+      if (createHash("sha256").update(content).digest("hex") !== file.sha256) {
+        throw new ProposalBranchWriterError("staged_file_hash_mismatch", `Staged file hash does not match manifest for ${file.path}.`);
+      }
+      if (content.byteLength !== file.bytes) {
+        throw new ProposalBranchWriterError("staged_file_size_mismatch", `Staged file byte count does not match manifest for ${file.path}.`);
+      }
+      const existing = await runGit2(input.repositoryDir, [
+        "show",
+        `${previousProposalSha}:${file.path}`
+      ]);
+      if (existing.exitCode !== 0 || existing.stdout !== content.toString("utf8")) {
+        throw new ProposalBranchWriterError("existing_branch_content_changed", "Existing proposal differs from the generated output. Review or close that proposal before regenerating it; maintainer edits and approval were preserved.");
+      }
+    }
+    if (await git2(input.repositoryDir, ["merge-base", baseCommitSha, previousProposalSha]) !== baseCommitSha) {
+      throw new ProposalBranchWriterError("existing_branch_base_changed", "Existing proposal has a different base. Review or close that proposal before regenerating it.");
+    }
+    return {
+      branchName,
+      baseBranch: input.baseBranch,
+      baseCommitSha,
+      commitSha: previousProposalSha,
+      changedFiles: await changedFilesFromBase(input.repositoryDir, baseCommitSha, previousProposalSha),
+      rollbackHint: `Delete branch ${branchName} before merge to discard this proposal.`
+    };
+  }
   let writeSucceeded = false;
   let branchReset = false;
   let proposalHeadSha = baseCommitSha;
   try {
-    await git2(input.repositoryDir, ["checkout", "-B", branchName, input.baseBranch]);
+    await git2(input.repositoryDir, ["checkout", "-b", branchName, baseCommitSha]);
     branchReset = true;
     await writeStagedFilesToRepository(input);
     await git2(input.repositoryDir, ["add", "--", ...input.manifest.files.map((file) => file.path)]);
@@ -213,7 +254,7 @@ async function writeProposalBranch(input) {
     }
     const commitSha = await git2(input.repositoryDir, ["rev-parse", "HEAD"]);
     proposalHeadSha = commitSha;
-    const changedFiles = await changedFilesFromBase(input.repositoryDir, input.baseBranch, branchName);
+    const changedFiles = await changedFilesFromBase(input.repositoryDir, baseCommitSha, branchName);
     assertChangedFilesAreOwned(changedFiles, input.manifest.files);
     writeSucceeded = true;
     return {
@@ -238,6 +279,14 @@ async function writeProposalBranch(input) {
     }
     await restoreRef(input.repositoryDir, originalRef);
   }
+}
+async function assertProposalBaseCheckout(repositoryDir, baseBranch) {
+  const base = await git2(repositoryDir, ["rev-parse", "--verify", `${baseBranch}^{commit}`]);
+  const head = await git2(repositoryDir, ["rev-parse", "HEAD"]);
+  if (head !== base) {
+    throw new ProposalBranchWriterError("proposal_base_checkout_mismatch", "Current checkout differs from the selected proposal base. Check out that base revision before generating a proposal; its existing ledger must be retained.");
+  }
+  return base;
 }
 function proposalBranchName(manifest) {
   const sourceKind = normalizeBranchSegment(manifest.source.event);
@@ -439,7 +488,7 @@ async function gitExitCode(repositoryDir, args) {
   return (await runGit2(repositoryDir, args)).exitCode;
 }
 function runGit2(repositoryDir, args) {
-  return new Promise((resolve3, reject) => {
+  return new Promise((resolve4, reject) => {
     const child = spawn2("git", args, {
       cwd: repositoryDir,
       stdio: ["ignore", "pipe", "pipe"]
@@ -456,7 +505,7 @@ function runGit2(repositoryDir, args) {
     });
     child.on("error", reject);
     child.on("close", (exitCode2) => {
-      resolve3({
+      resolve4({
         exitCode: exitCode2 ?? 1,
         stdout,
         stderr
@@ -601,7 +650,7 @@ async function git3(repositoryDir, args) {
   return result.stdout.trim();
 }
 function runGit3(repositoryDir, args) {
-  return new Promise((resolve3, reject) => {
+  return new Promise((resolve4, reject) => {
     const child = spawn3("git", args, {
       cwd: repositoryDir,
       stdio: ["ignore", "pipe", "pipe"]
@@ -618,7 +667,7 @@ function runGit3(repositoryDir, args) {
     });
     child.on("error", reject);
     child.on("close", (exitCode2) => {
-      resolve3({ exitCode: exitCode2 ?? 1, stdout, stderr });
+      resolve4({ exitCode: exitCode2 ?? 1, stdout, stderr });
     });
   });
 }
@@ -653,25 +702,30 @@ function createGitHubApiClient(options = {}) {
       const response = await requestPaginatedArray(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/files`, "GitHub pull request files response must be an array.", timeoutMs, maxResponseBytes, limit);
       return response.map(parsePullRequestFile);
     },
-    async listPullRequestReviewComments(input) {
-      const response = await requestPaginatedArray(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/comments`, "GitHub pull request review comments response must be an array.", timeoutMs, maxResponseBytes);
+    async listPullRequestReviewComments(input, limit) {
+      if (limit === 0)
+        return [];
+      const response = await requestPaginatedArray(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/comments`, "GitHub pull request review comments response must be an array.", timeoutMs, maxResponseBytes, limit ?? MAX_LIST_PAGES * DEFAULT_PAGE_SIZE, limit !== void 0);
       return response.map(parseReviewComment);
     }
   };
 }
-async function requestPaginatedArray(fetchImpl, token, baseUrl, invalidResponseMessage, timeoutMs, maxResponseBytes, maxItems = MAX_LIST_PAGES * DEFAULT_PAGE_SIZE) {
+async function requestPaginatedArray(fetchImpl, token, baseUrl, invalidResponseMessage, timeoutMs, maxResponseBytes, maxItems = MAX_LIST_PAGES * DEFAULT_PAGE_SIZE, partial = false) {
   positiveIntegerOption(maxItems, "listLimit");
   const entries = [];
   for (let page = 1; page <= MAX_LIST_PAGES; page += 1) {
-    const response = await requestJson(fetchImpl, token, `${baseUrl}?per_page=${DEFAULT_PAGE_SIZE}&page=${page}`, timeoutMs, maxResponseBytes);
+    const pageSize = partial ? Math.min(DEFAULT_PAGE_SIZE, maxItems) : DEFAULT_PAGE_SIZE;
+    const response = await requestJson(fetchImpl, token, `${baseUrl}?per_page=${pageSize}&page=${page}`, timeoutMs, maxResponseBytes);
     if (!Array.isArray(response)) {
       throw new GitHubApiClientError("unexpected_response", invalidResponseMessage);
     }
-    entries.push(...response);
+    entries.push(...partial ? response.slice(0, maxItems - entries.length) : response);
+    if (partial && entries.length >= maxItems)
+      return entries;
     if (entries.length > maxItems) {
       throw new GitHubApiClientError("response_too_large", `GitHub list response exceeded ${maxItems} items.`);
     }
-    if (response.length < DEFAULT_PAGE_SIZE) {
+    if (response.length < pageSize) {
       return entries;
     }
   }
@@ -1306,7 +1360,7 @@ async function collectLiveMergedPullRequestEvidence(input) {
   const reviewCommentLimit = input.reviewCommentLimit ?? DEFAULT_REVIEW_COMMENT_LIMIT;
   const [files, reviewComments] = await Promise.all([
     input.client.listPullRequestFiles(lookup, DEFAULT_CHANGED_FILE_LIMIT),
-    reviewCommentLimit === 0 ? Promise.resolve([]) : input.client.listPullRequestReviewComments(lookup)
+    reviewCommentLimit === 0 ? Promise.resolve([]) : input.client.listPullRequestReviewComments(lookup, reviewCommentLimit)
   ]);
   if (files.length > DEFAULT_CHANGED_FILE_LIMIT) {
     throw new LiveGitHubCollectionError("changed_file_limit", `Live GitHub collector changed files must not exceed ${DEFAULT_CHANGED_FILE_LIMIT} items.`);
@@ -2228,7 +2282,7 @@ function randomOption(value) {
   };
 }
 function defaultSleep(milliseconds) {
-  return new Promise((resolve3) => setTimeout(resolve3, milliseconds));
+  return new Promise((resolve4) => setTimeout(resolve4, milliseconds));
 }
 function expectString3(value, field) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -2297,6 +2351,79 @@ var EVIDENCE_KINDS = [
   "advisory"
 ];
 var CLAIM_EVIDENCE_FIELDS = ["evidenceSummary", "publicRecognitionText"];
+
+// packages/schemas/dist/diagnostics.js
+var FIELDS = /* @__PURE__ */ new Set([
+  "schemaVersion",
+  "contributor",
+  "platform",
+  "id",
+  "login",
+  "profileUrl",
+  "kind",
+  "contributionType",
+  "affectedArea",
+  "impactLevel",
+  "evidenceSummary",
+  "evidenceRefs",
+  "url",
+  "title",
+  "excerpt",
+  "claimEvidenceLinks",
+  "field",
+  "text",
+  "evidenceRefIndexes",
+  "suggestedBadge",
+  "publicRecognitionText",
+  "confidence",
+  "maintainerApprovalStatus",
+  "approvalSnapshot",
+  "contentSha256",
+  "recordedAt",
+  "source",
+  "repository",
+  "event",
+  "pullRequestNumber",
+  "mergedAt",
+  "ledger",
+  "assessments",
+  "headSha",
+  "decision",
+  "reason"
+]);
+function sanitizeValidationIssuePath(path) {
+  let result = "$";
+  let rest = path.startsWith("$") ? path.slice(1) : "";
+  while (rest.length > 0) {
+    const index = /^\[(0|[1-9]\d{0,8})\]/.exec(rest);
+    if (index !== null) {
+      result += index[0];
+      rest = rest.slice(index[0].length);
+      continue;
+    }
+    const field = /^\.([A-Za-z][A-Za-z0-9]*)(?=\.|\[|$)/.exec(rest);
+    if (field === null || !FIELDS.has(field[1]))
+      return result;
+    result += field[0];
+    rest = rest.slice(field[0].length);
+  }
+  return result;
+}
+function publicValidationDiagnostics(issues) {
+  const bounded = issues.slice(0, 8);
+  const issueCodes = [
+    ...new Set(bounded.map((issue) => /^[a-z][a-z0-9_]{0,79}$/.test(issue.code) ? issue.code : "validation_failed"))
+  ];
+  const issuePaths = [...new Set(bounded.map((issue) => sanitizeValidationIssuePath(issue.path)))];
+  const recovery = issues.some((issue) => ["approval_snapshot_required", "approval_snapshot_mismatch", "invalid_stage_status"].includes(issue.code));
+  return {
+    issueCodes,
+    issuePaths,
+    ...recovery ? {
+      recoveryHint: "To approve edited text, set maintainerApprovalStatus back to draft, remove the old approvalSnapshot, review the content, and run clarissimi approve-draft again."
+    } : {}
+  };
+}
 
 // packages/schemas/dist/validation.js
 var RANKING_LANGUAGE_PATTERNS = [
@@ -3333,6 +3460,50 @@ function assignOptional4(target, key, value) {
   }
 }
 
+// packages/core/dist/hints.js
+function prepareProviderHints(value, evidence) {
+  const hints = {};
+  const reports = [evidence.redactionReport];
+  function invalid2(field) {
+    throw new Error(`Provider hints.${field} has an invalid value.`);
+  }
+  if (value !== void 0) {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      throw new Error("Provider hints must be an object.");
+    }
+    const input = value;
+    if (input.contributionType !== void 0) {
+      if (typeof input.contributionType !== "string" || !isContributionType(input.contributionType))
+        invalid2("contributionType");
+      hints.contributionType = input.contributionType;
+    }
+    if (input.impactLevel !== void 0) {
+      if (typeof input.impactLevel !== "string" || !isImpactLevel(input.impactLevel))
+        invalid2("impactLevel");
+      hints.impactLevel = input.impactLevel;
+    }
+    if (input.confidence !== void 0) {
+      if (typeof input.confidence !== "number" || !Number.isFinite(input.confidence) || input.confidence < 0 || input.confidence > 1)
+        invalid2("confidence");
+      hints.confidence = input.confidence;
+    }
+    for (const field of ["affectedArea", "suggestedBadge"]) {
+      const text = input[field];
+      if (text === void 0)
+        continue;
+      if (typeof text !== "string" || text.trim().length === 0)
+        invalid2(field);
+      const redacted = redactText(text);
+      hints[field] = redacted.text;
+      reports.push(redacted.report);
+    }
+  }
+  return {
+    hints,
+    preparedEvidence: { ...evidence, redactionReport: mergeRedactionReports(reports) }
+  };
+}
+
 // packages/core/dist/approval.js
 function canPublishAssessment(value) {
   const validation = validateContributionAssessment(value);
@@ -4074,8 +4245,156 @@ function sanitizeAssessmentForActionSummary(assessment) {
 
 // packages/action/dist/staging.js
 import { createHash as createHash3 } from "node:crypto";
-import { mkdir as mkdir2, writeFile as writeFile2 } from "node:fs/promises";
-import { dirname as dirname2, isAbsolute as isAbsolute2, join as join2, normalize as normalize2, sep as sep2 } from "node:path";
+import { lstat as lstat4, mkdir as mkdir3, writeFile as writeFile2 } from "node:fs/promises";
+import { dirname as dirname3, isAbsolute as isAbsolute3, join as join4, normalize as normalize2, sep as sep3 } from "node:path";
+
+// packages/action/dist/staging-directory.js
+import { lstat as lstat3, mkdir as mkdir2, mkdtemp, realpath as realpath3, rm } from "node:fs/promises";
+import { dirname as dirname2, join as join3, resolve as resolve2 } from "node:path";
+import { tmpdir } from "node:os";
+
+// packages/action/dist/errors.js
+var ActionUsageError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ActionUsageError";
+  }
+};
+
+// packages/action/dist/path-security.js
+import { lstat as lstat2, realpath as realpath2 } from "node:fs/promises";
+import { isAbsolute as isAbsolute2, join as join2, relative as relative2, resolve, sep as sep2 } from "node:path";
+
+// packages/action/dist/environment.js
+function readEnvInput(value) {
+  if (value === void 0 || value.trim().length === 0) {
+    return void 0;
+  }
+  return value;
+}
+function requireEnvInput(value, name) {
+  const normalized = readEnvInput(value);
+  if (normalized === void 0) {
+    throw new ActionUsageError(`${name} is required for write modes.`);
+  }
+  return normalized;
+}
+
+// packages/action/dist/path-security.js
+async function resolveActionSummaryPath(env) {
+  const inputPath = readEnvInput(env.INPUT_SUMMARY_PATH);
+  if (inputPath === void 0) {
+    return void 0;
+  }
+  if (isAbsolute2(inputPath)) {
+    throw new ActionUsageError("INPUT_SUMMARY_PATH must be a relative path inside GITHUB_WORKSPACE.");
+  }
+  const workspace = resolve(readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd());
+  const resolvedPath = resolve(workspace, inputPath);
+  if (!isPathInside(workspace, resolvedPath)) {
+    throw new ActionUsageError("INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.");
+  }
+  const overlapsRecognitionOutput = Object.values(RENDERED_OUTPUT_PATHS).some((path) => relative2(resolve(workspace, path), resolvedPath).length === 0);
+  if (overlapsRecognitionOutput || isPathInside(resolve(workspace, DRAFTS_DIR_PATH), resolvedPath)) {
+    throw new ActionUsageError("INPUT_SUMMARY_PATH must not overwrite Clarissimi recognition outputs or draft inbox files.");
+  }
+  const workspaceRoot = await realpath2(workspace);
+  let currentPath = workspaceRoot;
+  const relativePath = relative2(workspace, resolvedPath);
+  const segments = relativePath.split(/[\\/]+/).filter((value) => value.length > 0);
+  if (segments.length === 0) {
+    throw new ActionUsageError("INPUT_SUMMARY_PATH must point to a file inside GITHUB_WORKSPACE.");
+  }
+  for (const [index, segment] of segments.entries()) {
+    currentPath = join2(currentPath, segment);
+    try {
+      const stats = await lstat2(currentPath);
+      if (stats.isSymbolicLink() || stats.isFile() && stats.nlink > 1) {
+        throw new ActionUsageError("INPUT_SUMMARY_PATH must not traverse symbolic links, junctions, or hard links.");
+      }
+      const isDestination = index === segments.length - 1;
+      if (isDestination ? !stats.isFile() : !stats.isDirectory()) {
+        throw new ActionUsageError("INPUT_SUMMARY_PATH must point to a file whose parent paths are directories.");
+      }
+      const resolvedCurrentPath = await realpath2(currentPath);
+      if (!isPathInside(workspaceRoot, resolvedCurrentPath)) {
+        throw new ActionUsageError("INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.");
+      }
+    } catch (error) {
+      if (isNodeError2(error) && error.code === "ENOENT") {
+        continue;
+      }
+      throw error;
+    }
+  }
+  return resolvedPath;
+}
+function isPathInside(basePath, targetPath) {
+  const relativePath = relative2(basePath, targetPath);
+  return relativePath.length === 0 || relativePath !== ".." && !relativePath.startsWith(`..${sep2}`) && !isAbsolute2(relativePath);
+}
+function isNodeError2(error) {
+  return error instanceof Error && "code" in error;
+}
+
+// packages/action/dist/staging-directory.js
+async function assertSafeStagingDirectory(path) {
+  let current = resolve2(path);
+  const systemTemp = resolve2(tmpdir());
+  while (true) {
+    try {
+      const entry = await lstat3(current);
+      if (entry.isSymbolicLink() || !entry.isDirectory()) {
+        throw new ActionUsageError("Staging directories must be directories without symbolic links or junctions; choose a separate temporary parent.");
+      }
+    } catch (error) {
+      if (!(error instanceof Error && "code" in error && error.code === "ENOENT"))
+        throw error;
+    }
+    const parent = dirname2(current);
+    if (current === systemTemp || parent === current)
+      return;
+    current = parent;
+  }
+}
+async function withActionStaging(input, task) {
+  const parent = resolve2(input.stagingDir);
+  const repository = await realpath3(input.repositoryDir);
+  await assertSafeStagingDirectory(parent);
+  let existing = parent;
+  while (true) {
+    try {
+      existing = await realpath3(existing);
+      break;
+    } catch (error) {
+      if (!(error instanceof Error && "code" in error && error.code === "ENOENT"))
+        throw error;
+      existing = dirname2(existing);
+    }
+  }
+  if (isPathInside(repository, parent) || isPathInside(parent, repository) || isPathInside(repository, existing)) {
+    throw new ActionUsageError("Staging parent must not overlap the checkout. Choose a separate temporary directory outside the repository.");
+  }
+  await mkdir2(parent, { recursive: true });
+  const stagingDir = await mkdtemp(join3(parent, "clarissimi-"));
+  let outcome;
+  try {
+    outcome = { ok: true, value: await task({ ...input, stagingDir }) };
+  } catch (error) {
+    outcome = { ok: false, error };
+  }
+  try {
+    await rm(stagingDir, { recursive: true, force: true });
+  } catch (error) {
+    if (outcome.ok)
+      throw error;
+  }
+  if (!outcome.ok)
+    throw outcome.error;
+  return outcome.value;
+}
+
+// packages/action/dist/staging.js
 var ProposalOutputStagingError = class extends Error {
   issues;
   constructor(message, issues) {
@@ -4188,6 +4507,8 @@ async function writeRenderedOutputs(outputDir, outputs) {
     ["staticDataJson", RENDERED_OUTPUT_PATHS.staticDataJson]
   ];
   const files = [];
+  for (const [, path] of entries)
+    await assertUnusedStagedDestination(outputDir, path);
   for (const [key, path] of entries) {
     assertClarissimiOutputPath(path);
     const content = outputs[key];
@@ -4196,9 +4517,10 @@ async function writeRenderedOutputs(outputDir, outputs) {
   return files;
 }
 async function writeStagedFile(outputDir, path, content) {
-  const destination = join2(outputDir, path);
-  await mkdir2(dirname2(destination), { recursive: true });
-  await writeFile2(destination, content, "utf8");
+  await assertUnusedStagedDestination(outputDir, path);
+  const destination = join4(outputDir, path);
+  await mkdir3(dirname3(destination), { recursive: true });
+  await writeFile2(destination, content, { encoding: "utf8", flag: "wx", mode: 384 });
   return [
     {
       path,
@@ -4206,6 +4528,18 @@ async function writeStagedFile(outputDir, path, content) {
       sha256: createHash3("sha256").update(content, "utf8").digest("hex")
     }
   ];
+}
+async function assertUnusedStagedDestination(outputDir, path) {
+  const destination = join4(outputDir, path);
+  await assertSafeStagingDirectory(dirname3(destination));
+  try {
+    await lstat4(destination);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT")
+      return;
+    throw error;
+  }
+  throw new Error("Staged output already exists; choose a fresh staging directory. Existing files were preserved.");
 }
 function summarizeApprovals(assessments) {
   return assessments.reduce((summary, assessment) => ({
@@ -4221,8 +4555,8 @@ function sameSource(left, right) {
 }
 function assertClarissimiOutputPath(path) {
   const normalized = normalize2(path);
-  const allowed = normalized === "CONTRIBUTORS.md" || normalized.startsWith(`.clarissimi${sep2}`) || normalized === ".clarissimi";
-  if (isAbsolute2(path) || normalized.startsWith("..") || normalized.includes(`${sep2}..${sep2}`) || !allowed) {
+  const allowed = normalized === "CONTRIBUTORS.md" || normalized.startsWith(`.clarissimi${sep3}`) || normalized === ".clarissimi";
+  if (isAbsolute3(path) || normalized.startsWith("..") || normalized.includes(`${sep3}..${sep3}`) || !allowed) {
     throw new ProposalOutputStagingError("Renderer output path is outside Clarissimi-owned files.", [
       {
         path: "$.files.path",
@@ -4234,15 +4568,16 @@ function assertClarissimiOutputPath(path) {
 }
 
 // packages/action/dist/run.js
-import { readFile as readFile4, realpath as realpath3 } from "node:fs/promises";
-import { isAbsolute as isAbsolute5, join as join5, resolve as resolve2 } from "node:path";
-import { tmpdir } from "node:os";
+import { readFile as readFile4, realpath as realpath4 } from "node:fs/promises";
+import { isAbsolute as isAbsolute5, join as join6, resolve as resolve3 } from "node:path";
+import { tmpdir as tmpdir2 } from "node:os";
 
 // packages/providers/dist/result-quality.js
 var SECURITY_CLAIM_PATTERN = /\b(?:security|vulnerabilit(?:y|ies)|exploit|advisory|cve-\d{4}-\d{4,})\b/i;
 var REGRESSION_CLAIM_PATTERN = /\b(?:regression (?:coverage|test|guard|prevention)|prevent(?:ed|s|ing)? (?:a )?regression)\b/i;
 var MEASURED_PERFORMANCE_CLAIM_PATTERN = /\b(?:faster|speedup|lower latency|reduced latency|improved throughput|benchmark(?:ed)?)\b/i;
 var MEASUREMENT_EVIDENCE_PATTERN = /\b(?:bench(?:mark)?|perf(?:ormance)?|latency|throughput|memory)\b/i;
+var BENCHMARK_FILE_PATTERN = /(?:^|[/\\])(?:benchmarks?|benches)[/\\].+\.(?:[cm]?[jt]sx?|py|rs|go|java|kt|cs|rb|php|swift|c|cc|cpp|json|csv|tsv|txt)$/i;
 var TEST_FILE_PATTERN = /(?:^|[/\\])[^/\\]+\.(?:test|spec)\.(?:[cm]?[jt]sx?|py|rs|go|java|kt|cs|rb|php|swift)$|(?:^|[/\\])[^/\\]+_test\.go$|(?:^|[/\\])(?:test_[^/\\]+|[^/\\]+_test)\.py$/i;
 function validateProviderAssessmentResult(input, value) {
   const schemaResult = validateContributionAssessment(value);
@@ -4399,7 +4734,7 @@ function isSecuritySupportItem(item) {
   return item.kind === "advisory" || (item.kind === "label" || item.kind === "test") && [item.id, item.title].some((value) => value !== void 0 && SECURITY_CLAIM_PATTERN.test(value));
 }
 function isMeasurementEvidence(item) {
-  return (item.kind === "test" || item.kind === "maintainer_note") && [item.id, item.title].some((value) => value !== void 0 && MEASUREMENT_EVIDENCE_PATTERN.test(value));
+  return item.kind === "file" && BENCHMARK_FILE_PATTERN.test(item.id) || (item.kind === "test" || item.kind === "maintainer_note") && [item.id, item.title].some((value) => value !== void 0 && MEASUREMENT_EVIDENCE_PATTERN.test(value));
 }
 function isRegressionClaimText(value) {
   return REGRESSION_CLAIM_PATTERN.test(value);
@@ -4634,7 +4969,7 @@ function isPublicNetworkAddress(address) {
   return !subnets.some(({ network, prefix }) => isInSubnet(numeric, network, prefix, bits));
 }
 async function executePinnedRequest(options, body, signal, pinned) {
-  return await new Promise((resolve3, reject) => {
+  return await new Promise((resolve4, reject) => {
     const request = (options.protocol === "https:" ? httpsRequest : httpRequest)({
       hostname: options.hostname,
       family: options.family,
@@ -4663,7 +4998,7 @@ async function executePinnedRequest(options, body, signal, pinned) {
       }
       const hasNoBody = status === 204 || status === 205 || status === 304;
       const stream = hasNoBody ? null : Readable.toWeb(response);
-      resolve3(new Response(stream, { status, headers }));
+      resolve4(new Response(stream, { status, headers }));
     });
     request.once("socket", (socket) => {
       socket.once("connect", () => {
@@ -4817,6 +5152,11 @@ function createOpenAiCompatibleContributionDraftProvider(options) {
   return {
     id: options.id ?? DEFAULT_PROVIDER_ID2,
     async createAssessment(input) {
+      try {
+        input = { ...input, ...prepareProviderHints(input.hints, input.preparedEvidence) };
+      } catch {
+        throw new OpenAiCompatibleProviderError("invalid_options", "Provider hints contain an invalid field value; validate hints before drafting.");
+      }
       const requestInput = {
         endpoint,
         endpointTrust,
@@ -5078,7 +5418,13 @@ function buildProviderPayload(input) {
       changed: input.preparedEvidence.redactionReport.changed,
       matchCount: input.preparedEvidence.redactionReport.occurrences.length
     },
-    hints: input.hints ?? {}
+    hints: {
+      contributionType: input.hints?.contributionType,
+      affectedArea: input.hints?.affectedArea,
+      impactLevel: input.hints?.impactLevel,
+      suggestedBadge: input.hints?.suggestedBadge,
+      confidence: input.hints?.confidence
+    }
   };
 }
 function allowlistedProviderMetadata(metadata) {
@@ -5257,31 +5603,8 @@ function isRecord7(value) {
 }
 
 // packages/action/dist/config.js
-import { basename, isAbsolute as isAbsolute3, join as join3 } from "node:path";
+import { basename, isAbsolute as isAbsolute4, join as join5 } from "node:path";
 import { pathToFileURL } from "node:url";
-
-// packages/action/dist/errors.js
-var ActionUsageError = class extends Error {
-  constructor(message) {
-    super(message);
-    this.name = "ActionUsageError";
-  }
-};
-
-// packages/action/dist/environment.js
-function readEnvInput(value) {
-  if (value === void 0 || value.trim().length === 0) {
-    return void 0;
-  }
-  return value;
-}
-function requireEnvInput(value, name) {
-  const normalized = readEnvInput(value);
-  if (normalized === void 0) {
-    throw new ActionUsageError(`${name} is required for write modes.`);
-  }
-  return normalized;
-}
 
 // packages/action/dist/json-input.js
 import { readFile as readFile3 } from "node:fs/promises";
@@ -5297,7 +5620,7 @@ async function loadActionConfigFromEnvironment(env) {
     return {};
   }
   const workspace = readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd();
-  const resolvedPath = isAbsolute3(configPath) ? configPath : join3(workspace, configPath);
+  const resolvedPath = isAbsolute4(configPath) ? configPath : join5(workspace, configPath);
   const parsed = await loadActionConfigValue(configPath, resolvedPath);
   const result = validateClarissimiConfig(parsed);
   if (!result.ok) {
@@ -5367,65 +5690,6 @@ function formatActionConfigValidationIssue(issue) {
   return issue.message;
 }
 
-// packages/action/dist/path-security.js
-import { lstat as lstat2, realpath as realpath2 } from "node:fs/promises";
-import { isAbsolute as isAbsolute4, join as join4, relative as relative2, resolve, sep as sep3 } from "node:path";
-async function resolveActionSummaryPath(env) {
-  const inputPath = readEnvInput(env.INPUT_SUMMARY_PATH);
-  if (inputPath === void 0) {
-    return void 0;
-  }
-  if (isAbsolute4(inputPath)) {
-    throw new ActionUsageError("INPUT_SUMMARY_PATH must be a relative path inside GITHUB_WORKSPACE.");
-  }
-  const workspace = resolve(readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd());
-  const resolvedPath = resolve(workspace, inputPath);
-  if (!isPathInside(workspace, resolvedPath)) {
-    throw new ActionUsageError("INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.");
-  }
-  const overlapsRecognitionOutput = Object.values(RENDERED_OUTPUT_PATHS).some((path) => relative2(resolve(workspace, path), resolvedPath).length === 0);
-  if (overlapsRecognitionOutput || isPathInside(resolve(workspace, DRAFTS_DIR_PATH), resolvedPath)) {
-    throw new ActionUsageError("INPUT_SUMMARY_PATH must not overwrite Clarissimi recognition outputs or draft inbox files.");
-  }
-  const workspaceRoot = await realpath2(workspace);
-  let currentPath = workspaceRoot;
-  const relativePath = relative2(workspace, resolvedPath);
-  const segments = relativePath.split(/[\\/]+/).filter((value) => value.length > 0);
-  if (segments.length === 0) {
-    throw new ActionUsageError("INPUT_SUMMARY_PATH must point to a file inside GITHUB_WORKSPACE.");
-  }
-  for (const [index, segment] of segments.entries()) {
-    currentPath = join4(currentPath, segment);
-    try {
-      const stats = await lstat2(currentPath);
-      if (stats.isSymbolicLink() || stats.isFile() && stats.nlink > 1) {
-        throw new ActionUsageError("INPUT_SUMMARY_PATH must not traverse symbolic links, junctions, or hard links.");
-      }
-      const isDestination = index === segments.length - 1;
-      if (isDestination ? !stats.isFile() : !stats.isDirectory()) {
-        throw new ActionUsageError("INPUT_SUMMARY_PATH must point to a file whose parent paths are directories.");
-      }
-      const resolvedCurrentPath = await realpath2(currentPath);
-      if (!isPathInside(workspaceRoot, resolvedCurrentPath)) {
-        throw new ActionUsageError("INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.");
-      }
-    } catch (error) {
-      if (isNodeError2(error) && error.code === "ENOENT") {
-        continue;
-      }
-      throw error;
-    }
-  }
-  return resolvedPath;
-}
-function isPathInside(basePath, targetPath) {
-  const relativePath = relative2(basePath, targetPath);
-  return relativePath.length === 0 || relativePath !== ".." && !relativePath.startsWith(`..${sep3}`) && !isAbsolute4(relativePath);
-}
-function isNodeError2(error) {
-  return error instanceof Error && "code" in error;
-}
-
 // packages/action/dist/provider.js
 function resolveActionProvider(env, runtime, config) {
   const providerId = readEnvInput(env.INPUT_PROVIDER) ?? config.provider ?? "fake";
@@ -5480,8 +5744,8 @@ function assignOptional5(target, key, value) {
 }
 
 // packages/action/dist/output.js
-import { appendFile, mkdir as mkdir3, writeFile as writeFile3 } from "node:fs/promises";
-import { dirname as dirname3 } from "node:path";
+import { appendFile, mkdir as mkdir4, writeFile as writeFile3 } from "node:fs/promises";
+import { dirname as dirname4 } from "node:path";
 async function writeGitHubOutputs(outputPath, summary, summaryJsonPath) {
   if (outputPath === void 0 || outputPath.trim().length === 0) {
     return;
@@ -5514,7 +5778,7 @@ async function writeActionSummaryJson(summaryJsonPath, summary) {
   if (summaryJsonPath === void 0) {
     return;
   }
-  await mkdir3(dirname3(summaryJsonPath), { recursive: true });
+  await mkdir4(dirname4(summaryJsonPath), { recursive: true });
   await writeFile3(summaryJsonPath, `${JSON.stringify(summary, null, 2)}
 `, "utf8");
 }
@@ -5559,20 +5823,23 @@ async function writeGitHubStepSummary(summaryPath, summary) {
 var MAX_PROVIDER_FAILURE_ISSUES = 8;
 var MAX_PROVIDER_FAILURE_FIELD_LENGTH = 120;
 async function writeGitHubProviderFailureStepSummary(summaryPath, error) {
-  if (summaryPath === void 0 || summaryPath.trim().length === 0 || error.code !== "invalid_assessment" || error.issues === void 0 || error.issues.length === 0) {
+  if (summaryPath === void 0 || summaryPath.trim().length === 0 || error.issues === void 0 || error.issues.length === 0) {
     return;
   }
   const issues = error.issues.slice(0, MAX_PROVIDER_FAILURE_ISSUES);
+  const providerFailure = error instanceof OpenAiCompatibleProviderError;
+  const diagnostics = publicValidationDiagnostics(error.issues);
   const markdown = [
-    "## Clarissimi provider result rejected",
+    providerFailure ? "## Clarissimi provider result rejected" : "## Clarissimi draft validation rejected",
     "",
-    "The provider output failed Clarissimi's result-quality contract. Raw provider content is intentionally omitted.",
+    providerFailure ? "The provider output failed Clarissimi's result-quality contract. Raw provider content is intentionally omitted." : "The assessment failed validation. Review the fields below before retrying; raw draft content is omitted.",
     "",
     "| Rule | Path |",
     "| --- | --- |",
-    ...issues.map((issue) => `| ${escapeMarkdownTableCell(boundedProviderFailureField(issue.code))} | ${escapeMarkdownTableCell(boundedProviderFailureField(issue.path))} |`),
+    ...issues.map((issue) => `| ${escapeMarkdownTableCell(boundedProviderFailureField(issue.code))} | ${escapeMarkdownTableCell(boundedProviderFailureField(sanitizeValidationIssuePath(issue.path)))} |`),
     ...error.issues.length > issues.length ? [`| additional_issues_omitted | ${error.issues.length - issues.length} |`] : [],
-    ""
+    "",
+    ...diagnostics.recoveryHint === void 0 ? [] : [diagnostics.recoveryHint]
   ].join("\n");
   await appendFile(summaryPath, markdown, "utf8");
 }
@@ -5623,7 +5890,8 @@ async function runActionDryRun(input) {
     assessment: sanitizeAssessmentForActionSummary(prepared.assessment)
   };
 }
-async function runActionPropose(input) {
+async function runActionProposeInStaging(input) {
+  const baseCommitSha = await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
   validateSourceCommentInput(input);
   const prepared = await prepareActionAssessment(input);
   if (prepared.kind === "skipped") {
@@ -5641,7 +5909,8 @@ async function runActionPropose(input) {
     repositoryDir: input.repositoryDir,
     stagedOutputDir: input.stagingDir,
     manifest: staging.manifest,
-    baseBranch: input.baseBranch
+    baseBranch: input.baseBranch,
+    expectedBaseCommitSha: baseCommitSha
   });
   const publishInput = {
     repositoryDir: input.repositoryDir,
@@ -5680,7 +5949,7 @@ async function runActionPropose(input) {
     }
   };
 }
-async function runActionCommit(input) {
+async function runActionCommitInStaging(input) {
   const prepared = await prepareActionAssessment(input);
   if (prepared.kind === "skipped") {
     throw new ActionUsageError("Commit mode requires a merged pull request input.");
@@ -5726,7 +5995,8 @@ async function runActionCommit(input) {
     directCommitPushed: published.pushed
   };
 }
-async function runActionStageDraft(input) {
+async function runActionStageDraftInStaging(input) {
+  const baseCommitSha = await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
   validateSourceCommentInput(input);
   const prepared = await prepareActionAssessment(input);
   if (prepared.kind === "skipped") {
@@ -5741,7 +6011,8 @@ async function runActionStageDraft(input) {
     repositoryDir: input.repositoryDir,
     stagedOutputDir: input.stagingDir,
     manifest: staging.manifest,
-    baseBranch: input.baseBranch
+    baseBranch: input.baseBranch,
+    expectedBaseCommitSha: baseCommitSha
   });
   const publishInput = {
     repositoryDir: input.repositoryDir,
@@ -5781,7 +6052,8 @@ async function runActionStageDraft(input) {
     }
   };
 }
-async function runActionPromoteDraft(input) {
+async function runActionPromoteDraftInStaging(input) {
+  const baseCommitSha = await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
   validateSourceCommentInput(input);
   const assessment = await readApprovedDraft(input.draftPath, input.repositoryDir, input.allowLegacyApproval ?? false);
   const staging = await stageProposalRecognitionOutputs({
@@ -5796,7 +6068,8 @@ async function runActionPromoteDraft(input) {
     repositoryDir: input.repositoryDir,
     stagedOutputDir: input.stagingDir,
     manifest: staging.manifest,
-    baseBranch: input.baseBranch
+    baseBranch: input.baseBranch,
+    expectedBaseCommitSha: baseCommitSha
   });
   const publishInput = {
     repositoryDir: input.repositoryDir,
@@ -5855,7 +6128,7 @@ function validateSourceCommentInput(input) {
   }
 }
 async function readExistingRecognitionRecords(repositoryDir) {
-  const ledgerPath = join5(repositoryDir, CONTRIBUTIONS_JSONL_PATH);
+  const ledgerPath = join6(repositoryDir, CONTRIBUTIONS_JSONL_PATH);
   try {
     return parseContributionsJsonl(await readFile4(ledgerPath, "utf8"));
   } catch (error) {
@@ -5910,7 +6183,7 @@ async function runActionFromEnvironment(env, io, runtime = {}) {
 `);
     return 0;
   } catch (error) {
-    if (error instanceof OpenAiCompatibleProviderError) {
+    if (error instanceof OpenAiCompatibleProviderError && error.code === "invalid_assessment" || error instanceof RendererValidationError || error instanceof FakeProviderAssessmentError) {
       try {
         await writeGitHubProviderFailureStepSummary(env.GITHUB_STEP_SUMMARY, error);
       } catch {
@@ -5976,7 +6249,7 @@ function buildActionCommitInput(input, env, runtime) {
     ...input,
     mode: "commit",
     repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
-    stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join5(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-commit"),
+    stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join6(readEnvInput(env.RUNNER_TEMP) ?? tmpdir2(), "clarissimi-commit"),
     targetBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
     liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(clientOptions)
   };
@@ -6012,7 +6285,7 @@ function buildActionWriteInput(input, env, runtime, mode) {
       ...input,
       mode,
       repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
-      stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join5(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-propose"),
+      stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join6(readEnvInput(env.RUNNER_TEMP) ?? tmpdir2(), "clarissimi-propose"),
       baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
       pullRequestClient,
       commentMode,
@@ -6029,7 +6302,7 @@ function buildActionWriteInput(input, env, runtime, mode) {
       draftPath: resolvePromoteDraftPath(env),
       allowLegacyApproval: parseLegacyApprovalInput(env.INPUT_ALLOW_LEGACY_APPROVAL),
       repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
-      stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join5(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-promote-draft"),
+      stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join6(readEnvInput(env.RUNNER_TEMP) ?? tmpdir2(), "clarissimi-promote-draft"),
       baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
       pullRequestClient,
       commentMode,
@@ -6046,7 +6319,7 @@ function buildActionWriteInput(input, env, runtime, mode) {
     ...input,
     mode,
     repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
-    stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join5(readEnvInput(env.RUNNER_TEMP) ?? tmpdir(), "clarissimi-stage-draft"),
+    stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join6(readEnvInput(env.RUNNER_TEMP) ?? tmpdir2(), "clarissimi-stage-draft"),
     baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
     pullRequestClient,
     commentMode,
@@ -6073,9 +6346,9 @@ function resolvePromoteDraftPath(env) {
   if (isAbsolute5(inputPath)) {
     throw new ActionUsageError("INPUT_DRAFT_PATH must be relative to GITHUB_WORKSPACE.");
   }
-  const workspace = resolve2(readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd());
-  const draftsRoot = resolve2(workspace, ".clarissimi", "drafts");
-  const resolvedPath = resolve2(workspace, inputPath);
+  const workspace = resolve3(readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd());
+  const draftsRoot = resolve3(workspace, ".clarissimi", "drafts");
+  const resolvedPath = resolve3(workspace, inputPath);
   if (!isPathInside(draftsRoot, resolvedPath) || resolvedPath === draftsRoot) {
     throw new ActionUsageError("INPUT_DRAFT_PATH must point inside .clarissimi/drafts/.");
   }
@@ -6090,9 +6363,9 @@ async function readApprovedDraft(path, repositoryDir, allowLegacyApproval) {
   let realRepositoryDir;
   try {
     [realDraftPath, realDraftsRoot, realRepositoryDir] = await Promise.all([
-      realpath3(path),
-      realpath3(join5(repositoryDir, ".clarissimi", "drafts")),
-      realpath3(repositoryDir)
+      realpath4(path),
+      realpath4(join6(repositoryDir, ".clarissimi", "drafts")),
+      realpath4(repositoryDir)
     ]);
   } catch {
     throw new Error("Unable to resolve the approved Clarissimi draft path.");
@@ -6215,6 +6488,21 @@ function assignOptional6(target, key, value) {
   if (value !== void 0) {
     target[key] = value;
   }
+}
+async function runActionPropose(input) {
+  await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
+  return withActionStaging(input, runActionProposeInStaging);
+}
+async function runActionStageDraft(input) {
+  await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
+  return withActionStaging(input, runActionStageDraftInStaging);
+}
+async function runActionPromoteDraft(input) {
+  await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
+  return withActionStaging(input, runActionPromoteDraftInStaging);
+}
+async function runActionCommit(input) {
+  return withActionStaging(input, runActionCommitInStaging);
 }
 
 // packages/action/dist/bin/clarissimi-action.js

@@ -92,11 +92,15 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExi
           throw new CliUsageError(positionalError);
         }
       }
-      io.stdout(
+      const helpText =
         spec === undefined || args.command === "help"
           ? renderCliHelp()
-          : renderCliCommandHelp(spec),
-      );
+          : renderCliCommandHelp(spec);
+      writeOutput(io, args, {
+        ok: true,
+        command: args.command ?? "help",
+        message: helpText.trimEnd(),
+      });
       return CLI_EXIT_CODES.success;
     }
 

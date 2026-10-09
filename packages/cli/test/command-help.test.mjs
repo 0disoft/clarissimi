@@ -79,6 +79,46 @@ test("global help forms still print the same command overview", async () => {
   }
 });
 
+for (const command of [
+  "validate-config",
+  "validate-ledger",
+  "recognize",
+  "stage-draft",
+  "approve-draft",
+  "import-draft",
+  "rebuild",
+  "render-page",
+  "analytics",
+]) {
+  test(`${command} help respects JSON output in either flag order`, async () => {
+    const human = await run([command, "--help"]);
+    assert.equal(human.exitCode, 0);
+    for (const flags of [
+      ["--help", "--json"],
+      ["--json", "--help"],
+    ]) {
+      const result = await run([command, ...flags]);
+      assert.equal(result.exitCode, 0, result.stdout + result.stderr);
+      assert.equal(result.stderr, "");
+      assert.deepEqual(JSON.parse(result.stdout), {
+        ok: true,
+        command,
+        message: human.stdout.trimEnd(),
+      });
+    }
+  });
+}
+
+test("completion help still rejects unsupported JSON as a JSON usage failure", async () => {
+  const result = await run(["completion", "--help", "--json"]);
+  assert.equal(result.exitCode, 1);
+  assert.equal(result.stderr, "");
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.ok, false);
+  assert.equal(output.command, "completion");
+  assert.match(output.message, /Unknown option.*--json/);
+});
+
 test("command help bypasses executable config and missing evidence", async () => {
   const dir = await mkdtemp(join(tmpdir(), "clarissimi-command-help-"));
   try {
@@ -86,13 +126,26 @@ test("command help bypasses executable config and missing evidence", async () =>
       join(dir, "clarissimi.config.ts"),
       'throw new Error("Help must not execute config.");\nexport default {};\n',
     );
-    const result = await run(
-      ["recognize", "--fixture", "missing.json", "--provider", "openai-compatible", "--help"],
-      dir,
-    );
-    assert.equal(result.exitCode, 0, result.stdout + result.stderr);
-    assert.equal(result.stderr, "");
-    assert.match(result.stdout, /Options:/);
+    for (const jsonFlags of [[], ["--json"]]) {
+      const result = await run(
+        [
+          "recognize",
+          "--fixture",
+          "missing.json",
+          "--provider",
+          "openai-compatible",
+          "--help",
+          ...jsonFlags,
+        ],
+        dir,
+      );
+      assert.equal(result.exitCode, 0, result.stdout + result.stderr);
+      assert.equal(result.stderr, "");
+      assert.match(
+        jsonFlags.length > 0 ? JSON.parse(result.stdout).message : result.stdout,
+        /Options:/,
+      );
+    }
     assert.deepEqual(await readdir(dir), ["clarissimi.config.ts"]);
   } finally {
     await rm(dir, { recursive: true, force: true });

@@ -8,7 +8,8 @@ import {
 
 import { CliUsageError, getStringFlag, type ParsedArgs } from "./args.js";
 import { CLI_EXIT_CODES, type CliExitCode } from "./exit-codes.js";
-import { fileExists, readTextFile, resolveFromCwd, type CliIo } from "./io.js";
+import { resolveFromCwd, type CliIo } from "./io.js";
+import { readLedgerText } from "./ledger.js";
 import { writeFailure, writeOutput } from "./output.js";
 
 export async function runAnalytics(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
@@ -23,7 +24,9 @@ export async function runAnalytics(args: ParsedArgs, io: CliIo): Promise<CliExit
   );
 
   try {
-    const ledgerText = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
+    const ledgerText = await readLedgerText(ledgerPath, {
+      allowMissing: !args.flags.has("ledger"),
+    });
     const records = parseContributionsJsonl(ledgerText);
     assertUniqueContributionRecords(records);
     const analyticsOptions: Parameters<typeof buildMaintainerRecentRecognitionShareDocument>[1] =

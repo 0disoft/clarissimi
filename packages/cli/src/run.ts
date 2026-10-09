@@ -71,6 +71,7 @@ import {
   writeUsageFailure,
 } from "./output.js";
 import { resolveRecognitionProvider } from "./provider.js";
+import { readLedgerText } from "./ledger.js";
 
 export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExitCode> {
   let args: ParsedArgs | undefined;
@@ -198,7 +199,7 @@ async function runValidateLedger(args: ParsedArgs, io: CliIo): Promise<CliExitCo
       io.cwd,
       getStringFlag(args, "ledger", CONTRIBUTIONS_JSONL_PATH) ?? CONTRIBUTIONS_JSONL_PATH,
     );
-    const text = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
+    const text = await readLedgerText(ledgerPath, { allowMissing: !args.flags.has("ledger") });
     const records = parseContributionsJsonl(text);
     assertUniqueContributionRecords(records);
 
@@ -643,17 +644,9 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
       readonly checkedFiles: readonly string[];
       readonly staleFiles: readonly string[];
     }> => {
-      const ledgerExists = await fileExists(ledgerPath);
-      if (check && !ledgerExists) {
-        throw new RendererValidationError("Cannot check outputs without the canonical ledger.", [
-          {
-            path: "$.ledger",
-            code: "missing_ledger",
-            message: "The selected canonical ledger does not exist.",
-          },
-        ]);
-      }
-      const ledgerText = ledgerExists ? await readTextFile(ledgerPath) : "";
+      const ledgerText = await readLedgerText(ledgerPath, {
+        allowMissing: !check && !args.flags.has("ledger"),
+      });
       const records = parseContributionsJsonl(ledgerText);
       assertUniqueContributionRecords(records);
       const outputs = renderRecognitionOutputs(records, {
@@ -749,7 +742,9 @@ async function runRenderPage(args: ParsedArgs, io: CliIo): Promise<CliExitCode> 
 
   try {
     const config = (await validateConfigFile(io.cwd, getStringFlag(args, "config"))).config;
-    const ledgerText = (await fileExists(ledgerPath)) ? await readTextFile(ledgerPath) : "";
+    const ledgerText = await readLedgerText(ledgerPath, {
+      allowMissing: !args.flags.has("ledger"),
+    });
     const records = parseContributionsJsonl(ledgerText);
     assertUniqueContributionRecords(records);
     const page = renderContributorPage(records, {

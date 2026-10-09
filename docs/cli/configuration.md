@@ -25,6 +25,11 @@ requires `--config <path>` so migration between formats is explicit.
 
 `packages/schemas` validates supported config values. The CLI owns file loading and precedence.
 
+When a CLI or GitHub Action configuration contains an unsupported enum value, the resulting
+error identifies the offending field and lists the allowed values drawn from the shared schema,
+without echoing the rejected value back to the caller. The set of supported values and all
+existing error codes remain unchanged.
+
 Current precedence is:
 
 1. explicit CLI flags

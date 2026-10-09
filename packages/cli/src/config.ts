@@ -128,7 +128,7 @@ function formatConfigValidationIssue(issue: ValidationIssue | undefined): string
 
   const field = issue.path.startsWith("$.") ? issue.path.slice(2) : issue.path;
   if (issue.code === "invalid_enum") {
-    return `Config field ${field} has an unsupported value.`;
+    return `Config field ${field} has an unsupported value. ${issue.message}`;
   }
 
   if (issue.code === "empty_string") {

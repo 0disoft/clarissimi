@@ -109,7 +109,7 @@ function formatActionConfigValidationIssue(issue: ValidationIssue | undefined): 
 
   const field = issue.path.startsWith("$.") ? issue.path.slice(2) : issue.path;
   if (issue.code === "invalid_enum") {
-    return `Action config field ${field} has an unsupported value.`;
+    return `Action config field ${field} has an unsupported value. ${issue.message}`;
   }
 
   if (issue.code === "empty_string") {

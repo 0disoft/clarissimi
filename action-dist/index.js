@@ -2374,9 +2374,6 @@ function isConfigProviderThinking(value) {
 function isConfigProviderEndpointTrust(value) {
   return CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES.includes(value);
 }
-function isConfigMode(value) {
-  return CONFIG_MODES.includes(value);
-}
 function isConfigMarkdownSummary(value) {
   return CONFIG_MARKDOWN_SUMMARIES.includes(value);
 }
@@ -2536,13 +2533,13 @@ function validateClarissimiConfig(value) {
       }
     ]);
   }
-  const provider = expectOptionalEnum(value.provider, isConfigProvider, "$.provider", issues);
+  const provider = expectOptionalEnum(value.provider, CONFIG_PROVIDERS, "$.provider", issues);
   const providerEndpoint = expectOptionalHttpUrl(value.providerEndpoint, "$.providerEndpoint", issues);
-  const providerEndpointTrust = expectOptionalEnum(value.providerEndpointTrust, isConfigProviderEndpointTrust, "$.providerEndpointTrust", issues);
+  const providerEndpointTrust = expectOptionalEnum(value.providerEndpointTrust, CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES, "$.providerEndpointTrust", issues);
   const providerModel = expectOptionalNonEmptyString(value.providerModel, "$.providerModel", issues);
-  const providerThinking = expectOptionalEnum(value.providerThinking, isConfigProviderThinking, "$.providerThinking", issues);
-  const mode = expectOptionalEnum(value.mode, isConfigMode, "$.mode", issues);
-  const markdownSummary = expectOptionalEnum(value.markdownSummary, isConfigMarkdownSummary, "$.markdownSummary", issues);
+  const providerThinking = expectOptionalEnum(value.providerThinking, CONFIG_PROVIDER_THINKING_VALUES, "$.providerThinking", issues);
+  const mode = expectOptionalEnum(value.mode, CONFIG_MODES, "$.mode", issues);
+  const markdownSummary = expectOptionalEnum(value.markdownSummary, CONFIG_MARKDOWN_SUMMARIES, "$.markdownSummary", issues);
   const includeAutomationContributors = expectOptionalBoolean(value.includeAutomationContributors, "$.includeAutomationContributors", issues);
   if (issues.length > 0) {
     return invalid(issues);
@@ -2731,15 +2728,16 @@ function expectOptionalHttpUrl(value, path, issues) {
   }
   return normalized;
 }
-function expectOptionalEnum(value, guard, path, issues) {
+function expectOptionalEnum(value, allowedValues, path, issues) {
   if (value === void 0) {
     return void 0;
   }
-  if (typeof value !== "string" || !guard(value)) {
-    pushIssue(issues, path, "invalid_enum", "Value is not in the allowed set.");
+  const selected = allowedValues.find((candidate) => candidate === value);
+  if (selected === void 0) {
+    pushIssue(issues, path, "invalid_enum", `Allowed values: ${allowedValues.join(", ")}.`);
     return void 0;
   }
-  return value;
+  return selected;
 }
 function expectOptionalBoolean(value, path, issues) {
   if (value === void 0) {
@@ -5352,7 +5350,7 @@ function formatActionConfigValidationIssue(issue) {
   }
   const field = issue.path.startsWith("$.") ? issue.path.slice(2) : issue.path;
   if (issue.code === "invalid_enum") {
-    return `Action config field ${field} has an unsupported value.`;
+    return `Action config field ${field} has an unsupported value. ${issue.message}`;
   }
   if (issue.code === "empty_string") {
     return `Action config field ${field} must be a non-empty string.`;

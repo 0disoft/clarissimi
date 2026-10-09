@@ -377,7 +377,7 @@ export function validateClarissimiConfig(value: unknown): ValidationResult<Clari
     ]);
   }
 
-  const provider = expectOptionalEnum(value.provider, isConfigProvider, "$.provider", issues);
+  const provider = expectOptionalEnum(value.provider, CONFIG_PROVIDERS, "$.provider", issues);
   const providerEndpoint = expectOptionalHttpUrl(
     value.providerEndpoint,
     "$.providerEndpoint",
@@ -385,7 +385,7 @@ export function validateClarissimiConfig(value: unknown): ValidationResult<Clari
   );
   const providerEndpointTrust = expectOptionalEnum(
     value.providerEndpointTrust,
-    isConfigProviderEndpointTrust,
+    CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES,
     "$.providerEndpointTrust",
     issues,
   );
@@ -396,14 +396,14 @@ export function validateClarissimiConfig(value: unknown): ValidationResult<Clari
   );
   const providerThinking = expectOptionalEnum(
     value.providerThinking,
-    isConfigProviderThinking,
+    CONFIG_PROVIDER_THINKING_VALUES,
     "$.providerThinking",
     issues,
   );
-  const mode = expectOptionalEnum(value.mode, isConfigMode, "$.mode", issues);
+  const mode = expectOptionalEnum(value.mode, CONFIG_MODES, "$.mode", issues);
   const markdownSummary = expectOptionalEnum(
     value.markdownSummary,
-    isConfigMarkdownSummary,
+    CONFIG_MARKDOWN_SUMMARIES,
     "$.markdownSummary",
     issues,
   );
@@ -709,7 +709,7 @@ function expectOptionalHttpUrl(
 
 function expectOptionalEnum<T extends string>(
   value: unknown,
-  guard: (candidate: string) => candidate is T,
+  allowedValues: readonly T[],
   path: string,
   issues: ValidationIssue[],
 ): T | undefined {
@@ -717,12 +717,13 @@ function expectOptionalEnum<T extends string>(
     return undefined;
   }
 
-  if (typeof value !== "string" || !guard(value)) {
-    pushIssue(issues, path, "invalid_enum", "Value is not in the allowed set.");
+  const selected = allowedValues.find((candidate) => candidate === value);
+  if (selected === undefined) {
+    pushIssue(issues, path, "invalid_enum", `Allowed values: ${allowedValues.join(", ")}.`);
     return undefined;
   }
 
-  return value;
+  return selected;
 }
 
 function expectOptionalBoolean(

@@ -34,7 +34,10 @@ applies to argument parsing and usage errors. Without `--json`, failures remain 
 stderr.
 When provider assessment validation fails, JSON may add bounded `issueCodes` from Clarissimi's
 validators and `issuePaths` for the affected fields. These identify failed rules without exposing
-provider text or evidence.
+provider text or evidence. The same bounded diagnostics apply to renderer and draft validation
+errors, and human output identifies fields and rules. Paths retain only schema-defined field names
+and array indexes; an unknown property is reported at its nearest known parent. Approval snapshot
+errors include the procedure to return the file to draft status, remove its snapshot, and reapprove.
 
 `clarissimi completion <shell>` is the deliberate exception to JSON success output: stdout is the
 generated shell program, and `--json` is rejected as an unsupported option. The program is static,

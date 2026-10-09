@@ -4,7 +4,11 @@ import {
   toDraftReviewRecord,
   toPublicContributionRecord,
 } from "@clarissimi/renderers";
-import type { ContributionAssessment, EvidenceRef } from "@clarissimi/schemas";
+import {
+  publicValidationDiagnostics,
+  type ContributionAssessment,
+  type EvidenceRef,
+} from "@clarissimi/schemas";
 
 import { getBooleanFlag, type ParsedArgs } from "./args.js";
 import { CliConfigError } from "./config.js";
@@ -78,23 +82,25 @@ export function resolveCommandName(args: ParsedArgs | undefined, argv: readonly 
 
 export function writeFailure(io: CliIo, args: ParsedArgs, command: string, error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
+  const issues =
+    error instanceof RendererValidationError ||
+    error instanceof FakeProviderAssessmentError ||
+    (error instanceof OpenAiCompatibleProviderError && error.code === "invalid_assessment")
+      ? (error.issues ?? [])
+      : [];
+  const diagnostics = issues.length > 0 ? publicValidationDiagnostics(issues) : {};
 
   if (getBooleanFlag(args, "json")) {
-    const issueCodes =
-      error instanceof OpenAiCompatibleProviderError && error.code === "invalid_assessment"
-        ? [...new Set(error.issues?.map((issue) => issue.code) ?? [])].slice(0, 8)
-        : [];
-    const issuePaths =
-      error instanceof OpenAiCompatibleProviderError && error.code === "invalid_assessment"
-        ? [...new Set(error.issues?.map((issue) => issue.path) ?? [])].slice(0, 8)
-        : [];
-    io.stdout(
-      `${JSON.stringify({ ok: false, command, message, ...(issueCodes.length > 0 ? { issueCodes } : {}), ...(issuePaths.length > 0 ? { issuePaths } : {}) }, null, 2)}\n`,
-    );
+    io.stdout(`${JSON.stringify({ ok: false, command, message, ...diagnostics }, null, 2)}\n`);
     return;
   }
 
   io.stderr(`${message}\n`);
+  if (issues.length > 0) {
+    const safe = publicValidationDiagnostics(issues);
+    io.stderr(`Fields: ${safe.issuePaths.join(", ")} (${safe.issueCodes.join(", ")}).\n`);
+    if (safe.recoveryHint !== undefined) io.stderr(`${safe.recoveryHint}\n`);
+  }
 }
 
 type SanitizedContributionAssessment = Omit<ContributionAssessment, "evidenceRefs"> & {

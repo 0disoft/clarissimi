@@ -3,7 +3,11 @@ import { isAbsolute, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
 import { checkExternalDraftApproval, prepareEvidenceForProvider } from "@clarissimi/core";
-import { CONTRIBUTIONS_JSONL_PATH, parseContributionsJsonl } from "@clarissimi/renderers";
+import {
+  CONTRIBUTIONS_JSONL_PATH,
+  parseContributionsJsonl,
+  RendererValidationError,
+} from "@clarissimi/renderers";
 import {
   collectMergedPullRequestEvidence,
   collectLiveMergedPullRequestEvidence,
@@ -13,6 +17,7 @@ import {
 import {
   createFakeContributionDraftProvider,
   OpenAiCompatibleProviderError,
+  FakeProviderAssessmentError,
   type ContributionDraftProvider,
 } from "@clarissimi/providers";
 import {
@@ -503,7 +508,11 @@ export async function runActionFromEnvironment(
     io.stdout(`${JSON.stringify(summary, null, 2)}\n`);
     return 0;
   } catch (error) {
-    if (error instanceof OpenAiCompatibleProviderError) {
+    if (
+      (error instanceof OpenAiCompatibleProviderError && error.code === "invalid_assessment") ||
+      error instanceof RendererValidationError ||
+      error instanceof FakeProviderAssessmentError
+    ) {
       try {
         await writeGitHubProviderFailureStepSummary(env.GITHUB_STEP_SUMMARY, error);
       } catch {

@@ -1,7 +1,11 @@
 import { appendFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import { OpenAiCompatibleProviderError } from "@clarissimi/providers";
+import {
+  sanitizeValidationIssuePath,
+  publicValidationDiagnostics,
+  type ValidationIssue,
+} from "@clarissimi/schemas";
 
 import type { ActionRunSummary } from "./types.js";
 
@@ -159,12 +163,11 @@ const MAX_PROVIDER_FAILURE_FIELD_LENGTH = 120;
 
 export async function writeGitHubProviderFailureStepSummary(
   summaryPath: string | undefined,
-  error: OpenAiCompatibleProviderError,
+  error: { readonly issues?: readonly ValidationIssue[] },
 ): Promise<void> {
   if (
     summaryPath === undefined ||
     summaryPath.trim().length === 0 ||
-    error.code !== "invalid_assessment" ||
     error.issues === undefined ||
     error.issues.length === 0
   ) {
@@ -181,12 +184,15 @@ export async function writeGitHubProviderFailureStepSummary(
     "| --- | --- |",
     ...issues.map(
       (issue) =>
-        `| ${escapeMarkdownTableCell(boundedProviderFailureField(issue.code))} | ${escapeMarkdownTableCell(boundedProviderFailureField(issue.path))} |`,
+        `| ${escapeMarkdownTableCell(boundedProviderFailureField(issue.code))} | ${escapeMarkdownTableCell(boundedProviderFailureField(sanitizeValidationIssuePath(issue.path)))} |`,
     ),
     ...(error.issues.length > issues.length
       ? [`| additional_issues_omitted | ${error.issues.length - issues.length} |`]
       : []),
     "",
+    ...(publicValidationDiagnostics(error.issues).recoveryHint === undefined
+      ? []
+      : [publicValidationDiagnostics(error.issues).recoveryHint!]),
   ].join("\n");
 
   await appendFile(summaryPath, markdown, "utf8");

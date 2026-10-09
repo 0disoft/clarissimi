@@ -216,6 +216,60 @@ test("restores owned paths when proposal commit fails", async () => {
   });
 });
 
+for (const existingLedger of [false, true]) {
+  test(`restores the original checkout after a later staged verification failure (${existingLedger ? "tracked ledger" : "new ledger"})`, async () => {
+    await withTempDir(async (dir) => {
+      const repositoryDir = join(dir, "repo");
+      const stagedOutputDir = join(dir, "staged");
+      await initRepository(repositoryDir);
+      const ledgerPath = join(repositoryDir, ".clarissimi", "contributions.jsonl");
+      const notesPath = join(repositoryDir, ".clarissimi", "notes.txt");
+      await mkdir(join(repositoryDir, ".clarissimi"));
+      await writeFile(notesPath, "keep unrelated local notes\n");
+      await writeFile(join(repositoryDir, ".git", "info", "exclude"), ".clarissimi/notes.txt\n");
+      if (existingLedger) {
+        await writeFile(ledgerPath, "\n");
+        await git(repositoryDir, ["add", ".clarissimi/contributions.jsonl"]);
+        await git(repositoryDir, ["commit", "-m", "Add empty recognition ledger"]);
+      }
+      const staging = await stageProposalRecognitionOutputs({
+        outputDir: stagedOutputDir,
+        assessments: [assessment()],
+        redactionMatchCount: 0,
+      });
+      const mainSha = await git(repositoryDir, ["rev-parse", "main"]);
+      const files = staging.manifest.files.map((file, index) =>
+        index === 1 ? { ...file, sha256: "0".repeat(64) } : file,
+      );
+
+      await assert.rejects(
+        () =>
+          writeProposalBranch({
+            repositoryDir,
+            stagedOutputDir,
+            manifest: { ...staging.manifest, files },
+            baseBranch: "main",
+          }),
+        (error) =>
+          error instanceof ProposalBranchWriterError && error.code === "staged_file_hash_mismatch",
+      );
+
+      assert.equal(await git(repositoryDir, ["rev-parse", "main"]), mainSha);
+      assert.equal(await git(repositoryDir, ["branch", "--show-current"]), "main");
+      assert.equal(
+        await git(repositoryDir, ["status", "--porcelain", "--untracked-files=all"]),
+        "",
+      );
+      assert.equal(await readFile(notesPath, "utf8"), "keep unrelated local notes\n");
+      if (existingLedger) {
+        assert.equal(await readFile(ledgerPath, "utf8"), "\n");
+      } else {
+        await assert.rejects(readFile(ledgerPath), { code: "ENOENT" });
+      }
+    });
+  });
+}
+
 test("refuses to overwrite existing proposal branches with unowned changes", async () => {
   await withTempDir(async (dir) => {
     const repositoryDir = join(dir, "repo");

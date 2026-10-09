@@ -200,15 +200,52 @@ async function restoreOwnedPaths(
   files: readonly ProposalStagedFile[],
 ): Promise<void> {
   const paths = files.map((file) => file.path);
-  const result = await runGit(repositoryDir, [
-    "restore",
-    `--source=${originalRef}`,
-    "--staged",
-    "--worktree",
+  const indexed = await git(repositoryDir, [
+    "--literal-pathspecs",
+    "ls-files",
+    "--cached",
+    "-z",
     "--",
     ...paths,
   ]);
-  if (result.exitCode !== 0) {
+  const original = await git(repositoryDir, [
+    "--literal-pathspecs",
+    "ls-tree",
+    "-r",
+    "--name-only",
+    "-z",
+    originalRef,
+    "--",
+    ...paths,
+  ]);
+  const trackedPaths = [...new Set([...indexed.split("\0"), ...original.split("\0")])].filter(
+    (path) => path.length > 0,
+  );
+  if (trackedPaths.length > 0) {
+    const restored = await runGit(repositoryDir, [
+      "--literal-pathspecs",
+      "restore",
+      `--source=${originalRef}`,
+      "--staged",
+      "--worktree",
+      "--",
+      ...trackedPaths,
+    ]);
+    if (restored.exitCode !== 0) {
+      throw new ProposalBranchWriterError(
+        "git_rollback_failed",
+        "Proposal branch writing failed and owned output rollback did not complete.",
+      );
+    }
+  }
+  const cleaned = await runGit(repositoryDir, [
+    "--literal-pathspecs",
+    "clean",
+    "-f",
+    "--",
+    ...paths,
+  ]);
+  if (cleaned.exitCode !== 0) {
     throw new ProposalBranchWriterError(
       "git_rollback_failed",
       "Proposal branch writing failed and owned output rollback did not complete.",

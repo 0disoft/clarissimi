@@ -11,7 +11,8 @@ import type {
 
 const DEFAULT_TEXT_LIMIT = 2_000;
 const REPOSITORY_NAME_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
-const TEST_PATH_PATTERN = /(^|\/)(__tests__|tests?|specs?)(\/|$)|[./_-](test|spec)\.[cm]?[jt]sx?$/i;
+const TEST_PATH_PATTERN =
+  /(^|\/)(__tests__|tests?|specs?)(\/|$)|[./_-](test|spec)\.[cm]?[jt]sx?$|(?:^|\/)[^/]+_test\.go$|(?:^|\/)(?:test_[^/]+|[^/]+_test)\.py$/i;
 
 export class GitHubEvidenceCollectionError extends Error {
   readonly field: string;

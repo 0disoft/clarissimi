@@ -84,6 +84,37 @@ test("collects merged pull request fixture evidence", () => {
   );
 });
 
+test("classifies conventional Go and Python test filenames outside test directories", () => {
+  const testPaths = [
+    "parser_test.go",
+    "internal/parser_test.go",
+    "internal\\parser_test.go",
+    "test_parser.py",
+    "parser_test.py",
+    "package/test_parser.py",
+    "package\\parser_test.py",
+  ];
+  const ordinaryPaths = [
+    "internal/contest.go",
+    "internal/parser_test.go.bak",
+    "package/testing.py",
+    "package/test_parser.py.txt",
+  ];
+  const collected = collectMergedPullRequestEvidence({
+    ...fixture,
+    pullRequest: {
+      ...fixture.pullRequest,
+      changedFiles: [...testPaths, ...ordinaryPaths].map((filename) => ({ filename })),
+    },
+  });
+  for (const path of testPaths) {
+    assert.equal(collected.evidence.items.find((item) => item.id === path)?.kind, "test", path);
+  }
+  for (const path of ordinaryPaths) {
+    assert.equal(collected.evidence.items.find((item) => item.id === path)?.kind, "file", path);
+  }
+});
+
 test("parses a GitHub merged pull request fixture from unknown JSON", () => {
   const parsed = parseGitHubMergedPullRequestFixture(fixture);
 

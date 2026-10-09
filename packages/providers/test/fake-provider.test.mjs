@@ -67,6 +67,46 @@ test("links regression claims to test-like changed files", () => {
   assert.match(assessment.publicRecognitionText, /regression coverage/);
 });
 
+test("links Go and Python regression claims to conventional test filenames", () => {
+  for (const path of [
+    "parser_test.go",
+    "internal/parser_test.go",
+    "internal\\parser_test.go",
+    "test_parser.py",
+    "parser_test.py",
+    "package/test_parser.py",
+    "package\\parser_test.py",
+  ]) {
+    const evidence = preparedEvidence([
+      { kind: "pull_request", id: "PR-42", title: "Add parser regression coverage" },
+      { kind: "file", id: path },
+    ]);
+    const assessment = createFakeAssessment({ contributor, preparedEvidence: evidence });
+
+    assert.equal(assessment.contributionType, "test", path);
+    assert.deepEqual(assessment.claimEvidenceLinks[1].evidenceRefIndexes, [1], path);
+    assert.match(assessment.publicRecognitionText, /regression coverage/, path);
+  }
+});
+
+test("does not infer test contributions from similarly named source or backup files", () => {
+  for (const path of [
+    "internal/contest.go",
+    "internal/parser_test.go.bak",
+    "package/testing.py",
+    "package/test_parser.py.txt",
+  ]) {
+    const evidence = preparedEvidence([
+      { kind: "pull_request", id: "PR-42", title: "Add parser regression coverage" },
+      { kind: "file", id: path },
+    ]);
+    const assessment = createFakeAssessment({ contributor, preparedEvidence: evidence });
+
+    assert.equal(assessment.contributionType, "maintenance", path);
+    assert.equal(assessment.publicRecognitionText.includes("regression coverage"), false, path);
+  }
+});
+
 test("does not claim regression coverage without test evidence", () => {
   const evidence = preparedEvidence([
     { kind: "pull_request", id: "PR-42", title: "Add parser regression coverage" },

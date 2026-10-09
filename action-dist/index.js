@@ -950,7 +950,7 @@ function assignOptional(target, key, value) {
 // packages/github/dist/merged-pr.js
 var DEFAULT_TEXT_LIMIT = 2e3;
 var REPOSITORY_NAME_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
-var TEST_PATH_PATTERN = /(^|\/)(__tests__|tests?|specs?)(\/|$)|[./_-](test|spec)\.[cm]?[jt]sx?$/i;
+var TEST_PATH_PATTERN = /(^|\/)(__tests__|tests?|specs?)(\/|$)|[./_-](test|spec)\.[cm]?[jt]sx?$|(?:^|\/)[^/]+_test\.go$|(?:^|\/)(?:test_[^/]+|[^/]+_test)\.py$/i;
 var GitHubEvidenceCollectionError = class extends Error {
   field;
   constructor(field, message) {
@@ -4226,7 +4226,7 @@ var SECURITY_CLAIM_PATTERN = /\b(?:security|vulnerabilit(?:y|ies)|exploit|adviso
 var REGRESSION_CLAIM_PATTERN = /\b(?:regression (?:coverage|test|guard|prevention)|prevent(?:ed|s|ing)? (?:a )?regression)\b/i;
 var MEASURED_PERFORMANCE_CLAIM_PATTERN = /\b(?:faster|speedup|lower latency|reduced latency|improved throughput|benchmark(?:ed)?)\b/i;
 var MEASUREMENT_EVIDENCE_PATTERN = /\b(?:bench(?:mark)?|perf(?:ormance)?|latency|throughput|memory)\b/i;
-var TEST_FILE_PATTERN = /(?:^|[/\\])[^/\\]+\.(?:test|spec)\.(?:[cm]?[jt]sx?|py|rs|go|java|kt|cs|rb|php|swift)$/i;
+var TEST_FILE_PATTERN = /(?:^|[/\\])[^/\\]+\.(?:test|spec)\.(?:[cm]?[jt]sx?|py|rs|go|java|kt|cs|rb|php|swift)$|(?:^|[/\\])[^/\\]+_test\.go$|(?:^|[/\\])(?:test_[^/\\]+|[^/\\]+_test)\.py$/i;
 function validateProviderAssessmentResult(input, value) {
   const schemaResult = validateContributionAssessment(value);
   if (!schemaResult.ok) {

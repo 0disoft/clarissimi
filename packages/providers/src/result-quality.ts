@@ -17,7 +17,7 @@ const MEASURED_PERFORMANCE_CLAIM_PATTERN =
 const MEASUREMENT_EVIDENCE_PATTERN =
   /\b(?:bench(?:mark)?|perf(?:ormance)?|latency|throughput|memory)\b/i;
 const TEST_FILE_PATTERN =
-  /(?:^|[/\\])[^/\\]+\.(?:test|spec)\.(?:[cm]?[jt]sx?|py|rs|go|java|kt|cs|rb|php|swift)$/i;
+  /(?:^|[/\\])[^/\\]+\.(?:test|spec)\.(?:[cm]?[jt]sx?|py|rs|go|java|kt|cs|rb|php|swift)$|(?:^|[/\\])[^/\\]+_test\.go$|(?:^|[/\\])(?:test_[^/\\]+|[^/\\]+_test)\.py$/i;
 
 export function validateProviderAssessmentResult(
   input: ProviderAssessmentInput,

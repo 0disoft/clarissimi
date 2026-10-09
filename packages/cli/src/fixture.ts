@@ -10,9 +10,12 @@ import {
 } from "@clarissimi/providers";
 import {
   isApprovalStatus,
+  validateContributorIdentity,
+  validateRecognitionSource,
   type ApprovalStatus,
   type ContributionAssessment,
   type ContributorIdentity,
+  type ValidationResult,
 } from "@clarissimi/schemas";
 
 import { parseJsonText, readTextFile } from "./io.js";
@@ -67,10 +70,18 @@ async function recognizeCollectedFixture(
   fixtureKind: FixtureRecognitionResult["fixtureKind"],
   selectedProvider?: ContributionDraftProvider,
 ): Promise<FixtureRecognitionResult> {
-  const preparedEvidence = prepareEvidenceForProvider(fixture.evidence);
+  const contributor = validatedFixtureField(
+    validateContributorIdentity(fixture.contributor),
+    "contributor",
+  );
+  const source = validatedFixtureField(
+    validateRecognitionSource(fixture.evidence.source),
+    "evidence.source",
+  );
+  const preparedEvidence = prepareEvidenceForProvider({ ...fixture.evidence, source });
   const provider = selectedProvider ?? createFakeContributionDraftProvider();
   const providerInput = {
-    contributor: fixture.contributor,
+    contributor,
     preparedEvidence,
   };
 
@@ -90,6 +101,15 @@ async function recognizeCollectedFixture(
     redactionChanged: preparedEvidence.redactionReport.changed,
     redactionMatchCount: preparedEvidence.redactionReport.occurrences.length,
   };
+}
+
+function validatedFixtureField<T>(result: ValidationResult<T>, field: string): T {
+  if (result.ok) {
+    return result.value;
+  }
+  const issue = result.issues[0];
+  const path = issue === undefined || issue.path === "$" ? field : `${field}${issue.path.slice(1)}`;
+  throw new Error(`Recognition fixture field ${path}: ${issue?.message ?? "Value is invalid."}`);
 }
 
 function parseRecognitionFixture(value: unknown): RecognitionFixture {

@@ -21,6 +21,7 @@ import {
   type ConfigMode,
   type ConfigMarkdownSummary,
   type ContributorKind,
+  type ContributorIdentity,
   type ConfigProvider,
   type ConfigProviderEndpointTrust,
   type ConfigProviderThinking,
@@ -31,6 +32,7 @@ import {
   type ReviewDecision,
   type ReviewDecisionValue,
   type ReviewGateMode,
+  type RecognitionSource,
 } from "./types.js";
 
 const RANKING_LANGUAGE_PATTERNS: readonly RegExp[] = [
@@ -465,6 +467,22 @@ export function validateClarissimiConfig(value: unknown): ValidationResult<Clari
     value: config,
     issues: [],
   };
+}
+
+export function validateContributorIdentity(value: unknown): ValidationResult<ContributorIdentity> {
+  const issues: ValidationIssue[] = [];
+  validateContributor(value, "$", issues);
+  return issues.length === 0
+    ? { ok: true, value: value as ContributorIdentity, issues: [] }
+    : invalid(issues);
+}
+
+export function validateRecognitionSource(value: unknown): ValidationResult<RecognitionSource> {
+  const issues: ValidationIssue[] = [];
+  validateSource(value, "$", issues);
+  return issues.length === 0
+    ? { ok: true, value: value as RecognitionSource, issues: [] }
+    : invalid(issues);
 }
 
 function validateContributor(value: unknown, path: string, issues: ValidationIssue[]): void {

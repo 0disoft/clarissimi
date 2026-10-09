@@ -42,8 +42,10 @@ Choose the narrowest rollback path:
 
 ## Procedure
 
-For temporary staging output, delete only the configured staging directory. The default Action path
-is under `RUNNER_TEMP` and must not be treated as source truth.
+The Action normally removes its private per-run staging subdirectory on success or failure. If a
+process crash leaves temporary output behind, inspect and delete only that run's `clarissimi-*`
+subdirectory. Preserve the configured staging parent and any other runs or files under it. The
+default parent is under `RUNNER_TEMP`; staging files must not be treated as source truth.
 
 For a local proposal branch:
 

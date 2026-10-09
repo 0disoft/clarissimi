@@ -64,7 +64,8 @@ The root `action.yml` exposes the same surface as a composite action:
   Clarissimi-managed status comment on the merged source pull request after a proposal succeeds
 - `base-branch`: defaults to `main`
 - `remote-name`: defaults to `origin`
-- `staging-dir`: optional temporary staging directory
+- `staging-dir`: optional temporary parent outside the checkout; each write run uses and cleans its
+  own private subdirectory
 - `summary-path`: optional workspace-relative path for a sanitized JSON summary artifact
 - `provider`: optional provider override; omitted values fall back to config, then the runner fake
   default

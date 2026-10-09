@@ -31,7 +31,8 @@
   draft without `approvalSnapshot`; a mismatched snapshot is always rejected
 - `base-branch`: base branch for proposal pull requests
 - `remote-name`: Git remote used to publish proposal branches
-- `staging-dir`: optional temporary staging directory for proposal outputs
+- `staging-dir`: optional temporary parent outside the checkout; each write run uses and cleans a
+  separate private subdirectory
 - `summary-path`: optional workspace-relative path for a sanitized JSON summary artifact
 - `provider`: `fake` or `openai-compatible`; omitted values fall back to config, then `fake`
 - `provider-model`: model name required when `provider` is `openai-compatible`

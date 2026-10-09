@@ -5369,6 +5369,10 @@ async function resolveActionSummaryPath(env) {
   if (!isPathInside(workspace, resolvedPath)) {
     throw new ActionUsageError("INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.");
   }
+  const overlapsRecognitionOutput = Object.values(RENDERED_OUTPUT_PATHS).some((path) => relative2(resolve(workspace, path), resolvedPath).length === 0);
+  if (overlapsRecognitionOutput || isPathInside(resolve(workspace, DRAFTS_DIR_PATH), resolvedPath)) {
+    throw new ActionUsageError("INPUT_SUMMARY_PATH must not overwrite Clarissimi recognition outputs or draft inbox files.");
+  }
   const workspaceRoot = await realpath2(workspace);
   let currentPath = workspaceRoot;
   const relativePath = relative2(workspace, resolvedPath);

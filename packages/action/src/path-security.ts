@@ -1,6 +1,8 @@
 import { lstat, realpath } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
+import { DRAFTS_DIR_PATH, RENDERED_OUTPUT_PATHS } from "@clarissimi/renderers";
+
 import { readEnvInput } from "./environment.js";
 import { ActionUsageError } from "./errors.js";
 
@@ -22,6 +24,17 @@ export async function resolveActionSummaryPath(
   const resolvedPath = resolve(workspace, inputPath);
   if (!isPathInside(workspace, resolvedPath)) {
     throw new ActionUsageError("INPUT_SUMMARY_PATH must stay inside GITHUB_WORKSPACE.");
+  }
+  const overlapsRecognitionOutput = Object.values(RENDERED_OUTPUT_PATHS).some(
+    (path) => relative(resolve(workspace, path), resolvedPath).length === 0,
+  );
+  if (
+    overlapsRecognitionOutput ||
+    isPathInside(resolve(workspace, DRAFTS_DIR_PATH), resolvedPath)
+  ) {
+    throw new ActionUsageError(
+      "INPUT_SUMMARY_PATH must not overwrite Clarissimi recognition outputs or draft inbox files.",
+    );
   }
 
   const workspaceRoot = await realpath(workspace);

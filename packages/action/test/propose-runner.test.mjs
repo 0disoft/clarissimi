@@ -266,7 +266,12 @@ test("propose mode preserves existing ledger records when rendering a new contri
       baseBranch: "main",
       pullRequestClient: client,
     });
-    const records = (await readFile(join(stagingDir, ".clarissimi", "contributions.jsonl"), "utf8"))
+    const records = (
+      await git(repositoryDir, [
+        "show",
+        "clarissimi/recognition/merged_pull_request-42:.clarissimi/contributions.jsonl",
+      ])
+    )
       .trim()
       .split("\n")
       .map((line) => JSON.parse(line));
@@ -333,10 +338,10 @@ test("runs fixture-first stage-draft mode through draft branch and pull request 
       baseBranch: "main",
       pullRequestClient: client,
     });
-    const stagedDraftText = await readFile(
-      join(stagingDir, ".clarissimi", "drafts", "sample-project-merged_pull_request-42.json"),
-      "utf8",
-    );
+    const stagedDraftText = await git(repositoryDir, [
+      "show",
+      "clarissimi/drafts/merged_pull_request-42:.clarissimi/drafts/sample-project-merged_pull_request-42.json",
+    ]);
 
     assert.equal(summary.mode, "stage-draft");
     assert.equal(summary.inputSource, "github_fixture");
@@ -431,13 +436,19 @@ test("promotes a BOM-prefixed approved draft through a public recognition propos
     assert.equal(client.created.length, 1);
     assert.equal(client.created[0].title, "Clarissimi recognition: sample/project#42");
     assert.equal(
-      (await readFile(join(stagingDir, ".clarissimi", "contributions.jsonl"), "utf8")).includes(
-        "approvalSnapshot",
-      ),
+      (
+        await git(repositoryDir, [
+          "show",
+          "clarissimi/recognition/merged_pull_request-42:.clarissimi/contributions.jsonl",
+        ])
+      ).includes("approvalSnapshot"),
       false,
     );
     const [record] = (
-      await readFile(join(stagingDir, ".clarissimi", "contributions.jsonl"), "utf8")
+      await git(repositoryDir, [
+        "show",
+        "clarissimi/recognition/merged_pull_request-42:.clarissimi/contributions.jsonl",
+      ])
     )
       .trim()
       .split("\n")
@@ -551,7 +562,10 @@ test("environment runner writes promote-draft proposal outputs", async () => {
     const parsed = JSON.parse(stdout);
     const outputText = await readFile(outputPath, "utf8");
     const summaryText = await readFile(summaryPath, "utf8");
-    const contributorsMarkdown = await readFile(join(stagingDir, "CONTRIBUTORS.md"), "utf8");
+    const contributorsMarkdown = await git(repositoryDir, [
+      "show",
+      "clarissimi/recognition/merged_pull_request-42:CONTRIBUTORS.md",
+    ]);
 
     assert.equal(exitCode, 0);
     assert.equal(stderr, "");
@@ -982,10 +996,10 @@ test("merged event stages a draft before a reviewed file can be promoted", async
     assert.equal(client.created.length, 1);
     assert.equal(
       (
-        await readFile(
-          join(stagingDir, ".clarissimi", "drafts", "sample-project-merged_pull_request-42.json"),
-          "utf8",
-        )
+        await git(repositoryDir, [
+          "show",
+          "clarissimi/drafts/merged_pull_request-42:.clarissimi/drafts/sample-project-merged_pull_request-42.json",
+        ])
       ).includes('"maintainerApprovalStatus": "draft"'),
       true,
     );
@@ -995,7 +1009,12 @@ test("merged event stages a draft before a reviewed file can be promoted", async
 
     const draftRelativePath = ".clarissimi/drafts/sample-project-merged_pull_request-42.json";
     const draftPath = join(repositoryDir, draftRelativePath);
-    const stagedDraft = JSON.parse(await readFile(join(stagingDir, draftRelativePath), "utf8"));
+    const stagedDraft = JSON.parse(
+      await git(repositoryDir, [
+        "show",
+        `clarissimi/drafts/merged_pull_request-42:${draftRelativePath}`,
+      ]),
+    );
     await mkdir(join(repositoryDir, ".clarissimi", "drafts"), { recursive: true });
     await writeFile(
       draftPath,
@@ -1021,7 +1040,12 @@ test("merged event stages a draft before a reviewed file can be promoted", async
       pullRequestClient: client,
     });
     const record = JSON.parse(
-      (await readFile(join(promotedDir, ".clarissimi", "contributions.jsonl"), "utf8")).trim(),
+      (
+        await git(repositoryDir, [
+          "show",
+          "clarissimi/recognition/merged_pull_request-42:.clarissimi/contributions.jsonl",
+        ])
+      ).trim(),
     );
     assert.equal(promoted.approvalStatus, "approved");
     assert.equal(promoted.proposedEntryCount, 1);
@@ -1046,8 +1070,14 @@ test("merged event stages a draft before a reviewed file can be promoted", async
     assert.equal(client.updated[0].number, promoted.proposalPullRequestNumber);
     assert.equal(await remoteBranchSha(repositoryDir, "main"), reviewedMainSha);
     assert.equal(
-      await readFile(join(rerunDir, ".clarissimi", "contributions.jsonl"), "utf8"),
-      await readFile(join(promotedDir, ".clarissimi", "contributions.jsonl"), "utf8"),
+      await git(repositoryDir, [
+        "show",
+        "clarissimi/recognition/merged_pull_request-42:.clarissimi/contributions.jsonl",
+      ]),
+      await git(repositoryDir, [
+        "show",
+        "clarissimi/recognition/merged_pull_request-42:.clarissimi/contributions.jsonl",
+      ]),
     );
   });
 });

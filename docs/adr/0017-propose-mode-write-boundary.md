@@ -122,3 +122,11 @@ Proposal, draft staging, and draft promotion require checkout HEAD to equal the 
 commit before reading inputs or calling a provider. The writer receives that pinned SHA and
 rechecks HEAD and the base before mutation. Different revisions fail with instructions to check
 out the selected base, preventing a proposal from replacing its base ledger with an older snapshot.
+
+
+## Staging Isolation
+
+The staging-dir input selects a temporary parent outside the checkout. Each write-mode execution
+creates a fresh private subdirectory and cleans it on success or failure. Overlapping checkout paths,
+symlinks, and junctions are rejected before staging writes. Low-level staging preflights all
+recognition destinations and uses exclusive file creation; existing outputs are never overwritten.

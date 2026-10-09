@@ -50,7 +50,7 @@ inputs:
     required: false
     default: origin
   staging-dir:
-    description: Optional temporary staging directory for propose or stage-draft generated files.
+    description: Optional temporary parent outside the checkout. Each write run creates and cleans its own staging subdirectory.
     required: false
   summary-path:
     description: Optional workspace-relative path for a sanitized JSON run summary artifact.

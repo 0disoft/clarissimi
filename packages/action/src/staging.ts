@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { lstat, mkdir, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, normalize, sep } from "node:path";
 
 import { canPublishAssessment } from "@clarissimi/core";
@@ -18,6 +18,7 @@ import type {
   RecognitionSource,
   ValidationIssue,
 } from "@clarissimi/schemas";
+import { assertSafeStagingDirectory } from "./staging-directory.js";
 
 export interface ProposalOutputStagingInput {
   readonly outputDir: string;
@@ -200,6 +201,8 @@ async function writeRenderedOutputs(
   ];
   const files: ProposalStagedFile[] = [];
 
+  for (const [, path] of entries) await assertUnusedStagedDestination(outputDir, path);
+
   for (const [key, path] of entries) {
     assertClarissimiOutputPath(path);
     const content = outputs[key];
@@ -214,9 +217,10 @@ async function writeStagedFile(
   path: string,
   content: string,
 ): Promise<readonly ProposalStagedFile[]> {
+  await assertUnusedStagedDestination(outputDir, path);
   const destination = join(outputDir, path);
   await mkdir(dirname(destination), { recursive: true });
-  await writeFile(destination, content, "utf8");
+  await writeFile(destination, content, { encoding: "utf8", flag: "wx", mode: 0o600 });
 
   return [
     {
@@ -225,6 +229,20 @@ async function writeStagedFile(
       sha256: createHash("sha256").update(content, "utf8").digest("hex"),
     },
   ];
+}
+
+async function assertUnusedStagedDestination(outputDir: string, path: string): Promise<void> {
+  const destination = join(outputDir, path);
+  await assertSafeStagingDirectory(dirname(destination));
+  try {
+    await lstat(destination);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return;
+    throw error;
+  }
+  throw new Error(
+    "Staged output already exists; choose a fresh staging directory. Existing files were preserved.",
+  );
 }
 
 function summarizeApprovals(

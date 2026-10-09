@@ -57,6 +57,7 @@ import {
   stageProposalRecognitionOutputs,
   type ProposalOutputStagingManifest,
 } from "./staging.js";
+import { withActionStaging } from "./staging-directory.js";
 import { sanitizeAssessmentForActionSummary } from "./summary.js";
 import { isPathInside, resolveActionSummaryPath } from "./path-security.js";
 import { resolveActionProvider } from "./provider.js";
@@ -124,7 +125,7 @@ export async function runActionDryRun(input: ActionDryRunInput): Promise<ActionD
   };
 }
 
-export async function runActionPropose(input: ActionProposeInput): Promise<ActionProposeSummary> {
+async function runActionProposeInStaging(input: ActionProposeInput): Promise<ActionProposeSummary> {
   const baseCommitSha = await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
   validateSourceCommentInput(input);
   const prepared = await prepareActionAssessment(input);
@@ -195,7 +196,7 @@ export async function runActionPropose(input: ActionProposeInput): Promise<Actio
   };
 }
 
-export async function runActionCommit(input: ActionCommitInput): Promise<ActionCommitSummary> {
+async function runActionCommitInStaging(input: ActionCommitInput): Promise<ActionCommitSummary> {
   const prepared = await prepareActionAssessment(input);
   if (prepared.kind === "skipped") {
     throw new ActionUsageError("Commit mode requires a merged pull request input.");
@@ -246,7 +247,7 @@ export async function runActionCommit(input: ActionCommitInput): Promise<ActionC
   };
 }
 
-export async function runActionStageDraft(
+async function runActionStageDraftInStaging(
   input: ActionStageDraftInput,
 ): Promise<ActionProposeSummary> {
   const baseCommitSha = await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
@@ -316,7 +317,7 @@ export async function runActionStageDraft(
   };
 }
 
-export async function runActionPromoteDraft(
+async function runActionPromoteDraftInStaging(
   input: ActionPromoteDraftInput,
 ): Promise<ActionProposeSummary> {
   const baseCommitSha = await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
@@ -969,4 +970,27 @@ function assignOptional<T extends object, K extends keyof T>(
   if (value !== undefined) {
     target[key] = value;
   }
+}
+
+export async function runActionPropose(input: ActionProposeInput): Promise<ActionProposeSummary> {
+  await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
+  return withActionStaging(input, runActionProposeInStaging);
+}
+
+export async function runActionStageDraft(
+  input: ActionStageDraftInput,
+): Promise<ActionProposeSummary> {
+  await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
+  return withActionStaging(input, runActionStageDraftInStaging);
+}
+
+export async function runActionPromoteDraft(
+  input: ActionPromoteDraftInput,
+): Promise<ActionProposeSummary> {
+  await assertProposalBaseCheckout(input.repositoryDir, input.baseBranch);
+  return withActionStaging(input, runActionPromoteDraftInStaging);
+}
+
+export async function runActionCommit(input: ActionCommitInput): Promise<ActionCommitSummary> {
+  return withActionStaging(input, runActionCommitInStaging);
 }

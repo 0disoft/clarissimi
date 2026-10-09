@@ -3,8 +3,8 @@ import {
   type ClarissimiConfig,
   type ValidationIssue,
 } from "@clarissimi/schemas";
-import { lstat } from "node:fs/promises";
-import { basename } from "node:path";
+import { lstat, stat } from "node:fs/promises";
+import { basename, dirname } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { fileExists, parseJsonText, readTextFile, resolveFromCwd } from "./io.js";
@@ -83,6 +83,7 @@ async function resolveDefaultConfigPath(cwd: string): Promise<string | undefined
       ) {
         throw error;
       }
+      await assertDefaultConfigParent(cwd, path);
     }
   }
 
@@ -93,6 +94,31 @@ async function resolveDefaultConfigPath(cwd: string): Promise<string | undefined
   }
 
   return existing[0];
+}
+
+async function assertDefaultConfigParent(cwd: string, path: string): Promise<void> {
+  const parent = dirname(resolveFromCwd(cwd, path));
+  try {
+    await lstat(parent);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return;
+    }
+    throw error;
+  }
+
+  try {
+    if ((await stat(parent)).isDirectory()) {
+      return;
+    }
+  } catch (error) {
+    if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") {
+      throw error;
+    }
+  }
+  throw new CliConfigError(
+    `Default config path ${path} has a parent that is not an existing directory. Restore its directory or link target, or pass --config <path> to select another config file.`,
+  );
 }
 
 async function loadConfigValue(path: string, resolvedPath: string): Promise<unknown> {

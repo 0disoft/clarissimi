@@ -1,6 +1,7 @@
 import {
   PROVIDER_EVIDENCE_LIMITS,
   prepareEvidenceForProvider,
+  prepareProviderHints,
   type EvidenceBundleInput,
 } from "@clarissimi/core";
 import {
@@ -83,7 +84,10 @@ async function recognizeCollectedFixture(
     validateRecognitionSource(fixture.evidence.source),
     "evidence.source",
   );
-  const preparedEvidence = prepareEvidenceForProvider({ ...fixture.evidence, source });
+  const { hints, preparedEvidence } = prepareProviderHints(
+    fixture.hints,
+    prepareEvidenceForProvider({ ...fixture.evidence, source }),
+  );
   const provider = selectedProvider ?? createFakeContributionDraftProvider();
   const providerInput = {
     contributor,
@@ -92,7 +96,7 @@ async function recognizeCollectedFixture(
 
   if (fixture.hints !== undefined) {
     Object.assign(providerInput, {
-      hints: fixture.hints,
+      hints,
     });
   }
 

@@ -1,4 +1,8 @@
-import { EvidencePreparationError, assertPreparedEvidenceForProvider } from "@clarissimi/core";
+import {
+  EvidencePreparationError,
+  assertPreparedEvidenceForProvider,
+  prepareProviderHints,
+} from "@clarissimi/core";
 import {
   ASSESSMENT_SCHEMA_VERSION,
   CLAIM_EVIDENCE_FIELDS,
@@ -100,6 +104,14 @@ export function createOpenAiCompatibleContributionDraftProvider(
   return {
     id: options.id ?? DEFAULT_PROVIDER_ID,
     async createAssessment(input: ProviderAssessmentInput): Promise<ContributionAssessment> {
+      try {
+        input = { ...input, ...prepareProviderHints(input.hints, input.preparedEvidence) };
+      } catch {
+        throw new OpenAiCompatibleProviderError(
+          "invalid_options",
+          "Provider hints contain an invalid field value; validate hints before drafting.",
+        );
+      }
       const requestInput = {
         endpoint,
         endpointTrust,
@@ -440,7 +452,13 @@ function buildProviderPayload(input: ProviderAssessmentInput): Record<string, un
       changed: input.preparedEvidence.redactionReport.changed,
       matchCount: input.preparedEvidence.redactionReport.occurrences.length,
     },
-    hints: input.hints ?? {},
+    hints: {
+      contributionType: input.hints?.contributionType,
+      affectedArea: input.hints?.affectedArea,
+      impactLevel: input.hints?.impactLevel,
+      suggestedBadge: input.hints?.suggestedBadge,
+      confidence: input.hints?.confidence,
+    },
   };
 }
 

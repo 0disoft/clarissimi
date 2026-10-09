@@ -12,6 +12,11 @@ security details, and prompt injection.
 
 Clarissimi must run redaction before any external provider call.
 
+This includes fixture assessment hints. Only the five schema-defined hint fields are accepted;
+enums, confidence in [0, 1], and nonempty strings are checked before drafting. Free-text hints
+are redacted and their matches contribute to the evidence redaction report. Unknown properties
+are discarded, and the external adapter repeats validation and allowlists its final hint payload.
+
 ## Consequences
 
 - Redaction failures fail closed.

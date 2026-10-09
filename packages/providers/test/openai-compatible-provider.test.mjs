@@ -932,3 +932,39 @@ function jsonResponse(body, status = 200) {
     },
   };
 }
+
+test("external adapter redacts and allowlists direct hints before constructing the request", async () => {
+  let body;
+  const provider = createOpenAiCompatibleContributionDraftProvider({
+    model: "clarissimi-test-model",
+    token: "unit-token",
+    fetch: async (_url, init) => {
+      body = String(init.body);
+      return new Response("", { status: 500 });
+    },
+  });
+  await assert.rejects(
+    provider.createAssessment({
+      contributor,
+      preparedEvidence: preparedEvidence(),
+      hints: {
+        affectedArea: "Maintainer person@example.com",
+        extraField: "private-invalid-marker",
+      },
+    }),
+  );
+  assert.ok(body.includes("[REDACTED]"));
+  assert.ok(!body.includes("person@example.com"));
+  assert.ok(!body.includes("extraField"));
+  assert.ok(!body.includes("private-invalid-marker"));
+  body = undefined;
+  await assert.rejects(
+    provider.createAssessment({
+      contributor,
+      preparedEvidence: preparedEvidence(),
+      hints: { confidence: 2 },
+    }),
+    (error) => error.code === "invalid_options",
+  );
+  assert.equal(body, undefined);
+});

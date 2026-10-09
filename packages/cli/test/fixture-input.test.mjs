@@ -10,6 +10,12 @@ import { recognizeFixture } from "../dist/fixture.js";
 import { runCli } from "../dist/index.js";
 
 for (const [field, value, label = field] of [
+  ["hints.contributionType", "private-invalid-marker"],
+  ["hints.impactLevel", "private-invalid-marker"],
+  ["hints.confidence", -1],
+  ["hints.confidence", 2, "out of range hints confidence"],
+  ["hints.affectedArea", {}],
+  ["hints.suggestedBadge", ""],
   ["contributor.platform", "private-invalid-marker"],
   ["contributor.login", 42],
   ["contributor.profileUrl", "https://github.com/wrong-user"],
@@ -124,6 +130,34 @@ test("recognize accepts valid evidence URLs and optional metadata", async () => 
     assert.equal(result.assessment.evidenceRefs[0].url, url);
     assert.equal(result.assessment.maintainerApprovalStatus, "draft");
     assert.deepEqual(await readdir(dir), ["fixture.json"]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("fixture hints are allowlisted and redacted before any provider, including redaction statistics", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "clarissimi-hints-"));
+  try {
+    const fixture = JSON.parse(
+      await readFile(new URL("../../../fixtures/merged-pr-basic.json", import.meta.url), "utf8"),
+    );
+    fixture.hints.affectedArea = "Maintainer person@example.com";
+    fixture.hints.extraField = "private-invalid-marker";
+    const path = join(dir, "fixture.json");
+    await writeFile(path, JSON.stringify(fixture));
+    let received;
+    const provider = createFakeContributionDraftProvider();
+    const result = await recognizeFixture(path, {
+      id: provider.id,
+      createAssessment: (input) => {
+        received = input;
+        return provider.createAssessment(input);
+      },
+    });
+    assert.equal(received.hints.affectedArea, "Maintainer [REDACTED]");
+    assert.equal(Object.hasOwn(received.hints, "extraField"), false);
+    assert.equal(result.redactionChanged, true);
+    assert.equal(result.redactionMatchCount, 1);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

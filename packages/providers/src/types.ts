@@ -1,9 +1,8 @@
 import type { PreparedProviderEvidence } from "@clarissimi/core";
 import type {
   ContributionAssessment,
-  ContributionType,
+  ContributionAssessmentHints,
   ContributorIdentity,
-  ImpactLevel,
 } from "@clarissimi/schemas";
 
 export interface ContributionDraftProvider {
@@ -17,10 +16,4 @@ export interface ProviderAssessmentInput {
   readonly hints?: ProviderAssessmentHints;
 }
 
-export interface ProviderAssessmentHints {
-  readonly contributionType?: ContributionType;
-  readonly affectedArea?: string;
-  readonly impactLevel?: ImpactLevel;
-  readonly suggestedBadge?: string;
-  readonly confidence?: number;
-}
+export type ProviderAssessmentHints = ContributionAssessmentHints;

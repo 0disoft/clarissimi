@@ -54,6 +54,14 @@ export const IMPACT_LEVELS = ["low", "medium", "high"] as const;
 
 export type ImpactLevel = (typeof IMPACT_LEVELS)[number];
 
+export interface ContributionAssessmentHints {
+  readonly contributionType?: ContributionType;
+  readonly affectedArea?: string;
+  readonly impactLevel?: ImpactLevel;
+  readonly suggestedBadge?: string;
+  readonly confidence?: number;
+}
+
 export const APPROVAL_STATUSES = [
   "draft",
   "auto_approved",

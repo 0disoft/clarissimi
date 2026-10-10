@@ -49,6 +49,12 @@ The versions above are a reviewed snapshot, not a permanent ban on compatible up
 maintainer-authorized refresh may replace the snapshot after the same dependency, build, package,
 and generated-output checks pass. New major versions remain deliberate migrations.
 
+The workspace overrides Tinypool to `^2.1.2` while Oxfmt's accepted snapshot requires the vulnerable
+`2.1.0`. This minimum covers GHSA-5gmw-xhrv-c9v3 and GHSA-85c8-ppgw-ccpr while allowing compatible
+2.x fixes. The lockfile records the version validated by CI. Remove this override when an accepted
+Oxfmt update requires a safe Tinypool version itself; the formatter snapshot need not change just
+to remediate its worker-pool dependency.
+
 ## Consequences
 
 TypeScript now installs platform-specific native compiler packages. The lockfile grows to represent

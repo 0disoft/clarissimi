@@ -31,15 +31,17 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - uses: 0disoft/clarissimi@v0.7.0
+      - uses: 0disoft/clarissimi@v1.0.0
         with:
           mode: dry-run
 ```
 
 This first workflow is read-only. It validates the post-merge event path and writes a bounded run
 summary without changing repository files, branches, comments, or pull requests. The immutable
-`v0.7.0` pin is reproducible; use `0disoft/clarissimi@v0` instead when you deliberately want the
-maintainer-approved moving `0.x` channel.
+`v1.0.0` pin is reproducible; use `0disoft/clarissimi@v1` instead when you deliberately want the
+maintainer-approved moving `1.x` channel. `v1.0.0` is the prepared stable candidate and becomes the
+recommended immutable reference once it is published; until then the published immutable release is
+`v0.7.0` and the moving `v0` channel still follows the `0.x` line.
 
 Without provider configuration, Clarissimi uses its deterministic fake provider. That is useful for
 checking workflow wiring, not for publishing meaningful recognition. For real drafts, configure an
@@ -65,7 +67,7 @@ automation-first repositories; it never force-pushes and still loses to branch p
 concurrent update. Copy the complete least-privilege workflows from the
 [Action guide](docs/github-action/README.md).
 
-`gate` in `v0.7.0` verifies the comment author's current repository write permission. Required
+`gate` in `v1.0.0` verifies the comment author's current repository write permission. Required
 mode fails closed when that permission cannot be checked. The earlier `v0.6.2` release checks
 comment author association only; keep it advisory where membership does not imply write access. Do
 not point a consumer at `main`; use the release tag documented in the Action guide.
@@ -73,7 +75,7 @@ not point a consumer at `main`; use the release tag documented in the Action gui
 Choose one optional `CONTRIBUTORS.md` summary without replacing the detailed recognition history:
 
 ```yaml
-- uses: 0disoft/clarissimi@v0.7.0
+- uses: 0disoft/clarissimi@v1.0.0
   with:
     mode: promote-draft
     draft-path: .clarissimi/drafts/example-project-merged_pull_request-42.json # replace with an approved draft
@@ -278,13 +280,17 @@ node packages/cli/dist/bin/clarissimi.js import-draft --draft .clarissimi/drafts
 
 ## GitHub Action
 
-The current public Action release is `0disoft/clarissimi@v0.7.0`. Consumers may pin that immutable
-tag or use `0disoft/clarissimi@v0` to follow maintainer-approved `0.x` Action releases. Earlier
-releases remain immutable, and `main` is never a consumer release channel. Clarissimi is also
-available in the [GitHub Marketplace](https://github.com/marketplace/actions/clarissimi) under the
-`Code review` and `Utilities` categories. The standalone `clarissimi` CLI is available from npm.
-Root and workspace packages remain private. Future CLI releases follow the ADR 0056 staged registry
-and two-factor-authentication gates.
+The prepared stable Action release is `0disoft/clarissimi@v1.0.0`, a candidate awaiting publication.
+Consumers may pin that immutable tag or use `0disoft/clarissimi@v1` to follow maintainer-approved
+`1.x` Action releases once `v1.0.0` is published. Until then the published immutable release is
+`v0.7.0` and the moving `v0` channel continues to follow the `0.x` line; the `v1` release does not
+move or delete those `v0.x.y` tags or the `v0` alias. Earlier releases remain immutable, and `main`
+is never a consumer release channel. Clarissimi is also available in the
+[GitHub Marketplace](https://github.com/marketplace/actions/clarissimi) under the `Code review` and
+`Utilities` categories. The standalone `clarissimi` CLI is available from npm.
+Root and workspace packages remain private. Future CLI releases follow the ADR 0056 staged registry and
+two-factor-authentication gates; ADR 0062 keeps commands, options, documented JSON keys and types,
+exit meanings, config, and registered ledger versions compatible throughout the CLI `1.x` line.
 
 See [`0disoft/clarissimi-example`](https://github.com/0disoft/clarissimi-example) for a public,
 synthetic consumer repository with a read-only `v0` workflow, a manual recognition proposal, and
@@ -347,7 +353,7 @@ workflow should keep the sanitized JSON run summary as an uploadable artifact. S
 `markdown-summary: table` to add the compact table or `markdown-summary: gallery` to add stable-id
 GitHub avatars to proposed `CONTRIBUTORS.md` output; this input also works in `promote-draft`, which
 otherwise skips config and provider loading. The `table` input is available in immutable tag
-`v0.1.1`; `gallery` is available in the current immutable `v0.7.0` release and moving `v0` line.
+`v0.1.1`; `gallery` is available in the current immutable `v1.0.0` release and moving `v1` line.
 
 Treat `clarissimi.config.ts` as executable runner code, not static configuration. Load it only from
 a trusted checkout, never from an untrusted pull request head or a path derived from pull request

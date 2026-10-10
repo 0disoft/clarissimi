@@ -1515,8 +1515,8 @@ Accepted scope:
 Source: `docs/adr/0058-add-static-contributor-page.md`, `docs/product/02-spec.md`,
 `docs/cli/command-contract.md`
 
-Status: Implemented on `main`; a standalone CLI release containing the command remains gated and
-manual-only.
+Status: Published in standalone CLI `clarissimi@0.2.0`; the prepared `1.0.0` candidate retains the
+command and adds the stable CLI compatibility contract.
 
 Completed scope:
 
@@ -1534,12 +1534,12 @@ Completed scope:
   duplicate rejection, JSON output, and explicit output-path handling
 - keep hosting and deployment consumer-owned; README mutation, custom themes, JavaScript apps,
   organization aggregation, and hosted dashboards remain outside this boundary
-- prepare the public manifest as npm `0.2.0` candidate for the additive command; npm `latest`
-  remains `0.1.2` until staging, maintainer approval, and external-consumer verification complete
+- publish npm `0.2.0` with the additive command; npm `latest` is `0.2.0` while the independent
+  `1.0.0` candidate awaits staged publication, maintainer approval, and external verification
 
 ### 44. Action v0.6.2 Correctness and Security Patch
 
-Status: Immutable `v0.6.2` is published. The moving `v0` alias points to that release.
+Status: Immutable `v0.6.2` is published. The moving `v0` alias was subsequently promoted to `v0.7.0`.
 
 Accepted scope:
 
@@ -1557,8 +1557,8 @@ Accepted scope:
 
 ### 45. Action v0.7.0 Release Candidate
 
-Status: Immutable `v0.7.0` is the selected Action release candidate. Publication and moving-`v0`
-promotion require fresh exact-SHA validation.
+Status: Immutable `v0.7.0` is published at `fed30422f548f70791a6481bec33232bfa7ba2e3`. The moving
+`v0` alias points to this release. The same source published standalone CLI `clarissimi@0.2.0`.
 
 Accepted scope:
 
@@ -1570,6 +1570,21 @@ Accepted scope:
 - preserve existing Action input names, defaults, permissions, and readable v1 ledgers
 - require exact-SHA hosted CI, live-provider, external dry-run, full-write, cleanup, orphan-audit,
   post-tag, Marketplace, and compare-and-swap moving-`v0` validation before completion
+
+### 46. Stable Action and CLI Release
+
+Source: `docs/adr/0055-define-stable-v1-action-compatibility-boundary.md`,
+`docs/adr/0062-authorize-stable-action-and-cli-release.md`
+
+Status: Action `v1.0.0` and CLI `clarissimi@1.0.0` are authorized release candidates. Publication
+requires exact-candidate validation; npm remains staged and maintainer-approved.
+
+- preserve the Action input, output, permission, approval, and registered ledger contracts
+- preserve CLI commands, options, documented JSON keys and types, exit meanings, config, and
+  registered ledger readers throughout `1.x`
+- publish the accumulated proposal, atomic-write, diagnostics, completion, and evidence fixes
+- keep private workspace versions at `0.0.0` and future Action and CLI release cadence independent
+- preserve existing `v0` tags and alias when publishing and validating the new `v1` alias
 
 ## Deferred Work
 

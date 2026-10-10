@@ -109,6 +109,9 @@ engine.
   esbuild toolchain on Linux, Windows, and macOS only when toolchain inputs change or on demand
 - `0061-link-public-claims-to-evidence.md`: preserve explicit links from public claims to ordered
   evidence references while keeping historical assessment records readable
+- `0062-authorize-stable-action-and-cli-release.md`: authorize the first stable root Action release
+  `v1.0.0` and standalone CLI `1.0.0`, and keep the CLI `1.x` commands, options, JSON keys and types,
+  exit meanings, config, and registered ledger versions backward compatible
 
 ## Review Blockers
 

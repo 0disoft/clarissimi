@@ -18,9 +18,12 @@ publication beginning with non-prerelease release `v0.3.0`.
 ADR 0055 defines `v1.0.0` as the first stable root Action candidate and keeps Action release
 versions independent from persisted schema versions. The release, Marketplace, validation-record,
 external-consumer, and alias tools now accept both authorized v0 and v1 lines with regression
-coverage. It does not authorize an immediate tag: stable v1 publication remains blocked until the
-candidate consumer documents name `v1.0.0` and the exact candidate completes every hosted,
-post-tag, Marketplace, and external gate in this document.
+coverage. ADR 0062 authorizes preparation of the stable `v1.0.0` Action release and the standalone
+CLI `clarissimi@1.0.0`, preserving the ADR 0055 Action boundary and the ADR 0056 npm contract. It
+does not authorize an immediate tag: stable v1 publication remains blocked until the
+candidate consumer documents name `v1.0.0` (now satisfied by the prepared root onboarding, Action guide, and
+`SECURITY.md`) and the exact candidate completes every hosted, post-tag, Marketplace, and external
+gate in this document.
 
 The current root and workspace packages stay private at `0.0.0`. ADR 0056 accepts only the
 dependency-free `distribution/npm/clarissimi` CLI distribution beginning at `0.1.0`; it does not
@@ -43,7 +46,13 @@ authorize publishing internal workspace packages or couple the CLI version to an
   workspace-package publication remains blocked.
 - Stable root Action tag: `v1.0.0` is selected by ADR 0055; v1-capable release tooling is
   implemented, but publication remains blocked until candidate documentation and every exact-SHA,
-  post-tag, Marketplace, and alias gate pass.
+  post-tag, Marketplace, and alias gate pass. ADR 0062 authorizes preparation of this stable
+  Action release and of the standalone CLI `clarissimi@1.0.0`.
+- Standalone CLI stable release: `clarissimi@1.0.0` is authorized by ADR 0062 and stays gated by
+  the ADR 0056 staged-publication, maintainer-approval, and external-consumer checks below. The
+  CLI `1.x` line keeps existing commands, options, documented JSON keys and types, exit meanings,
+  config, and registered ledger versions compatible; a removal or semantic break requires a new
+  major version.
 
 ## Stable v1 Compatibility Contract
 
@@ -103,7 +112,9 @@ The versioned Action tag requires:
 
 Standalone CLI `clarissimi@0.1.2` is public on npm. Future CLI versions remain blocked until every
 version-specific registry gate passes; Action release validation does not substitute for the
-npm-specific checks below.
+npm-specific checks below. The later standalone CLI `clarissimi@0.2.0` is published and the
+`clarissimi@1.0.0` candidate is prepared under ADR 0062; `1.0.0` is not public until it is staged
+and approved through the gates below.
 
 ## Standalone CLI npm Publication
 
@@ -329,13 +340,19 @@ audit run `29325038208` found no residue. A complete new-correlation post-tag va
 on all three runners; the failed attempt is retained as a transient GitHub API reliability signal,
 not erased or counted as the final release result.
 
-Action `v0.7.0` is the next candidate for the approved-draft, public-output, reviewer-permission,
-and claim-to-evidence safeguards accumulated after `v0.6.2`. It keeps Action inputs, permissions,
-defaults, and readable v1 ledgers compatible. Its consumer documents and release notes identify
-`v0.7.0` before tagging; publication still requires candidate CI, hosted live-provider, external
-dry-run, full-write, cleanup, and orphan-audit results for one exact commit. After publication, run
-those checks again against the immutable tag, verify Marketplace `Latest`, then move `v0` with
-the separate compare-and-swap procedure. The standalone CLI version is independent.
+Action `v0.7.0` is published. It shipped the approved-draft, public-output, reviewer-permission, and
+claim-to-evidence safeguards accumulated after `v0.6.2` and keeps Action inputs, permissions,
+defaults, and readable v1 ledgers compatible. The standalone CLI version is independent.
+
+Action `v1.0.0` is the next stable release candidate authorized by ADR 0055 and ADR 0062 for the
+proposal-isolation, reviewed-branch, input/output-collision, atomic-write, and diagnostics fixes
+accumulated after `v0.7.0`. It keeps Action inputs, permissions, defaults, modes, and readable v1
+ledgers compatible. The prepared consumer documents, Action guide, security policy, release notes,
+and implementation tracker now identify `v1.0.0`; publication still requires candidate CI, hosted
+live-provider, external dry-run, full-write, cleanup, and orphan-audit results for one exact
+commit. After publication, run those checks again against the immutable tag, verify Marketplace
+`Latest`, then promote `v1` with the separate compare-and-swap procedure. The standalone CLI
+`clarissimi@1.0.0` candidate is versioned and released separately under ADR 0062.
 
 Current promotion validation record:
 

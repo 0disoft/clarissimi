@@ -357,7 +357,7 @@ export const implementationTrackerContract = {
     "29892358683",
     "29892969685",
     "29893077391",
-    "Immutable `v0.7.0` is the selected Action release candidate",
+    "Immutable `v0.7.0` is published",
     "2def5c4b6630c26ca19245984c3d1eba033e7e5b",
     "30206978376",
     "`clarissimi@0.1.2` is public npm `latest` with provenance",
@@ -515,7 +515,7 @@ export const readmeValidationContract = {
   path: "README.md",
   requiredSnippets: [
     "## Start in 30 Seconds",
-    "- uses: 0disoft/clarissimi@v0.7.0",
+    "- uses: 0disoft/clarissimi@v1.0.0",
     "mode: dry-run",
     "## Choose How Results Are Written",
     "`propose` remains the default write mode and accepts an already approved assessment.",
@@ -1666,10 +1666,10 @@ export async function runReleaseReadiness(options = {}) {
     "free root Action Marketplace publication is allowed by ADR 0045; workspace-package publication remains blocked",
   );
   console.log(
-    "stable v1.0.0 tooling is ready under ADR 0055; publication remains blocked pending candidate-version docs and fresh exact-candidate validation",
+    "stable v1.0.0 is authorized under ADRs 0055 and 0062; exact-candidate validation is required before publication",
   );
   console.log(
-    "standalone CLI clarissimi@0.1.2 is public with staged OIDC provenance and external-consumer verification under ADR 0056",
+    "standalone CLI clarissimi@1.0.0 is the stable candidate under ADR 0062; staged OIDC publication retains maintainer approval",
   );
 }
 

@@ -13,8 +13,7 @@ npm install --global clarissimi
 clarissimi --help
 ```
 
-The published line includes the repository-owned `render-page` command. Version `1.0.0` is the
-prepared stable candidate and awaits staged publication plus maintainer approval; ADR 0062 keeps
+The stable `1.0.0` release includes the repository-owned `render-page` command. ADR 0062 keeps
 existing commands, options, documented JSON keys and types, exit meanings, config, and registered
 ledger versions compatible throughout the CLI `1.x` line. Private workspace packages remain
 `0.0.0`.

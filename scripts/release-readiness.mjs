@@ -1669,7 +1669,7 @@ export async function runReleaseReadiness(options = {}) {
     "stable v1.0.0 is authorized under ADRs 0055 and 0062; exact-candidate validation is required before publication",
   );
   console.log(
-    "standalone CLI clarissimi@1.0.0 is the stable candidate under ADR 0062; staged OIDC publication retains maintainer approval",
+    "standalone CLI 1.x follows ADR 0062; staged OIDC publication retains maintainer approval",
   );
 }
 

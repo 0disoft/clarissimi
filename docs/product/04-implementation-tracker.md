@@ -1515,7 +1515,7 @@ Accepted scope:
 Source: `docs/adr/0058-add-static-contributor-page.md`, `docs/product/02-spec.md`,
 `docs/cli/command-contract.md`
 
-Status: Published in standalone CLI `clarissimi@0.2.0`; the prepared `1.0.0` candidate retains the
+Status: Published in standalone CLI `clarissimi@0.2.0`; the stable `1.0.0` release retains the
 command and adds the stable CLI compatibility contract.
 
 Completed scope:
@@ -1534,8 +1534,8 @@ Completed scope:
   duplicate rejection, JSON output, and explicit output-path handling
 - keep hosting and deployment consumer-owned; README mutation, custom themes, JavaScript apps,
   organization aggregation, and hosted dashboards remain outside this boundary
-- publish npm `0.2.0` with the additive command; npm `latest` is `0.2.0` while the independent
-  `1.0.0` candidate awaits staged publication, maintainer approval, and external verification
+- publish npm `0.2.0` with the additive command; subsequent stable npm `1.0.0` is `latest` after
+  staged publication, maintainer approval, and external verification
 
 ### 44. Action v0.6.2 Correctness and Security Patch
 
@@ -1558,7 +1558,7 @@ Accepted scope:
 ### 45. Action v0.7.0 Release Candidate
 
 Status: Immutable `v0.7.0` is published at `fed30422f548f70791a6481bec33232bfa7ba2e3`. The moving
-`v0` alias points to this release. The same source published standalone CLI `clarissimi@0.2.0`.
+`v0` alias points to this release. Standalone CLI `clarissimi@0.2.0` was published separately.
 
 Accepted scope:
 
@@ -1576,8 +1576,11 @@ Accepted scope:
 Source: `docs/adr/0055-define-stable-v1-action-compatibility-boundary.md`,
 `docs/adr/0062-authorize-stable-action-and-cli-release.md`
 
-Status: Action `v1.0.0` and CLI `clarissimi@1.0.0` are authorized release candidates. Publication
-requires exact-candidate validation; npm remains staged and maintainer-approved.
+Status: Action `v1.0.0` and CLI `clarissimi@1.0.0` are published at release source
+`c4f14a40b812f881cca886c924fae041e92dea3e`. Marketplace and npm both mark these versions latest.
+The CLI passed exact registry installation, executable help, fixture dry-run, and signature audit.
+Release evidence is retained in issue `26` and `docs/ops/release.md`. Moving `v1` passed its
+exact-SHA external checks and points to the same source; existing `v0` remains at `v0.7.0`.
 
 - preserve the Action input, output, permission, approval, and registered ledger contracts
 - preserve CLI commands, options, documented JSON keys and types, exit meanings, config, and

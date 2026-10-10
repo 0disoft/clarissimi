@@ -112,9 +112,9 @@ The versioned Action tag requires:
 
 Standalone CLI `clarissimi@0.1.2` is public on npm. Future CLI versions remain blocked until every
 version-specific registry gate passes; Action release validation does not substitute for the
-npm-specific checks below. The later standalone CLI `clarissimi@0.2.0` is published and the
-`clarissimi@1.0.0` candidate is prepared under ADR 0062; `1.0.0` is not public until it is staged
-and approved through the gates below.
+npm-specific checks below. The later standalone CLI `clarissimi@0.2.0` and stable
+`clarissimi@1.0.0` are published. Stable `1.0.0` completed the ADR 0062 preparation, staging,
+maintainer approval, exact registry install, and signature verification.
 
 ## Standalone CLI npm Publication
 
@@ -344,15 +344,44 @@ Action `v0.7.0` is published. It shipped the approved-draft, public-output, revi
 claim-to-evidence safeguards accumulated after `v0.6.2` and keeps Action inputs, permissions,
 defaults, and readable v1 ledgers compatible. The standalone CLI version is independent.
 
-Action `v1.0.0` is the next stable release candidate authorized by ADR 0055 and ADR 0062 for the
+Action `v1.0.0` is the published stable release authorized by ADR 0055 and ADR 0062 for the
 proposal-isolation, reviewed-branch, input/output-collision, atomic-write, and diagnostics fixes
 accumulated after `v0.7.0`. It keeps Action inputs, permissions, defaults, modes, and readable v1
 ledgers compatible. The prepared consumer documents, Action guide, security policy, release notes,
-and implementation tracker now identify `v1.0.0`; publication still requires candidate CI, hosted
-live-provider, external dry-run, full-write, cleanup, and orphan-audit results for one exact
-commit. After publication, run those checks again against the immutable tag, verify Marketplace
-`Latest`, then promote `v1` with the separate compare-and-swap procedure. The standalone CLI
-`clarissimi@1.0.0` candidate is versioned and released separately under ADR 0062.
+and implementation tracker identify `v1.0.0`. Exact-source and immutable-tag CI, hosted
+live-provider, external dry-run, full-write, cleanup, and orphan-audit checks passed for
+`c4f14a40b812f881cca886c924fae041e92dea3e`, and Marketplace identifies it as `Latest`.
+The standalone CLI `clarissimi@1.0.0` is published separately under ADR 0062.
+
+## Stable 1.0.0 Publication Record
+
+- Completed: 2026-10-10. Action `v1.0.0`, moving `v1`, and npm `clarissimi@1.0.0` are public.
+- Release source: `c4f14a40b812f881cca886c924fae041e92dea3e`.
+- GitHub release: https://github.com/0disoft/clarissimi/releases/tag/v1.0.0.
+- Release evidence: https://github.com/0disoft/clarissimi/issues/26.
+- Marketplace verification: `v1.0.0` is `Latest` and renders the matching Action reference.
+- Hosted CI: `923` tests passed, with documentation, format, lint, migration, benchmarks, package, and smoke gates.
+
+| Validation                      | Source candidate | Immutable tag | Moving alias  |
+| ------------------------------- | ---------------- | ------------- | ------------- |
+| Hosted CI                       | `38040670774`    | `38040670774` | `38040670774` |
+| Live provider                   | `38040732036`    | `38041029547` | `38041506657` |
+| External dry-run                | `38040755760`    | `38041048651` | `38041527414` |
+| External full-write and cleanup | `38040789320`    | `38041080032` | `38041581379` |
+| Orphan audit                    | `38040864602`    | `38041159989` | `38041679206` |
+
+- External dry-run and full-write checks passed on Ubuntu, macOS, and Windows. Both tag and alias
+  resolve to the release source. Final audits found no reserved smoke residue.
+- The first alias attempt rolled back after external run `38041252941` rejected `v1` in its old
+  `v0`-only harness guard. Integration-lab commit `2266f9707fc712464a3fcd46d38b4c7024eec241`
+  added `v1` while requiring an exact expected SHA for both aliases; the final alias checks above passed.
+- Existing `v0` remains at `fed30422f548f70791a6481bec33232bfa7ba2e3`.
+- npm OIDC stage run: https://github.com/0disoft/clarissimi/actions/runs/38040760996.
+- npm stage: `8bb89000-37e6-4053-91bf-ab31d1ac5814`, approved by the maintainer with proof of presence.
+- Public npm `latest`: `1.0.0`; four-file tarball shasum
+  `cd098afcdc64d807a1a49e98c62093494db38047` matches the staged package.
+- Exact registry installation in an empty consumer, executable help, synthetic fixture dry-run,
+  and npm signature/provenance audit passed. No workspace package was published.
 
 Current promotion validation record:
 

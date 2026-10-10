@@ -40,10 +40,9 @@ code.
 ## Action Usage
 
 Use `0disoft/clarissimi@v1` for maintainer-approved `1.x` updates, or pin
-`0disoft/clarissimi@v1.0.0` when exact release reproducibility matters. `v1.0.0` is the prepared
-stable candidate and becomes the recommended immutable reference once it is published; until then
-the published immutable release is `v0.7.0` and the moving `v0` channel still follows the `0.x`
-line. The moving `main` ref is reserved for this repository's development and dogfood workflows.
+`0disoft/clarissimi@v1.0.0` when exact release reproducibility matters. The stable release is
+published; the existing `v0` alias still points to `v0.7.0`.
+The moving `main` ref is reserved for this repository's development and dogfood workflows.
 Immutable version tags never move.
 
 The public [`clarissimi-example`](https://github.com/0disoft/clarissimi-example) consumer shows the

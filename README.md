@@ -39,9 +39,7 @@ jobs:
 This first workflow is read-only. It validates the post-merge event path and writes a bounded run
 summary without changing repository files, branches, comments, or pull requests. The immutable
 `v1.0.0` pin is reproducible; use `0disoft/clarissimi@v1` instead when you deliberately want the
-maintainer-approved moving `1.x` channel. `v1.0.0` is the prepared stable candidate and becomes the
-recommended immutable reference once it is published; until then the published immutable release is
-`v0.7.0` and the moving `v0` channel still follows the `0.x` line.
+maintainer-approved moving `1.x` channel. Existing `v0` references keep their published targets.
 
 Without provider configuration, Clarissimi uses its deterministic fake provider. That is useful for
 checking workflow wiring, not for publishing meaningful recognition. For real drafts, configure an
@@ -280,14 +278,14 @@ node packages/cli/dist/bin/clarissimi.js import-draft --draft .clarissimi/drafts
 
 ## GitHub Action
 
-The prepared stable Action release is `0disoft/clarissimi@v1.0.0`, a candidate awaiting publication.
+The current stable Action release is `0disoft/clarissimi@v1.0.0`.
 Consumers may pin that immutable tag or use `0disoft/clarissimi@v1` to follow maintainer-approved
-`1.x` Action releases once `v1.0.0` is published. Until then the published immutable release is
-`v0.7.0` and the moving `v0` channel continues to follow the `0.x` line; the `v1` release does not
-move or delete those `v0.x.y` tags or the `v0` alias. Earlier releases remain immutable, and `main`
+`1.x` Action releases. The `v0` alias still points to `v0.7.0`; the `v1` release preserves
+the existing `v0.x.y` tags and `v0` alias. Earlier releases remain immutable, and `main`
 is never a consumer release channel. Clarissimi is also available in the
 [GitHub Marketplace](https://github.com/marketplace/actions/clarissimi) under the `Code review` and
 `Utilities` categories. The standalone `clarissimi` CLI is available from npm.
+Its current stable version is `1.0.0`.
 Root and workspace packages remain private. Future CLI releases follow the ADR 0056 staged registry and
 two-factor-authentication gates; ADR 0062 keeps commands, options, documented JSON keys and types,
 exit meanings, config, and registered ledger versions compatible throughout the CLI `1.x` line.

@@ -64,11 +64,11 @@ Do not publicly disclose:
 
 ## Supported Versions
 
-Clarissimi's stable supported line is the immutable Action release `v1.0.0` and the moving `v1`
-release line, effective at stable publication. Once `v1.0.0` is published, security fixes are
-supported for `v1.0.0` and the moving `v1` release line; before then the immutable `v0.7.0` release
-and the moving `v0` release line remain supported. Fixes land on the default branch, ship in a new
+Security fixes are supported for the current immutable Action release `v1.0.0`, the
+moving `v1` release line, and the current standalone CLI `clarissimi@1.0.0`.
+Fixes land on the default branch, ship in a new
 immutable `v1.x.y` release after release validation, and reach `v1` only after that release passes
 the alias promotion gates. The `v1` release preserves the existing `v0.x.y` tags and the `v0` alias
 and does not move or repoint them. No fixed `v0` support duration is promised, and older immutable
-tags do not receive routine backports.
+tags do not receive routine backports. CLI fixes ship as a new immutable npm version through the
+staged-publication and maintainer-approval gates.

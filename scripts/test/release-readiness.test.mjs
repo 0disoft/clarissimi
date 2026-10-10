@@ -2311,6 +2311,14 @@ test("release readiness accepts the npm trusted-publishing workflow contract", (
   assert.deepEqual(validateNpmPublishWorkflowContract(createNpmPublishWorkflowText()), []);
 });
 
+test("release readiness rejects npm staging without an authorized stable version guard", () => {
+  const guard = '[[ "${RELEASE_VERSION}" =~ ^[01]\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$ ]]';
+  const text = createNpmPublishWorkflowText().replace(guard, "");
+  assert.deepEqual(validateNpmPublishWorkflowContract(text), [
+    `.github/workflows/npm-publish.yml must include ${guard}.`,
+  ]);
+});
+
 test("release readiness rejects token fallback and automatic npm publication triggers", () => {
   const text = createNpmPublishWorkflowText()
     .replace("workflow_dispatch:", "push:")
@@ -3889,6 +3897,7 @@ function createNpmPublishWorkflowText() {
     "    inputs:",
     "      version:",
     "      sha:",
+    '[[ "${RELEASE_VERSION}" =~ ^[01]\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$ ]]',
     "permissions:",
     "  contents: read",
     "  id-token: write",

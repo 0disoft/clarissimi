@@ -117,6 +117,7 @@ export const npmPublishWorkflowContract = {
     "workflow_dispatch:",
     "version:",
     "sha:",
+    '[[ "${RELEASE_VERSION}" =~ ^[01]\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$ ]]',
     "contents: read",
     "id-token: write",
     "runs-on: ubuntu-latest",

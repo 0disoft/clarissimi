@@ -29,6 +29,11 @@ ledger had already changed, leaving public outputs on different generations.
   and preserve all existing outputs. File ownership, ACLs, and special mode bits are not copied.
 - Derived outputs are replaced before the canonical ledger. The ledger rename is the generation's
   final commit point.
+- Before any replacement, existing destinations are copied to exclusive same-directory recovery
+  files. A replacement failure restores already replaced files in reverse order and removes newly
+  created outputs. If restoration fails, remaining recovery copies are kept and their paths are
+  reported; restoration of other files still runs. Recovery copies stay on disk so a large ledger
+  does not need an additional in-memory copy.
 - Temporary files and the lock are removed on normal failure paths.
 
 The lock coordinates Clarissimi CLI writers. It is not a distributed lock and cannot prevent an
@@ -40,6 +45,10 @@ unrelated program that ignores the lock from modifying the same files.
 - Invalid derived destinations fail before the canonical ledger changes.
 - A process crash during replacement can still leave some derived files ahead of the ledger, but
   the canonical ledger remains the recovery source and `rebuild` restores derived outputs.
+  Crashes can also leave `.clarissimi-backup` files; inspect them before removing them. Normal
+  replacement failures attempt rollback, but neither multi-file crash atomicity nor disk-failure
+  recovery is guaranteed. Backup preparation requires extra disk space and fails before replacing
+  any output when that preparation cannot complete.
 - A process terminated without cleanup can leave a stale lock that requires explicit maintainer
   inspection and removal; Clarissimi does not guess that a lock owner is dead.
 - A newly acquired lock records a PID, acquisition time, and random owner token. Normal cleanup

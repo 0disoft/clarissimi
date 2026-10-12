@@ -1,6 +1,7 @@
 import {
   open,
   chmod,
+  copyFile,
   lstat,
   mkdir,
   readFile,
@@ -10,6 +11,7 @@ import {
   stat,
   writeFile,
 } from "node:fs/promises";
+import { constants } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 
@@ -237,11 +239,18 @@ export async function writeTextFilesAtomically(
     }
   }
 
-  const staged: { destination: string; temporaryPath: string }[] = [];
+  const staged: {
+    destination: string;
+    temporaryPath: string;
+    backupPath?: string;
+    preserveBackup?: boolean;
+  }[] = [];
+  const replaced: typeof staged = [];
   const writeTemporaryFile = options.writeFile ?? writeFile;
   const setFileMode = options.chmod ?? chmod;
   const renameFile = options.rename ?? rename;
   const removeFile = options.rm ?? rm;
+  const copyExistingFile = options.copyFile ?? copyFile;
   let generationFailure: { readonly error: unknown } | undefined;
   try {
     for (const entry of uniqueEntries.values()) {
@@ -264,20 +273,65 @@ export async function writeTextFilesAtomically(
         throw error;
       }
     }
+    // Prepare recovery copies before changing any output. Keep large ledgers on
+    // disk instead of duplicating them in process memory.
+    for (const entry of staged) {
+      if (!destinationModes.has(entry.destination)) continue;
+      const backupPath = join(dirname(entry.destination), `.${randomUUID()}.clarissimi-backup`);
+      entry.backupPath = backupPath;
+      try {
+        await retryTransientFileOperation(() =>
+          copyExistingFile(entry.destination, backupPath, constants.COPYFILE_EXCL),
+        );
+      } catch (error) {
+        if (isNodeError(error) && error.code === "EEXIST") delete entry.backupPath;
+        throw error;
+      }
+    }
     const ordered = staged
       .filter((entry) => entry.destination !== resolvedCommitPointPath)
       .concat(staged.filter((entry) => entry.destination === resolvedCommitPointPath));
     for (const entry of ordered) {
       await retryTransientFileOperation(() => renameFile(entry.temporaryPath, entry.destination));
+      replaced.push(entry);
     }
   } catch (error) {
     generationFailure = { error };
   }
+  const rollbackFailures: unknown[] = [];
+  if (generationFailure !== undefined) {
+    for (const entry of [...replaced].reverse()) {
+      try {
+        if (entry.backupPath !== undefined) {
+          await retryTransientFileOperation(() => renameFile(entry.backupPath!, entry.destination));
+          delete entry.backupPath;
+        } else {
+          await retryTransientFileOperation(() => removeFile(entry.destination, { force: true }));
+        }
+      } catch (error) {
+        entry.preserveBackup = true;
+        rollbackFailures.push(error);
+      }
+    }
+  }
+  const cleanupPaths = staged.flatMap((entry) => [
+    entry.temporaryPath,
+    ...(entry.backupPath !== undefined && !entry.preserveBackup ? [entry.backupPath] : []),
+  ]);
   const cleanupResults = await Promise.allSettled(
-    staged.map((entry) =>
-      retryTransientFileOperation(() => removeFile(entry.temporaryPath, { force: true })),
+    cleanupPaths.map((path) =>
+      retryTransientFileOperation(() => removeFile(path, { force: true })),
     ),
   );
+  if (generationFailure !== undefined && rollbackFailures.length > 0) {
+    const recoveryPaths = replaced
+      .filter((entry) => entry.preserveBackup)
+      .map((entry) => entry.backupPath ?? entry.destination);
+    throw new AggregateError(
+      [generationFailure.error, ...rollbackFailures],
+      `Output replacement failed and prior outputs could not all be restored. Inspect the retained recovery paths: ${recoveryPaths.join(", ")}.`,
+    );
+  }
   if (generationFailure !== undefined) {
     throw generationFailure.error;
   }
@@ -290,6 +344,7 @@ export async function writeTextFilesAtomically(
 export interface AtomicWriteOptions {
   readonly writeFile?: typeof writeFile;
   readonly chmod?: typeof chmod;
+  readonly copyFile?: typeof copyFile;
   readonly rename?: typeof rename;
   readonly rm?: typeof rm;
 }

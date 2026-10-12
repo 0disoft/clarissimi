@@ -31,7 +31,12 @@ publication. Current implementation status is recorded below without changing th
   the source manifest, package README, root license, compiled CLI, and pinned esbuild version.
 - `scripts/verify-standalone-cli-package.mjs` checks the manifest and exact tarball file set,
   installs the tarball with scripts disabled into an isolated temporary consumer, and runs the
-  installed CLI help contract.
+  installed CLI help contract plus a fixture draft-stage/approval/import/rebuild workflow. Approval
+  records a content digest, import writes one canonical record and derived files, and rebuild repairs
+  a deliberately damaged derived file without changing the canonical ledger. The installed CLI
+  must reject import before approval without creating outputs and remove generation files and
+  locks after success. These are local
+  package-consumer checks, not proof of real contribution review, registry availability or publication.
 - npm package versions, Action release versions, and persisted schema versions are independent.
   `clarissimi@0.1.0`, root Action `v1.0.0`, and `clarissimi.assessment/v1` do not imply matching
   release cadence or compatibility promises.

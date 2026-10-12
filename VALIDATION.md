@@ -1,5 +1,27 @@
 # Validation
 
+## 2026-10-12 Installed standalone CLI workflow
+
+The local package verifier previously stopped at installed `--help`. It now
+installs the locally built dependency-free tarball with lifecycle scripts disabled
+and runs stage-draft, an unapproved import rejection (exit 6, no output creation),
+approve-draft with saved digest, approved import, damaged-derived-output rebuild,
+and rebuild --check. Canonical bytes stay unchanged during repair, and recursive
+fixture inspection finds no remaining generation files or locks.
+
+`pnpm run verify:cli-package` passed on Windows Node v24.18.0. Six package-contract
+tests, lint, docs (158 Markdown files), format and diff checks passed. The initial
+new rejection assertion incorrectly expected full issues in CLI JSON; the actual
+public contract projects issueCodes, which the final passing verifier checks.
+This failure was in the verifier, not evidence of an approval bypass.
+
+ADR 0056 now names the installed workflow checks. No package version, persisted
+schema, public CLI signature, DB, runner, CI or hygiene change. No remote publish,
+GitHub write or provider call. The unchanged repository-wide suite from the prior
+storage patch was not repeated; focus was the changed package verifier and real
+installed bundle. Registry installation and other operating systems remain
+unverified in this run.
+
 ## 2026-10-12 CLI generation rollback
 
 Three regressions reproduced partial output replacement before the fix: failure

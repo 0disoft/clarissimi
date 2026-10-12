@@ -93,11 +93,102 @@ export async function verifyStandaloneCliPackage(options = {}) {
     if (help.stderr !== "") {
       throw new Error("Installed standalone CLI help wrote unexpected stderr output.");
     }
+    await verifyInstalledCliWorkflow({ installedCli, repoRoot, tempRoot, runCommand });
   } finally {
     await rm(tempRoot, { force: true, recursive: true });
   }
 
   console.log("Standalone CLI package verification passed");
+}
+
+async function verifyInstalledCliWorkflow({ installedCli, repoRoot, tempRoot, runCommand }) {
+  const cwd = join(tempRoot, "workflow");
+  await mkdir(cwd);
+  const fixture = JSON.parse(
+    await readFile(join(repoRoot, "fixtures", "approved-draft.json"), "utf8"),
+  );
+  const draft = { ...fixture, maintainerApprovalStatus: "draft" };
+  delete draft.approvalSnapshot;
+  const input = join(cwd, "assessment.json");
+  const draftsDir = join(cwd, "drafts");
+  const ledger = join(cwd, "canonical.jsonl");
+  const outDir = join(cwd, "outputs");
+  await writeFile(input, `${JSON.stringify(draft)}\n`, "utf8");
+  const invoke = async (command, args, expectedExitCode = 0) => {
+    const result = await runCommand(process.execPath, [installedCli, command, ...args, "--json"], {
+      cwd,
+      expectedExitCode,
+    });
+    const value = JSON.parse(result.stdout);
+    if (
+      result.stderr !== "" ||
+      value.ok !== (expectedExitCode === 0) ||
+      value.command !== command
+    ) {
+      throw new Error(`Installed CLI ${command} did not return its expected result contract.`);
+    }
+    return value;
+  };
+  const staged = await invoke("stage-draft", ["--draft", input, "--drafts-dir", draftsDir]);
+  if (
+    staged.approvalStatus !== "draft" ||
+    typeof staged.stagedDraftPath !== "string" ||
+    dirname(staged.stagedDraftPath) !== draftsDir
+  ) {
+    throw new Error("Installed CLI did not stage an unapproved draft inside its selected inbox.");
+  }
+  const importArgs = ["--draft", staged.stagedDraftPath, "--ledger", ledger, "--out-dir", outDir];
+  // The CLI contract reserves exit 6 for policy rejection.
+  const rejected = await invoke("import-draft", importArgs, 6);
+  if (
+    !rejected.issueCodes?.includes("not_approved") ||
+    JSON.stringify((await readdir(cwd)).sort()) !== JSON.stringify(["assessment.json", "drafts"])
+  ) {
+    throw new Error("Installed CLI must reject an unapproved draft without creating its outputs.");
+  }
+  const approved = await invoke("approve-draft", ["--draft", staged.stagedDraftPath]);
+  const saved = JSON.parse(await readFile(staged.stagedDraftPath, "utf8"));
+  if (
+    approved.approvalStatus !== "approved" ||
+    !/^[a-f0-9]{64}$/.test(saved.approvalSnapshot?.contentSha256 ?? "")
+  ) {
+    throw new Error("Installed CLI did not persist the approval content digest.");
+  }
+  const imported = await invoke("import-draft", importArgs);
+  if (imported.records !== 1 || imported.wroteDerivedFiles !== true) {
+    throw new Error("Installed CLI did not import one approved record and its derived outputs.");
+  }
+  const originalLedger = await readFile(ledger, "utf8");
+  const rows = originalLedger
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  if (
+    rows.length !== 1 ||
+    rows[0].source.repository !== fixture.source.repository ||
+    rows[0].publicRecognitionText !== fixture.publicRecognitionText
+  ) {
+    throw new Error("Installed CLI ledger does not preserve the reviewed contribution.");
+  }
+  const markdown = join(outDir, "CONTRIBUTORS.md");
+  const originalMarkdown = await readFile(markdown, "utf8");
+  await writeFile(markdown, "damaged derived output\n", "utf8");
+  const rebuilt = await invoke("rebuild", ["--ledger", ledger, "--out-dir", outDir]);
+  if (
+    rebuilt.records !== 1 ||
+    rebuilt.wroteFiles !== true ||
+    (await readFile(ledger, "utf8")) !== originalLedger ||
+    (await readFile(markdown, "utf8")) !== originalMarkdown
+  ) {
+    throw new Error(
+      "Installed CLI rebuild did not repair output while preserving its canonical ledger.",
+    );
+  }
+  await invoke("rebuild", ["--ledger", ledger, "--out-dir", outDir, "--check"]);
+  const names = await readdir(cwd, { recursive: true });
+  if (names.some((name) => /(?:\.clarissimi-(?:tmp|backup)|\.lock)$/.test(name))) {
+    throw new Error("Installed CLI left generation files after a successful workflow.");
+  }
 }
 
 export function validateInstalledPackageManifest(manifest) {
@@ -212,7 +303,7 @@ function runChildCommand(command, args, options) {
     });
     child.on("error", reject);
     child.on("close", (code) => {
-      if (code !== 0) {
+      if (code !== (options.expectedExitCode ?? 0)) {
         reject(
           new Error(
             `${command} ${args.join(" ")} failed with exit code ${code}.\n${stderr || stdout}`,

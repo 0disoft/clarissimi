@@ -76,6 +76,7 @@ import { resolveRecognitionProvider } from "./provider.js";
 import {
   CliLedgerValidationError,
   assertLedgerDirectoryParents,
+  assertLedgerFilePath,
   readLedgerRecords,
   readLedgerText,
   withLedgerOutputLocks,
@@ -738,7 +739,7 @@ async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   }
 
   try {
-    await readLedgerText(requestedLedgerPath, {
+    await assertLedgerFilePath(requestedLedgerPath, {
       allowMissing: outDir === undefined && !args.flags.has("ledger"),
     });
     if (outDir !== undefined) {
@@ -860,7 +861,7 @@ async function runRenderPage(args: ParsedArgs, io: CliIo): Promise<CliExitCode> 
   const pagePath = join(outputDirectory, CONTRIBUTOR_PAGE_HTML_PATH);
 
   try {
-    await readLedgerText(ledgerPath, { allowMissing: !args.flags.has("ledger") });
+    await assertLedgerFilePath(ledgerPath, { allowMissing: !args.flags.has("ledger") });
     const configResult = await validateConfigFile(io.cwd, getStringFlag(args, "config"));
     const config = configResult.config;
     const ledgerText = await readLedgerText(ledgerPath, {

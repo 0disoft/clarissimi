@@ -74,11 +74,26 @@ export async function readLedgerText(
   path: string,
   options: { readonly allowMissing?: boolean } = {},
 ): Promise<string> {
+  return inspectLedgerFile(path, options, readTextFile);
+}
+
+export async function assertLedgerFilePath(
+  path: string,
+  options: { readonly allowMissing?: boolean } = {},
+): Promise<void> {
+  await inspectLedgerFile(path, options);
+}
+
+async function inspectLedgerFile(
+  path: string,
+  options: { readonly allowMissing?: boolean },
+  readText?: (path: string) => Promise<string>,
+): Promise<string> {
   try {
     if (!(await stat(path)).isFile()) {
       throw invalidLedgerPath();
     }
-    return await readTextFile(path);
+    return readText === undefined ? "" : await readText(path);
   } catch (error) {
     if (!(error instanceof Error) || !("code" in error)) {
       throw error;

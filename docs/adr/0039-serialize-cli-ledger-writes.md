@@ -17,6 +17,11 @@ ledger had already changed, leaving public outputs on different generations.
 - `import-draft` acquires an exclusive sibling lock file before reading or changing the ledger.
 - Lock acquisition is bounded and fails instead of silently proceeding after the timeout.
 - The command renders a complete generation while holding the lock.
+- Preflight checks that only require the file kind, missing-file policy, parent directories, and
+  dangling-link checks do not read the payload. `rebuild` and `render-page` avoid discarded full-file
+  reads. Content validation before lock creation remains in place where it prevents invalid ledgers
+  from creating output directories. Writing rebuilds still reread the current payload after acquiring
+  the locks; preflight data is never used as a cached generation snapshot.
 - Exports acquire source and destination canonical ledger locks in deterministic path order,
   recheck path resolution after acquisition, and preserve every existing destination record.
 - Writing rebuilds require an existing source; a missing default is allowed only for a preview.

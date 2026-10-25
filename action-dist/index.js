@@ -2303,9 +2303,6 @@ function isRecord3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// packages/action/dist/review-gate.js
-import { readFile as readFile2 } from "node:fs/promises";
-
 // packages/schemas/dist/types.js
 var ASSESSMENT_SCHEMA_VERSION = "clarissimi.assessment/v1";
 var REVIEW_DECISION_SCHEMA_VERSION = "clarissimi.review-decision/v1";
@@ -2921,6 +2918,21 @@ function invalid(issues) {
   };
 }
 
+// packages/action/dist/json-input.js
+import { readFile as readFile2 } from "node:fs/promises";
+async function readActionJsonFile(path) {
+  const text = await readFile2(path, "utf8");
+  try {
+    return JSON.parse(text.replace(/^\uFEFF/, ""));
+  } catch (error) {
+    if (!(error instanceof SyntaxError))
+      throw error;
+    const location = /\(line ([1-9]\d*) column ([1-9]\d*)\)$/.exec(error.message);
+    const detail = location === null ? "" : ` at line ${location[1]}, column ${location[2]}`;
+    throw new SyntaxError(`Invalid JSON in Action input${detail}.`);
+  }
+}
+
 // packages/action/dist/review-gate.js
 var REVIEW_DECISION_MARKER = "<!-- clarissimi:review-decision:v1";
 var REVIEW_DECISION_END = "-->";
@@ -2939,7 +2951,7 @@ function isActionReviewGateMode(value) {
   return isReviewGateMode(value);
 }
 async function runActionReviewGate(input) {
-  const event = parsePullRequestEvent(JSON.parse(await readFile2(input.eventPath, "utf8")));
+  const event = parsePullRequestEvent(await readActionJsonFile(input.eventPath));
   const listed = await input.commentClient.listPullRequestComments({
     repository: event.repository,
     pullRequestNumber: event.pullRequestNumber
@@ -4627,7 +4639,7 @@ function assertClarissimiOutputPath(path) {
 }
 
 // packages/action/dist/run.js
-import { readFile as readFile4, realpath as realpath4 } from "node:fs/promises";
+import { readFile as readFile3, realpath as realpath4 } from "node:fs/promises";
 import { isAbsolute as isAbsolute5, join as join6, resolve as resolve3 } from "node:path";
 import { tmpdir as tmpdir2 } from "node:os";
 
@@ -5664,15 +5676,6 @@ function isRecord7(value) {
 // packages/action/dist/config.js
 import { basename, isAbsolute as isAbsolute4, join as join5 } from "node:path";
 import { pathToFileURL } from "node:url";
-
-// packages/action/dist/json-input.js
-import { readFile as readFile3 } from "node:fs/promises";
-async function readActionJsonFile(path) {
-  const text = await readFile3(path, "utf8");
-  return JSON.parse(text.replace(/^\uFEFF/, ""));
-}
-
-// packages/action/dist/config.js
 async function loadActionConfigFromEnvironment(env) {
   const configPath = readEnvInput(env.INPUT_CONFIG_PATH);
   if (configPath === void 0) {
@@ -6192,7 +6195,7 @@ function validateSourceCommentInput(input) {
 async function readExistingRecognitionRecords(repositoryDir) {
   const ledgerPath = join6(repositoryDir, CONTRIBUTIONS_JSONL_PATH);
   try {
-    return parseContributionsJsonl(await readFile4(ledgerPath, "utf8"));
+    return parseContributionsJsonl(await readFile3(ledgerPath, "utf8"));
   } catch (error) {
     if (isNodeError3(error) && error.code === "ENOENT") {
       return [];

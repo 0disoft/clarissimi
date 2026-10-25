@@ -56,5 +56,11 @@ The first package slice must not:
 The Action package can be tested locally without secrets, network access, or workflow write
 permissions. It also gives the future `action.yml` implementation a narrow entrypoint to call.
 
+Action JSON files, including review-gate events, use the shared BOM-aware reader. Parse failures
+remain `SyntaxError` instances but expose only a fixed message and optional numeric line/column;
+raw input excerpts and the original error cause are not retained. Filesystem errors keep their
+existing codes, and environment-runner exit-code mapping remains unchanged. This prevents malformed
+event or fixture content from reaching CI stderr through engine-generated parse messages.
+
 `propose` and `commit` modes remain future work because they require explicit permission,
 checkout, branch, pull request, and rollback decisions.

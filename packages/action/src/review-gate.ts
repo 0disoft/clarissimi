@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-
 import {
   isReviewGateMode,
   validateReviewDecision,
@@ -7,6 +5,7 @@ import {
   type ReviewGateMode,
 } from "@clarissimi/schemas";
 
+import { readActionJsonFile } from "./json-input.js";
 import type { SourcePullRequestComment, SourcePullRequestCommentClient } from "./source-comment.js";
 
 const REVIEW_DECISION_MARKER = "<!-- clarissimi:review-decision:v1";
@@ -55,9 +54,7 @@ export function isActionReviewGateMode(value: string): value is ReviewGateMode {
 export async function runActionReviewGate(
   input: ActionReviewGateInput,
 ): Promise<ActionReviewGateSummary> {
-  const event = parsePullRequestEvent(
-    JSON.parse(await readFile(input.eventPath, "utf8")) as unknown,
-  );
+  const event = parsePullRequestEvent(await readActionJsonFile(input.eventPath));
   const listed = await input.commentClient.listPullRequestComments({
     repository: event.repository,
     pullRequestNumber: event.pullRequestNumber,

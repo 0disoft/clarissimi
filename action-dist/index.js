@@ -3230,10 +3230,6 @@ var REDACTION_PLACEHOLDER = "[REDACTED]";
 // packages/redaction/dist/redact.js
 var REDACTION_RULES = [
   {
-    kind: "private_key_block",
-    pattern: /-----BEGIN (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----/g
-  },
-  {
     kind: "github_token",
     pattern: /\b(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{16,}\b/g
   },
@@ -3274,7 +3270,7 @@ var SENSITIVE_JSON_KEYS = /* @__PURE__ */ new Set([
 ]);
 function redactText(input) {
   const occurrences = [];
-  let text = input;
+  let text = redactPrivateKeyBlocks(input, occurrences);
   for (const rule of REDACTION_RULES) {
     text = text.replace(rule.pattern, (match, offset) => {
       occurrences.push({
@@ -3291,6 +3287,32 @@ function redactText(input) {
     text,
     report: buildReport(occurrences)
   };
+}
+function redactPrivateKeyBlocks(input, occurrences) {
+  const begin = /-----BEGIN (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----/g;
+  const end = /-----END (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----/g;
+  const parts = [];
+  let offset = 0;
+  for (let match = begin.exec(input); match !== null; match = begin.exec(input)) {
+    end.lastIndex = begin.lastIndex;
+    if (end.exec(input) === null) {
+      break;
+    }
+    parts.push(input.slice(offset, match.index), REDACTION_PLACEHOLDER);
+    occurrences.push({
+      kind: "private_key_block",
+      replacement: REDACTION_PLACEHOLDER,
+      start: match.index,
+      end: end.lastIndex
+    });
+    offset = end.lastIndex;
+    begin.lastIndex = offset;
+  }
+  if (parts.length === 0) {
+    return input;
+  }
+  parts.push(input.slice(offset));
+  return parts.join("");
 }
 function redactEmailAddresses(input, occurrences) {
   const localParts = /[A-Z0-9._%+-]+/gi;

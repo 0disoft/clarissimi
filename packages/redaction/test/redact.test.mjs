@@ -171,6 +171,61 @@ test("redacts private key blocks", () => {
   assert.equal(result.report.occurrences[0].kind, "private_key_block");
 });
 
+test("private key scanning preserves legacy delimiters, nesting, overlaps, and offsets", () => {
+  const prefixes = ["", "RSA ", "OPENSSH ", "EC ", "DSA ", "PGP ", "UNKNOWN "];
+  for (const beginPrefix of prefixes) {
+    for (const endPrefix of prefixes) {
+      const begin = `-----BEGIN ${beginPrefix}PRIVATE KEY-----`;
+      const end = `-----END ${endPrefix}PRIVATE KEY-----`;
+      for (const input of [
+        `before ${begin}\nsynthetic-key-material\n${end} after`,
+        `🚀${end}${begin}inner${begin}nested${end} trailing${end} ${begin}unfinished`,
+        `${end}${begin.slice(5)}synthetic-key-material${end}`,
+        `${begin}${end.slice(5)}`,
+        `${begin}one${end}${begin}two${end}`,
+      ]) {
+        const occurrences = [];
+        const expected = input.replace(
+          /-----BEGIN (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----/g,
+          (match, start) => {
+            occurrences.push({
+              kind: "private_key_block",
+              replacement: REDACTION_PLACEHOLDER,
+              start,
+              end: start + match.length,
+            });
+            return REDACTION_PLACEHOLDER;
+          },
+        );
+        assert.deepEqual(redactText(input), {
+          text: expected,
+          report: { changed: occurrences.length > 0, occurrences },
+        });
+      }
+    }
+  }
+});
+
+test("unterminated private key headers cannot block redaction past the child-process deadline", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "--eval",
+      `import assert from "node:assert/strict";
+       import { redactText, REDACTION_PLACEHOLDER } from ${JSON.stringify(new URL("../dist/index.js", import.meta.url).href)};
+       const tail = "-----BEGIN PRIVATE KEY-----\\n".repeat(16_384);
+       assert.equal(redactText(tail).text, tail);
+       const complete = "-----BEGIN RSA PRIVATE KEY-----\\nsynthetic-key-material\\n-----END PRIVATE KEY-----\\n";
+       assert.equal(redactText(complete + tail).text, REDACTION_PLACEHOLDER + "\\n" + tail);
+       assert.equal(redactText(tail + "-----END PRIVATE KEY-----").text, REDACTION_PLACEHOLDER);`,
+    ],
+    { encoding: "utf8", timeout: 5_000 },
+  );
+  assert.equal(result.error, undefined, result.error?.message);
+  assert.equal(result.status, 0, result.stderr);
+});
+
 test("redacts nested JSON values but preserves object shape", () => {
   const address = `contributor@${["example", "invalid"].join(".")}`;
   const result = redactJson({

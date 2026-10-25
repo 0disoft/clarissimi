@@ -58,6 +58,14 @@ linear in input length instead of quadratic on repeated `a.` near misses, while 
 order, accepted addresses, and occurrence offsets. A child-process deadline regression covers long
 near misses and a 512 KiB text; compatibility cases cover punctuation and adjacent addresses.
 
+Private-key block masking scans BEGIN and END markers separately. Successful matches advance past
+the matched END; if the first pending BEGIN has no END, scanning stops because no later BEGIN can
+complete a block either. This bounds delimiter scanning to linear time instead of rescanning an
+unterminated suffix for every BEGIN. Existing accepted marker prefixes, mismatched prefix behavior,
+replacement order, unmatched text, and occurrence offsets remain unchanged. Compatibility cases
+cover nesting and overlapping markers, and a child-process deadline covers repeated unterminated
+headers, including a tail after a complete block.
+
 ## Review Blockers
 
 - A provider adapter can receive raw evidence without redaction.

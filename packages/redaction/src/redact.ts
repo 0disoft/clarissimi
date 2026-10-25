@@ -45,10 +45,6 @@ const REDACTION_RULES: readonly RedactionRule[] = [
     pattern:
       /["']?\b(?:token|secret|password|api[_-]?key)\s*[:=]\s*(?:"[^"\r\n]{8,}"|'[^'\r\n]{8,}'|[^"'`\s]{8,})["']?/gi,
   },
-  {
-    kind: "email",
-    pattern: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
-  },
 ];
 
 const SENSITIVE_JSON_KEYS = new Set([
@@ -82,11 +78,53 @@ export function redactText(input: string): RedactedText {
       return REDACTION_PLACEHOLDER;
     });
   }
+  text = redactEmailAddresses(text, occurrences);
 
   return {
     text,
     report: buildReport(occurrences),
   };
+}
+
+function redactEmailAddresses(input: string, occurrences: RedactionOccurrence[]): string {
+  const localParts = /[A-Z0-9._%+-]+/gi;
+  const email = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/iy;
+  const parts: string[] = [];
+  let end = 0;
+
+  for (let token = localParts.exec(input); token !== null; token = localParts.exec(input)) {
+    if (input[localParts.lastIndex] !== "@") {
+      continue;
+    }
+    // Try only the first word boundary in this maximal local part. A failed domain
+    // cannot match from any later boundary in the same token; retrying is quadratic.
+    // After a prior match, punctuation can itself begin at a word boundary.
+    const previousIsWord = /\w/.test(input[token.index - 1] ?? "");
+    const boundary = token[0].search(previousIsWord ? /\W/ : /\w/);
+    if (boundary === -1) {
+      continue;
+    }
+    email.lastIndex = token.index + boundary;
+    const match = email.exec(input);
+    if (match === null) {
+      continue;
+    }
+
+    parts.push(input.slice(end, match.index), REDACTION_PLACEHOLDER);
+    occurrences.push({
+      kind: "email",
+      replacement: REDACTION_PLACEHOLDER,
+      start: match.index,
+      end: email.lastIndex,
+    });
+    end = email.lastIndex;
+    localParts.lastIndex = end;
+  }
+  if (parts.length === 0) {
+    return input;
+  }
+  parts.push(input.slice(end));
+  return parts.join("");
 }
 
 export function redactJson<T extends RedactableJson>(input: T): RedactedJson<T> {

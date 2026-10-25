@@ -3256,10 +3256,6 @@ var REDACTION_RULES = [
   {
     kind: "generic_secret_assignment",
     pattern: /["']?\b(?:token|secret|password|api[_-]?key)\s*[:=]\s*(?:"[^"\r\n]{8,}"|'[^'\r\n]{8,}'|[^"'`\s]{8,})["']?/gi
-  },
-  {
-    kind: "email",
-    pattern: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi
   }
 ];
 var SENSITIVE_JSON_KEYS = /* @__PURE__ */ new Set([
@@ -3290,10 +3286,46 @@ function redactText(input) {
       return REDACTION_PLACEHOLDER;
     });
   }
+  text = redactEmailAddresses(text, occurrences);
   return {
     text,
     report: buildReport(occurrences)
   };
+}
+function redactEmailAddresses(input, occurrences) {
+  const localParts = /[A-Z0-9._%+-]+/gi;
+  const email = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/iy;
+  const parts = [];
+  let end = 0;
+  for (let token = localParts.exec(input); token !== null; token = localParts.exec(input)) {
+    if (input[localParts.lastIndex] !== "@") {
+      continue;
+    }
+    const previousIsWord = /\w/.test(input[token.index - 1] ?? "");
+    const boundary = token[0].search(previousIsWord ? /\W/ : /\w/);
+    if (boundary === -1) {
+      continue;
+    }
+    email.lastIndex = token.index + boundary;
+    const match = email.exec(input);
+    if (match === null) {
+      continue;
+    }
+    parts.push(input.slice(end, match.index), REDACTION_PLACEHOLDER);
+    occurrences.push({
+      kind: "email",
+      replacement: REDACTION_PLACEHOLDER,
+      start: match.index,
+      end: email.lastIndex
+    });
+    end = email.lastIndex;
+    localParts.lastIndex = end;
+  }
+  if (parts.length === 0) {
+    return input;
+  }
+  parts.push(input.slice(end));
+  return parts.join("");
 }
 function redactJson(input) {
   const occurrences = [];

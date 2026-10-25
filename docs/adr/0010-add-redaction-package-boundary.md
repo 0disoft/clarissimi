@@ -44,6 +44,14 @@ value. This keeps diagnostic output useful without creating a second leak path.
 The first implementation uses deterministic regular expressions and no external dependency. A later
 ADR may add configurable rules or structured detectors if tests show the default set is too small.
 
+The 2026-10-26 email matcher first scans maximal local-part tokens and checks whether each is
+followed by `@`. It attempts the existing email expression only at the token's first word boundary,
+using a sticky expression to prevent retries at later boundaries after a failed domain match.
+Successful matches advance the token scanner past the matched address. This keeps email scanning
+linear in input length instead of quadratic on repeated `a.` near misses, while preserving masking
+order, accepted addresses, and occurrence offsets. A child-process deadline regression covers long
+near misses and a 512 KiB text; compatibility cases cover punctuation and adjacent addresses.
+
 ## Review Blockers
 
 - A provider adapter can receive raw evidence without redaction.

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 import {
@@ -15,6 +16,66 @@ test("redacts email addresses without changing surrounding evidence text", () =>
   assert.equal(result.text, `Maintainer note from person at ${REDACTION_PLACEHOLDER}.`);
   assert.equal(result.report.changed, true);
   assert.equal(result.report.occurrences[0].kind, "email");
+});
+
+test("email redaction preserves legacy boundaries, greedy matches, and occurrence offsets", () => {
+  const locals = ["dev", ".dev", "+dev", "_", "---", "a.b", "a+b", "a..b", "%dev"];
+  const domains = [
+    "example.invalid",
+    "x.y",
+    "x.co_",
+    "x.co-word",
+    "x..com",
+    "x.com.",
+    "x.c0m",
+    "a@b.invalid",
+  ];
+  const suffixes = ["", ".", "_", "é", "+next@other.invalid", "-next@other.invalid"];
+  for (const local of locals) {
+    for (const domain of domains) {
+      for (const suffix of suffixes) {
+        const text = `before ${local}@${domain}${suffix} after`;
+        const occurrences = [];
+        const expected = text.replace(
+          /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
+          (match, start) => {
+            occurrences.push({
+              kind: "email",
+              replacement: REDACTION_PLACEHOLDER,
+              start,
+              end: start + match.length,
+            });
+            return REDACTION_PLACEHOLDER;
+          },
+        );
+        assert.deepEqual(redactText(text), {
+          text: expected,
+          report: { changed: occurrences.length > 0, occurrences },
+        });
+      }
+    }
+  }
+});
+
+test("email-like near misses cannot block redaction past the child-process deadline", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "--eval",
+      `import assert from "node:assert/strict";
+       import { redactText, REDACTION_PLACEHOLDER } from ${JSON.stringify(new URL("../dist/index.js", import.meta.url).href)};
+       for (const suffix of ["", "@invalid", "@example.c"]) {
+         const input = "a.".repeat(32_768) + suffix;
+         assert.equal(redactText(input).text, input);
+       }
+       const input = "a.".repeat(262_144) + " user@example.invalid";
+       assert.equal(redactText(input).text, "a.".repeat(262_144) + " " + REDACTION_PLACEHOLDER);`,
+    ],
+    { encoding: "utf8", timeout: 5_000 },
+  );
+  assert.equal(result.error, undefined, result.error?.message);
+  assert.equal(result.status, 0, result.stderr);
 });
 
 test("redacts environment-style secret assignments", () => {

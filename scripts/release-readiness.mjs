@@ -154,7 +154,7 @@ export const rootPackageManagerContract = {
 
 export const formatterContract = {
   dependency: "oxfmt",
-  version: "0.62.0",
+  versionRange: "0.74.x",
   configPath: ".oxfmtrc.json",
   config: {
     endOfLine: "lf",
@@ -624,7 +624,7 @@ export const lintAndFormatDecisionDocumentContract = {
   path: "docs/adr/0059-refresh-development-toolchain.md",
   requiredSnippets: [
     "Refresh the root development toolchain with `pnpm update --latest`.",
-    "`oxfmt@0.62.0`",
+    "`oxfmt@0.74.x`",
     "run `oxfmt --check`",
     "cover maintained TypeScript, JavaScript, JSON, Markdown, and YAML files",
     "use `.oxfmtrc.json`",
@@ -3205,9 +3205,9 @@ export function validateRootPackageManager(packageJson, contract = rootPackageMa
 export function validateFormatterContract(packageJson, config, contract = formatterContract) {
   const issues = [];
 
-  if (packageJson?.devDependencies?.[contract.dependency] !== contract.version) {
+  if (packageJson?.devDependencies?.[contract.dependency] !== contract.versionRange) {
     issues.push(
-      `package.json devDependencies.${contract.dependency} must remain exactly ${contract.version}.`,
+      `package.json devDependencies.${contract.dependency} must use the reviewed range ${contract.versionRange}.`,
     );
   }
 

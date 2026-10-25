@@ -23,11 +23,17 @@ Refresh the root development toolchain with `pnpm update --latest`.
 
 The accepted snapshot is:
 
-- `@types/node@26.2.0`
+- `@types/node@26.6.5`
 - `esbuild@0.28.2`
-- `oxfmt@0.62.0`
-- `oxlint@1.77.0`
+- `oxfmt@0.74.0`
+- `oxlint@1.89.0`
 - `typescript@7.0.2`
+
+The 2026-10-26 refresh declares `@types/node@26.x`, `oxlint@1.x`, and `typescript@7.x`
+so compatible stable releases can be selected without editing the manifest. Pre-1.0 tools
+retain minor-version compatibility boundaries: `esbuild@^0.28.2` and `oxfmt@0.74.x`.
+The pnpm lockfile records the exact reviewed versions; CI uses frozen installation.
+The existing `pnpm@11.7.0` package manager remains unchanged; pnpm 12 is a separate migration.
 
 The `format` validation must continue to:
 
@@ -49,11 +55,9 @@ The versions above are a reviewed snapshot, not a permanent ban on compatible up
 maintainer-authorized refresh may replace the snapshot after the same dependency, build, package,
 and generated-output checks pass. New major versions remain deliberate migrations.
 
-The workspace overrides Tinypool to `^2.1.2` while Oxfmt's accepted snapshot requires the vulnerable
-`2.1.0`. This minimum covers GHSA-5gmw-xhrv-c9v3 and GHSA-85c8-ppgw-ccpr while allowing compatible
-2.x fixes. The lockfile records the version validated by CI. Remove this override when an accepted
-Oxfmt update requires a safe Tinypool version itself; the formatter snapshot need not change just
-to remediate its worker-pool dependency.
+Oxfmt 0.74.0 requires Tinypool 2.2.0 directly, so the previous `^2.1.2` security override
+is no longer needed and has been removed. The lockfile must retain a version that includes
+the fixes for GHSA-5gmw-xhrv-c9v3 and GHSA-85c8-ppgw-ccpr.
 
 ## Consequences
 

@@ -174,7 +174,7 @@ test("release readiness rejects format command drift", () => {
 
 test("release readiness accepts the formatter dependency and config contract", () => {
   const packageJson = {
-    devDependencies: { oxfmt: formatterContract.version },
+    devDependencies: { oxfmt: formatterContract.versionRange },
   };
 
   assert.deepEqual(
@@ -194,7 +194,7 @@ test("release readiness rejects formatter dependency, config, and ignore drift",
       { endOfLine: "crlf", proseWrap: "always", ignorePatterns: ["dist/**"] },
     ),
     [
-      "package.json devDependencies.oxfmt must remain exactly 0.62.0.",
+      "package.json devDependencies.oxfmt must use the reviewed range 0.74.x.",
       '.oxfmtrc.json endOfLine must remain "lf".',
       '.oxfmtrc.json proseWrap must remain "preserve".',
       ".oxfmtrc.json ignorePatterns must include action-dist/**.",
@@ -777,7 +777,7 @@ test("release readiness rejects lint and format decision drift", () => {
       "Refresh the root development toolchain with `pnpm update --latest`.",
       "Use any toolchain.",
     )
-    .replace("`oxfmt@0.62.0`", "any formatter")
+    .replace("`oxfmt@0.74.x`", "any formatter")
     .replace("run `oxfmt --check`", "run formatter")
     .replace(
       "cover maintained TypeScript, JavaScript, JSON, Markdown, and YAML files",
@@ -796,7 +796,7 @@ test("release readiness rejects lint and format decision drift", () => {
 
   assert.deepEqual(validateLintAndFormatDecisionDocumentContract(text), [
     "docs/adr/0059-refresh-development-toolchain.md must include Refresh the root development toolchain with `pnpm update --latest`..",
-    "docs/adr/0059-refresh-development-toolchain.md must include `oxfmt@0.62.0`.",
+    "docs/adr/0059-refresh-development-toolchain.md must include `oxfmt@0.74.x`.",
     "docs/adr/0059-refresh-development-toolchain.md must include run `oxfmt --check`.",
     "docs/adr/0059-refresh-development-toolchain.md must include cover maintained TypeScript, JavaScript, JSON, Markdown, and YAML files.",
     "docs/adr/0059-refresh-development-toolchain.md must include use `.oxfmtrc.json`.",
@@ -2892,7 +2892,7 @@ function createDocsValidationScriptText() {
 function createLintAndFormatDecisionText() {
   return [
     "Refresh the root development toolchain with `pnpm update --latest`.",
-    "The selected formatter snapshot is `oxfmt@0.62.0`.",
+    "The selected formatter range is `oxfmt@0.74.x`.",
     "",
     "The `format` validation must:",
     "",

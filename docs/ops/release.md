@@ -179,7 +179,7 @@ root and every `packages/*` manifest stay private at `0.0.0`. Before any publica
 1. Run `pnpm run verify:cli-package`. It builds the workspace, creates the ignored
    `.tmp/npm/clarissimi` staging directory, checks the exact tarball contents, installs the tarball
    with lifecycle scripts disabled into an isolated temporary consumer, and runs `clarissimi
---help` from that installation.
+   --help` from that installation.
 2. Recheck that the npm name `clarissimi` is controlled by the maintainer account and that the exact
    version does not exist. A name search done during development is not sufficient registry proof.
 3. Confirm the requested version exactly matches

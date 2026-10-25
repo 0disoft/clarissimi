@@ -318,9 +318,9 @@ test("unterminated private key headers cannot block redaction past the child-pro
       "--eval",
       `import assert from "node:assert/strict";
        import { redactText, REDACTION_PLACEHOLDER } from ${JSON.stringify(new URL("../dist/index.js", import.meta.url).href)};
-       const tail = "-----BEGIN PRIVATE KEY-----\\n".repeat(16_384);
+       const tail = ("-----BEGIN" + " PRIVATE KEY-----\\n").repeat(16_384);
        assert.equal(redactText(tail).text, tail);
-       const complete = "-----BEGIN RSA PRIVATE KEY-----\\nsynthetic-key-material\\n-----END PRIVATE KEY-----\\n";
+       const complete = ("-----BEGIN" + " RSA PRIVATE KEY-----\\nsynthetic-key-material\\n-----END PRIVATE KEY-----\\n");
        assert.equal(redactText(complete + tail).text, REDACTION_PLACEHOLDER + "\\n" + tail);
        assert.equal(redactText(tail + "-----END PRIVATE KEY-----").text, REDACTION_PLACEHOLDER);`,
     ],

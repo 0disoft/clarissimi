@@ -57,6 +57,14 @@ that external validation has already passed.
 - Publication remains gated. The exact `v1.0.0` Action candidate and the exact CLI `1.0.0` build
   must each pass their local, hosted, and external gates before any tag, alias, or registry action.
 
+## Compatible Patch Candidate
+
+On 2026-10-26, Action `v1.0.1` and standalone CLI `clarissimi@1.0.1` are selected
+as compatible patch candidates for credential redaction, bounded redaction scans, CLI generation
+rollback, and reduced ledger reads. Existing Action and CLI signatures, permissions, defaults,
+persisted schemas, and private workspace versions remain unchanged. Publication and alias promotion
+still require the exact-source evidence and npm maintainer approval described above.
+
 ## Consequences
 
 Action consumers gain a stable major contract, and CLI consumers gain an explicit `1.x` compatibility

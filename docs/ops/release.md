@@ -29,6 +29,15 @@ The current root and workspace packages stay private at `0.0.0`. ADR 0056 accept
 dependency-free `distribution/npm/clarissimi` CLI distribution beginning at `0.1.0`; it does not
 authorize publishing internal workspace packages or couple the CLI version to an Action tag.
 
+## 1.0.1 Patch Candidate
+
+Selected on 2026-10-26: root Action `v1.0.1` and standalone CLI `clarissimi@1.0.1`.
+ADR 0062 records the compatible patch scope. Consumer references and the standalone manifest
+name these candidates; publication is pending exact-SHA hosted CI, live-provider and external
+consumer evidence. The Action uses stable publication, post-tag validation and compare-and-swap
+`v1` promotion. npm uses the existing stage-only OIDC workflow and requires maintainer 2FA approval
+before the package is public. Existing immutable releases and `v0` stay unchanged.
+
 ## Release Types
 
 - Source-only merge: allowed after `pnpm run docs`, `pnpm run release-readiness`,

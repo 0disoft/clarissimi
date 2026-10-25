@@ -47,8 +47,11 @@ export async function pathsReferToSameFile(left: string, right: string): Promise
   if (!(await fileExists(leftCanonical)) || !(await fileExists(rightCanonical))) {
     return false;
   }
-  const [leftStat, rightStat] = await Promise.all([stat(leftCanonical), stat(rightCanonical)]);
-  return leftStat.ino !== 0 && leftStat.dev === rightStat.dev && leftStat.ino === rightStat.ino;
+  const [leftStat, rightStat] = await Promise.all([
+    stat(leftCanonical, { bigint: true }),
+    stat(rightCanonical, { bigint: true }),
+  ]);
+  return leftStat.ino !== 0n && leftStat.dev === rightStat.dev && leftStat.ino === rightStat.ino;
 }
 
 export function pathKey(path: string): string {

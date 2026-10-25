@@ -15,6 +15,8 @@ ledger had already changed, leaving public outputs on different generations.
 ## Decision
 
 - `import-draft` acquires an exclusive sibling lock file before reading or changing the ledger.
+- File identity comparisons read device and inode values as `bigint`. Distinct 64-bit file IDs
+  must not collapse through JavaScript number rounding and trigger false output-overlap failures.
 - Lock acquisition is bounded and fails instead of silently proceeding after the timeout.
 - The command renders a complete generation while holding the lock.
 - Preflight checks that only require the file kind, missing-file policy, parent directories, and

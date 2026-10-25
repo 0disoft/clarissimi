@@ -179,6 +179,54 @@ test("quoted JSON credentials never reach the provider request body", async () =
   assert.equal(payload.redaction.matchCount, 1);
 });
 
+test("shared sensitive keys keep OAuth and session credentials out of provider requests", async () => {
+  const marker = "synthetic-shared-key-value";
+  let requestBody;
+  const provider = createOpenAiCompatibleContributionDraftProvider({
+    model: "clarissimi-test-model",
+    token: "unit-token",
+    fetch: async (_url, init) => {
+      requestBody = JSON.parse(init.body);
+      return jsonResponse({}, 503);
+    },
+  });
+  const text = JSON.stringify({
+    access_token: marker,
+    refreshToken: marker,
+    clientSecret: marker,
+    authorization: marker,
+    "set-cookie": marker,
+    private_key: marker,
+  });
+  const evidence = prepareEvidenceForProvider({
+    source,
+    items: [{ kind: "file", id: "config.json", text, metadata: { clientSecret: marker } }],
+  });
+  await assert.rejects(
+    provider.createAssessment({ contributor, preparedEvidence: evidence }),
+    (error) => error instanceof OpenAiCompatibleProviderError && error.code === "http_error",
+  );
+  assert.equal(JSON.stringify(requestBody).includes(marker), false);
+  const payload = JSON.parse(requestBody.messages[1].content);
+  assert.equal(payload.evidenceRefs[0].excerpt, payload.evidenceItems[0].text);
+  assert.equal(payload.redaction.matchCount, 7);
+  assert.deepEqual(evidence.items[0].metadata, { clientSecret: "[REDACTED]" });
+  assert.throws(
+    () =>
+      prepareEvidenceForProvider({
+        source,
+        items: [
+          {
+            kind: "file",
+            id: "config.json",
+            url: `https://example.invalid/proof?access_token=${marker}`,
+          },
+        ],
+      }),
+    { code: "unsafe_structural_field" },
+  );
+});
+
 test("uses strict structured output for the supported OpenAI release-smoke model", async () => {
   let requestBody;
   const provider = createOpenAiCompatibleContributionDraftProvider({
@@ -316,7 +364,8 @@ test("keeps secret canaries out of the provider transport payload", async () => 
       {
         kind: "pull_request",
         id: "PR-42",
-        url: `https://github.com/example/project/pull/42?access_token=${canary}#${canary}`,
+        // Sensitive query keys now fail preparation; this still verifies URL omission.
+        url: `https://github.com/example/project/pull/42?reference=${canary}#${canary}`,
         title: "Provider payload boundary",
         metadata: {
           authorization: `Bearer ${canary}`,

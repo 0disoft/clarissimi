@@ -138,6 +138,69 @@ test("quoted credential keys are masked with their original occurrence offsets",
   assert.equal(redactText('{"token":"12345678"}').text, `{${REDACTION_PLACEHOLDER}}`);
 });
 
+const sharedCredentialKeys = [
+  "token",
+  "secret",
+  "password",
+  "authorization",
+  "cookie",
+  "signature",
+  "api_key",
+  "api-key",
+  "apiKey",
+  "access_token",
+  "access-token",
+  "accessToken",
+  "refresh_token",
+  "refresh-token",
+  "refreshToken",
+  "client_secret",
+  "client-secret",
+  "clientSecret",
+  "private_key",
+  "private-key",
+  "privateKey",
+  "set_cookie",
+  "set-cookie",
+  "setCookie",
+];
+
+test("shared sensitive keys protect serialized credential text across naming styles", () => {
+  const marker = "synthetic-shared-key-value";
+  const results = sharedCredentialKeys.map((key) => redactText(JSON.stringify({ [key]: marker })));
+  assert.equal(results.filter((result) => !result.text.includes(marker)).length, 24);
+  for (const result of results) {
+    assert.equal(result.text, `{${REDACTION_PLACEHOLDER}}`);
+    assert.equal(result.report.occurrences[0].kind, "generic_secret_assignment");
+  }
+  for (const key of [
+    "tokenCount",
+    "clientSecretHint",
+    "access_token_expiry",
+    "signatureAlgorithm",
+  ]) {
+    const text = JSON.stringify({ [key]: marker });
+    assert.equal(redactText(text).text, text);
+  }
+});
+
+test("shared sensitive keys protect nested JSON across naming styles", () => {
+  const marker = "synthetic-shared-key-value";
+  const entries = sharedCredentialKeys.map((key) => ({ [key]: marker }));
+  const result = redactJson({ entries });
+  assert.equal(result.report.occurrences.length, 24);
+  assert.deepEqual(result.value, {
+    entries: sharedCredentialKeys.map((key) => ({ [key]: REDACTION_PLACEHOLDER })),
+  });
+  assert.equal(JSON.stringify(result).includes(marker), false);
+  assert.equal(
+    entries.every((entry) => Object.values(entry)[0] === marker),
+    true,
+  );
+  const publicFields = { tokenCount: marker, clientSecretHint: marker, signatureAlgorithm: marker };
+  assert.deepEqual(redactJson(publicFields).value, publicFields);
+});
+
 test("redacts unquoted generic secret assignments", () => {
   const result = redactText("password=synthetic-generic-secret");
 

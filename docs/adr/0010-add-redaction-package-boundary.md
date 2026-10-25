@@ -37,6 +37,14 @@ The existing eight-character minimum, rule order, and `generic_secret_assignment
 remain unchanged. Regressions cover 56 quoted-key/value and separator combinations, occurrence
 offsets, longer nonsensitive key names, and the request body captured by an injected provider.
 
+Text assignment detection and structured JSON key detection derive their patterns from one shared
+sensitive-key vocabulary. The vocabulary preserves the union of the former text and JSON rules,
+including OAuth tokens, client secrets, authorization, cookies, private keys, and signatures.
+Compound names accept underscore, hyphen, and joined case-insensitive spellings, so `access_token`,
+`access-token`, and `accessToken` are covered in both representations. JSON matching remains anchored
+to the entire trimmed key; longer unrelated names remain unchanged. Text value-length thresholds,
+rule order, and report kinds remain unchanged. Patterns are compiled once at module initialization.
+
 The package must not own:
 
 - provider API calls

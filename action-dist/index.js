@@ -3228,6 +3228,22 @@ var RendererValidationError = class extends Error {
 var REDACTION_PLACEHOLDER = "[REDACTED]";
 
 // packages/redaction/dist/redact.js
+var SENSITIVE_KEYS = [
+  "api_key",
+  "authorization",
+  "client_secret",
+  "cookie",
+  "password",
+  "private_key",
+  "refresh_token",
+  "set_cookie",
+  "signature",
+  "token",
+  "access_token",
+  "secret"
+];
+var SENSITIVE_KEY_SOURCE = SENSITIVE_KEYS.map((key) => key.replaceAll("_", "[_-]?")).join("|");
+var SENSITIVE_JSON_KEY = new RegExp(`^(?:${SENSITIVE_KEY_SOURCE})$`, "i");
 var REDACTION_RULES = [
   {
     kind: "github_token",
@@ -3251,23 +3267,9 @@ var REDACTION_RULES = [
   },
   {
     kind: "generic_secret_assignment",
-    pattern: /["']?\b(?:token|secret|password|api[_-]?key)["']?\s*[:=]\s*(?:"[^"\r\n]{8,}"|'[^'\r\n]{8,}'|[^"'`\s]{8,})["']?/gi
+    pattern: new RegExp(String.raw`["']?\b(?:${SENSITIVE_KEY_SOURCE})["']?\s*[:=]\s*` + /(?:"[^"\r\n]{8,}"|'[^'\r\n]{8,}'|[^"'`\s]{8,})["']?/.source, "gi")
   }
 ];
-var SENSITIVE_JSON_KEYS = /* @__PURE__ */ new Set([
-  "api_key",
-  "apikey",
-  "authorization",
-  "client_secret",
-  "cookie",
-  "password",
-  "private_key",
-  "refresh_token",
-  "set_cookie",
-  "signature",
-  "token",
-  "access_token"
-]);
 function redactText(input) {
   const occurrences = [];
   let text = redactPrivateKeyBlocks(input, occurrences);
@@ -3387,7 +3389,7 @@ function redactJsonValue(value, occurrences) {
   return value;
 }
 function isSensitiveJsonKey(key) {
-  return SENSITIVE_JSON_KEYS.has(key.trim().toLowerCase().replaceAll("-", "_"));
+  return SENSITIVE_JSON_KEY.test(key.trim());
 }
 function buildReport(occurrences) {
   return {

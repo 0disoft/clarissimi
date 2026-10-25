@@ -13,6 +13,23 @@ interface RedactionRule {
   readonly pattern: RegExp;
 }
 
+const SENSITIVE_KEYS = [
+  "api_key",
+  "authorization",
+  "client_secret",
+  "cookie",
+  "password",
+  "private_key",
+  "refresh_token",
+  "set_cookie",
+  "signature",
+  "token",
+  "access_token",
+  "secret",
+] as const;
+const SENSITIVE_KEY_SOURCE = SENSITIVE_KEYS.map((key) => key.replaceAll("_", "[_-]?")).join("|");
+const SENSITIVE_JSON_KEY = new RegExp(`^(?:${SENSITIVE_KEY_SOURCE})$`, "i");
+
 const REDACTION_RULES: readonly RedactionRule[] = [
   {
     kind: "github_token",
@@ -37,25 +54,13 @@ const REDACTION_RULES: readonly RedactionRule[] = [
   },
   {
     kind: "generic_secret_assignment",
-    pattern:
-      /["']?\b(?:token|secret|password|api[_-]?key)["']?\s*[:=]\s*(?:"[^"\r\n]{8,}"|'[^'\r\n]{8,}'|[^"'`\s]{8,})["']?/gi,
+    pattern: new RegExp(
+      String.raw`["']?\b(?:${SENSITIVE_KEY_SOURCE})["']?\s*[:=]\s*` +
+        /(?:"[^"\r\n]{8,}"|'[^'\r\n]{8,}'|[^"'`\s]{8,})["']?/.source,
+      "gi",
+    ),
   },
 ];
-
-const SENSITIVE_JSON_KEYS = new Set([
-  "api_key",
-  "apikey",
-  "authorization",
-  "client_secret",
-  "cookie",
-  "password",
-  "private_key",
-  "refresh_token",
-  "set_cookie",
-  "signature",
-  "token",
-  "access_token",
-]);
 
 export function redactText(input: string): RedactedText {
   const occurrences: RedactionOccurrence[] = [];
@@ -203,7 +208,7 @@ function redactJsonValue(
 }
 
 function isSensitiveJsonKey(key: string): boolean {
-  return SENSITIVE_JSON_KEYS.has(key.trim().toLowerCase().replaceAll("-", "_"));
+  return SENSITIVE_JSON_KEY.test(key.trim());
 }
 
 function buildReport(occurrences: readonly RedactionOccurrence[]): RedactionReport {

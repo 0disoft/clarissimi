@@ -1,5 +1,30 @@
 # Validation
 
+## 2026-10-26 Compatible 1.0.1 publication
+
+Action `v1.0.1` and standalone CLI `clarissimi@1.0.1` are published from
+`20991a4cdd55208bb6c37d798e44eae263ad0537`. Exact-source, immutable-tag,
+Marketplace, moving-`v1` and registry consumer evidence is recorded in `docs/ops/release.md`.
+
+Local `pnpm run check` completed 952 tests: 948 passed, four POSIX permission cases
+skipped on Windows, zero failures. Hosted Linux CI completed 950 tests with no skips
+or failures. Release readiness (including secret scan and Action bundle freshness),
+docs, lint, format, migration-check, smoke and installed CLI package verification
+passed. `check` already executes the same typecheck and test pair as `contract`,
+so that identical pair was not rerun under a second script name.
+
+Release validation exposed a false path-overlap rejection during concurrent imports.
+A deterministic regression reproduced rounding of adjacent 64-bit file IDs in the
+old number-based comparison; `bigint` stat identities fix it. The regression, concurrent
+imports and hard-link checks passed after the fix. Synthetic PEM fixture markers
+now construct the same strings without weakening the release secret scan.
+
+The maintainer approved the OIDC-staged npm package with 2FA. Exact registry installation,
+CLI help, fixture dry-run and signature/provenance audit passed, and the published
+tarball hash matches the reviewed four-file package. No public API, ledger schema, DB,
+permission, runner or hygiene-policy change. ADR 0039 documents exact file identities;
+ADR 0062 records the compatible patch scope.
+
 ## 2026-10-12 Installed standalone CLI workflow
 
 The local package verifier previously stopped at installed `--help`. It now

@@ -29,14 +29,39 @@ The current root and workspace packages stay private at `0.0.0`. ADR 0056 accept
 dependency-free `distribution/npm/clarissimi` CLI distribution beginning at `0.1.0`; it does not
 authorize publishing internal workspace packages or couple the CLI version to an Action tag.
 
-## 1.0.1 Patch Candidate
+## Stable 1.0.1 Publication Record
 
-Selected on 2026-10-26: root Action `v1.0.1` and standalone CLI `clarissimi@1.0.1`.
-ADR 0062 records the compatible patch scope. Consumer references and the standalone manifest
-name these candidates; publication is pending exact-SHA hosted CI, live-provider and external
-consumer evidence. The Action uses stable publication, post-tag validation and compare-and-swap
-`v1` promotion. npm uses the existing stage-only OIDC workflow and requires maintainer 2FA approval
-before the package is public. Existing immutable releases and `v0` stay unchanged.
+- Completed on 2026-10-26: root Action `v1.0.1` and npm `clarissimi@1.0.1` are public.
+- Release source: `20991a4cdd55208bb6c37d798e44eae263ad0537`.
+- GitHub release: <https://github.com/0disoft/clarissimi/releases/tag/v1.0.1>.
+- Release evidence: <https://github.com/0disoft/clarissimi/issues/27>.
+- Marketplace verification passed: `v1.0.1` is Latest and renders `0disoft/clarissimi@v1.0.1`.
+- Local check: 948 passed, four POSIX permission cases skipped on Windows, zero failures.
+  Hosted Linux CI passed all 950 tests with zero skips; hosted toolchain smoke also passed
+  (`40229473289`).
+
+| Validation                      | Source candidate | Immutable tag | Moving alias  |
+| ------------------------------- | ---------------- | ------------- | ------------- |
+| Hosted CI                       | `40229473298`    | `40229473298` | `40229473298` |
+| Live provider                   | `40229596218`    | `40230737708` | `40231169772` |
+| External dry-run                | `40229645959`    | `40230783851` | `40231205016` |
+| External full-write and cleanup | `40230207770`    | `40230835221` | `40231254858` |
+| Orphan audit                    | `40230404645`    | `40230936287` | `40231361429` |
+
+- Source-candidate, immutable-tag and moving-alias external checks passed on Ubuntu, macOS and Windows.
+  Required cleanup steps and orphan audits passed. GitHub API TLS timeouts were recovered by
+  reusing completed runs and resuming only missing work; no duplicate candidate smoke was needed.
+- npm OIDC stage: <https://github.com/0disoft/clarissimi/actions/runs/40229632519>.
+- Stage `431af02a-adc5-4182-a8e5-218e7eaf476b` was approved by the maintainer with 2FA.
+- Public npm `latest` is `1.0.1`. The four-file tarball shasum
+  `5cfaaa91168c95ca864ae4a003722dde7e72f9f3` matches the inspected stage and local verified package.
+- Exact registry installation in an empty consumer, executable help, fixture dry-run and
+  `npm audit signatures` passed. Provenance is available at
+  <https://registry.npmjs.org/-/npm/v1/attestations/clarissimi@1.0.1>.
+- Moving alias `v1` now resolves to the release source after compare-and-swap promotion from
+  `c4f14a40b812f881cca886c924fae041e92dea3e` and successful alias verification. Existing immutable
+  tags and `v0` were not moved.
+- No internal workspace package, public API, persisted schema, DB, permission or runner change.
 
 ## Release Types
 

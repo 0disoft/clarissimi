@@ -150,6 +150,35 @@ test("creates a draft assessment from an OpenAI-compatible response", async () =
   assert.equal(requestText.includes("[REDACTED]"), true);
 });
 
+test("quoted JSON credentials never reach the provider request body", async () => {
+  const marker = "synthetic-quoted-json-value";
+  let requestBody;
+  let requests = 0;
+  const provider = createOpenAiCompatibleContributionDraftProvider({
+    model: "clarissimi-test-model",
+    token: "unit-token",
+    fetch: async (_url, init) => {
+      requests += 1;
+      requestBody = JSON.parse(init.body);
+      return jsonResponse({}, 503);
+    },
+  });
+  const evidence = prepareEvidenceForProvider({
+    source,
+    items: [{ kind: "file", id: "config.json", text: JSON.stringify({ token: marker }) }],
+  });
+  await assert.rejects(
+    provider.createAssessment({ contributor, preparedEvidence: evidence }),
+    (error) => error instanceof OpenAiCompatibleProviderError && error.code === "http_error",
+  );
+  assert.equal(requests, 1);
+  assert.equal(JSON.stringify(requestBody).includes(marker), false);
+  const payload = JSON.parse(requestBody.messages[1].content);
+  assert.equal(payload.evidenceItems[0].text, "{[REDACTED]}");
+  assert.equal(payload.evidenceRefs[0].excerpt, "{[REDACTED]}");
+  assert.equal(payload.redaction.matchCount, 1);
+});
+
 test("uses strict structured output for the supported OpenAI release-smoke model", async () => {
   let requestBody;
   const provider = createOpenAiCompatibleContributionDraftProvider({

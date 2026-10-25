@@ -30,6 +30,13 @@ minimum of 16 token-body characters and word boundaries; it identifies token-lik
 verifying whether a credential is valid. Provider preparation and repository-visible text checks
 must both use this shared rule, including for values inside nonsensitive JSON fields.
 
+Generic secret assignment detection accepts a closing quote after the existing `token`, `secret`,
+`password`, and `api[_-]?key` keywords. This masks quoted JSON keys in evidence strings, including
+file text and diffs, before they are copied into provider evidence items and reference excerpts.
+The existing eight-character minimum, rule order, and `generic_secret_assignment` report kind
+remain unchanged. Regressions cover 56 quoted-key/value and separator combinations, occurrence
+offsets, longer nonsensitive key names, and the request body captured by an injected provider.
+
 The package must not own:
 
 - provider API calls

@@ -97,6 +97,47 @@ test("redacts quoted dotenv values and quoted generic assignments", () => {
   assert.equal(generic.report.occurrences[0].kind, "generic_secret_assignment");
 });
 
+test("quoted credential keys are masked with their original occurrence offsets", () => {
+  const fields = ["token", "secret", "password", "api_key", "api-key", "apiKey", "API_KEY"];
+  const marker = "synthetic-quoted-json-value";
+  const cases = [];
+  for (const field of fields) {
+    for (const keyQuote of ['"', "'"]) {
+      for (const separator of [":", "="]) {
+        for (const valueQuote of ['"', "'"]) {
+          const assignment = `${keyQuote}${field}${keyQuote} ${separator} ${valueQuote}${marker}${valueQuote}`;
+          const prefix = "before { ";
+          cases.push({ input: `${prefix}${assignment} } after`, start: prefix.length, assignment });
+        }
+      }
+    }
+  }
+  const results = cases.map(({ input }) => redactText(input));
+  assert.equal(results.filter((result) => !result.text.includes(marker)).length, cases.length);
+  for (const [index, result] of results.entries()) {
+    assert.deepEqual(result, {
+      text: `before { ${REDACTION_PLACEHOLDER} } after`,
+      report: {
+        changed: true,
+        occurrences: [
+          {
+            kind: "generic_secret_assignment",
+            replacement: REDACTION_PLACEHOLDER,
+            start: cases[index].start,
+            end: cases[index].start + cases[index].assignment.length,
+          },
+        ],
+      },
+    });
+  }
+  for (const field of ["tokenCount", "secretary", "passwordHint", "api_key_rotation"]) {
+    const input = JSON.stringify({ [field]: marker });
+    assert.equal(redactText(input).text, input);
+  }
+  assert.equal(redactText('{"token":"1234567"}').report.changed, false);
+  assert.equal(redactText('{"token":"12345678"}').text, `{${REDACTION_PLACEHOLDER}}`);
+});
+
 test("redacts unquoted generic secret assignments", () => {
   const result = redactText("password=synthetic-generic-secret");
 

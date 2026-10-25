@@ -38,7 +38,7 @@ const REDACTION_RULES: readonly RedactionRule[] = [
   {
     kind: "generic_secret_assignment",
     pattern:
-      /["']?\b(?:token|secret|password|api[_-]?key)\s*[:=]\s*(?:"[^"\r\n]{8,}"|'[^'\r\n]{8,}'|[^"'`\s]{8,})["']?/gi,
+      /["']?\b(?:token|secret|password|api[_-]?key)["']?\s*[:=]\s*(?:"[^"\r\n]{8,}"|'[^'\r\n]{8,}'|[^"'`\s]{8,})["']?/gi,
   },
 ];
 

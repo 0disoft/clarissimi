@@ -248,6 +248,18 @@ test("prepares provider evidence by redacting all text-bearing fields", () => {
   assert.equal(prepared.evidenceRefs[0].excerpt, REDACTION_PLACEHOLDER);
 });
 
+test("quoted JSON credentials cannot escape through evidence text or references", () => {
+  const marker = "synthetic-quoted-json-value";
+  const prepared = prepareEvidenceForProvider({
+    source,
+    items: [{ kind: "file", id: "config.json", text: JSON.stringify({ api_key: marker }) }],
+  });
+  assert.equal(prepared.items[0].text, `{${REDACTION_PLACEHOLDER}}`);
+  assert.equal(prepared.evidenceRefs[0].excerpt, `{${REDACTION_PLACEHOLDER}}`);
+  assert.equal(prepared.redactionReport.occurrences[0].kind, "generic_secret_assignment");
+  assert.equal(JSON.stringify(prepared).includes(marker), false);
+});
+
 test("keeps provider evidence source and item identity intact", () => {
   const prepared = prepareEvidenceForProvider({
     source,

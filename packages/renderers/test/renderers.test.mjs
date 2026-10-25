@@ -87,19 +87,21 @@ test("preserves claim evidence links in sanitized drafts and public ledger recor
 });
 
 test("rejects an approved assessment with secret-bearing public text", () => {
-  const syntheticToken = `ghp_${"a".repeat(20)}`;
-  assert.throws(
-    () =>
-      renderContributionsJsonl([
-        assessment({ publicRecognitionText: `Recognized with ${syntheticToken}.` }),
-      ]),
-    (error) => {
-      assert.equal(error instanceof RendererValidationError, true);
-      assert.equal(error.issues[0].path, "$.publicRecognitionText");
-      assert.equal(JSON.stringify(error).includes(syntheticToken), false);
-      return true;
-    },
-  );
+  for (const prefix of ["ghp", "github_pat"]) {
+    const syntheticToken = `${prefix}_${"a".repeat(22)}_${"b".repeat(59)}`;
+    assert.throws(
+      () =>
+        renderContributionsJsonl([
+          assessment({ publicRecognitionText: `Recognized with ${syntheticToken}.` }),
+        ]),
+      (error) => {
+        assert.equal(error instanceof RendererValidationError, true);
+        assert.equal(error.issues[0].path, "$.publicRecognitionText");
+        assert.equal(JSON.stringify(error).includes(syntheticToken), false);
+        return true;
+      },
+    );
+  }
 });
 
 test("normalizes historic v1 UTC timestamps while rejecting impossible dates", () => {

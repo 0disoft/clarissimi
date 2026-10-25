@@ -21,7 +21,7 @@ const REDACTION_RULES: readonly RedactionRule[] = [
   },
   {
     kind: "github_token",
-    pattern: /\bgh(?:p|o|u|s|r)_[A-Za-z0-9_]{16,}\b/g,
+    pattern: /\b(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{16,}\b/g,
   },
   {
     kind: "openai_token",

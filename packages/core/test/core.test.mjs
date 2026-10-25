@@ -267,6 +267,26 @@ test("keeps provider evidence source and item identity intact", () => {
   assert.equal(prepared.redactionReport.changed, false);
 });
 
+test("fine-grained GitHub credentials cannot escape through prepared evidence or references", () => {
+  const syntheticToken = `github_pat_${"a".repeat(22)}_${"b".repeat(59)}`;
+  const prepared = prepareEvidenceForProvider({
+    source,
+    items: [
+      {
+        kind: "pull_request",
+        id: "PR-42",
+        title: `Reported with ${syntheticToken}`,
+        excerpt: `Used ${syntheticToken}`,
+        metadata: { note: syntheticToken },
+      },
+    ],
+  });
+  assert.equal(JSON.stringify(prepared).includes(syntheticToken), false);
+  assert.equal(prepared.redactionReport.occurrences.length, 3);
+  assert.equal(prepared.items[0].title, `Reported with ${REDACTION_PLACEHOLDER}`);
+  assert.equal(prepared.evidenceRefs[0].excerpt, `Used ${REDACTION_PLACEHOLDER}`);
+});
+
 test("rejects prepared evidence above the item budget", () => {
   assert.throws(
     () =>

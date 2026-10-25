@@ -120,6 +120,41 @@ test("redacts provider token patterns", () => {
   );
 });
 
+test("redacts all GitHub credential families in prose and nested JSON", () => {
+  for (const prefix of ["ghp", "gho", "ghu", "ghs", "ghr", "github_pat"]) {
+    const syntheticToken = `${prefix}_${"a".repeat(22)}_${"b".repeat(59)}`;
+    const input = `Before (${syntheticToken}) after.`;
+    const result = redactText(input);
+    assert.equal(result.report.changed, true, prefix);
+    assert.equal(result.text, `Before (${REDACTION_PLACEHOLDER}) after.`);
+    assert.deepEqual(result.report.occurrences, [
+      {
+        kind: "github_token",
+        replacement: REDACTION_PLACEHOLDER,
+        start: 8,
+        end: 8 + syntheticToken.length,
+      },
+    ]);
+    const nested = redactJson({ notes: [input] });
+    assert.deepEqual(nested.value, { notes: [`Before (${REDACTION_PLACEHOLDER}) after.`] });
+    assert.equal(JSON.stringify({ result, nested }).includes(syntheticToken), false);
+  }
+});
+
+test("GitHub token detection preserves prefix boundaries and minimum body length", () => {
+  for (const text of [
+    "github_pat_",
+    "github_pat_documentation",
+    `github_pat_${"a".repeat(15)}`,
+    `xgithub_pat_${"a".repeat(30)}`,
+  ]) {
+    const result = redactText(text);
+    assert.equal(result.text, text);
+    assert.equal(result.report.changed, false);
+  }
+  assert.equal(redactText(`github_pat_${"a".repeat(16)}`).text, REDACTION_PLACEHOLDER);
+});
+
 test("redacts private key blocks", () => {
   const marker = `${"PRIVATE"} KEY`;
   const result = redactText(

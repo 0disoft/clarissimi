@@ -24,6 +24,12 @@ The package owns:
 - default masking for email addresses, environment-style secret assignments, private key blocks,
   GitHub token-like strings, and common provider token-like strings
 
+The shared GitHub token rule covers `ghp_`, `gho_`, `ghu_`, `ghs_`, `ghr_`, and fine-grained
+`github_pat_` prefixes under the existing `github_token` report kind. Detection keeps the existing
+minimum of 16 token-body characters and word boundaries; it identifies token-like text rather than
+verifying whether a credential is valid. Provider preparation and repository-visible text checks
+must both use this shared rule, including for values inside nonsensitive JSON fields.
+
 The package must not own:
 
 - provider API calls

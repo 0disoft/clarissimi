@@ -286,8 +286,14 @@ test("prepares provider evidence by redacting all text-bearing fields", () => {
 
 test("authorization credentials cannot escape through provider fields or repository-visible prose", () => {
   const marker = "non-credential-marker";
-  for (const scheme of ["Basic", "Bearer", "Negotiate"]) {
-    const header = `Authorization: ${scheme} ${marker}`;
+  for (const value of [
+    ...["Basic", "Bearer", "Negotiate", "Token", "OAuth", "DPoP"].map(
+      (scheme) => `${scheme} ${marker}`,
+    ),
+    `Digest username="${marker}", response="${marker}"`,
+    `AWS4-HMAC-SHA256 Credential=${marker}/scope, Signature=${marker}`,
+  ]) {
+    const header = `Authorization: ${value}`;
     const prepared = prepareEvidenceForProvider({
       source,
       items: [

@@ -1127,10 +1127,13 @@ var SENSITIVE_KEYS = [
 var SENSITIVE_KEY_SOURCE = SENSITIVE_KEYS.map((key) => key.replaceAll("_", "[_-]?")).join("|");
 var SENSITIVE_JSON_KEY = new RegExp(`^(?:${SENSITIVE_KEY_SOURCE})$`, "i");
 var PRIVATE_KEY_LABEL_SOURCE = "(?:(?:RSA |OPENSSH |EC |DSA |ENCRYPTED |PGP )?PRIVATE KEY|PGP PRIVATE KEY BLOCK)";
-var AUTHORIZATION_SCHEME_SOURCE = "(?:Basic|Bearer|Negotiate)[ \\t]+";
+var AUTHORIZATION_TOKEN_SOURCE = /[!#$%&'*+.^_`|~0-9A-Z-]+/.source;
+var AUTHORIZATION_SCHEME_SOURCE = `${AUTHORIZATION_TOKEN_SOURCE}[ \\t]+`;
 var DOUBLE_QUOTED_CHARACTER = String.raw`(?:\\[^\r\n]|[^"\\\r\n])`;
 var SINGLE_QUOTED_CHARACTER = String.raw`(?:\\[^\r\n]|[^'\\\r\n])`;
 var QUOTED_VALUE_SOURCE = `"${DOUBLE_QUOTED_CHARACTER}*"?|'${SINGLE_QUOTED_CHARACTER}*'?`;
+var AUTHORIZATION_PARAMETER_SOURCE = `${AUTHORIZATION_TOKEN_SOURCE}[ \\t]*=[ \\t]*(?:${QUOTED_VALUE_SOURCE}|` + /[!#$%&'*+.^_`|~0-9A-Z/-]+/.source + ")";
+var AUTHORIZATION_PARAMETERS_SOURCE = `(?:,[ \\t,]*)?${AUTHORIZATION_PARAMETER_SOURCE}(?:[ \\t]*,[ \\t,]*${AUTHORIZATION_PARAMETER_SOURCE})*`;
 var REDACTION_RULES = [
   {
     kind: "generic_secret_assignment",
@@ -1140,7 +1143,7 @@ var REDACTION_RULES = [
   {
     kind: "generic_secret_assignment",
     // Consume the scheme and credential before generic rules can mask only the scheme.
-    pattern: new RegExp(String.raw`["']?\b(?:proxy-)?authorization["']?[ \t]*[:=][ \t]*` + `(?:"${AUTHORIZATION_SCHEME_SOURCE}(?=\\S)${DOUBLE_QUOTED_CHARACTER}+"?|'${AUTHORIZATION_SCHEME_SOURCE}(?=\\S)${SINGLE_QUOTED_CHARACTER}+'?|["']?${AUTHORIZATION_SCHEME_SOURCE}` + /[^"'`\s]+/.source + String.raw`)["']?`, "gi")
+    pattern: new RegExp(String.raw`["']?\b(?:proxy-)?authorization["']?[ \t]*[:=][ \t]*` + `(?:"${AUTHORIZATION_SCHEME_SOURCE}(?=\\S)${DOUBLE_QUOTED_CHARACTER}+"?|'${AUTHORIZATION_SCHEME_SOURCE}(?=\\S)${SINGLE_QUOTED_CHARACTER}+'?|["']?${AUTHORIZATION_SCHEME_SOURCE}(?:${QUOTED_VALUE_SOURCE}|${AUTHORIZATION_PARAMETERS_SOURCE}|` + /[^"'`\s]+/.source + ")" + String.raw`)["']?`, "gi")
   },
   {
     kind: "github_token",

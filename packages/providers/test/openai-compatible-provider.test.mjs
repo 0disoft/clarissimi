@@ -161,12 +161,19 @@ test("authorization credentials never reach the provider request body", async ()
       return jsonResponse({}, 503);
     },
   });
+  const authorizationValues = [
+    ...["Basic", "Bearer", "Negotiate", "Token", "OAuth", "DPoP"].map(
+      (scheme) => `${scheme} ${marker}`,
+    ),
+    `Digest username="${marker}", response="${marker}"`,
+    `AWS4-HMAC-SHA256 Credential=${marker}/scope, Signature=${marker}`,
+  ];
   const evidence = prepareEvidenceForProvider({
     source,
-    items: ["Basic", "Bearer", "Negotiate"].map((scheme, index) => ({
+    items: authorizationValues.map((value, index) => ({
       kind: "file",
       id: `src/request-${index}.ts`,
-      text: `Authorization: ${scheme} ${marker}`,
+      text: `Authorization: ${value}`,
     })),
   });
   await assert.rejects(
@@ -175,7 +182,7 @@ test("authorization credentials never reach the provider request body", async ()
   );
   assert.equal(JSON.stringify(requestBody).includes(marker), false);
   const payload = JSON.parse(requestBody.messages[1].content);
-  assert.equal(payload.redaction.matchCount, 3);
+  assert.equal(payload.redaction.matchCount, authorizationValues.length);
   assert.ok(payload.evidenceItems.every((item) => item.text === "[REDACTED]"));
   assert.ok(payload.evidenceRefs.every((ref) => ref.excerpt === "[REDACTED]"));
 });

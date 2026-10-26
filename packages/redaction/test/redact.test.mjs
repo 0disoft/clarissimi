@@ -218,6 +218,94 @@ test("authorization schemes and credentials are masked together across 96 text f
   assert.equal(cases, 96);
 });
 
+test("extension authentication schemes cannot expose credentials across 64 text forms", () => {
+  const marker = "non-credential-marker";
+  const failures = [];
+  let cases = 0;
+  for (const scheme of ["Token", "OAuth", "DPoP", "X-Custom"]) {
+    for (const key of ["Authorization", "Proxy-Authorization"]) {
+      for (const separator of [":", "="]) {
+        for (const assignment of [
+          `${key}${separator} ${scheme} ${marker}`,
+          `"${key}"${separator} ${scheme} ${marker}`,
+          `${key}${separator} "${scheme} ${marker}"`,
+          `'${key}${separator} ${scheme} ${marker}'`,
+        ]) {
+          const result = redactText(`before ${assignment} after`);
+          if (result.text !== `before ${REDACTION_PLACEHOLDER} after`) failures.push(assignment);
+          cases += 1;
+        }
+      }
+    }
+  }
+  assert.equal(cases, 64);
+  assert.deepEqual(failures, []);
+});
+
+test("parameterized authentication masks all values including quoted commas and escapes", () => {
+  const marker = "non-credential-marker";
+  const failures = [];
+  for (const value of [
+    `Digest username="${marker}", realm="scope,with,commas", response="${marker}"`,
+    `Signature keyId="${marker}", algorithm="test-only", signature="${marker}"`,
+    `AWS4-HMAC-SHA256 Credential=${marker}/scope/service, SignedHeaders=host, Signature=${marker}`,
+    `X-Custom first = "${marker}\\"tail", second\t=\t${marker}`,
+    `Digest , , username="${marker}",, , response="${marker}"`,
+  ]) {
+    for (const key of ["Authorization", "Proxy-Authorization"]) {
+      const input = `${key}: ${value}\nKeep this evidence.`;
+      const result = redactText(input);
+      if (result.text !== `${REDACTION_PLACEHOLDER}\nKeep this evidence.`) failures.push(input);
+    }
+  }
+  assert.deepEqual(failures, []);
+});
+
+test("extension and parameterized authorization preserve bounded field boundaries", () => {
+  for (const scheme of ["Token", "OAuth", "DPoP", "X!Custom+Auth"]) {
+    assert.equal(redactText(`Authorization: ${scheme} x`).text, REDACTION_PLACEHOLDER);
+    assert.equal(
+      redactText(`Authorization: ${scheme} "non-credential-marker"`).text,
+      REDACTION_PLACEHOLDER,
+    );
+    const quoted = JSON.stringify({
+      Authorization: `${scheme} non-credential-marker`,
+      keep: "yes",
+    });
+    assert.equal(redactText(quoted).text, `{${REDACTION_PLACEHOLDER},"keep":"yes"}`);
+  }
+  const input =
+    'Authorization: Digest a="non-credential-marker", b=scope after\nKeep this evidence.';
+  assert.equal(redactText(input).text, `${REDACTION_PLACEHOLDER} after\nKeep this evidence.`);
+});
+
+test("long extension and parameterized authorization stay within the child-process deadline", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "--eval",
+      `
+    import assert from "node:assert/strict";
+    import { redactText, REDACTION_PLACEHOLDER } from ${JSON.stringify(new URL("../dist/index.js", import.meta.url).href)};
+    const values = [
+      "OAuth " + "x".repeat(131072),
+      "Digest " + "name=x,".repeat(16384) + 'last="non-credential-marker"',
+      "Digest name=x," + " ".repeat(131072) + 'last="non-credential-marker',
+      "Digest name=x," + ", ".repeat(65536) + 'last="non-credential-marker"',
+      'X-Custom "' + "x\\\\".repeat(65536) + "tail",
+    ];
+    for (const value of values) {
+      assert.equal(redactText("Authorization: " + value).text, REDACTION_PLACEHOLDER);
+    }
+  `,
+    ],
+    { encoding: "utf8", timeout: 5000 },
+  );
+  assert.equal(result.error, undefined, result.error?.message);
+  assert.equal(result.status, 0, result.stderr);
+});
+
 test("authorization masking preserves full quoted values and masks short or truncated credentials", () => {
   for (const scheme of ["Basic", "Bearer", "Negotiate"]) {
     for (const quote of ['"', "'"]) {

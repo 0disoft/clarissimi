@@ -32,11 +32,20 @@ const SENSITIVE_KEY_SOURCE = SENSITIVE_KEYS.map((key) => key.replaceAll("_", "[_
 const SENSITIVE_JSON_KEY = new RegExp(`^(?:${SENSITIVE_KEY_SOURCE})$`, "i");
 const PRIVATE_KEY_LABEL_SOURCE =
   "(?:(?:RSA |OPENSSH |EC |DSA |ENCRYPTED |PGP )?PRIVATE KEY|PGP PRIVATE KEY BLOCK)";
-const AUTHORIZATION_SCHEME_SOURCE = "(?:Basic|Bearer|Negotiate)[ \\t]+";
+const AUTHORIZATION_TOKEN_SOURCE = /[!#$%&'*+.^_`|~0-9A-Z-]+/.source;
+const AUTHORIZATION_SCHEME_SOURCE = `${AUTHORIZATION_TOKEN_SOURCE}[ \\t]+`;
 // An escape consumes its following character, so only an unescaped quote ends a value.
 const DOUBLE_QUOTED_CHARACTER = String.raw`(?:\\[^\r\n]|[^"\\\r\n])`;
 const SINGLE_QUOTED_CHARACTER = String.raw`(?:\\[^\r\n]|[^'\\\r\n])`;
 const QUOTED_VALUE_SOURCE = `"${DOUBLE_QUOTED_CHARACTER}*"?|'${SINGLE_QUOTED_CHARACTER}*'?`;
+// Include slash-separated scope components used by AWS authorization parameters.
+const AUTHORIZATION_PARAMETER_SOURCE =
+  `${AUTHORIZATION_TOKEN_SOURCE}[ \\t]*=[ \\t]*(?:${QUOTED_VALUE_SOURCE}|` +
+  /[!#$%&'*+.^_`|~0-9A-Z/-]+/.source +
+  ")";
+const AUTHORIZATION_PARAMETERS_SOURCE =
+  `(?:,[ \\t,]*)?${AUTHORIZATION_PARAMETER_SOURCE}` +
+  `(?:[ \\t]*,[ \\t,]*${AUTHORIZATION_PARAMETER_SOURCE})*`;
 
 const REDACTION_RULES: readonly RedactionRule[] = [
   {
@@ -58,7 +67,9 @@ const REDACTION_RULES: readonly RedactionRule[] = [
         `(?:"${AUTHORIZATION_SCHEME_SOURCE}(?=\\S)${DOUBLE_QUOTED_CHARACTER}+"?|` +
         `'${AUTHORIZATION_SCHEME_SOURCE}(?=\\S)${SINGLE_QUOTED_CHARACTER}+'?|` +
         `["']?${AUTHORIZATION_SCHEME_SOURCE}` +
+        `(?:${QUOTED_VALUE_SOURCE}|${AUTHORIZATION_PARAMETERS_SOURCE}|` +
         /[^"'`\s]+/.source +
+        ")" +
         String.raw`)["']?`,
       "gi",
     ),

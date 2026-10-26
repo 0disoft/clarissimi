@@ -1,5 +1,38 @@
 # Validation
 
+## 2026-10-27 Scheme-independent authorization redaction
+
+The authorization rule recognized only Basic, Bearer, and Negotiate. Extension schemes and
+comma-separated authentication parameters could leave credential values in prepared evidence.
+Comparing the original HEAD implementation with the fix on eight representative headers found
+the harmless marker retained in five original outputs and zero updated outputs. New 64-form
+extension-scheme and parameter-list regressions also failed before implementation. No real
+credentials, external provider calls, or hosted writes were used.
+
+The shared rule now recognizes HTTP scheme tokens and consumes token credentials or complete
+parameter lists, including escaped quotes, quoted commas, optional whitespace, empty list members,
+and slash-separated AWS scope components. Quoted whole values and quoted individual credentials
+share the existing escape grammar. The rule order, general eight-character threshold, report
+vocabulary, and report-value privacy remain unchanged. No dependency, Git subprocess, network call,
+public API signature/schema, DB, runner, or repository-hygiene policy was added or changed.
+
+ADR 0010 records the expanded masking boundary and RFC 9110 grammar. The Action bundle is refreshed.
+Matching is conservative same-line text detection, not credential validity checking; unrelated
+following lines and fields remain available. Hosted CI and external publication/deployment were
+not run.
+
+- Build/typecheck and the 95 focused redaction/core/provider tests passed. The complete suite with
+  `--test-concurrency=4` passed 1,094 of 1,098 tests, with four POSIX permission cases skipped on
+  Windows and zero failures. Existing 96 known-scheme forms remain compatible; 64 extension forms,
+  parameter lists, field boundaries, short values, and quoted credentials are covered.
+- Provider-preparation and repository-visible checks cover eight representative header values;
+  an injected provider captures the request and confirms no marker survives in evidence or refs.
+  A child-process deadline test covers five long inputs, including 128 KiB tokens/whitespace,
+  16,384 parameters, repeated empty list members, and unterminated escaped quoted values.
+- Lint, formatting, documentation (160 Markdown files), CLI smoke, release-readiness static gates,
+  regenerated Action bundle freshness, secret scan, and Git whitespace checks passed. An unnecessary
+  quote escape in a test fixture was corrected after the initial lint warning.
+
 ## 2026-10-27 Immutable proposal ownership snapshot
 
 Existing-proposal reuse checked changed paths through a branch name and resolved the branch SHA

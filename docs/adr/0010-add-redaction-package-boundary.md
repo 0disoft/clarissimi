@@ -55,18 +55,25 @@ to the entire trimmed key; longer unrelated names remain unchanged. Text value-l
 rule order, and report kinds remain unchanged. Patterns are compiled once at module initialization.
 
 Same-line `Authorization` and `Proxy-Authorization` text assignments receive a scheme-aware rule
-for Basic, Bearer, and Negotiate before token and generic assignment rules run. The rule masks the
-scheme together with its credential instead of treating the scheme as the entire value. Quoted
-values are consumed in full; unquoted credentials end at whitespace or a quote, and truncated
-quoted credentials are still masked. Even short credentials are covered in this explicit context;
-the general eight-character threshold remains unchanged. The existing `generic_secret_assignment`
-report kind is reused. Matching stays on one line and excludes longer unrelated field names.
-Quoted parsing requires a non-whitespace first value character so unterminated whitespace-only
-values cannot trigger overlapping-quantifier backtracking. This is pattern-based masking for the
-named schemes, not credential validation or support for every HTTP authentication scheme.
+before token and generic assignment rules run. The scheme uses the HTTP token grammar instead of
+a Basic/Bearer/Negotiate allowlist. HTTP credentials can carry a token or comma-separated
+authentication parameters ([RFC 9110 section 11.4](https://www.rfc-editor.org/rfc/rfc9110.html#section-11.4));
+both forms must be consumed as one redacted assignment. Parameter names accept HTTP token
+characters, optional whitespace around equals signs, and empty comma-list members. Values use the
+shared escape-aware quoted grammar or token characters, with slash-separated AWS scope components
+also accepted. Quoted parameter values can contain commas and whitespace without ending the field.
+
+Quoted whole values or individual credentials are consumed in full; missing closing quotes mask
+the remaining quoted content on the same line. Unquoted token credentials end at whitespace or a
+quote, and parameter lists end after their final value. Following lines and unrelated fields remain
+available as evidence. Even short credentials are covered in this explicit context; the general
+eight-character threshold and `generic_secret_assignment` report kind remain unchanged. Matching
+stays on one line and excludes longer unrelated field names. Quoted scheme parsing requires a
+non-whitespace first value character so unterminated whitespace-only values cannot trigger
+overlapping-quantifier backtracking. This is conservative text masking, not credential validation.
 
 Quoted assignment values share an escape-aware character grammar across dotenv, generic sensitive
-keys, and the named authorization schemes. A backslash consumes the following non-newline character;
+keys, and authorization schemes. A backslash consumes the following non-newline character;
 an escaped quote is content, while an unescaped quote ends the value. Missing closing quotes mask
 the remaining value on the same line. The generic eight-character minimum is checked against the
 captured raw value content, preserving its existing UTF-16 length semantics even for escapes.

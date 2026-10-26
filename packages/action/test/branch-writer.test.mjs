@@ -146,11 +146,11 @@ for (const mode of ["propose", "stage-draft"]) {
         const child = originalSpawn(command, args, options);
         if (
           command === "git" &&
-          args[0] === "diff" &&
+          args[0] === "log" &&
           options.cwd === repositoryDir &&
           update === undefined
         ) {
-          // Change the ref only after the ownership diff has finished reading it.
+          // Change the ref only after the ownership history scan has finished reading it.
           child.prependOnceListener("close", () => {
             update = spawnSync(
               "git",
@@ -188,6 +188,76 @@ for (const mode of ["propose", "stage-draft"]) {
       assert.equal(await git(repositoryDir, ["status", "--short"]), "");
     });
   });
+}
+
+for (const mode of ["propose", "stage-draft"]) {
+  for (const history of ["linear", "merge"]) {
+    test(`rejects ${mode} reuse with reverted unowned ${history} history`, async () => {
+      await withTempDir(async (dir) => {
+        const repositoryDir = join(dir, "repo"),
+          stagedOutputDir = join(dir, "staged");
+        const remoteDir = join(dir, "remote.git");
+        await initRepository(repositoryDir);
+        await git(dir, ["init", "--bare", remoteDir]);
+        await git(repositoryDir, ["remote", "add", "origin", remoteDir]);
+        await git(repositoryDir, ["push", "origin", "main"]);
+        const stage =
+          mode === "propose" ? stageProposalRecognitionOutputs : stageProposalDraftReviewOutput;
+        const staging = await stage({
+          outputDir: stagedOutputDir,
+          assessments: [
+            assessment({ maintainerApprovalStatus: mode === "propose" ? "approved" : "draft" }),
+          ],
+          redactionMatchCount: 0,
+        });
+        const input = {
+          repositoryDir,
+          stagedOutputDir,
+          manifest: staging.manifest,
+          baseBranch: "main",
+        };
+        const first = await writeProposalBranch(input);
+        await git(repositoryDir, ["checkout", first.branchName]);
+        if (history === "merge") {
+          await git(repositoryDir, ["checkout", "-b", "empty-side"]);
+          await git(repositoryDir, ["commit", "--allow-empty", "-m", "Side branch"]);
+          await git(repositoryDir, ["checkout", first.branchName]);
+          await git(repositoryDir, ["merge", "--no-ff", "--no-edit", "empty-side"]);
+        }
+        const original = await readFile(join(repositoryDir, "README.md"), "utf8");
+        await writeFile(join(repositoryDir, "README.md"), "History-only audit marker\n");
+        await git(repositoryDir, ["add", "README.md"]);
+        await git(repositoryDir, [
+          "commit",
+          ...(history === "merge" ? ["--amend"] : []),
+          "-m",
+          "Unowned historical change",
+        ]);
+        await writeFile(join(repositoryDir, "README.md"), original);
+        await git(repositoryDir, ["add", "README.md"]);
+        await git(repositoryDir, ["commit", "-m", "Restore original tree"]);
+        const historySha = await git(repositoryDir, ["rev-parse", "HEAD"]);
+        assert.equal(
+          await git(repositoryDir, ["rev-parse", `${historySha}^{tree}`]),
+          await git(repositoryDir, ["rev-parse", `${first.commitSha}^{tree}`]),
+        );
+        await git(repositoryDir, ["checkout", "main"]);
+        let failure;
+        try {
+          const reused = await writeProposalBranch(input);
+          await publishProposalBranch({ repositoryDir, branch: reused });
+        } catch (error) {
+          failure = error;
+        }
+        assert.equal(await git(remoteDir, ["branch", "--list", first.branchName]), "");
+        assert.ok(failure instanceof ProposalBranchWriterError);
+        assert.equal(failure.code, "existing_branch_has_unowned_changes");
+        assert.equal(await git(repositoryDir, ["rev-parse", first.branchName]), historySha);
+        assert.equal(await git(repositoryDir, ["branch", "--show-current"]), "main");
+        assert.equal(await git(repositoryDir, ["status", "--short"]), "");
+      });
+    });
+  }
 }
 
 test("writes staged outputs to a deterministic proposal branch without mutating main", async () => {
@@ -230,6 +300,39 @@ test("writes staged outputs to a deterministic proposal branch without mutating 
       await git(repositoryDir, ["show", "-s", "--format=%an <%ae>", result.branchName]),
       "Clarissimi Bot <clarissimi-bot@users.noreply.github.com>",
     );
+  });
+});
+
+test("reuses owned-only reverted history with a unique deterministic changed-file list", async () => {
+  await withTempDir(async (dir) => {
+    const repositoryDir = join(dir, "repo"),
+      stagedOutputDir = join(dir, "staged");
+    await initRepository(repositoryDir);
+    const staging = await stageProposalRecognitionOutputs({
+      outputDir: stagedOutputDir,
+      assessments: [assessment()],
+      redactionMatchCount: 0,
+    });
+    const input = {
+      repositoryDir,
+      stagedOutputDir,
+      manifest: staging.manifest,
+      baseBranch: "main",
+    };
+    const first = await writeProposalBranch(input);
+    await git(repositoryDir, ["checkout", first.branchName]);
+    const original = await readFile(join(repositoryDir, "CONTRIBUTORS.md"), "utf8");
+    await writeFile(join(repositoryDir, "CONTRIBUTORS.md"), original + "\nTemporary owned edit\n");
+    await git(repositoryDir, ["add", "CONTRIBUTORS.md"]);
+    await git(repositoryDir, ["commit", "-m", "Owned edit"]);
+    await writeFile(join(repositoryDir, "CONTRIBUTORS.md"), original);
+    await git(repositoryDir, ["add", "CONTRIBUTORS.md"]);
+    await git(repositoryDir, ["commit", "-m", "Restore owned output"]);
+    const expectedSha = await git(repositoryDir, ["rev-parse", "HEAD"]);
+    await git(repositoryDir, ["checkout", "main"]);
+    const reused = await writeProposalBranch(input);
+    assert.equal(reused.commitSha, expectedSha);
+    assert.deepEqual(reused.changedFiles, staging.manifest.files.map((file) => file.path).sort());
   });
 });
 

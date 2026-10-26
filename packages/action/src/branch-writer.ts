@@ -379,12 +379,12 @@ async function changedFilesFromBase(
 ): Promise<readonly string[]> {
   return readChangedFiles(
     repositoryDir,
-    `${baseBranch}...${branchName}`,
+    `${baseBranch}..${branchName}`,
     runGit,
     () =>
       new ProposalBranchWriterError(
         "git_command_failed",
-        "Git diff failed while verifying proposal changes.",
+        "Git history inspection failed while verifying proposal changes.",
       ),
   );
 }

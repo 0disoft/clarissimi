@@ -229,10 +229,20 @@ async function assertCommittedFilesMatchManifest(input, commitSha, runGit4, crea
   }
 }
 async function readChangedFiles(repositoryDir, range, runGit4, createError) {
-  const result = await runGit4(repositoryDir, ["diff", "--no-renames", "--name-only", "-z", range]);
+  const result = await runGit4(repositoryDir, [
+    "log",
+    "--format=",
+    "--root",
+    "--diff-merges=separate",
+    "--no-renames",
+    "--name-only",
+    "-z",
+    range,
+    "--"
+  ]);
   if (result.exitCode !== 0)
     throw createError();
-  return result.stdout.split("\0").filter((path) => path.length > 0);
+  return [...new Set(result.stdout.split("\0").filter((path) => path.length > 0))].sort();
 }
 function assertChangedFilesAreOwned(changedFiles, files, createError = () => new ProposalBranchWriterError("proposal_has_unowned_changes", "Proposal branch contains changes outside the staged Clarissimi output manifest.")) {
   const ownedPaths = new Set(files.map((file) => file.path));
@@ -496,7 +506,7 @@ function isNodeError(error) {
   return error instanceof Error && "code" in error;
 }
 async function changedFilesFromBase(repositoryDir, baseBranch, branchName) {
-  return readChangedFiles(repositoryDir, `${baseBranch}...${branchName}`, runGit2, () => new ProposalBranchWriterError("git_command_failed", "Git diff failed while verifying proposal changes."));
+  return readChangedFiles(repositoryDir, `${baseBranch}..${branchName}`, runGit2, () => new ProposalBranchWriterError("git_command_failed", "Git history inspection failed while verifying proposal changes."));
 }
 async function hasCachedChanges(repositoryDir) {
   const exitCode2 = await gitExitCode(repositoryDir, ["diff", "--cached", "--quiet"]);
@@ -611,7 +621,7 @@ async function createDirectCommit(input) {
       ]);
     }
     const commitSha = await git3(input.repositoryDir, ["rev-parse", "HEAD"]);
-    const changedFiles = commitCreated ? await readChangedFiles(input.repositoryDir, `${baseCommitSha}..${commitSha}`, runGit3, () => new DirectCommitError("git_command_failed", "Git diff failed while verifying direct commit changes.")) : [];
+    const changedFiles = commitCreated ? await readChangedFiles(input.repositoryDir, `${baseCommitSha}..${commitSha}`, runGit3, () => new DirectCommitError("git_command_failed", "Git history inspection failed while verifying direct commit changes.")) : [];
     assertChangedFilesAreOwned(changedFiles, input.manifest.files, () => new DirectCommitError("unowned_commit_changes", "Created commit contains changes outside the staged output manifest. The local commit was preserved for inspection; no publish result was returned."));
     await assertCommittedFilesMatchManifest(input, commitSha, runGit3, () => new DirectCommitError("committed_output_mismatch", "Committed output differs from the staged manifest. The local commit was preserved for inspection; no publishable result was returned."));
     return {

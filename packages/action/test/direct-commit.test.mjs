@@ -192,6 +192,44 @@ test("verifies and publishes exact output in SHA-256 Git repositories", async ()
   }, "sha256");
 });
 
+test("refuses a hook's added-then-deleted file in unpublished commit history", async () => {
+  await withRepository(async ({ repositoryDir, remoteDir, stagedOutputDir }) => {
+    const base = await git(remoteDir, ["rev-parse", "refs/heads/main"]);
+    const staging = await stageRecognition(stagedOutputDir);
+    await writeFile(
+      join(repositoryDir, ".git", "hooks", "post-commit"),
+      "#!/bin/sh\nprintf 'temporary audit marker\\n' > HISTORY-ONLY.txt\ngit add HISTORY-ONLY.txt\ngit -c core.hooksPath=.git/no-hooks commit -m 'Temporary file'\ngit rm HISTORY-ONLY.txt\ngit -c core.hooksPath=.git/no-hooks commit -m 'Remove temporary file'\n",
+      { mode: 0o755 },
+    );
+    let failure;
+    try {
+      const commit = await createDirectCommit({
+        repositoryDir,
+        stagedOutputDir,
+        manifest: staging.manifest,
+        targetBranch: "main",
+        expectedHeadSha: base,
+      });
+      await publishDirectCommit({ repositoryDir, commit });
+    } catch (error) {
+      failure = error;
+    }
+    const publishedHistory = await git(remoteDir, [
+      "log",
+      "refs/heads/main",
+      "--format=%H",
+      "--",
+      "HISTORY-ONLY.txt",
+    ]);
+    assert.equal(publishedHistory.split("\n").filter(Boolean).length, 0);
+    assert.equal(await git(remoteDir, ["rev-parse", "refs/heads/main"]), base);
+    assert.ok(failure instanceof DirectCommitError);
+    assert.equal(failure.code, "unowned_commit_changes");
+    assert.equal(await git(repositoryDir, ["rev-list", "--count", `${base}..HEAD`]), "3");
+    assert.equal(await git(repositoryDir, ["status", "--short"]), "");
+  });
+});
+
 test("publishes the verified commit when HEAD advances after preflight", async (t) => {
   await withRepository(async ({ repositoryDir, remoteDir, stagedOutputDir }) => {
     const staging = await stageRecognition(stagedOutputDir);

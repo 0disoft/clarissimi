@@ -33,9 +33,11 @@ Add GitHub Action `mode: commit` as an explicit non-default write mode.
   captured SHA instead of `HEAD`. A later local HEAD update cannot publish unvalidated content
   or cause the returned SHA to differ from the published commit. This adds no Git or network call.
 - After commit hooks finish, every changed path must exactly match the staged output manifest.
-  Direct and proposal writers share this ownership check and read NUL-delimited Git filenames
-  without trimming. Rename detection is disabled so a rename's removed source path cannot hide
-  behind its permitted destination. The check reuses the existing diff request and adds no Git
+  Direct and proposal writers share this ownership check and inspect all unpublished commits,
+  including paths changed and reverted before the final tree. Merge changes are compared against
+  every parent. They read NUL-delimited Git filenames without trimming; rename detection is disabled
+  so a rename's removed source path cannot hide behind its permitted destination. The history
+  request replaces the existing diff request and adds no Git
   subprocess or network call. A direct commit with extra paths fails with `unowned_commit_changes`
   before returning a publishable result; its local commit and checkout are preserved for inspection.
 - Before a new commit is pushed, one `git ls-remote --refs` request to the configured remote must

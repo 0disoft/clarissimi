@@ -111,6 +111,17 @@ check their captured commit SHA rather than the mutable branch name. Publication
 branch-mismatch rejection if the local ref moved in the meantime. The reuse ownership preflight
 uses two Git subprocesses instead of three, with no added network request or repository lock.
 
+Owned-path validation inspects every commit reachable from the captured proposal SHA but not the
+captured base SHA (`base..proposal`), rather than only the final tree difference. A file changed
+and then restored, or added and then deleted, still enters public Git history and must be owned.
+The shared history reader uses one `git log --format= --root --diff-merges=separate --no-renames
+--name-only -z` request. It compares merges against every parent, includes root changes, and preserves
+literal filenames, including leading whitespace and embedded newlines. Returned paths are unique
+and sorted. Creation and reuse reject unowned historical paths using their existing diagnostics;
+owned-only multi-commit history remains reusable when the final output matches the manifest.
+This replaces the existing diff subprocess without adding a Git or network call. Inspection now
+includes intermediate commit changes, so work grows with unpublished history rather than net changes.
+
 ## Rollback And Recovery
 
 `propose` mode rollback is closing or deleting the proposal branch and pull request before merge.

@@ -102,7 +102,7 @@ export async function createDirectCommit(input: DirectCommitInput): Promise<Dire
           () =>
             new DirectCommitError(
               "git_command_failed",
-              "Git diff failed while verifying direct commit changes.",
+              "Git history inspection failed while verifying direct commit changes.",
             ),
         )
       : [];

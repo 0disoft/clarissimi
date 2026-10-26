@@ -91,10 +91,22 @@ export async function readChangedFiles(
   runGit: GitRunner,
   createError: () => Error,
 ): Promise<readonly string[]> {
-  const result = await runGit(repositoryDir, ["diff", "--no-renames", "--name-only", "-z", range]);
+  // A final-tree diff hides files changed and then reverted in publishable history.
+  // Compare merges against every parent; otherwise merge-only changes are omitted.
+  const result = await runGit(repositoryDir, [
+    "log",
+    "--format=",
+    "--root",
+    "--diff-merges=separate",
+    "--no-renames",
+    "--name-only",
+    "-z",
+    range,
+    "--",
+  ]);
   if (result.exitCode !== 0) throw createError();
   // Preserve literal filenames, including leading whitespace, without Git quoting.
-  return result.stdout.split("\0").filter((path) => path.length > 0);
+  return [...new Set(result.stdout.split("\0").filter((path) => path.length > 0))].sort();
 }
 
 export function assertChangedFilesAreOwned(

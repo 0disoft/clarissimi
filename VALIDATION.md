@@ -1,5 +1,40 @@
 # Validation
 
+## 2026-10-27 Unpublished commit history ownership
+
+The shared ownership reader inspected only the final tree difference. A post-commit hook could
+add a file in one commit and delete it in another, leaving the final manifest and owned-path diff
+unchanged while publishing the file's content in Git history. The original direct-commit regression
+published two history entries for a harmless temporary marker file to a local bare remote.
+Four additional regressions showed recognition and stage-draft proposal reuse publishing both
+linear and merge-only unowned README changes despite identical final trees. All five regressions
+failed before the fix and passed afterward; direct-mode published marker history entries drop
+from two to zero, and all four unsafe proposal reuses are rejected before publication.
+
+The shared reader now inspects every commit in `base..capturedCommit` using one NUL-delimited
+`git log --format= --root --diff-merges=separate --no-renames --name-only -z` request. Merge changes
+are compared against every parent. Root changes and literal filenames remain visible; paths are
+deduplicated and sorted. This replaces one diff subprocess with one history subprocess and adds
+zero Git subprocesses or network calls. Inspection covers intermediate changes rather than only
+net changes, so processing scales with unpublished history. The existing captured-SHA, content
+hash, path ownership, remote-base, and publication checks remain in place.
+
+ADR 0017 and ADR 0038 record the stronger ownership boundary; the Action bundle is regenerated.
+Public API signatures, schemas, DB, dependencies, runner, and repository-hygiene policy are
+unchanged. Previously accepted history with reverted unowned paths now fails using existing
+ownership diagnostics. Multi-commit histories touching only manifest-owned paths remain reusable
+when the final staged content matches. Rejected direct commits and proposal branches remain local
+for inspection. No real credentials were used. Hosted CI, external provider requests, external
+push, release, and deployment were not performed.
+
+- Build/typecheck passed. The complete suite with `--test-concurrency=4` passed 1,105 of 1,109 tests,
+  with four POSIX permission tests skipped on Windows and zero failures. Six new cases cover the
+  five unsafe histories and valid owned-only history reuse with unique deterministic paths.
+- Existing immutable-snapshot race tests, rename/leading-space path checks, output-blob integrity,
+  SHA-256 direct publication, and remote-base checks remain passing.
+- Lint, formatting, documentation (160 Markdown files), CLI smoke, release-readiness static gates,
+  Action bundle freshness, secret scan, and Git whitespace checks passed.
+
 ## 2026-10-27 Direct publication base boundary
 
 The direct publisher checked HEAD against the generated commit but did not compare its captured

@@ -87,10 +87,27 @@ export const CLI_COMMAND_SPECS: readonly CliCommandSpec[] = [
   },
   {
     name: "recognize",
-    description: "Create a dry-run recognition draft from a fixture.",
+    description: "Create recognition drafts from fixtures or selected merged GitHub PRs.",
     usage:
       "clarissimi recognize (--fixture <path> | --github-fixture <path>) --mode dry-run [--config <path>] [--markdown-summary none|table|gallery] [--exclude-automation-contributors] [--provider <id>] [--provider-model <model>] [--provider-endpoint <url>] [--provider-endpoint-trust public|private-network] [--provider-thinking disabled] [--json]",
     flags: [
+      {
+        name: "pr",
+        description: "Collect one merged github.com pull request URL.",
+        valueLabel: "url",
+      },
+      {
+        name: "repo",
+        description: "Select a GitHub repository for --prs.",
+        valueLabel: "owner/name",
+      },
+      {
+        name: "prs",
+        description: "Collect up to 25 comma-separated merged PR numbers.",
+        valueLabel: "numbers",
+      },
+      { name: "drafts-dir", description: "Select the live stage-draft inbox.", valueLabel: "path" },
+      { name: "allow-partial", description: "Allow bounded file collection and report omissions." },
       {
         name: "fixture",
         description: "Read a Clarissimi evidence fixture.",
@@ -103,9 +120,9 @@ export const CLI_COMMAND_SPECS: readonly CliCommandSpec[] = [
       },
       {
         name: "mode",
-        description: "Select the fixture-first execution mode.",
+        description: "Use dry-run or explicitly stage live PR drafts.",
         valueLabel: "mode",
-        values: ["dry-run"],
+        values: ["dry-run", "stage-draft"],
       },
       CONFIG_FLAG,
       MARKDOWN_SUMMARY_FLAG,
@@ -157,6 +174,36 @@ export const CLI_COMMAND_SPECS: readonly CliCommandSpec[] = [
         description: "Write to an explicit draft inbox directory.",
         valueLabel: "path",
       },
+      JSON_FLAG,
+      HELP_FLAG,
+    ],
+  },
+  {
+    name: "review-drafts",
+    description: "Review a hash-bound batch, then explicitly approve and import it together.",
+    usage:
+      "clarissimi review-drafts --review <path> [--drafts-dir <path> | --approve] [--ledger <path>] [--out-dir <path>] [--config <path>] [--json]",
+    flags: [
+      {
+        name: "review",
+        description: "Save or approve an exact review manifest.",
+        valueLabel: "path",
+      },
+      {
+        name: "drafts-dir",
+        description: "Select an inbox when generating the review.",
+        valueLabel: "path",
+      },
+      { name: "approve", description: "Approve the reviewed hashes and import this batch." },
+      {
+        name: "out-dir",
+        description: "Select derived output directory for approval.",
+        valueLabel: "path",
+      },
+      LEDGER_FLAG,
+      CONFIG_FLAG,
+      MARKDOWN_SUMMARY_FLAG,
+      EXCLUDE_AUTOMATION_FLAG,
       JSON_FLAG,
       HELP_FLAG,
     ],

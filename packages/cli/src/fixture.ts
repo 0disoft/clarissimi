@@ -34,7 +34,7 @@ export interface RecognitionFixture {
 }
 
 export interface FixtureRecognitionResult {
-  readonly fixtureKind: "evidence" | "github";
+  readonly fixtureKind: "evidence" | "github" | "live-github";
   readonly draft: ContributionAssessment;
   readonly assessment: ContributionAssessment;
   readonly redactionChanged: boolean;
@@ -51,7 +51,7 @@ export async function recognizeFixture(
   provider?: ContributionDraftProvider,
 ): Promise<FixtureRecognitionResult> {
   const fixture = await readRecognitionFixture(path);
-  return recognizeCollectedFixture(fixture, "evidence", provider);
+  return recognizeCollectedEvidence(fixture, "evidence", provider);
 }
 
 export async function recognizeGitHubFixture(
@@ -61,7 +61,7 @@ export async function recognizeGitHubFixture(
   const parsed = parseJsonText(await readTextFile(path), path);
   const collected = collectMergedPullRequestEvidence(parseGitHubMergedPullRequestFixture(parsed));
 
-  return recognizeCollectedFixture(
+  return recognizeCollectedEvidence(
     {
       contributor: collected.contributor,
       evidence: collected.evidence,
@@ -71,7 +71,7 @@ export async function recognizeGitHubFixture(
   );
 }
 
-async function recognizeCollectedFixture(
+export async function recognizeCollectedEvidence(
   fixture: RecognitionFixture,
   fixtureKind: FixtureRecognitionResult["fixtureKind"],
   selectedProvider?: ContributionDraftProvider,

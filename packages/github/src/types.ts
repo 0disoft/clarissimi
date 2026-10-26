@@ -42,4 +42,12 @@ export interface GitHubMergedPullRequestFixture {
 export interface CollectedGitHubEvidence {
   readonly contributor: ContributorIdentity;
   readonly evidence: EvidenceBundleInput;
+  readonly collectionCoverage?: GitHubCollectionCoverage;
+}
+
+export interface GitHubCollectionCoverage {
+  readonly changedFilesCollected: number;
+  readonly changedFilesOmittedAtLeast: number;
+  readonly reviewCommentsMayBeOmitted: boolean;
+  readonly linkedIssuesOmitted: boolean;
 }

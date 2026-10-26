@@ -14,6 +14,35 @@ redaction, providers, or renderers.
 
 ## MVP Commands
 
+The source checkout additionally implements live collection and batch review (unreleased; not
+available in the published `1.0.1` CLI):
+
+```sh
+clarissimi recognize --pr https://github.com/owner/project/pull/42 --mode dry-run --json
+clarissimi recognize --repo owner/project --prs 42,43 --mode stage-draft
+clarissimi review-drafts --review .clarissimi/review.json
+# Read the saved manifest, including recognition text, evidence links and hashes.
+clarissimi review-drafts --review .clarissimi/review.json --approve --out-dir .
+```
+
+The live path uses `GITHUB_TOKEN`, then `GH_TOKEN`, when set; public PRs also work without a token
+within GitHub's unauthenticated limits. Only merged PRs on `github.com` are accepted, up to 25 per
+call. No repository is checked out and no GitHub resource is written. `dry-run` writes nothing;
+`stage-draft` creates inbox files exclusively. If a later file already exists, earlier saved paths
+are reported so partial progress is visible. Existing drafts are never overwritten.
+
+Large PRs fail by default. `--allow-partial` explicitly collects up to 100 files, reports a lower
+bound for omitted files, and includes coverage in provider evidence. Review comment counts at
+their limit are reported as possibly incomplete. Absence of the flag retains the strict behavior.
+
+The review manifest is created outside the inbox and cannot overwrite an existing file. It
+contains sanitized review records, not raw evidence excerpts. Review at most 25 pending drafts;
+previously approved drafts with valid snapshots are skipped. Edit the inbox drafts and generate a
+new manifest when prose needs changes. `--approve` checks both current and reviewed content hashes
+and publishes the whole selected batch in one rendering/atomic replacement pass. One mismatch,
+invalid record, duplicate ledger identity, or output conflict rejects the import. This local
+explicit maintainer approval does not replace GitHub's Action permission or SHA review checks.
+
 - `clarissimi help`
 - `clarissimi --help`
 - `clarissimi validate-config`

@@ -113,6 +113,9 @@ engine.
   `v1.0.0` and standalone CLI `1.0.0`, and keep the CLI `1.x` commands, options, JSON keys and types,
   exit meanings, config, and registered ledger versions backward compatible
 
+- `0063-add-live-cli-and-batch-review.md`: collect selected real PRs and explicitly approve a
+  hash-bound batch with one ledger rendering pass
+
 ## Review Blockers
 
 - A change contradicts an accepted ADR without adding a superseding ADR.

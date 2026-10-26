@@ -24,12 +24,7 @@ import {
   renderStaticContributionsJson,
   toDraftReviewRecord,
 } from "@clarissimi/renderers";
-import {
-  isConfigMarkdownSummary,
-  validateContributionAssessment,
-  type ConfigMarkdownSummary,
-  type ValidationIssue,
-} from "@clarissimi/schemas";
+import { validateContributionAssessment, type ValidationIssue } from "@clarissimi/schemas";
 
 import {
   CliUsageError,
@@ -49,9 +44,13 @@ import {
   type CliFlagSpec,
 } from "./command-spec.js";
 import { renderShellCompletion } from "./completion.js";
-import { CliConfigError, validateConfigFile, type CliConfig } from "./config.js";
+import { CliConfigError, validateConfigFile } from "./config.js";
 import { CLI_EXIT_CODES, type CliExitCode } from "./exit-codes.js";
 import { recognizeFixture, recognizeGitHubFixture } from "./fixture.js";
+import { runRecognizeLive } from "./recognize-live.js";
+import { runReviewDrafts } from "./review-batch.js";
+import { planRenderedOutputs } from "./output-plan.js";
+import { resolveMarkdownSummary, resolveIncludeAutomationContributors } from "./output-options.js";
 import {
   canonicalFilePath,
   fileExists,
@@ -121,6 +120,8 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<CliExi
         return await runValidateLedger(args, io);
       case "recognize":
         return await runRecognize(args, io);
+      case "review-drafts":
+        return await runReviewDrafts(args, io);
       case "stage-draft":
         return await runStageDraft(args, io);
       case "approve-draft":
@@ -263,6 +264,10 @@ async function runRecognize(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const positionalError = rejectUnexpectedPositionals(args, "recognize");
   if (positionalError !== undefined) {
     throw new CliUsageError(positionalError);
+  }
+
+  if (["pr", "repo", "prs", "drafts-dir", "allow-partial"].some((flag) => args.flags.has(flag))) {
+    return runRecognizeLive(args, io);
   }
 
   const fixturePath = getStringFlag(args, "fixture");
@@ -704,23 +709,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function resolveMarkdownSummary(args: ParsedArgs, config: CliConfig): ConfigMarkdownSummary {
-  const value = getStringFlag(args, "markdown-summary") ?? config.markdownSummary ?? "none";
-  if (!isConfigMarkdownSummary(value)) {
-    throw new CliUsageError(`Unsupported Markdown summary: ${value}`);
-  }
-
-  return value;
-}
-
-function resolveIncludeAutomationContributors(args: ParsedArgs, config: CliConfig): boolean {
-  if (getBooleanFlag(args, "exclude-automation-contributors")) {
-    return false;
-  }
-
-  return config.includeAutomationContributors ?? true;
-}
-
 async function runRebuild(args: ParsedArgs, io: CliIo): Promise<CliExitCode> {
   const positionalError = rejectUnexpectedPositionals(args, "rebuild");
   if (positionalError !== undefined) {
@@ -914,60 +902,6 @@ function rejectUnexpectedPositionals(args: ParsedArgs, command: string): string 
   }
 
   return `${command} does not accept positional arguments: ${args.positionals.join(" ")}`;
-}
-
-async function planRenderedOutputs(
-  outDir: string,
-  sourceLedgerPath: string,
-  outputs: {
-    readonly contributionsJsonl: string;
-    readonly contributorsJson: string;
-    readonly contributorsMarkdown: string;
-    readonly staticDataJson: string;
-  },
-  protectDestination = true,
-): Promise<{
-  readonly entries: readonly { readonly path: string; readonly value: string }[];
-  readonly commitPointPath: string;
-}> {
-  const outputLedgerPath = join(outDir, CONTRIBUTIONS_JSONL_PATH);
-  const sourceIsOutput = await pathsReferToSameFile(sourceLedgerPath, outputLedgerPath);
-  const entries = [
-    { path: join(outDir, CONTRIBUTORS_JSON_PATH), value: outputs.contributorsJson },
-    { path: join(outDir, CONTRIBUTORS_MARKDOWN_PATH), value: outputs.contributorsMarkdown },
-    { path: join(outDir, STATIC_DATA_JSON_PATH), value: outputs.staticDataJson },
-  ];
-  await assertLedgerIsSeparateFromOutputs(
-    sourceLedgerPath,
-    entries.map((entry) => entry.path),
-  );
-  if (!sourceIsOutput) {
-    if (protectDestination) {
-      const existing = await readLedgerRecords(outputLedgerPath, { allowMissing: true });
-      const next = new Set(
-        parseContributionsJsonl(outputs.contributionsJsonl).map((record) =>
-          renderContributionsJsonl([record]),
-        ),
-      );
-      if (existing.some((record) => !next.has(renderContributionsJsonl([record])))) {
-        throw new RendererValidationError(
-          "The output ledger contains records absent or changed in the selected input. Select the correct --ledger or a separate --out-dir; existing records were preserved.",
-          [
-            {
-              path: "$.ledger",
-              code: "output_ledger_conflict",
-              message: "Rebuild cannot remove or change records in another ledger.",
-            },
-          ],
-        );
-      }
-    }
-    entries.push({ path: outputLedgerPath, value: outputs.contributionsJsonl });
-  }
-  return {
-    entries,
-    commitPointPath: sourceIsOutput ? join(outDir, STATIC_DATA_JSON_PATH) : outputLedgerPath,
-  };
 }
 
 async function findStaleRenderedOutputs(

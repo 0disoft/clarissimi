@@ -72,6 +72,7 @@ export function createGitHubApiClient(options: GitHubApiClientOptions = {}): Liv
     async listPullRequestFiles(
       input: LiveGitHubPullRequestLookup,
       limit = DEFAULT_PAGE_SIZE,
+      allowPartial = false,
     ): Promise<readonly LiveGitHubPullRequestFile[]> {
       const response = await requestPaginatedArray(
         fetchImpl,
@@ -81,6 +82,7 @@ export function createGitHubApiClient(options: GitHubApiClientOptions = {}): Liv
         timeoutMs,
         maxResponseBytes,
         limit,
+        allowPartial,
       );
 
       return response.map(parsePullRequestFile);

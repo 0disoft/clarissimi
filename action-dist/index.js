@@ -701,8 +701,8 @@ function createGitHubApiClient(options = {}) {
       const response = await requestJson(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}`, timeoutMs, maxResponseBytes);
       return parsePullRequest(response);
     },
-    async listPullRequestFiles(input, limit = DEFAULT_PAGE_SIZE) {
-      const response = await requestPaginatedArray(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/files`, "GitHub pull request files response must be an array.", timeoutMs, maxResponseBytes, limit);
+    async listPullRequestFiles(input, limit = DEFAULT_PAGE_SIZE, allowPartial = false) {
+      const response = await requestPaginatedArray(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/files`, "GitHub pull request files response must be an array.", timeoutMs, maxResponseBytes, limit, allowPartial);
       return response.map(parsePullRequestFile);
     },
     async listPullRequestReviewComments(input, limit) {
@@ -2500,23 +2500,32 @@ async function collectLiveMergedPullRequestEvidence(input) {
   }
   const reviewCommentLimit = input.reviewCommentLimit ?? DEFAULT_REVIEW_COMMENT_LIMIT;
   const [files, reviewComments] = await Promise.all([
-    input.client.listPullRequestFiles(lookup, DEFAULT_CHANGED_FILE_LIMIT),
+    input.client.listPullRequestFiles(lookup, DEFAULT_CHANGED_FILE_LIMIT + (input.allowPartialFiles === true ? 1 : 0), input.allowPartialFiles),
     reviewCommentLimit === 0 ? Promise.resolve([]) : input.client.listPullRequestReviewComments(lookup, reviewCommentLimit)
   ]);
-  if (files.length > DEFAULT_CHANGED_FILE_LIMIT) {
+  if (files.length > DEFAULT_CHANGED_FILE_LIMIT && input.allowPartialFiles !== true) {
     throw new LiveGitHubCollectionError("changed_file_limit", `Live GitHub collector changed files must not exceed ${DEFAULT_CHANGED_FILE_LIMIT} items.`);
   }
-  const fixture = toMergedPullRequestFixture(input.repository, pullRequest, files);
+  const fixture = toMergedPullRequestFixture(input.repository, pullRequest, files.slice(0, DEFAULT_CHANGED_FILE_LIMIT));
   const collected = collectMergedPullRequestEvidence(fixture);
+  const linkedIssueLimit = input.linkedIssueLimit ?? DEFAULT_LINKED_ISSUE_LIMIT;
+  const linkedIssues = buildLinkedIssueItems(pullRequest, input.repository, linkedIssueLimit + 1);
+  const collectionCoverage = {
+    changedFilesCollected: Math.min(files.length, DEFAULT_CHANGED_FILE_LIMIT),
+    changedFilesOmittedAtLeast: Math.max(0, files.length - DEFAULT_CHANGED_FILE_LIMIT),
+    reviewCommentsMayBeOmitted: reviewCommentLimit === 0 || reviewComments.length >= reviewCommentLimit,
+    linkedIssuesOmitted: linkedIssues.length > linkedIssueLimit
+  };
   const extraItems = [
-    ...buildLinkedIssueItems(pullRequest, input.repository, input.linkedIssueLimit ?? DEFAULT_LINKED_ISSUE_LIMIT),
+    ...linkedIssues.slice(0, linkedIssueLimit),
     ...buildReviewCommentItems(reviewComments, reviewCommentLimit)
   ];
   return {
     contributor: collected.contributor,
+    collectionCoverage,
     evidence: {
       source: collected.evidence.source,
-      items: dedupeEvidenceItems2([...collected.evidence.items, ...extraItems])
+      items: dedupeEvidenceItems2([...collected.evidence.items, ...extraItems]).map((item) => item.kind === "pull_request" ? { ...item, metadata: { collectionCoverage } } : item)
     }
   };
 }

@@ -1,5 +1,15 @@
 # Validation
 
+## 2026-10-26 Live CLI and batch review
+
+Added selected real PR collection, explicit staging, optional partial-file coverage, and one-step
+hash-bound batch approval/import under existing ledger locks. Shared output planning/options were
+extracted without changing the single-draft path. Build and lint pass; all 16 new CLI integration
+cases pass, including two-PR publication, stale draft/manifest refusal, duplicate/overlap rejection,
+partial evidence reporting, and exclusive staging. The complete GitHub/CLI suite had 347 cases:
+343 passed and four POSIX permission cases were skipped on Windows.
+These are source-only additions; the published 1.0.1 CLI remains unchanged.
+
 ## 2026-10-26 Numeric performance evidence
 
 English and Korean numeric performance claims now require matching linked measurement content;

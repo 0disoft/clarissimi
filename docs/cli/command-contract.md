@@ -22,6 +22,24 @@
 
 ## MVP Commands
 
+### Live collection and batch review (unreleased)
+
+ADR 0063 adds `recognize --pr <url>` and `recognize --repo <owner/name> --prs <numbers>` with
+`--mode dry-run|stage-draft`, optional `--drafts-dir`, and explicit `--allow-partial`. These inputs
+cannot be combined with fixture flags. GitHub transport and normalization stay in `packages/github`;
+the CLI only resolves selection, configuration, environment tokens, provider, and file writes.
+Live JSON returns `fixtureKind: live-github`, `repository`, `results`, `stagedDraftPaths`, `mode`,
+and `publicOutputsRendered: false`. Each result includes the sanitized draft, redaction counts,
+and `collectionCoverage`. Existing fixture output fields remain unchanged.
+
+`review-drafts --review <file> [--drafts-dir <path>]` exclusively saves a
+`clarissimi.review-batch/v1` manifest. `review-drafts --review <file> --approve [--ledger <path>]
+[--out-dir <path>]` checks the saved hashes, approves and imports the entire batch, and regenerates
+outputs once. Approval is explicit and cannot be enabled by a provider/config default. Drafts are
+bounded to 512 KiB each, manifests to 16 MiB, pending entries to 25, and inbox enumeration to 1,000
+JSON files. Rejected imports preserve prior ledger/output and draft approval states. Output follows
+the existing usage, invalid-config, invalid-ledger, policy-rejection and write-failure exit meanings.
+
 ### `clarissimi help` and `clarissimi --help`
 
 Prints the current command list and common flags. Help output is informational and must not read

@@ -68,6 +68,12 @@ export function validateCiWorkflowContract(text, contract) {
     }
   }
 
+  for (const command of contract.singleRunCommands ?? []) {
+    if (text.split(command).length - 1 > 1)
+      issues.push(`${contract.path} must run ${command} exactly once.`);
+  }
+  issues.push(...validateSnippetOrder(text, contract.path, contract.requiredOrder ?? []));
+
   return issues;
 }
 

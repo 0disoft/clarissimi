@@ -1408,18 +1408,34 @@ export const ciWorkflowContract = {
   ],
   requiredCommands: [
     "pnpm install --frozen-lockfile",
-    "pnpm run docs",
     "pnpm run release-readiness",
     "pnpm run lint",
     "pnpm run format",
+    "pnpm run check",
+    "node scripts/migration-check.mjs",
+    "node scripts/benchmark-scale.mjs --check",
+    "node scripts/benchmark-cli-io.mjs --check",
+    "node scripts/verify-standalone-cli-package.mjs",
+    "node scripts/smoke.mjs",
+  ],
+  requiredOrder: [
+    "pnpm run check",
+    "node scripts/migration-check.mjs",
+    "node scripts/benchmark-scale.mjs --check",
+    "node scripts/benchmark-cli-io.mjs --check",
+    "node scripts/verify-standalone-cli-package.mjs",
+    "node scripts/smoke.mjs",
+  ],
+  singleRunCommands: ["pnpm run check", "pnpm run release-readiness"],
+  forbiddenCommands: [
+    "pnpm run contract",
+    "pnpm run docs",
     "pnpm run migration-check",
     "pnpm run benchmark:scale",
     "pnpm run benchmark:cli-io",
     "pnpm run verify:cli-package",
     "pnpm run smoke",
-    "pnpm run check",
   ],
-  forbiddenCommands: ["pnpm run contract"],
 };
 
 export const toolchainPlatformSmokeWorkflowContract = {

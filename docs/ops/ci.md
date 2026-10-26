@@ -95,6 +95,15 @@ manual dispatch. It uses read-only repository permissions and runs `docs`, `rele
 `lint`, `format`, `migration-check`, `benchmark:scale`, `benchmark:cli-io`, `smoke`, and `check`
 with Node.js 24 and the package-manager version declared by `package.json`.
 
+CI executes documentation validation once inside `release-readiness`. After `check` compiles and
+tests this exact checkout, migration, both benchmarks, CLI package verification and smoke invoke
+their existing Node scripts directly. This removes five redundant `tsc -b` invocations while
+preserving the same validation logic: eight compiler invocations become three (release bundle
+freshness, check typecheck, and check test build). Local `pnpm run` aliases still build on demand.
+The workflow contract rejects duplicated full validation and compiled consumers scheduled before
+`check`. The required `Validation` job name, event triggers, read-only permissions and concurrency
+policy are unchanged; no additional runner is introduced.
+
 Before public package publication or a versioned Action tag, release maintainers should run:
 
 ```powershell

@@ -64,9 +64,6 @@ jobs:
           chmod +x "${RUNNER_TEMP}/release-tools/yq"
           echo "${RUNNER_TEMP}/release-tools" >> "${GITHUB_PATH}"
 
-      - name: Validate documentation
-        run: pnpm run docs
-
       - name: Run release readiness validation
         run: pnpm run release-readiness
 
@@ -76,20 +73,21 @@ jobs:
       - name: Run format validation
         run: pnpm run format
 
+      - name: Compile and run check validation
+        run: pnpm run check
+
+      # Reuse this checkout's compiled workspace for the remaining validation.
       - name: Run migration compatibility validation
-        run: pnpm run migration-check
+        run: node scripts/migration-check.mjs
 
       - name: Run scale benchmark regression guard
-        run: pnpm run benchmark:scale
+        run: node scripts/benchmark-scale.mjs --check
 
       - name: Run CLI file I/O benchmark regression guard
-        run: pnpm run benchmark:cli-io
+        run: node scripts/benchmark-cli-io.mjs --check
 
       - name: Verify standalone CLI package
-        run: pnpm run verify:cli-package
+        run: node scripts/verify-standalone-cli-package.mjs
 
       - name: Run smoke validation
-        run: pnpm run smoke
-
-      - name: Run check validation
-        run: pnpm run check
+        run: node scripts/smoke.mjs

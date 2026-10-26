@@ -1,5 +1,30 @@
 # Validation
 
+## 2026-10-26 Feedback improvements and CI reuse
+
+All five feedback slices are implemented in local commits: collector redaction, numeric claim
+support, selected live PR/batch review, additional contributor candidates, and CI build reuse.
+No version, remote branch, tag, npm package, or deployed Action has been changed by this work.
+
+- `pnpm run check`: 1,001 tests, 997 passed, four POSIX permission tests skipped on Windows,
+  zero failures.
+- `pnpm run lint` and `pnpm run format`: passed.
+- `node scripts/release-readiness.mjs`: passed, including docs, secret scan, Action bundle
+  freshness, workflow/YAML checks, whitespace and generated-output guards.
+- Direct compiled-script CI paths passed: `migration-check.mjs`, both benchmark guards,
+  `verify-standalone-cli-package.mjs`, and `smoke.mjs`.
+- CI contract tests: all 132 passed; `actionlint .github/workflows/ci.yml` passed.
+- Actual public PR `0disoft/clarissimi#9` collected successfully in read-only CLI mode with the
+  deterministic provider. No external model call was needed.
+
+CI reuses compiled outputs for five subsequent consumers and performs documentation validation
+inside release readiness only. TypeScript compiler invocations decrease from eight to three;
+the full test suite still runs once. Permissions, runner count and required job identity are
+preserved. Hosted Linux/macOS runs and new public releases were not dispatched in this local task.
+
+Updated sources of truth: ADRs 0006, 0010, 0018, 0061, 0063 and 0064; CLI README and command
+contract; monorepo package ownership; and the CI operational contract.
+
 ## 2026-10-26 Additional contributor candidates
 
 Live CLI collection now suggests reviewers and linked-issue reporters by stable GitHub account ID

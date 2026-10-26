@@ -2282,20 +2282,20 @@ test("release readiness rejects workflows without explicit permissions", () => {
 
 test("release readiness rejects CI workflow command drift", () => {
   const text = createCiWorkflowText()
-    .replace("pnpm run release-readiness", "pnpm run docs")
+    .replace("pnpm run release-readiness", "pnpm run build")
     .replace("pnpm run lint", "pnpm run typecheck")
     .replace("pnpm run check", "pnpm run typecheck")
-    .replace("pnpm run benchmark:scale", "pnpm run build")
-    .replace("pnpm run benchmark:cli-io", "pnpm run build")
-    .replace("pnpm run verify:cli-package", "pnpm run build");
+    .replace("node scripts/benchmark-scale.mjs --check", "pnpm run build")
+    .replace("node scripts/benchmark-cli-io.mjs --check", "pnpm run build")
+    .replace("node scripts/verify-standalone-cli-package.mjs", "pnpm run build");
 
   assert.deepEqual(validateCiWorkflowContract(text), [
     ".github/workflows/ci.yml must run pnpm run release-readiness.",
     ".github/workflows/ci.yml must run pnpm run lint.",
-    ".github/workflows/ci.yml must run pnpm run benchmark:scale.",
-    ".github/workflows/ci.yml must run pnpm run benchmark:cli-io.",
-    ".github/workflows/ci.yml must run pnpm run verify:cli-package.",
     ".github/workflows/ci.yml must run pnpm run check.",
+    ".github/workflows/ci.yml must run node scripts/benchmark-scale.mjs --check.",
+    ".github/workflows/ci.yml must run node scripts/benchmark-cli-io.mjs --check.",
+    ".github/workflows/ci.yml must run node scripts/verify-standalone-cli-package.mjs.",
   ]);
 });
 
@@ -2304,6 +2304,33 @@ test("release readiness rejects the duplicate CI contract run", () => {
 
   assert.deepEqual(validateCiWorkflowContract(text), [
     ".github/workflows/ci.yml must not run pnpm run contract.",
+  ]);
+});
+
+test("CI rejects duplicate full validation and prebuilt consumers before compilation", () => {
+  const duplicate = `${createCiWorkflowText()}\n      - run: pnpm run check`;
+  assert.ok(
+    validateCiWorkflowContract(duplicate).includes(
+      ".github/workflows/ci.yml must run pnpm run check exactly once.",
+    ),
+  );
+  const reordered = createCiWorkflowText()
+    .replace("      - run: pnpm run check\n", "")
+    .replace(
+      "      - run: node scripts/smoke.mjs",
+      "      - run: node scripts/smoke.mjs\n      - run: pnpm run check",
+    );
+  assert.ok(
+    validateCiWorkflowContract(reordered).some((issue) =>
+      issue.includes("must keep node scripts/migration-check.mjs after"),
+    ),
+  );
+});
+
+test("CI rejects a second docs pass already performed by release readiness", () => {
+  const duplicate = `${createCiWorkflowText()}\n      - run: pnpm run docs`;
+  assert.deepEqual(validateCiWorkflowContract(duplicate), [
+    ".github/workflows/ci.yml must not run pnpm run docs.",
   ]);
 });
 
@@ -3877,16 +3904,15 @@ function createCiWorkflowText() {
     "      - run: |",
     '          npm install --global "ssealed@${SSEALED_VERSION}"',
     "          sha256sum --check -",
-    "      - run: pnpm run docs",
     "      - run: pnpm run release-readiness",
     "      - run: pnpm run lint",
     "      - run: pnpm run format",
-    "      - run: pnpm run migration-check",
-    "      - run: pnpm run benchmark:scale",
-    "      - run: pnpm run benchmark:cli-io",
-    "      - run: pnpm run verify:cli-package",
-    "      - run: pnpm run smoke",
     "      - run: pnpm run check",
+    "      - run: node scripts/migration-check.mjs",
+    "      - run: node scripts/benchmark-scale.mjs --check",
+    "      - run: node scripts/benchmark-cli-io.mjs --check",
+    "      - run: node scripts/verify-standalone-cli-package.mjs",
+    "      - run: node scripts/smoke.mjs",
   ].join("\n");
 }
 

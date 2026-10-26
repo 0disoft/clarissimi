@@ -4841,6 +4841,12 @@ var METRIC_PATTERNS = [
   ["performance", /\bperformance\b|성능/gi]
 ];
 var NUMBER_PATTERN = /(?<![\w.+-])([+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)\s*(%|percent\b|퍼센트|x\b|×|배|ms\b|milliseconds?\b|밀리초|seconds?\b|s\b|초|ns\b|us\b|µs|[kmgt]?i?b\b|bytes?\b|(?:ops|requests)\/s\b)?/giu;
+var CLAUSE_SEPARATOR = /[;,](?=\s)|\b(?:and|but|while|whereas)\b|그리고|하지만|반면/;
+var NEGATED_CHANGE_PATTERN = /\b(?:not|no|never|neither|without|unchanged|failed\s+to)\b|n['’]t\b|않|못|아니|없/i;
+var DECREASE_PATTERN = /\b(?:reduc(?:e[ds]?|ing|tion)|decreas(?:e[ds]?|ing)|lower(?:ed|ing)?|drop(?:ped|s|ping)?|fell|fallen|fall(?:s|ing)?|cut(?:s|ting)?|shrank|shrink(?:s|ing)?)\b|감소|줄|낮|축소/i;
+var INCREASE_PATTERN = /\b(?:increas(?:e[ds]?|ing)|rais(?:e[ds]?|ing)|higher|rose|risen|ris(?:e[sd]?|ing)|grew|grown|grow(?:s|ing)?|boost(?:ed|s|ing)?)\b|증가|늘|높|상승/i;
+var IMPROVEMENT_PATTERN = /\b(?:improv(?:e[ds]?|ing|ement)|better|faster|speedup)\b|개선|향상|빨라|빠르/i;
+var DEGRADATION_PATTERN = /\b(?:worse|worsen(?:ed|s|ing)?|slower|degrad(?:e[ds]?|ing|ation))\b|악화|느려|느리|저하/i;
 function numericPerformanceClaims(text) {
   return [...text.matchAll(/[\s\S]+?(?:[.!?](?=\s|$)|$)/g)].flatMap((sentence) => {
     if (!PERFORMANCE_CLAIM_PATTERN.test(sentence[0]))
@@ -4855,27 +4861,49 @@ function supportsNumericPerformanceClaim(item, claim) {
     if (!MEASUREMENT_CONTEXT_PATTERN.test(sentence[0]))
       return false;
     const observed = measurementValues(sentence[0]);
-    return claim.values.every((value) => observed.some((other) => other.metric === value.metric && other.value === value.value && other.unit === value.unit));
+    return claim.values.every((value) => observed.some((other) => value.change !== void 0 && other.metric === value.metric && other.value === value.value && other.unit === value.unit && other.change === value.change));
   });
 }
 function measurementValues(text) {
+  return text.split(CLAUSE_SEPARATOR).flatMap(clauseMeasurements);
+}
+function clauseMeasurements(text) {
   const metrics = METRIC_PATTERNS.flatMap(([metric, pattern]) => [...text.matchAll(pattern)].map((match) => ({ metric, index: match.index }))).sort((left, right) => left.index - right.index);
+  const numbers = [...text.matchAll(NUMBER_PATTERN)];
+  const metricNames = [...new Set(metrics.map(({ metric }) => metric))];
+  const unambiguous = numbers.length === 1 && metricNames.length === 1;
+  const changes = new Map(metricNames.map((metric) => [metric, measurementChange(text, metric, unambiguous)]));
   let metricIndex = 0;
-  return [...text.matchAll(NUMBER_PATTERN)].flatMap((match) => {
+  return numbers.flatMap((match) => {
     while ((metrics[metricIndex]?.index ?? Infinity) <= match.index)
       metricIndex += 1;
     const context = metrics[Math.max(0, metricIndex - 1)];
-    if (context === void 0)
-      return [];
     const unit = (match[2] ?? "").toLowerCase();
     return [
       {
-        metric: context.metric,
+        metric: context?.metric ?? "",
         value: Number(match[1].replaceAll(",", "")),
-        unit: normalizeUnit(unit)
+        unit: normalizeUnit(unit),
+        change: changes.get(context?.metric ?? "")
       }
     ];
   });
+}
+function measurementChange(text, metric, unambiguous) {
+  if (NEGATED_CHANGE_PATTERN.test(text))
+    return void 0;
+  const lowerIsBetter = ["latency", "memory", "runtime"].includes(metric);
+  const improvement = IMPROVEMENT_PATTERN.test(text);
+  const degradation = DEGRADATION_PATTERN.test(text);
+  const decrease = DECREASE_PATTERN.test(text) || (lowerIsBetter ? improvement : degradation);
+  const increase = INCREASE_PATTERN.test(text) || (lowerIsBetter ? degradation : improvement);
+  if (decrease && increase)
+    return void 0;
+  if (!decrease && !increase)
+    return "absolute";
+  if (!unambiguous)
+    return void 0;
+  return decrease ? "decrease" : "increase";
 }
 function normalizeUnit(unit) {
   if (["percent", "\uD37C\uC13C\uD2B8"].includes(unit))
@@ -5013,7 +5041,7 @@ function validateProviderAssessmentResult(input, value) {
           issues.push({
             path: `$.${field}`,
             code: "provider_result_performance_measurement_missing",
-            message: "Numeric performance claims require linked measured results with matching metric, value, and unit; maintainer review is required."
+            message: "Numeric performance claims require linked measured results with matching metric, value, unit, and change direction; maintainer review is required."
           });
         }
       }

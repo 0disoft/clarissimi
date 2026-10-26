@@ -50,6 +50,14 @@ split numeric claim must link supporting measurements. Unsupported numeric claim
 `provider_result_performance_measurement_missing` for maintainer review. This validates the stated
 support; it does not establish that a reported measurement is truthful or causal.
 
+Numeric support also distinguishes absolute values from increases and decreases. Common English
+and Korean change expressions are normalized within each clause; an improvement means a decrease
+for latency, memory, and runtime, and an increase for throughput, speed, and performance. Negated
+changes, conflicting directions, and changes with ambiguous metric/value associations cannot
+establish support. Unbound numeric values remain unsupported instead of disappearing at clause
+boundaries. Complex or unrecognized prose still requires maintainer review; this is a conservative
+text check, not a general natural-language proof of a measurement.
+
 Older `assessment/v1` records and manually authored drafts without links remain valid. Their
 missing map means support cannot be inferred, and maintainers must review the prose and references
 directly. Existing ledgers need no rewrite or migration edge; the migration compatibility fixture

@@ -1,5 +1,20 @@
 # Validation
 
+## 2026-10-26 Numeric measurement change direction
+
+Seventeen newly added counterexamples reproduced false acceptance of reversed, negated, ambiguous,
+or absolute-versus-change numeric performance support before the fix. The numeric regression suite
+now covers these cases, valid English/Korean changes, separate metric clauses, and an unbound value
+after a conjunction. The provider boundary compares change direction in addition to metric, value,
+and unit, without extra network or filesystem calls. ADR 0061 records the conservative support rule.
+Public schemas, approval policy, database state, dependencies, and CI runners are unchanged.
+
+- `pnpm run check`: 1,025 tests, 1,021 passed, four POSIX permission tests skipped on Windows,
+  zero failures. This includes all 41 numeric performance cases.
+- `pnpm run lint`, `pnpm run format`, and documentation validation: passed.
+- Action bundle regenerated; freshness and release-readiness static gates: passed.
+- Hosted CI, external model calls, publishing, and deployment were not run for this local fix.
+
 ## 2026-10-26 Feedback improvements and CI reuse
 
 All five feedback slices are implemented in local commits: collector redaction, numeric claim

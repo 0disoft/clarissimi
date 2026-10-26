@@ -178,7 +178,7 @@ export function validateProviderAssessmentResult(
             path: `$.${field}`,
             code: "provider_result_performance_measurement_missing",
             message:
-              "Numeric performance claims require linked measured results with matching metric, value, and unit; maintainer review is required.",
+              "Numeric performance claims require linked measured results with matching metric, value, unit, and change direction; maintainer review is required.",
           });
         }
       }

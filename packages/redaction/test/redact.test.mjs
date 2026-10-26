@@ -275,6 +275,47 @@ test("redacts private key blocks", () => {
   assert.equal(result.report.occurrences[0].kind, "private_key_block");
 });
 
+for (const label of ["ENCRYPTED PRIVATE KEY", "PGP PRIVATE KEY BLOCK"]) {
+  for (const closed of [true, false]) {
+    test(`redacts ${label} with ${closed ? "a complete" : "an incomplete"} block`, () => {
+      const begin = `-----BEGIN ${label}-----`;
+      const end = `-----END ${label}-----`;
+      const block = `${begin}\nsynthetic-key-material${closed ? `\n${end}` : ""}`;
+      const input = `before\n${block}${closed ? "\nafter" : ""}`;
+      const result = redactText(input);
+      assert.equal(result.text, `before\n${REDACTION_PLACEHOLDER}${closed ? "\nafter" : ""}`);
+      assert.deepEqual(result.report.occurrences, [
+        {
+          kind: "private_key_block",
+          replacement: REDACTION_PLACEHOLDER,
+          start: 7,
+          end: 7 + block.length,
+        },
+      ]);
+      assert.equal(JSON.stringify(result).includes("synthetic-key-material"), false);
+    });
+  }
+}
+
+test("mixed private key formats are masked without swallowing surrounding text", () => {
+  const blocks = ["RSA PRIVATE KEY", "ENCRYPTED PRIVATE KEY", "PGP PRIVATE KEY BLOCK"].map(
+    (label) => `-----BEGIN ${label}-----\nsynthetic-key-material\n-----END ${label}-----`,
+  );
+  const result = redactText(blocks.join("\nbetween\n"));
+  assert.equal(result.text, Array(3).fill(REDACTION_PLACEHOLDER).join("\nbetween\n"));
+  assert.equal(result.report.occurrences.length, 3);
+});
+
+test("public key and certificate armor is preserved", () => {
+  for (const label of ["PUBLIC KEY", "PGP PUBLIC KEY BLOCK", "CERTIFICATE"]) {
+    const input = `-----BEGIN ${label}-----\nnon-key-test-content\n-----END ${label}-----`;
+    assert.deepEqual(redactText(input), {
+      text: input,
+      report: { changed: false, occurrences: [] },
+    });
+  }
+});
+
 test("private key scanning masks incomplete blocks and preserves delimiter offsets", () => {
   const prefixes = ["", "RSA ", "OPENSSH ", "EC ", "DSA ", "PGP ", "UNKNOWN "];
   for (const beginPrefix of prefixes) {
@@ -318,11 +359,13 @@ test("unterminated private key headers cannot block redaction past the child-pro
       "--eval",
       `import assert from "node:assert/strict";
        import { redactText, REDACTION_PLACEHOLDER } from ${JSON.stringify(new URL("../dist/index.js", import.meta.url).href)};
-       const tail = ("-----BEGIN" + " PRIVATE KEY-----\\n").repeat(16_384);
+       for (const label of ["PRIVATE KEY", "ENCRYPTED PRIVATE KEY", "PGP PRIVATE KEY BLOCK"]) {
+       const tail = ("-----BEGIN" + " " + label + "-----\\n").repeat(16_384);
        assert.equal(redactText(tail).text, REDACTION_PLACEHOLDER);
        const complete = ("-----BEGIN" + " RSA PRIVATE KEY-----\\nsynthetic-key-material\\n-----END PRIVATE KEY-----\\n");
        assert.equal(redactText(complete + tail).text, REDACTION_PLACEHOLDER + "\\n" + REDACTION_PLACEHOLDER);
-       assert.equal(redactText(tail + "-----END PRIVATE KEY-----").text, REDACTION_PLACEHOLDER);`,
+       assert.equal(redactText(tail + "-----END " + label + "-----").text, REDACTION_PLACEHOLDER);
+       }`,
     ],
     { encoding: "utf8", timeout: 5_000 },
   );

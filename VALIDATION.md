@@ -1,5 +1,23 @@
 # Validation
 
+## 2026-10-27 Private-key armor format coverage
+
+Encrypted PKCS #8 and OpenPGP private-key armor previously passed through redaction in both complete
+and incomplete form; all four reproduced cases retained the non-key test payload in prepared
+provider evidence. Both boundary patterns now share a label vocabulary covering the two omitted
+formats. ADR 0010 records the standard labels and scope. Eight new tests cover complete/incomplete
+blocks, mixed formats, public-key/certificate preservation, provider preparation, excerpt truncation,
+and repository-visible rejection. All 46 focused redaction/core/collector tests passed. The existing
+16,384-header child-process deadline guard also covers both new formats. Tests use only non-key
+content; no credentials or cryptographic key material were generated. API shapes, DB, and runners
+are unchanged.
+
+- `pnpm run check`: 1,049 tests, 1,045 passed, four POSIX permission tests skipped on Windows,
+  zero failures.
+- Lint, formatting, CLI smoke, documentation validation, and release-readiness static gates: passed.
+- Action bundle regenerated and its freshness check passed.
+- Hosted CI, live model calls, publishing, and deployment were not run for this local fix.
+
 ## 2026-10-26 Bounded assessment nesting
 
 The recursive public-score inspection previously threw `RangeError` for 6,000-level JSON, including

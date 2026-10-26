@@ -1072,6 +1072,7 @@ var SENSITIVE_KEYS = [
 ];
 var SENSITIVE_KEY_SOURCE = SENSITIVE_KEYS.map((key) => key.replaceAll("_", "[_-]?")).join("|");
 var SENSITIVE_JSON_KEY = new RegExp(`^(?:${SENSITIVE_KEY_SOURCE})$`, "i");
+var PRIVATE_KEY_LABEL_SOURCE = "(?:(?:RSA |OPENSSH |EC |DSA |ENCRYPTED |PGP )?PRIVATE KEY|PGP PRIVATE KEY BLOCK)";
 var REDACTION_RULES = [
   {
     kind: "github_token",
@@ -1119,8 +1120,8 @@ function redactText(input) {
   };
 }
 function redactPrivateKeyBlocks(input, occurrences) {
-  const begin = /-----BEGIN (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----/g;
-  const end = /-----END (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----/g;
+  const begin = new RegExp(`-----BEGIN ${PRIVATE_KEY_LABEL_SOURCE}-----`, "g");
+  const end = new RegExp(`-----END ${PRIVATE_KEY_LABEL_SOURCE}-----`, "g");
   const parts = [];
   let offset = 0;
   for (let match = begin.exec(input); match !== null; match = begin.exec(input)) {

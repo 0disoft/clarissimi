@@ -9,6 +9,7 @@ import {
   checkExternalDraftApproval,
   createDraftApprovalSnapshot,
   findUnsafeRepositoryAssessmentFields,
+  prepareEvidenceExcerpt,
   prepareEvidenceForProvider,
 } from "../dist/index.js";
 import { ASSESSMENT_SCHEMA_VERSION, REDACTION_PLACEHOLDER } from "./support.mjs";
@@ -19,6 +20,41 @@ const source = {
   pullRequestNumber: 42,
   mergedAt: "2026-07-08T00:00:00.000Z",
 };
+
+for (const label of ["ENCRYPTED PRIVATE KEY", "PGP PRIVATE KEY BLOCK"]) {
+  test(`${label} is masked before provider preparation and excerpt truncation`, () => {
+    const block = `-----BEGIN ${label}-----\n${"synthetic-key-material".repeat(200)}\n-----END ${label}-----`;
+    const evidence = prepareEvidenceForProvider({
+      source,
+      items: [
+        {
+          kind: "pull_request",
+          id: "PR-42",
+          title: block,
+          text: block,
+          metadata: { note: block },
+          ...prepareEvidenceExcerpt(block, 32),
+        },
+      ],
+    });
+    const item = evidence.items[0];
+    assert.equal(item.title, REDACTION_PLACEHOLDER);
+    assert.equal(item.text, REDACTION_PLACEHOLDER);
+    assert.equal(item.excerpt, REDACTION_PLACEHOLDER);
+    assert.deepEqual(item.metadata, { note: REDACTION_PLACEHOLDER });
+    assert.equal(evidence.redactionReport.occurrences.length, 4);
+    assert.equal(JSON.stringify(evidence).includes("synthetic-key-material"), false);
+    const issues = findUnsafeRepositoryAssessmentFields({
+      ...validAssessment(),
+      evidenceSummary: block,
+    });
+    assert.ok(
+      issues.some(
+        (issue) => issue.path === "$.evidenceSummary" && issue.code === "unsafe_repository_text",
+      ),
+    );
+  });
+}
 
 function validAssessment(status = "approved") {
   return {

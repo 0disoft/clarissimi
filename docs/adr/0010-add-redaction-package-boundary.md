@@ -24,6 +24,15 @@ The package owns:
 - default masking for email addresses, environment-style secret assignments, private key blocks,
   GitHub token-like strings, and common provider token-like strings
 
+Private-key scanning shares one label vocabulary for both BEGIN and END boundaries. In addition
+to the existing labels, it covers encrypted PKCS #8 (`ENCRYPTED PRIVATE KEY`,
+[RFC 7468 section 11](https://www.rfc-editor.org/rfc/rfc7468.html#section-11)) and OpenPGP private-key
+armor (`PGP PRIVATE KEY BLOCK`,
+[RFC 9580 section 6.2.1](https://www.rfc-editor.org/rfc/rfc9580.html#section-6.2.1)). Matched bodies
+are masked without validating key material. Incomplete blocks mask the remaining input, and the
+forward scan avoids repeatedly rescanning unterminated headers. Public-key and certificate labels
+are excluded. Provider preparation and repository-visible checks reuse this shared policy.
+
 The shared GitHub token rule covers `ghp_`, `gho_`, `ghu_`, `ghs_`, `ghr_`, and fine-grained
 `github_pat_` prefixes under the existing `github_token` report kind. Detection keeps the existing
 minimum of 16 token-body characters and word boundaries; it identifies token-like text rather than

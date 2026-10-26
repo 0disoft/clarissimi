@@ -29,6 +29,8 @@ const SENSITIVE_KEYS = [
 ] as const;
 const SENSITIVE_KEY_SOURCE = SENSITIVE_KEYS.map((key) => key.replaceAll("_", "[_-]?")).join("|");
 const SENSITIVE_JSON_KEY = new RegExp(`^(?:${SENSITIVE_KEY_SOURCE})$`, "i");
+const PRIVATE_KEY_LABEL_SOURCE =
+  "(?:(?:RSA |OPENSSH |EC |DSA |ENCRYPTED |PGP )?PRIVATE KEY|PGP PRIVATE KEY BLOCK)";
 
 const REDACTION_RULES: readonly RedactionRule[] = [
   {
@@ -87,8 +89,8 @@ export function redactText(input: string): RedactedText {
 }
 
 function redactPrivateKeyBlocks(input: string, occurrences: RedactionOccurrence[]): string {
-  const begin = /-----BEGIN (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----/g;
-  const end = /-----END (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----/g;
+  const begin = new RegExp(`-----BEGIN ${PRIVATE_KEY_LABEL_SOURCE}-----`, "g");
+  const end = new RegExp(`-----END ${PRIVATE_KEY_LABEL_SOURCE}-----`, "g");
   const parts: string[] = [];
   let offset = 0;
 

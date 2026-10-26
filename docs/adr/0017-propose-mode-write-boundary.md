@@ -98,6 +98,10 @@ it is never reset before that check. Publication fetches an existing remote prop
 base and full tree against the generated proposal, and confirms the inspected SHA before reuse.
 Different content, approval edits, or extra files stop publication without updating the remote.
 Creation uses an empty-ref lease so a concurrent proposal cannot be overwritten.
+The push source is the verified full commit SHA, never the mutable local branch name. Moving
+the local branch after preflight cannot substitute unvalidated content into publication or make
+the returned commit SHA disagree with the pushed commit. The existing mismatch preflight and
+remote lease reconciliation remain in place; no additional Git command or network call is needed.
 
 ## Rollback And Recovery
 

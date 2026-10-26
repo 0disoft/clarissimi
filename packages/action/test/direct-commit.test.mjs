@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawn } from "node:child_process";
+import childProcess, { spawn, spawnSync } from "node:child_process";
+import { syncBuiltinESMExports } from "node:module";
 import { createHash } from "node:crypto";
 import test from "node:test";
 
@@ -119,6 +120,53 @@ test("verifies and publishes exact output in SHA-256 Git repositories", async ()
     await publishDirectCommit({ repositoryDir, commit });
     assert.equal(await git(remoteDir, ["rev-parse", "refs/heads/main"]), commit.commitSha);
   }, "sha256");
+});
+
+test("publishes the verified commit when HEAD advances after preflight", async (t) => {
+  await withRepository(async ({ repositoryDir, remoteDir, stagedOutputDir }) => {
+    const staging = await stageRecognition(stagedOutputDir);
+    const commit = await createDirectCommit({
+      repositoryDir,
+      stagedOutputDir,
+      manifest: staging.manifest,
+      targetBranch: "main",
+    });
+    const unverifiedSha = await git(repositoryDir, [
+      "commit-tree",
+      `${commit.baseCommitSha}^{tree}`,
+      "-p",
+      commit.commitSha,
+      "-m",
+      "Concurrent unverified commit",
+    ]);
+    const originalSpawn = childProcess.spawn;
+    let advanced = false;
+    // Interpose only the publication subprocess: move real HEAD before Git resolves
+    // the refspec, after the publisher has already checked it. No timing sleeps.
+    const spawnMock = t.mock.method(childProcess, "spawn", (command, args, options) => {
+      if (command === "git" && args[0] === "push" && options.cwd === repositoryDir) {
+        const update = spawnSync("git", ["update-ref", "HEAD", unverifiedSha], {
+          cwd: repositoryDir,
+          encoding: "utf8",
+        });
+        assert.equal(update.status, 0, update.stderr);
+        advanced = true;
+      }
+      return originalSpawn(command, args, options);
+    });
+    syncBuiltinESMExports();
+    let result;
+    try {
+      result = await publishDirectCommit({ repositoryDir, commit });
+    } finally {
+      spawnMock.mock.restore();
+      syncBuiltinESMExports();
+    }
+    assert.equal(advanced, true);
+    assert.equal(await git(repositoryDir, ["rev-parse", "HEAD"]), unverifiedSha);
+    assert.equal(await git(remoteDir, ["rev-parse", "refs/heads/main"]), commit.commitSha);
+    assert.equal(result.commitSha, commit.commitSha);
+  });
 });
 
 test("rejects a dirty worktree before writing recognition outputs", async () => {

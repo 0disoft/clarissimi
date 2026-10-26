@@ -177,7 +177,8 @@ export async function publishDirectCommit(
     await git(input.repositoryDir, [
       "push",
       remoteName,
-      `HEAD:refs/heads/${input.commit.targetBranch}`,
+      // HEAD may move after preflight; publish only the verified commit.
+      `${currentSha}:refs/heads/${input.commit.targetBranch}`,
     ]);
   }
 

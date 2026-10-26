@@ -94,6 +94,51 @@ test("publishes a proposal branch without mutating remote main", async () => {
   });
 });
 
+test("publishes the verified commit when the proposal ref advances after preflight", async () => {
+  await withTempDir(async (dir) => {
+    const remoteDir = join(dir, "remote.git");
+    const repositoryDir = join(dir, "repo");
+    const stagedOutputDir = join(dir, "staged");
+    await initRepositoryWithRemote(repositoryDir, remoteDir);
+    const staging = await stageProposalRecognitionOutputs({
+      outputDir: stagedOutputDir,
+      assessments: [assessment()],
+      redactionMatchCount: 0,
+    });
+    const branch = await writeProposalBranch({
+      repositoryDir,
+      stagedOutputDir,
+      manifest: staging.manifest,
+      baseBranch: "main",
+    });
+    const unverifiedSha = await git(repositoryDir, [
+      "commit-tree",
+      `${branch.baseCommitSha}^{tree}`,
+      "-p",
+      branch.commitSha,
+      "-m",
+      "Concurrent unverified commit",
+    ]);
+    let advanced = false;
+    const result = await publishProposalBranch(
+      { repositoryDir, branch },
+      {
+        runGit: async (cwd, args) => {
+          if (args[0] === "push") {
+            await git(cwd, ["update-ref", `refs/heads/${branch.branchName}`, unverifiedSha]);
+            advanced = true;
+          }
+          return runGitResult(cwd, args);
+        },
+      },
+    );
+    assert.equal(advanced, true);
+    assert.equal(await git(repositoryDir, ["rev-parse", branch.branchName]), unverifiedSha);
+    assert.equal(await remoteBranchSha(repositoryDir, branch.branchName), branch.commitSha);
+    assert.equal(result.commitSha, branch.commitSha);
+  });
+});
+
 test("rejects publishing when the local branch no longer matches the writer result", async () => {
   await withTempDir(async (dir) => {
     const remoteDir = join(dir, "remote.git");

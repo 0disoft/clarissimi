@@ -78,7 +78,8 @@ export async function publishProposalBranch(
     "push",
     `--force-with-lease=${remoteRef}:${remoteSha ?? ""}`,
     remoteName,
-    `${input.branch.branchName}:${remoteRef}`,
+    // The branch may move after preflight; publish only the verified commit.
+    `${localSha}:${remoteRef}`,
   ]);
   let publishedSha = localSha;
   if (pushResult.exitCode !== 0) {

@@ -50,7 +50,8 @@ async function publishProposalBranch(input, runtime = { runGit }) {
     "push",
     `--force-with-lease=${remoteRef}:${remoteSha ?? ""}`,
     remoteName,
-    `${input.branch.branchName}:${remoteRef}`
+    // The branch may move after preflight; publish only the verified commit.
+    `${localSha}:${remoteRef}`
   ]);
   let publishedSha = localSha;
   if (pushResult.exitCode !== 0) {
@@ -644,7 +645,8 @@ async function publishDirectCommit(input) {
     await git3(input.repositoryDir, [
       "push",
       remoteName,
-      `HEAD:refs/heads/${input.commit.targetBranch}`
+      // HEAD may move after preflight; publish only the verified commit.
+      `${currentSha}:refs/heads/${input.commit.targetBranch}`
     ]);
   }
   return {

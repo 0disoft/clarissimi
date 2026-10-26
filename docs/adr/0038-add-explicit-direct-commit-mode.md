@@ -28,7 +28,10 @@ Add GitHub Action `mode: commit` as an explicit non-default write mode.
 - The checkout must be clean before repository output is written.
 - When `GITHUB_SHA` is available, checkout HEAD must equal it before mutation.
 - The Action writes only Clarissimi-owned public recognition outputs, creates one bot-authored
-  commit, and pushes `HEAD` to the explicitly configured target branch.
+  commit, and pushes its verified full commit SHA to the explicitly configured target branch.
+  Publication still rejects HEAD mismatches during preflight, but its push refspec uses the
+  captured SHA instead of `HEAD`. A later local HEAD update cannot publish unvalidated content
+  or cause the returned SHA to differ from the published commit. This adds no Git or network call.
 - After commit hooks finish, every changed path must exactly match the staged output manifest.
   Direct and proposal writers share this ownership check and read NUL-delimited Git filenames
   without trimming. Rename detection is disabled so a rename's removed source path cannot hide

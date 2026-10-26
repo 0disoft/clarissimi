@@ -1,5 +1,35 @@
 # Validation
 
+## 2026-10-27 Pin publication to verified commits
+
+Both publishers checked a local commit SHA but pushed a mutable ref (`HEAD` or the proposal
+branch name). Two deterministic regressions against the original implementation moved that ref
+immediately before Git push resolved it. In both cases a descendant commit removing all generated
+recognition outputs reached a temporary local bare remote, while the publisher returned the older
+verified SHA. No hosted repository or external provider was used.
+
+Both push refspecs now use the full SHA captured by the existing preflight. Moving a local ref
+after validation can no longer replace the published commit. Proposal empty-ref leases and
+equivalent-winner reconciliation, direct fast-forward semantics, initial mismatch rejection, and
+unchanged-output behavior are preserved. Selecting the source is O(1), adds no Git subprocess or
+network request, and needs no checkout lock. The two tests mutate actual local refs and verify the
+bare remote's resulting SHA; direct mode interposes only process launch, restoring the Node built-in
+binding in `finally`, without sleep-based race timing.
+
+ADRs 0017 and 0038 record the immutable publication source. Public API signatures, schemas, DB,
+dependencies, runner, and repository-hygiene policy are unchanged. The Action bundle is refreshed.
+This protects source selection during publication; concurrent remote updates after the push and
+concurrent checkout writes during generation still require normal Git/workspace coordination.
+Hosted CI and external publishing/deployment are outside this local run.
+
+- Build/typecheck passed. The focused direct/proposal publisher suite passed 26/26 tests. The
+  complete suite with `--test-concurrency=4` passed 1,088 of 1,092 tests, with four POSIX permission
+  tests skipped on Windows and zero failures. Both ref-substitution regressions failed against
+  the original code and passed after the fix; SHA-256 direct publication remains covered.
+- Lint, formatting, documentation (160 Markdown files), CLI smoke, and release-readiness static
+  gates passed. The first freshness check found the not-yet-regenerated Action bundle; after
+  regeneration the full static readiness gate, including bundle freshness and secret scan, passed.
+
 ## 2026-10-27 Committed output content verification
 
 Path ownership checks did not prevent hooks from replacing approved bytes inside permitted

@@ -13,6 +13,8 @@ export interface EvidenceItemInput {
   readonly url?: string;
   readonly title?: string;
   readonly excerpt?: string;
+  /** Collector report for redaction performed before excerpt truncation. */
+  readonly excerptRedactionReport?: RedactionReport;
   readonly text?: string;
   readonly metadata?: RedactableJson;
 }
@@ -58,6 +60,23 @@ export class EvidencePreparationError extends Error {
     this.name = "EvidencePreparationError";
     this.code = code;
   }
+}
+
+export function prepareEvidenceExcerpt(
+  value: string | undefined,
+  limit = 2_000,
+): Pick<EvidenceItemInput, "excerpt" | "excerptRedactionReport"> {
+  if (!Number.isSafeInteger(limit) || limit < 3) {
+    throw new RangeError("Evidence excerpt limit must be an integer of at least three.");
+  }
+  if (value === undefined) return {};
+  const redacted = redactText(value);
+  const normalized = redacted.text.replace(/\s+/g, " ").trim();
+  if (normalized.length === 0) return {};
+  return {
+    excerpt: normalized.length > limit ? `${normalized.slice(0, limit - 3)}...` : normalized,
+    ...(redacted.report.changed ? { excerptRedactionReport: redacted.report } : {}),
+  };
 }
 
 export function prepareEvidenceForProvider(input: EvidenceBundleInput): PreparedProviderEvidence {
@@ -119,7 +138,8 @@ function prepareEvidenceItem(input: EvidenceItemInput): PreparedEvidenceItem {
     assertSafeStructuralField(input.url, "item.url");
   }
 
-  const reports: RedactionReport[] = [];
+  const reports: RedactionReport[] =
+    input.excerptRedactionReport === undefined ? [] : [input.excerptRedactionReport];
   const title = redactOptionalText(input.title, reports);
   const excerpt = redactOptionalText(input.excerpt, reports);
   const text = redactOptionalText(input.text, reports);

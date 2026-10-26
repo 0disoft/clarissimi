@@ -94,19 +94,17 @@ function redactPrivateKeyBlocks(input: string, occurrences: RedactionOccurrence[
 
   for (let match = begin.exec(input); match !== null; match = begin.exec(input)) {
     end.lastIndex = begin.lastIndex;
-    // If the first pending BEGIN has no END, no later BEGIN can have one either.
-    // Stop instead of rescanning the same suffix for each unterminated header.
-    if (end.exec(input) === null) {
-      break;
-    }
+    // An incomplete block still contains key material. Mask its entire suffix in
+    // one pass, including nested BEGIN markers, without rescanning that suffix.
+    const blockEnd = end.exec(input) === null ? input.length : end.lastIndex;
     parts.push(input.slice(offset, match.index), REDACTION_PLACEHOLDER);
     occurrences.push({
       kind: "private_key_block",
       replacement: REDACTION_PLACEHOLDER,
       start: match.index,
-      end: end.lastIndex,
+      end: blockEnd,
     });
-    offset = end.lastIndex;
+    offset = blockEnd;
     begin.lastIndex = offset;
   }
   if (parts.length === 0) {

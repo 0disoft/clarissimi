@@ -1,4 +1,4 @@
-import type { EvidenceItemInput } from "@clarissimi/core";
+import { prepareEvidenceExcerpt, type EvidenceItemInput } from "@clarissimi/core";
 import type { ContributorIdentity, RecognitionSource } from "@clarissimi/schemas";
 
 import type {
@@ -9,7 +9,6 @@ import type {
   GitHubMergedPullRequestFixture,
 } from "./types.js";
 
-const DEFAULT_TEXT_LIMIT = 2_000;
 const REPOSITORY_NAME_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 const TEST_PATH_PATTERN =
   /(^|\/)(__tests__|tests?|specs?)(\/|$)|[./_-](test|spec)\.[cm]?[jt]sx?$|(?:^|\/)[^/]+_test\.go$|(?:^|\/)(?:test_[^/]+|[^/]+_test)\.py$/i;
@@ -173,7 +172,7 @@ function buildPullRequestItem(
     title,
   };
   assignOptional(item, "url", url);
-  assignOptional(item, "excerpt", normalizeOptionalExcerpt(body));
+  Object.assign(item, prepareEvidenceExcerpt(body));
   return item;
 }
 
@@ -210,7 +209,7 @@ function buildChangedFileItems(files: readonly GitHubChangedFileFixture[]): Evid
       title: filename,
     };
 
-    assignOptional(item, "excerpt", buildFileExcerpt(file, status, additions, deletions));
+    Object.assign(item, buildFileExcerpt(file, status, additions, deletions));
     assignOptional(item, "metadata", metadata);
     return item;
   });
@@ -236,9 +235,9 @@ function buildFileExcerpt(
   status: string | undefined,
   additions: number | undefined,
   deletions: number | undefined,
-): string | undefined {
-  const patchExcerpt = normalizeOptionalExcerpt(file.patchExcerpt);
-  if (patchExcerpt !== undefined) {
+): Pick<EvidenceItemInput, "excerpt" | "excerptRedactionReport"> {
+  const patchExcerpt = prepareEvidenceExcerpt(file.patchExcerpt);
+  if (patchExcerpt.excerpt !== undefined) {
     return patchExcerpt;
   }
 
@@ -248,7 +247,7 @@ function buildFileExcerpt(
     deletions === undefined ? undefined : `${deletions} deletions`,
   ].filter((entry): entry is string => entry !== undefined);
 
-  return changeSummary.length === 0 ? undefined : changeSummary.join(", ");
+  return changeSummary.length === 0 ? {} : { excerpt: changeSummary.join(", ") };
 }
 
 function buildFileMetadata(
@@ -403,17 +402,6 @@ function normalizeOptionalString(value: string | undefined): string | undefined 
 
   const normalized = value.replace(/\s+/g, " ").trim();
   return normalized.length === 0 ? undefined : normalized;
-}
-
-function normalizeOptionalExcerpt(value: string | undefined): string | undefined {
-  const normalized = normalizeOptionalString(value);
-  if (normalized === undefined) {
-    return undefined;
-  }
-
-  return normalized.length > DEFAULT_TEXT_LIMIT
-    ? `${normalized.slice(0, DEFAULT_TEXT_LIMIT - 1)}...`
-    : normalized;
 }
 
 function normalizePositiveInteger(value: number, field: string): number {

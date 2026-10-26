@@ -12,6 +12,12 @@ security details, and prompt injection.
 
 Clarissimi must run redaction before any external provider call.
 
+Collectors call the core-owned `prepareEvidenceExcerpt` before whitespace normalization or
+truncation. An incomplete private-key block is masked through end-of-input. Collector reports
+contain only replacement metadata and are merged during provider preparation so early masking
+does not hide redaction counts. Excerpts, including the truncation suffix, stay within 2,000
+characters; provider preparation still repeats redaction for all other fields.
+
 This includes fixture assessment hints. Only the five schema-defined hint fields are accepted;
 enums, confidence in [0, 1], and nonempty strings are checked before drafting. Free-text hints
 are redacted and their matches contribute to the evidence redaction report. Unknown properties

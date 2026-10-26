@@ -275,7 +275,7 @@ test("redacts private key blocks", () => {
   assert.equal(result.report.occurrences[0].kind, "private_key_block");
 });
 
-test("private key scanning preserves legacy delimiters, nesting, overlaps, and offsets", () => {
+test("private key scanning masks incomplete blocks and preserves delimiter offsets", () => {
   const prefixes = ["", "RSA ", "OPENSSH ", "EC ", "DSA ", "PGP ", "UNKNOWN "];
   for (const beginPrefix of prefixes) {
     for (const endPrefix of prefixes) {
@@ -290,7 +290,7 @@ test("private key scanning preserves legacy delimiters, nesting, overlaps, and o
       ]) {
         const occurrences = [];
         const expected = input.replace(
-          /-----BEGIN (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----/g,
+          /-----BEGIN (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----[\s\S]*?(?:-----END (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----|$)/g,
           (match, start) => {
             occurrences.push({
               kind: "private_key_block",
@@ -319,9 +319,9 @@ test("unterminated private key headers cannot block redaction past the child-pro
       `import assert from "node:assert/strict";
        import { redactText, REDACTION_PLACEHOLDER } from ${JSON.stringify(new URL("../dist/index.js", import.meta.url).href)};
        const tail = ("-----BEGIN" + " PRIVATE KEY-----\\n").repeat(16_384);
-       assert.equal(redactText(tail).text, tail);
+       assert.equal(redactText(tail).text, REDACTION_PLACEHOLDER);
        const complete = ("-----BEGIN" + " RSA PRIVATE KEY-----\\nsynthetic-key-material\\n-----END PRIVATE KEY-----\\n");
-       assert.equal(redactText(complete + tail).text, REDACTION_PLACEHOLDER + "\\n" + tail);
+       assert.equal(redactText(complete + tail).text, REDACTION_PLACEHOLDER + "\\n" + REDACTION_PLACEHOLDER);
        assert.equal(redactText(tail + "-----END PRIVATE KEY-----").text, REDACTION_PLACEHOLDER);`,
     ],
     { encoding: "utf8", timeout: 5_000 },

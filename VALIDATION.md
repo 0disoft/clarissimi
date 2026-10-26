@@ -1,5 +1,12 @@
 # Validation
 
+## 2026-10-26 Collector redaction boundary
+
+Collector excerpts now redact before normalization and truncation, including incomplete private
+keys through end-of-input. Early redaction reports survive provider preparation. The focused
+redaction, core, GitHub, and provider suite passed all 155 tests on Windows. The shared Action
+bundle was regenerated. No remote publication was performed.
+
 ## 2026-10-26 Compatible 1.0.1 publication
 
 Action `v1.0.1` and standalone CLI `clarissimi@1.0.1` are published from

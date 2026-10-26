@@ -37,7 +37,7 @@ The live collector must not:
 
 - read tokens or environment variables
 - own retry, rate-limit, or workflow permission policy beyond structured client errors
-- call providers or redaction directly
+- call providers or the redaction package directly (bounded excerpts use the core-owned policy)
 - write files, branches, comments, pull requests, or workflow outputs
 - require `pull_request_target` or untrusted pull request head checkout
 

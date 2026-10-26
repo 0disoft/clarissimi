@@ -1007,8 +1007,1154 @@ function assignOptional(target, key, value) {
   }
 }
 
+// packages/redaction/dist/types.js
+var REDACTION_PLACEHOLDER = "[REDACTED]";
+
+// packages/redaction/dist/redact.js
+var SENSITIVE_KEYS = [
+  "api_key",
+  "authorization",
+  "client_secret",
+  "cookie",
+  "password",
+  "private_key",
+  "refresh_token",
+  "set_cookie",
+  "signature",
+  "token",
+  "access_token",
+  "secret"
+];
+var SENSITIVE_KEY_SOURCE = SENSITIVE_KEYS.map((key) => key.replaceAll("_", "[_-]?")).join("|");
+var SENSITIVE_JSON_KEY = new RegExp(`^(?:${SENSITIVE_KEY_SOURCE})$`, "i");
+var REDACTION_RULES = [
+  {
+    kind: "github_token",
+    pattern: /\b(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{16,}\b/g
+  },
+  {
+    kind: "openai_token",
+    pattern: /\bsk-(?:proj|live|test|admin|user|org|svc|key)-[A-Za-z0-9_-]{12,}\b/g
+  },
+  {
+    kind: "anthropic_token",
+    pattern: /\bsk-ant-[A-Za-z0-9_-]{12,}\b/g
+  },
+  {
+    kind: "gemini_token",
+    pattern: /\bAIza[A-Za-z0-9_-]{20,}\b/g
+  },
+  {
+    kind: "env_assignment",
+    pattern: /["']?\b(?:[A-Z][A-Z0-9_]*_)?(?:TOKEN|SECRET|PASSWORD|PRIVATE_KEY|API_KEY)\s*=\s*(?:"[^"\r\n]*"|'[^'\r\n]*'|[^"'\s]+)["']?/g
+  },
+  {
+    kind: "generic_secret_assignment",
+    pattern: new RegExp(String.raw`["']?\b(?:${SENSITIVE_KEY_SOURCE})["']?\s*[:=]\s*` + /(?:"[^"\r\n]{8,}"|'[^'\r\n]{8,}'|[^"'`\s]{8,})["']?/.source, "gi")
+  }
+];
+function redactText(input) {
+  const occurrences = [];
+  let text = redactPrivateKeyBlocks(input, occurrences);
+  for (const rule of REDACTION_RULES) {
+    text = text.replace(rule.pattern, (match, offset) => {
+      occurrences.push({
+        kind: rule.kind,
+        replacement: REDACTION_PLACEHOLDER,
+        start: offset,
+        end: offset + match.length
+      });
+      return REDACTION_PLACEHOLDER;
+    });
+  }
+  text = redactEmailAddresses(text, occurrences);
+  return {
+    text,
+    report: buildReport(occurrences)
+  };
+}
+function redactPrivateKeyBlocks(input, occurrences) {
+  const begin = /-----BEGIN (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----/g;
+  const end = /-----END (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----/g;
+  const parts = [];
+  let offset = 0;
+  for (let match = begin.exec(input); match !== null; match = begin.exec(input)) {
+    end.lastIndex = begin.lastIndex;
+    const blockEnd = end.exec(input) === null ? input.length : end.lastIndex;
+    parts.push(input.slice(offset, match.index), REDACTION_PLACEHOLDER);
+    occurrences.push({
+      kind: "private_key_block",
+      replacement: REDACTION_PLACEHOLDER,
+      start: match.index,
+      end: blockEnd
+    });
+    offset = blockEnd;
+    begin.lastIndex = offset;
+  }
+  if (parts.length === 0) {
+    return input;
+  }
+  parts.push(input.slice(offset));
+  return parts.join("");
+}
+function redactEmailAddresses(input, occurrences) {
+  const localParts = /[A-Z0-9._%+-]+/gi;
+  const email = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/iy;
+  const parts = [];
+  let end = 0;
+  for (let token = localParts.exec(input); token !== null; token = localParts.exec(input)) {
+    if (input[localParts.lastIndex] !== "@") {
+      continue;
+    }
+    const previousIsWord = /\w/.test(input[token.index - 1] ?? "");
+    const boundary = token[0].search(previousIsWord ? /\W/ : /\w/);
+    if (boundary === -1) {
+      continue;
+    }
+    email.lastIndex = token.index + boundary;
+    const match = email.exec(input);
+    if (match === null) {
+      continue;
+    }
+    parts.push(input.slice(end, match.index), REDACTION_PLACEHOLDER);
+    occurrences.push({
+      kind: "email",
+      replacement: REDACTION_PLACEHOLDER,
+      start: match.index,
+      end: email.lastIndex
+    });
+    end = email.lastIndex;
+    localParts.lastIndex = end;
+  }
+  if (parts.length === 0) {
+    return input;
+  }
+  parts.push(input.slice(end));
+  return parts.join("");
+}
+function redactJson(input) {
+  const occurrences = [];
+  const value = redactJsonValue(input, occurrences);
+  return {
+    value,
+    report: buildReport(occurrences)
+  };
+}
+function mergeRedactionReports(reports) {
+  const occurrences = reports.flatMap((report) => report.occurrences);
+  return buildReport(occurrences);
+}
+function redactJsonValue(value, occurrences) {
+  if (typeof value === "string") {
+    const redacted = redactText(value);
+    occurrences.push(...redacted.report.occurrences);
+    return redacted.text;
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactJsonValue(entry, occurrences));
+  }
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, entry]) => {
+      if (isSensitiveJsonKey(key)) {
+        occurrences.push({
+          kind: "sensitive_json_key",
+          replacement: REDACTION_PLACEHOLDER,
+          start: 0,
+          end: typeof entry === "string" ? entry.length : 0
+        });
+        return [key, REDACTION_PLACEHOLDER];
+      }
+      return [key, redactJsonValue(entry, occurrences)];
+    }));
+  }
+  return value;
+}
+function isSensitiveJsonKey(key) {
+  return SENSITIVE_JSON_KEY.test(key.trim());
+}
+function buildReport(occurrences) {
+  return {
+    changed: occurrences.length > 0,
+    occurrences
+  };
+}
+
+// packages/core/dist/evidence.js
+var PROVIDER_EVIDENCE_LIMITS = {
+  maxItems: 256,
+  maxUtf8Bytes: 512 * 1024
+};
+var EvidencePreparationError = class extends Error {
+  code;
+  constructor(code, message) {
+    super(message);
+    this.name = "EvidencePreparationError";
+    this.code = code;
+  }
+};
+function prepareEvidenceExcerpt(value, limit = 2e3) {
+  if (!Number.isSafeInteger(limit) || limit < 3) {
+    throw new RangeError("Evidence excerpt limit must be an integer of at least three.");
+  }
+  if (value === void 0)
+    return {};
+  const redacted = redactText(value);
+  const normalized = redacted.text.replace(/\s+/g, " ").trim();
+  if (normalized.length === 0)
+    return {};
+  return {
+    excerpt: normalized.length > limit ? `${normalized.slice(0, limit - 3)}...` : normalized,
+    ...redacted.report.changed ? { excerptRedactionReport: redacted.report } : {}
+  };
+}
+function prepareEvidenceForProvider(input) {
+  assertEvidenceItemCount(input.items.length);
+  const items = input.items.map(prepareEvidenceItem);
+  const redactionReport = mergeRedactionReports(items.map((item) => item.redactionReport));
+  const prepared = {
+    source: input.source,
+    items,
+    evidenceRefs: items.map(toEvidenceRef),
+    redactionReport
+  };
+  assertPreparedEvidenceForProvider(prepared);
+  return prepared;
+}
+function assertPreparedEvidenceForProvider(evidence) {
+  assertEvidenceItemCount(evidence.items.length);
+  for (const [index, item] of evidence.items.entries()) {
+    assertSafeStructuralField(item.id, `items[${index}].id`);
+    if (item.url !== void 0) {
+      assertSafeStructuralField(item.url, `items[${index}].url`);
+    }
+  }
+  for (const [index, ref] of evidence.evidenceRefs.entries()) {
+    assertSafeStructuralField(ref.id, `evidenceRefs[${index}].id`);
+    if (ref.url !== void 0) {
+      assertSafeStructuralField(ref.url, `evidenceRefs[${index}].url`);
+    }
+  }
+  const bytes = new TextEncoder().encode(JSON.stringify({
+    source: evidence.source,
+    items: evidence.items.map((item) => ({
+      kind: item.kind,
+      id: item.id,
+      url: item.url,
+      title: item.title,
+      excerpt: item.excerpt,
+      text: item.text,
+      metadata: item.metadata
+    })),
+    evidenceRefs: evidence.evidenceRefs
+  })).byteLength;
+  if (bytes > PROVIDER_EVIDENCE_LIMITS.maxUtf8Bytes) {
+    throw new EvidencePreparationError("evidence_bytes_limit", `Prepared provider evidence must not exceed ${PROVIDER_EVIDENCE_LIMITS.maxUtf8Bytes} UTF-8 bytes.`);
+  }
+}
+function prepareEvidenceItem(input) {
+  assertSafeStructuralField(input.id, "item.id");
+  if (input.url !== void 0) {
+    assertSafeStructuralField(input.url, "item.url");
+  }
+  const reports = input.excerptRedactionReport === void 0 ? [] : [input.excerptRedactionReport];
+  const title = redactOptionalText(input.title, reports);
+  const excerpt = redactOptionalText(input.excerpt, reports);
+  const text = redactOptionalText(input.text, reports);
+  const metadata = redactOptionalJson(input.metadata, reports);
+  const item = {
+    kind: input.kind,
+    id: input.id,
+    redactionReport: mergeRedactionReports(reports)
+  };
+  assignOptional2(item, "url", input.url);
+  assignOptional2(item, "title", title);
+  assignOptional2(item, "excerpt", excerpt);
+  assignOptional2(item, "text", text);
+  assignOptional2(item, "metadata", metadata);
+  return item;
+}
+function assertEvidenceItemCount(count) {
+  if (count > PROVIDER_EVIDENCE_LIMITS.maxItems) {
+    throw new EvidencePreparationError("evidence_item_limit", `Prepared provider evidence must not exceed ${PROVIDER_EVIDENCE_LIMITS.maxItems} items.`);
+  }
+}
+function assertSafeStructuralField(value, field) {
+  if (redactText(value).report.changed) {
+    throw new EvidencePreparationError("unsafe_structural_field", `Prepared provider evidence ${field} contains secret-bearing data.`);
+  }
+}
+function toEvidenceRef(item) {
+  const ref = {
+    kind: item.kind,
+    id: item.id
+  };
+  assignOptional2(ref, "url", item.url);
+  assignOptional2(ref, "title", item.title);
+  assignOptional2(ref, "excerpt", item.excerpt ?? item.text);
+  return ref;
+}
+function redactOptionalText(value, reports) {
+  if (value === void 0) {
+    return void 0;
+  }
+  const result = redactText(value);
+  reports.push(result.report);
+  return result.text;
+}
+function redactOptionalJson(value, reports) {
+  if (value === void 0) {
+    return void 0;
+  }
+  const result = redactJson(value);
+  reports.push(result.report);
+  return result.value;
+}
+function assignOptional2(target, key, value) {
+  if (value !== void 0) {
+    target[key] = value;
+  }
+}
+
+// packages/schemas/dist/types.js
+var ASSESSMENT_SCHEMA_VERSION = "clarissimi.assessment/v1";
+var REVIEW_DECISION_SCHEMA_VERSION = "clarissimi.review-decision/v1";
+var REVIEW_GATE_MODES = ["advisory", "required"];
+var REVIEW_DECISIONS = ["approved", "skip"];
+var CONFIG_PROVIDERS = ["fake", "openai-compatible"];
+var CONFIG_PROVIDER_THINKING_VALUES = ["disabled"];
+var CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES = ["public", "private-network"];
+var CONFIG_MODES = ["dry-run", "propose", "commit"];
+var CONFIG_MARKDOWN_SUMMARIES = ["none", "table", "gallery"];
+var CONTRIBUTOR_KINDS = ["human", "bot", "ai_agent"];
+var CONTRIBUTION_TYPES = [
+  "bug_fix",
+  "bug_report",
+  "reproduction",
+  "test",
+  "performance",
+  "documentation",
+  "security",
+  "accessibility",
+  "api_design",
+  "maintenance",
+  "translation",
+  "release_validation",
+  "example",
+  "other"
+];
+var IMPACT_LEVELS = ["low", "medium", "high"];
+var APPROVAL_STATUSES = [
+  "draft",
+  "auto_approved",
+  "approved",
+  "rejected",
+  "skipped"
+];
+var EVIDENCE_KINDS = [
+  "pull_request",
+  "issue",
+  "review",
+  "comment",
+  "commit",
+  "file",
+  "label",
+  "test",
+  "maintainer_note",
+  "advisory"
+];
+var CLAIM_EVIDENCE_FIELDS = ["evidenceSummary", "publicRecognitionText"];
+
+// packages/schemas/dist/diagnostics.js
+var FIELDS = /* @__PURE__ */ new Set([
+  "schemaVersion",
+  "contributor",
+  "platform",
+  "id",
+  "login",
+  "profileUrl",
+  "kind",
+  "contributionType",
+  "affectedArea",
+  "impactLevel",
+  "evidenceSummary",
+  "evidenceRefs",
+  "url",
+  "title",
+  "excerpt",
+  "claimEvidenceLinks",
+  "field",
+  "text",
+  "evidenceRefIndexes",
+  "suggestedBadge",
+  "publicRecognitionText",
+  "confidence",
+  "maintainerApprovalStatus",
+  "approvalSnapshot",
+  "contentSha256",
+  "recordedAt",
+  "source",
+  "repository",
+  "event",
+  "pullRequestNumber",
+  "mergedAt",
+  "ledger",
+  "assessments",
+  "headSha",
+  "decision",
+  "reason"
+]);
+function sanitizeValidationIssuePath(path) {
+  let result = "$";
+  let rest = path.startsWith("$") ? path.slice(1) : "";
+  while (rest.length > 0) {
+    const index = /^\[(0|[1-9]\d{0,8})\]/.exec(rest);
+    if (index !== null) {
+      result += index[0];
+      rest = rest.slice(index[0].length);
+      continue;
+    }
+    const field = /^\.([A-Za-z][A-Za-z0-9]*)(?=\.|\[|$)/.exec(rest);
+    if (field === null || !FIELDS.has(field[1]))
+      return result;
+    result += field[0];
+    rest = rest.slice(field[0].length);
+  }
+  return result;
+}
+function publicValidationDiagnostics(issues) {
+  const bounded = issues.slice(0, 8);
+  const issueCodes = [
+    ...new Set(bounded.map((issue) => /^[a-z][a-z0-9_]{0,79}$/.test(issue.code) ? issue.code : "validation_failed"))
+  ];
+  const issuePaths = [...new Set(bounded.map((issue) => sanitizeValidationIssuePath(issue.path)))];
+  const recovery = issues.some((issue) => ["approval_snapshot_required", "approval_snapshot_mismatch", "invalid_stage_status"].includes(issue.code));
+  return {
+    issueCodes,
+    issuePaths,
+    ...recovery ? {
+      recoveryHint: "To approve edited text, set maintainerApprovalStatus back to draft, remove the old approvalSnapshot, review the content, and run clarissimi approve-draft again."
+    } : {}
+  };
+}
+
+// packages/schemas/dist/validation.js
+var RANKING_LANGUAGE_PATTERNS = [
+  /\bleaderboard\b/i,
+  /\btotal\s+score\b/i,
+  /\baverage\s+score\b/i,
+  /\bhigh\s+score\b/i,
+  /\bscore\s+share\b/i,
+  /\bpoint\s+share\b/i,
+  /\bpoints\s+share\b/i,
+  /\bimpact\s+weight\s+share\b/i,
+  /\bcontribution\s+weight\s+share\b/i,
+  /\bshare\s+of\s+(?:the\s+)?(?:(?:last|past)\s+\d+\s+(?:days'?|months'?)\s+|recent\s+|total\s+)?(?:score|points|impact\s+weight|contribution\s+weight)\b/i,
+  /\b\d+(?:\.\d+)?\s*%\s+of\s+(?:the\s+)?(?:(?:last|past)\s+\d+\s+(?:days'?|months'?)|recent|total)?\s*(?:contribution\s+)?(?:score|points|impact\s+weight|contribution\s+weight)\b/i,
+  /\b\d+(?:\.\d+)?\s+percent\s+of\s+(?:the\s+)?(?:(?:last|past)\s+\d+\s+(?:days'?|months'?)|recent|total)?\s*(?:contribution\s+)?(?:score|points|impact\s+weight|contribution\s+weight)\b/i,
+  /최근\s*\d+\s*개월(?:간)?\s*(?:전체\s*)?(?:기여\s*)?(?:점수|가중치)\s*(?:비율|점유율|몫)?/i,
+  /(?:기여\s*)?(?:점수|가중치)\s*(?:비율|점유율)/i,
+  /\bcontribution\s+points\b/i,
+  /\bleaderboard\s+points\b/i,
+  /\bcontributor\s+tier\b/i,
+  /\brank(?:ed|ing)?\b/i,
+  /\btop\s+\d+\s+contributor\b/i,
+  /\b(?:gold|silver|bronze)\s+contributor\b/i,
+  /\bmedium\s+contributor\b/i,
+  /\bmedium\s+quality\b/i,
+  /\blow-quality\s+contributor\b/i
+];
+var PUBLIC_SCORE_FIELD_NAMES = /* @__PURE__ */ new Set([
+  "score",
+  "totalscore",
+  "averagescore",
+  "scoreshare",
+  "pointshare",
+  "pointsshare",
+  "impactweightshare",
+  "contributionweightshare",
+  "recentscoreshare",
+  "recentpointshare",
+  "recentpointsshare",
+  "recentimpactweightshare",
+  "recentcontributionweightshare",
+  "contributionshare",
+  "recentcontributionshare",
+  "rank",
+  "ranking",
+  "leaderboard",
+  "leaderboardposition",
+  "contributortier",
+  "tier",
+  "points"
+]);
+var PUBLIC_SCORE_FIELD_SUFFIXES = [
+  "scoreshare",
+  "pointshare",
+  "pointsshare",
+  "impactweightshare",
+  "contributionweightshare",
+  "contributionshare",
+  "scorepercent",
+  "pointpercent",
+  "pointspercent",
+  "impactweightpercent",
+  "contributionweightpercent",
+  "contributionpercent"
+];
+function isContributionType(value) {
+  return CONTRIBUTION_TYPES.includes(value);
+}
+function isConfigProvider(value) {
+  return CONFIG_PROVIDERS.includes(value);
+}
+function isConfigProviderThinking(value) {
+  return CONFIG_PROVIDER_THINKING_VALUES.includes(value);
+}
+function isConfigProviderEndpointTrust(value) {
+  return CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES.includes(value);
+}
+function isConfigMarkdownSummary(value) {
+  return CONFIG_MARKDOWN_SUMMARIES.includes(value);
+}
+function isContributorKind(value) {
+  return CONTRIBUTOR_KINDS.includes(value);
+}
+function isImpactLevel(value) {
+  return IMPACT_LEVELS.includes(value);
+}
+function isApprovalStatus(value) {
+  return APPROVAL_STATUSES.includes(value);
+}
+function isReviewGateMode(value) {
+  return REVIEW_GATE_MODES.includes(value);
+}
+function isReviewDecisionValue(value) {
+  return REVIEW_DECISIONS.includes(value);
+}
+function validateReviewDecision(value) {
+  const issues = [];
+  if (!isRecord2(value)) {
+    return invalid([
+      { path: "$", code: "expected_object", message: "Review decision must be an object." }
+    ]);
+  }
+  expectLiteral(value.schemaVersion, REVIEW_DECISION_SCHEMA_VERSION, "$.schemaVersion", issues);
+  expectRepositoryName(value.repository, "$.repository", issues);
+  expectPositiveInteger(value.pullRequestNumber, "$.pullRequestNumber", issues);
+  if (typeof value.headSha !== "string" || !/^[a-f0-9]{40}$/i.test(value.headSha)) {
+    pushIssue(issues, "$.headSha", "invalid_commit_sha", "Head SHA must be a 40-character Git commit SHA.");
+  }
+  expectEnum(value.decision, isReviewDecisionValue, "$.decision", issues);
+  expectNonEmptyString(value.reason, "$.reason", issues);
+  if (typeof value.reason === "string" && value.reason.length > 1e3) {
+    pushIssue(issues, "$.reason", "string_too_long", "Review decision reason must not exceed 1000 characters.");
+  }
+  return issues.length === 0 ? { ok: true, value, issues: [] } : invalid(issues);
+}
+function isEvidenceKind(value) {
+  return EVIDENCE_KINDS.includes(value);
+}
+function hasPublicRankingLanguage(value) {
+  return RANKING_LANGUAGE_PATTERNS.some((pattern) => pattern.test(value));
+}
+function validateContributionAssessment(value) {
+  const issues = [];
+  if (!isRecord2(value)) {
+    return invalid([
+      {
+        path: "$",
+        code: "expected_object",
+        message: "Assessment must be an object."
+      }
+    ]);
+  }
+  expectLiteral(value.schemaVersion, ASSESSMENT_SCHEMA_VERSION, "$.schemaVersion", issues);
+  rejectPublicScoreFields(value, "$", issues);
+  validateContributor(value.contributor, "$.contributor", issues);
+  expectEnum(value.contributionType, isContributionType, "$.contributionType", issues);
+  expectPublicNarrativeText(value.affectedArea, "$.affectedArea", issues);
+  expectEnum(value.impactLevel, isImpactLevel, "$.impactLevel", issues);
+  expectPublicNarrativeText(value.evidenceSummary, "$.evidenceSummary", issues);
+  validateEvidenceRefs(value.evidenceRefs, "$.evidenceRefs", issues);
+  validateClaimEvidenceLinks(value.claimEvidenceLinks, value, issues);
+  expectPublicNarrativeText(value.suggestedBadge, "$.suggestedBadge", issues);
+  expectPublicNarrativeText(value.publicRecognitionText, "$.publicRecognitionText", issues);
+  expectConfidence(value.confidence, "$.confidence", issues);
+  expectEnum(value.maintainerApprovalStatus, isApprovalStatus, "$.maintainerApprovalStatus", issues);
+  validateDraftApprovalSnapshot(value.approvalSnapshot, value.maintainerApprovalStatus, issues);
+  validateSource(value.source, "$.source", issues);
+  if (issues.length > 0) {
+    return invalid(issues);
+  }
+  return {
+    ok: true,
+    value,
+    issues: []
+  };
+}
+function isClaimEvidenceField(value) {
+  return CLAIM_EVIDENCE_FIELDS.includes(value);
+}
+function validateClaimEvidenceLinks(value, assessment, issues) {
+  if (value === void 0) {
+    return;
+  }
+  if (!Array.isArray(value)) {
+    pushIssue(issues, "$.claimEvidenceLinks", "expected_array", "Claim evidence links must be an array.");
+    return;
+  }
+  const linksByField = /* @__PURE__ */ new Map();
+  value.forEach((link, index) => {
+    const path = `$.claimEvidenceLinks[${index}]`;
+    if (!isRecord2(link)) {
+      pushIssue(issues, path, "expected_object", "Claim evidence link must be an object.");
+      return;
+    }
+    if (typeof link.field !== "string" || !isClaimEvidenceField(link.field)) {
+      pushIssue(issues, `${path}.field`, "invalid_claim_field", "Claim evidence field is unknown.");
+      return;
+    }
+    expectNonEmptyString(link.text, `${path}.text`, issues);
+    if (typeof link.text === "string" && link.text.trim().length > 0) {
+      const texts = linksByField.get(link.field) ?? [];
+      texts.push(link.text);
+      linksByField.set(link.field, texts);
+    }
+    if (!Array.isArray(link.evidenceRefIndexes) || link.evidenceRefIndexes.length === 0) {
+      pushIssue(issues, `${path}.evidenceRefIndexes`, "empty_evidence_links", "A claim must link to at least one evidence reference.");
+      return;
+    }
+    const seen = /* @__PURE__ */ new Set();
+    link.evidenceRefIndexes.forEach((refIndex, refPosition) => {
+      const refPath = `${path}.evidenceRefIndexes[${refPosition}]`;
+      if (typeof refIndex !== "number" || !Number.isInteger(refIndex) || refIndex < 0 || !Array.isArray(assessment.evidenceRefs) || refIndex >= assessment.evidenceRefs.length) {
+        pushIssue(issues, refPath, "invalid_evidence_index", "Evidence reference index is invalid.");
+      } else if (seen.has(refIndex)) {
+        pushIssue(issues, refPath, "duplicate_evidence_index", "Evidence reference index is repeated.");
+      } else {
+        seen.add(refIndex);
+      }
+    });
+  });
+  for (const field of CLAIM_EVIDENCE_FIELDS) {
+    const texts = linksByField.get(field);
+    if (texts === void 0) {
+      pushIssue(issues, "$.claimEvidenceLinks", "missing_claim_field", `Claims must cover ${field}.`);
+    } else if (texts.join(" ") !== assessment[field]) {
+      pushIssue(issues, `$.${field}`, "claim_evidence_text_mismatch", `Claim evidence links must cover the complete ${field} text in order.`);
+    }
+  }
+}
+function validateDraftApprovalSnapshot(value, status, issues) {
+  if (value === void 0) {
+    return;
+  }
+  if (status !== "approved") {
+    pushIssue(issues, "$.approvalSnapshot", "invalid_approval_snapshot_status", "An approval snapshot requires maintainerApprovalStatus approved.");
+  }
+  if (!isRecord2(value)) {
+    pushIssue(issues, "$.approvalSnapshot", "expected_object", "Approval snapshot must be an object.");
+    return;
+  }
+  if (typeof value.contentSha256 !== "string" || !/^[0-9a-f]{64}$/.test(value.contentSha256)) {
+    pushIssue(issues, "$.approvalSnapshot.contentSha256", "invalid_digest", "Approval snapshot digest must be a lowercase SHA-256 hex string.");
+  }
+  expectIsoDateTime(value.recordedAt, "$.approvalSnapshot.recordedAt", issues);
+}
+function validateClarissimiConfig(value) {
+  const issues = [];
+  if (!isRecord2(value)) {
+    return invalid([
+      {
+        path: "$",
+        code: "expected_object",
+        message: "Clarissimi config must be a JSON object."
+      }
+    ]);
+  }
+  const provider = expectOptionalEnum(value.provider, CONFIG_PROVIDERS, "$.provider", issues);
+  const providerEndpoint = expectOptionalHttpUrl(value.providerEndpoint, "$.providerEndpoint", issues);
+  const providerEndpointTrust = expectOptionalEnum(value.providerEndpointTrust, CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES, "$.providerEndpointTrust", issues);
+  const providerModel = expectOptionalNonEmptyString(value.providerModel, "$.providerModel", issues);
+  const providerThinking = expectOptionalEnum(value.providerThinking, CONFIG_PROVIDER_THINKING_VALUES, "$.providerThinking", issues);
+  const mode = expectOptionalEnum(value.mode, CONFIG_MODES, "$.mode", issues);
+  const markdownSummary = expectOptionalEnum(value.markdownSummary, CONFIG_MARKDOWN_SUMMARIES, "$.markdownSummary", issues);
+  const includeAutomationContributors = expectOptionalBoolean(value.includeAutomationContributors, "$.includeAutomationContributors", issues);
+  if (issues.length > 0) {
+    return invalid(issues);
+  }
+  const config = {};
+  if (provider !== void 0) {
+    config.provider = provider;
+  }
+  if (providerEndpoint !== void 0) {
+    config.providerEndpoint = providerEndpoint;
+  }
+  if (providerEndpointTrust !== void 0) {
+    config.providerEndpointTrust = providerEndpointTrust;
+  }
+  if (providerModel !== void 0) {
+    config.providerModel = providerModel;
+  }
+  if (providerThinking !== void 0) {
+    config.providerThinking = providerThinking;
+  }
+  if (mode !== void 0) {
+    config.mode = mode;
+  }
+  if (markdownSummary !== void 0) {
+    config.markdownSummary = markdownSummary;
+  }
+  if (includeAutomationContributors !== void 0) {
+    config.includeAutomationContributors = includeAutomationContributors;
+  }
+  return {
+    ok: true,
+    value: config,
+    issues: []
+  };
+}
+function validateContributor(value, path, issues) {
+  if (!isRecord2(value)) {
+    pushIssue(issues, path, "expected_object", "Contributor must be an object.");
+    return;
+  }
+  expectLiteral(value.platform, "github", `${path}.platform`, issues);
+  expectNonEmptyString(value.id, `${path}.id`, issues);
+  expectNonEmptyString(value.login, `${path}.login`, issues);
+  expectGitHubProfileUrl(value.profileUrl, value.login, value.kind, `${path}.profileUrl`, issues);
+  if (value.kind !== void 0) {
+    expectEnum(value.kind, isContributorKind, `${path}.kind`, issues);
+  }
+}
+function expectGitHubProfileUrl(value, login, kind, path, issues) {
+  if (typeof value !== "string" || typeof login !== "string") {
+    expectUrl(value, path, issues);
+    return;
+  }
+  try {
+    const parsed = new URL(value);
+    const normalizedPath = decodeURIComponent(parsed.pathname).replace(/\/$/, "");
+    const expectedUserPath = `/${login}`.toLowerCase();
+    const expectedAppPath = `/apps/${login.replace(/\[bot\]$/i, "")}`.toLowerCase();
+    const validPath = normalizedPath.toLowerCase() === expectedUserPath || kind === "bot" && normalizedPath.toLowerCase() === expectedAppPath;
+    if (parsed.protocol !== "https:" || parsed.hostname.toLowerCase() !== "github.com" || parsed.port !== "" || parsed.username !== "" || parsed.password !== "" || parsed.search !== "" || parsed.hash !== "" || !validPath) {
+      pushIssue(issues, path, "invalid_github_profile_url", "GitHub contributor profile URL must match the contributor login.");
+    }
+  } catch {
+    pushIssue(issues, path, "invalid_url", "Value must be a valid URL.");
+  }
+}
+function validateEvidenceRefs(value, path, issues) {
+  if (!Array.isArray(value)) {
+    pushIssue(issues, path, "expected_array", "Evidence refs must be an array.");
+    return;
+  }
+  if (value.length === 0) {
+    pushIssue(issues, path, "empty_array", "At least one evidence ref is required.");
+    return;
+  }
+  value.forEach((entry, index) => {
+    const entryPath = `${path}[${index}]`;
+    if (!isRecord2(entry)) {
+      pushIssue(issues, entryPath, "expected_object", "Evidence ref must be an object.");
+      return;
+    }
+    expectEnum(entry.kind, isEvidenceKind, `${entryPath}.kind`, issues);
+    expectNonEmptyString(entry.id, `${entryPath}.id`, issues);
+    if (entry.url !== void 0) {
+      expectUrl(entry.url, `${entryPath}.url`, issues);
+    }
+    if (entry.title !== void 0) {
+      expectNonEmptyString(entry.title, `${entryPath}.title`, issues);
+    }
+    if (entry.excerpt !== void 0) {
+      expectNonEmptyString(entry.excerpt, `${entryPath}.excerpt`, issues);
+    }
+  });
+}
+function validateSource(value, path, issues) {
+  if (!isRecord2(value)) {
+    pushIssue(issues, path, "expected_object", "Source must be an object.");
+    return;
+  }
+  expectRepositoryName(value.repository, `${path}.repository`, issues);
+  expectLiteral(value.event, "merged_pull_request", `${path}.event`, issues);
+  expectPositiveInteger(value.pullRequestNumber, `${path}.pullRequestNumber`, issues);
+  if (value.mergedAt !== void 0) {
+    expectIsoDateTime(value.mergedAt, `${path}.mergedAt`, issues);
+  }
+}
+function expectPublicNarrativeText(value, path, issues) {
+  expectNonEmptyString(value, path, issues);
+  if (typeof value === "string" && hasPublicRankingLanguage(value)) {
+    pushIssue(issues, path, "public_ranking_language", "Public recognition fields must not contain contributor scoring or ranking language.");
+  }
+}
+function expectConfidence(value, path, issues) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    pushIssue(issues, path, "expected_number", "Confidence must be a finite number.");
+    return;
+  }
+  if (value < 0 || value > 1) {
+    pushIssue(issues, path, "out_of_range", "Confidence must be between 0 and 1.");
+  }
+}
+function rejectPublicScoreFields(value, path, issues) {
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => {
+      rejectPublicScoreFields(entry, `${path}[${index}]`, issues);
+    });
+    return;
+  }
+  if (!isRecord2(value)) {
+    return;
+  }
+  for (const [key, nestedValue] of Object.entries(value)) {
+    const fieldPath = `${path}.${key}`;
+    if (isPublicScoreFieldName(key)) {
+      pushIssue(issues, fieldPath, "public_score_field", "Assessment must not contain public score, rank, leaderboard, point, or contributor tier fields.");
+    }
+    rejectPublicScoreFields(nestedValue, fieldPath, issues);
+  }
+}
+function normalizeFieldName(value) {
+  return value.replace(/[^A-Za-z0-9]+/g, "").toLowerCase();
+}
+function isPublicScoreFieldName(value) {
+  const normalized = normalizeFieldName(value);
+  return PUBLIC_SCORE_FIELD_NAMES.has(normalized) || PUBLIC_SCORE_FIELD_SUFFIXES.some((suffix) => normalized.endsWith(suffix));
+}
+function expectEnum(value, guard, path, issues) {
+  if (typeof value !== "string" || !guard(value)) {
+    pushIssue(issues, path, "invalid_enum", "Value is not in the allowed set.");
+  }
+}
+function expectLiteral(value, expected, path, issues) {
+  if (value !== expected) {
+    pushIssue(issues, path, "invalid_literal", `Value must be ${expected}.`);
+  }
+}
+function expectNonEmptyString(value, path, issues) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    pushIssue(issues, path, "empty_string", "Value must be a non-empty string.");
+  }
+}
+function expectOptionalNonEmptyString(value, path, issues) {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (typeof value !== "string" || value.trim().length === 0) {
+    pushIssue(issues, path, "empty_string", "Value must be a non-empty string.");
+    return void 0;
+  }
+  return value;
+}
+function expectOptionalHttpUrl(value, path, issues) {
+  const normalized = expectOptionalNonEmptyString(value, path, issues);
+  if (normalized === void 0) {
+    return void 0;
+  }
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      pushIssue(issues, path, "invalid_url_protocol", "Value must be an HTTP(S) URL.");
+      return void 0;
+    }
+  } catch {
+    pushIssue(issues, path, "invalid_url", "Value must be a valid HTTP(S) URL.");
+    return void 0;
+  }
+  return normalized;
+}
+function expectOptionalEnum(value, allowedValues, path, issues) {
+  if (value === void 0) {
+    return void 0;
+  }
+  const selected = allowedValues.find((candidate) => candidate === value);
+  if (selected === void 0) {
+    pushIssue(issues, path, "invalid_enum", `Allowed values: ${allowedValues.join(", ")}.`);
+    return void 0;
+  }
+  return selected;
+}
+function expectOptionalBoolean(value, path, issues) {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (typeof value !== "boolean") {
+    pushIssue(issues, path, "expected_boolean", "Value must be a boolean.");
+    return void 0;
+  }
+  return value;
+}
+function expectUrl(value, path, issues) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    pushIssue(issues, path, "invalid_url", "Value must be a non-empty URL string.");
+    return;
+  }
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== "https:") {
+      pushIssue(issues, path, "invalid_url_protocol", "URL must use https.");
+    }
+  } catch {
+    pushIssue(issues, path, "invalid_url", "Value must be a valid URL.");
+  }
+}
+function expectRepositoryName(value, path, issues) {
+  if (typeof value !== "string" || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value)) {
+    pushIssue(issues, path, "invalid_repository", "Repository must use owner/name format.");
+  }
+}
+function expectPositiveInteger(value, path, issues) {
+  if (!Number.isInteger(value) || typeof value !== "number" || value <= 0) {
+    pushIssue(issues, path, "invalid_integer", "Value must be a positive integer.");
+  }
+}
+function expectIsoDateTime(value, path, issues) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value) || Number.isNaN(Date.parse(value)) || new Date(value).toISOString() !== value) {
+    pushIssue(issues, path, "invalid_datetime", "Value must be a canonical RFC 3339 UTC date time with milliseconds.");
+  }
+}
+function isRecord2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function pushIssue(issues, path, code, message) {
+  issues.push({ path, code, message });
+}
+function invalid(issues) {
+  return {
+    ok: false,
+    issues
+  };
+}
+
+// packages/core/dist/hints.js
+function prepareProviderHints(value, evidence) {
+  const hints = {};
+  const reports = [evidence.redactionReport];
+  function invalid2(field) {
+    throw new Error(`Provider hints.${field} has an invalid value.`);
+  }
+  if (value !== void 0) {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      throw new Error("Provider hints must be an object.");
+    }
+    const input = value;
+    if (input.contributionType !== void 0) {
+      if (typeof input.contributionType !== "string" || !isContributionType(input.contributionType))
+        invalid2("contributionType");
+      hints.contributionType = input.contributionType;
+    }
+    if (input.impactLevel !== void 0) {
+      if (typeof input.impactLevel !== "string" || !isImpactLevel(input.impactLevel))
+        invalid2("impactLevel");
+      hints.impactLevel = input.impactLevel;
+    }
+    if (input.confidence !== void 0) {
+      if (typeof input.confidence !== "number" || !Number.isFinite(input.confidence) || input.confidence < 0 || input.confidence > 1)
+        invalid2("confidence");
+      hints.confidence = input.confidence;
+    }
+    for (const field of ["affectedArea", "suggestedBadge"]) {
+      const text = input[field];
+      if (text === void 0)
+        continue;
+      if (typeof text !== "string" || text.trim().length === 0)
+        invalid2(field);
+      const redacted = redactText(text);
+      hints[field] = redacted.text;
+      reports.push(redacted.report);
+    }
+  }
+  return {
+    hints,
+    preparedEvidence: { ...evidence, redactionReport: mergeRedactionReports(reports) }
+  };
+}
+
+// packages/core/dist/approval.js
+function canPublishAssessment(value) {
+  const validation = validateContributionAssessment(value);
+  if (!validation.ok) {
+    return validation;
+  }
+  if (!isPublicApprovalStatus(validation.value.maintainerApprovalStatus)) {
+    return {
+      ok: false,
+      issues: [
+        {
+          path: "$.maintainerApprovalStatus",
+          code: "not_approved",
+          message: "Only approved or auto_approved assessments can become public records."
+        }
+      ]
+    };
+  }
+  return {
+    ok: true,
+    value: {
+      assessment: validation.value
+    },
+    issues: []
+  };
+}
+function isPublicApprovalStatus(status) {
+  return status === "approved" || status === "auto_approved";
+}
+
+// packages/core/dist/draft-approval.js
+import { createHash as createHash2 } from "node:crypto";
+function checkExternalDraftApproval(assessment) {
+  if (assessment.maintainerApprovalStatus === "auto_approved") {
+    return "auto_approval_unconfigured";
+  }
+  return checkDraftApprovalSnapshot(assessment);
+}
+function checkDraftApprovalSnapshot(assessment) {
+  if (assessment.maintainerApprovalStatus !== "approved") {
+    return "not_required";
+  }
+  if (assessment.approvalSnapshot === void 0) {
+    return "missing";
+  }
+  return assessment.approvalSnapshot.contentSha256 === draftContentSha256(assessment) ? "valid" : "mismatch";
+}
+function draftContentSha256(assessment) {
+  const content = { ...assessment };
+  delete content.maintainerApprovalStatus;
+  delete content.approvalSnapshot;
+  return createHash2("sha256").update(JSON.stringify(sortJsonValue(content))).digest("hex");
+}
+function sortJsonValue(value) {
+  if (Array.isArray(value)) {
+    return value.map(sortJsonValue);
+  }
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0).map(([key, item]) => [key, sortJsonValue(item)]));
+  }
+  return value;
+}
+
+// packages/core/dist/repository-safety.js
+var SENSITIVE_URL_PARAMETER_PATTERN = /(?:^|[_-])(?:access[_-]?token|auth[_-]?token|token|secret|password|api[_-]?key|private[_-]?key|signature|credential|authorization|cookie|session[_-]?(?:id|key|token))(?:$|[=_-])/i;
+var MAX_URL_DECODE_LAYERS = 6;
+var ENCODED_BYTE_PATTERN = /%[0-9a-f]{2}/i;
+function isSensitiveUrlParameterName(name) {
+  const decoded = decodeNestedUrlComponent(name);
+  return decoded === void 0 || SENSITIVE_URL_PARAMETER_PATTERN.test(decoded.replace(/([a-z0-9])([A-Z])/g, "$1_$2"));
+}
+function findUnsafeRepositoryAssessmentFields(assessment) {
+  const fields = [
+    { path: "$.contributor.id", value: assessment.contributor.id },
+    { path: "$.contributor.login", value: assessment.contributor.login },
+    { path: "$.contributor.profileUrl", value: assessment.contributor.profileUrl, url: true },
+    { path: "$.affectedArea", value: assessment.affectedArea },
+    { path: "$.evidenceSummary", value: assessment.evidenceSummary },
+    { path: "$.suggestedBadge", value: assessment.suggestedBadge },
+    { path: "$.publicRecognitionText", value: assessment.publicRecognitionText },
+    { path: "$.source.repository", value: assessment.source.repository }
+  ];
+  assessment.evidenceRefs.forEach((ref, index) => {
+    fields.push({ path: `$.evidenceRefs[${index}].id`, value: ref.id }, { path: "$.evidenceRefs[].url", value: ref.url, url: true }, { path: `$.evidenceRefs[${index}].title`, value: ref.title });
+  });
+  assessment.claimEvidenceLinks?.forEach((link, index) => {
+    fields.push({ path: `$.claimEvidenceLinks[${index}].text`, value: link.text });
+  });
+  const issues = [];
+  for (const field of fields) {
+    if (field.value === void 0) {
+      continue;
+    }
+    const match = findSensitiveTextKind(field.value, field.url === true);
+    if (match !== void 0) {
+      issues.push({
+        path: field.path,
+        code: match.code,
+        message: `Repository-visible content contains ${match.kind}; edit the assessment before writing it.`
+      });
+    }
+  }
+  return issues;
+}
+function findSensitiveTextKind(value, url) {
+  if (!url) {
+    return findDirectSensitiveText(value);
+  }
+  let parsed;
+  try {
+    parsed = new URL(value);
+  } catch {
+    return findDirectSensitiveText(value, false);
+  }
+  if (parsed.username.length > 0 || parsed.password.length > 0) {
+    return { code: "invalid_url_userinfo", kind: "URL credentials" };
+  }
+  for (const [name, parameterValue] of parsed.searchParams) {
+    const decodedName = decodeNestedUrlComponent(name);
+    const decodedValue = decodeNestedUrlComponent(parameterValue);
+    if (decodedName === void 0 || decodedValue === void 0) {
+      return { code: "invalid_url_encoding", kind: "an invalid URL encoding" };
+    }
+    if (isSensitiveUrlParameterName(decodedName)) {
+      return { code: "unsafe_url_parameter", kind: "a sensitive URL parameter" };
+    }
+    const kind = redactText(`${decodedName}=${decodedValue}`).report.occurrences[0]?.kind;
+    if (kind !== void 0) {
+      return { code: "unsafe_repository_text", kind };
+    }
+  }
+  const direct = findDirectSensitiveText(value, false);
+  if (direct !== void 0) {
+    return direct;
+  }
+  for (const encodedPart of [parsed.pathname, parsed.hash]) {
+    const decoded = decodeNestedUrlComponent(encodedPart);
+    if (decoded === void 0) {
+      return { code: "invalid_url_encoding", kind: "an invalid URL encoding" };
+    }
+    const kind = redactText(decoded).report.occurrences[0]?.kind;
+    if (kind !== void 0) {
+      return { code: "unsafe_repository_text", kind };
+    }
+    if (encodedPart === parsed.hash) {
+      const fragment = decoded.slice(1);
+      if (isSensitiveUrlParameterName(fragment) || fragment.split(/[?&/]/).some((part) => part.includes("=") && isSensitiveUrlParameterName(part.split("=")[0]))) {
+        return { code: "unsafe_url_parameter", kind: "a sensitive URL fragment" };
+      }
+    }
+  }
+  return void 0;
+}
+function decodeNestedUrlComponent(value) {
+  let decoded = value;
+  for (let layer = 0; layer < MAX_URL_DECODE_LAYERS && ENCODED_BYTE_PATTERN.test(decoded); layer += 1) {
+    try {
+      decoded = decodeURIComponent(decoded);
+    } catch {
+      return void 0;
+    }
+  }
+  return ENCODED_BYTE_PATTERN.test(decoded) ? void 0 : decoded;
+}
+function findDirectSensitiveText(value, scanEmbeddedUrls = true) {
+  const kind = redactText(value).report.occurrences[0]?.kind;
+  if (kind !== void 0) {
+    return { code: "unsafe_repository_text", kind };
+  }
+  if (scanEmbeddedUrls) {
+    for (const match of value.matchAll(/https?:\/\/[^\s<>"']+/gi)) {
+      const unsafeUrl = findSensitiveTextKind(match[0], true);
+      if (unsafeUrl !== void 0) {
+        return unsafeUrl;
+      }
+    }
+  }
+  return void 0;
+}
+
 // packages/github/dist/merged-pr.js
-var DEFAULT_TEXT_LIMIT = 2e3;
 var REPOSITORY_NAME_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 var TEST_PATH_PATTERN = /(^|\/)(__tests__|tests?|specs?)(\/|$)|[./_-](test|spec)\.[cm]?[jt]sx?$|(?:^|\/)[^/]+_test\.go$|(?:^|\/)(?:test_[^/]+|[^/]+_test)\.py$/i;
 var GitHubEvidenceCollectionError = class extends Error {
@@ -1038,14 +2184,14 @@ function parseGitHubMergedPullRequestFixture(value) {
       }
     }
   };
-  assignOptional2(fixture.pullRequest, "body", expectOptionalString(pullRequest.body, "$.pullRequest.body"));
-  assignOptional2(fixture.pullRequest, "htmlUrl", expectOptionalString(pullRequest.htmlUrl, "$.pullRequest.htmlUrl"));
-  assignOptional2(fixture.pullRequest, "mergedAt", expectOptionalString(pullRequest.mergedAt, "$.pullRequest.mergedAt"));
-  assignOptional2(fixture.pullRequest.user, "htmlUrl", expectOptionalString(pullRequest.user.htmlUrl, "$.pullRequest.user.htmlUrl"));
-  assignOptional2(fixture.pullRequest.user, "kind", expectOptionalContributorKind(pullRequest.user.kind, "$.pullRequest.user.kind"));
-  assignOptional2(fixture.pullRequest, "labels", parseOptionalLabels(pullRequest.labels, "$.pullRequest.labels"));
-  assignOptional2(fixture.pullRequest, "changedFiles", parseOptionalChangedFiles(pullRequest.changedFiles, "$.pullRequest.changedFiles"));
-  assignOptional2(fixture.pullRequest, "mergeCommitSha", expectOptionalString(pullRequest.mergeCommitSha, "$.pullRequest.mergeCommitSha"));
+  assignOptional3(fixture.pullRequest, "body", expectOptionalString(pullRequest.body, "$.pullRequest.body"));
+  assignOptional3(fixture.pullRequest, "htmlUrl", expectOptionalString(pullRequest.htmlUrl, "$.pullRequest.htmlUrl"));
+  assignOptional3(fixture.pullRequest, "mergedAt", expectOptionalString(pullRequest.mergedAt, "$.pullRequest.mergedAt"));
+  assignOptional3(fixture.pullRequest.user, "htmlUrl", expectOptionalString(pullRequest.user.htmlUrl, "$.pullRequest.user.htmlUrl"));
+  assignOptional3(fixture.pullRequest.user, "kind", expectOptionalContributorKind(pullRequest.user.kind, "$.pullRequest.user.kind"));
+  assignOptional3(fixture.pullRequest, "labels", parseOptionalLabels(pullRequest.labels, "$.pullRequest.labels"));
+  assignOptional3(fixture.pullRequest, "changedFiles", parseOptionalChangedFiles(pullRequest.changedFiles, "$.pullRequest.changedFiles"));
+  assignOptional3(fixture.pullRequest, "mergeCommitSha", expectOptionalString(pullRequest.mergeCommitSha, "$.pullRequest.mergeCommitSha"));
   return fixture;
 }
 function collectMergedPullRequestEvidence(fixture) {
@@ -1064,7 +2210,7 @@ function collectMergedPullRequestEvidence(fixture) {
     event: "merged_pull_request",
     pullRequestNumber
   };
-  assignOptional2(source, "mergedAt", mergedAt);
+  assignOptional3(source, "mergedAt", mergedAt);
   const items = [
     buildPullRequestItem(pullRequestNumber, title, pullRequest.body, pullRequestUrl),
     ...buildLabelItems(pullRequest.labels ?? []),
@@ -1089,7 +2235,7 @@ function collectContributor(user) {
     login,
     profileUrl
   };
-  assignOptional2(contributor, "kind", user.kind);
+  assignOptional3(contributor, "kind", user.kind);
   return contributor;
 }
 function expectOptionalContributorKind(value, path) {
@@ -1107,8 +2253,8 @@ function buildPullRequestItem(pullRequestNumber, title, body, url) {
     id: `PR-${pullRequestNumber}`,
     title
   };
-  assignOptional2(item, "url", url);
-  assignOptional2(item, "excerpt", normalizeOptionalExcerpt(body));
+  assignOptional3(item, "url", url);
+  Object.assign(item, prepareEvidenceExcerpt(body));
   return item;
 }
 function buildLabelItems(labels) {
@@ -1141,8 +2287,8 @@ function buildChangedFileItems(files) {
       id: filename,
       title: filename
     };
-    assignOptional2(item, "excerpt", buildFileExcerpt(file, status, additions, deletions));
-    assignOptional2(item, "metadata", metadata);
+    Object.assign(item, buildFileExcerpt(file, status, additions, deletions));
+    assignOptional3(item, "metadata", metadata);
     return item;
   });
 }
@@ -1160,8 +2306,8 @@ function buildMergeCommitItems(mergeCommitSha) {
   ];
 }
 function buildFileExcerpt(file, status, additions, deletions) {
-  const patchExcerpt = normalizeOptionalExcerpt(file.patchExcerpt);
-  if (patchExcerpt !== void 0) {
+  const patchExcerpt = prepareEvidenceExcerpt(file.patchExcerpt);
+  if (patchExcerpt.excerpt !== void 0) {
     return patchExcerpt;
   }
   const changeSummary = [
@@ -1169,13 +2315,13 @@ function buildFileExcerpt(file, status, additions, deletions) {
     additions === void 0 ? void 0 : `${additions} additions`,
     deletions === void 0 ? void 0 : `${deletions} deletions`
   ].filter((entry) => entry !== void 0);
-  return changeSummary.length === 0 ? void 0 : changeSummary.join(", ");
+  return changeSummary.length === 0 ? {} : { excerpt: changeSummary.join(", ") };
 }
 function buildFileMetadata(status, additions, deletions) {
   const metadata = {};
-  assignOptional2(metadata, "status", status);
-  assignOptional2(metadata, "additions", additions);
-  assignOptional2(metadata, "deletions", deletions);
+  assignOptional3(metadata, "status", status);
+  assignOptional3(metadata, "additions", additions);
+  assignOptional3(metadata, "deletions", deletions);
   return Object.keys(metadata).length === 0 ? void 0 : metadata;
 }
 function dedupeEvidenceItems(items) {
@@ -1225,10 +2371,10 @@ function parseOptionalChangedFiles(value, field) {
     const changedFile = {
       filename: expectString2(entry.filename, `${itemPath}.filename`)
     };
-    assignOptional2(changedFile, "status", expectOptionalString(entry.status, `${itemPath}.status`));
-    assignOptional2(changedFile, "additions", expectOptionalNumber(entry.additions, `${itemPath}.additions`));
-    assignOptional2(changedFile, "deletions", expectOptionalNumber(entry.deletions, `${itemPath}.deletions`));
-    assignOptional2(changedFile, "patchExcerpt", expectOptionalString(entry.patchExcerpt, `${itemPath}.patchExcerpt`));
+    assignOptional3(changedFile, "status", expectOptionalString(entry.status, `${itemPath}.status`));
+    assignOptional3(changedFile, "additions", expectOptionalNumber(entry.additions, `${itemPath}.additions`));
+    assignOptional3(changedFile, "deletions", expectOptionalNumber(entry.deletions, `${itemPath}.deletions`));
+    assignOptional3(changedFile, "patchExcerpt", expectOptionalString(entry.patchExcerpt, `${itemPath}.patchExcerpt`));
     return changedFile;
   });
 }
@@ -1273,13 +2419,6 @@ function normalizeOptionalString(value) {
   }
   const normalized = value.replace(/\s+/g, " ").trim();
   return normalized.length === 0 ? void 0 : normalized;
-}
-function normalizeOptionalExcerpt(value) {
-  const normalized = normalizeOptionalString(value);
-  if (normalized === void 0) {
-    return void 0;
-  }
-  return normalized.length > DEFAULT_TEXT_LIMIT ? `${normalized.slice(0, DEFAULT_TEXT_LIMIT - 1)}...` : normalized;
 }
 function normalizePositiveInteger(value, field) {
   if (!Number.isInteger(value) || value <= 0) {
@@ -1327,7 +2466,7 @@ function normalizeOptionalHttpsUrl(value, field) {
 function isTestPath(filename) {
   return TEST_PATH_PATTERN.test(filename.replace(/\\/g, "/"));
 }
-function assignOptional2(target, key, value) {
+function assignOptional3(target, key, value) {
   if (value !== void 0) {
     target[key] = value;
   }
@@ -1337,7 +2476,6 @@ function assignOptional2(target, key, value) {
 var DEFAULT_REVIEW_COMMENT_LIMIT = 25;
 var DEFAULT_LINKED_ISSUE_LIMIT = 25;
 var DEFAULT_CHANGED_FILE_LIMIT = 100;
-var TEXT_LIMIT = 2e3;
 var REPOSITORY_NAME_PATTERN2 = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 var LiveGitHubCollectionError = class extends Error {
   code;
@@ -1400,20 +2538,20 @@ function toMergedPullRequestFixture(repository, pullRequest, files) {
       changedFiles: files.map(toChangedFileFixture)
     }
   };
-  assignOptional3(fixture.pullRequest, "body", normalizeOptionalString2(pullRequest.body));
-  assignOptional3(fixture.pullRequest.user, "htmlUrl", normalizeOptionalString2(pullRequest.user.htmlUrl));
-  assignOptional3(fixture.pullRequest.user, "kind", pullRequest.user.kind);
-  assignOptional3(fixture.pullRequest, "mergeCommitSha", normalizeOptionalString2(pullRequest.mergeCommitSha));
+  assignOptional4(fixture.pullRequest, "body", pullRequest.body ?? void 0);
+  assignOptional4(fixture.pullRequest.user, "htmlUrl", normalizeOptionalString2(pullRequest.user.htmlUrl));
+  assignOptional4(fixture.pullRequest.user, "kind", pullRequest.user.kind);
+  assignOptional4(fixture.pullRequest, "mergeCommitSha", normalizeOptionalString2(pullRequest.mergeCommitSha));
   return fixture;
 }
 function toChangedFileFixture(file) {
   const changedFile = {
     filename: file.filename
   };
-  assignOptional3(changedFile, "status", normalizeOptionalString2(file.status));
-  assignOptional3(changedFile, "additions", normalizeOptionalNonNegativeInteger2(file.additions));
-  assignOptional3(changedFile, "deletions", normalizeOptionalNonNegativeInteger2(file.deletions));
-  assignOptional3(changedFile, "patchExcerpt", normalizeOptionalExcerpt2(file.patch));
+  assignOptional4(changedFile, "status", normalizeOptionalString2(file.status));
+  assignOptional4(changedFile, "additions", normalizeOptionalNonNegativeInteger2(file.additions));
+  assignOptional4(changedFile, "deletions", normalizeOptionalNonNegativeInteger2(file.deletions));
+  assignOptional4(changedFile, "patchExcerpt", file.patch ?? void 0);
   return changedFile;
 }
 function buildLinkedIssueItems(pullRequest, repository, limit) {
@@ -1461,8 +2599,8 @@ function buildReviewCommentItems(comments, limit) {
       id,
       title
     };
-    assignOptional3(item, "url", normalizeOptionalHttpsUrl2(comment.htmlUrl, "reviewComment.htmlUrl"));
-    assignOptional3(item, "excerpt", normalizeOptionalExcerpt2(comment.body));
+    assignOptional4(item, "url", normalizeOptionalHttpsUrl2(comment.htmlUrl, "reviewComment.htmlUrl"));
+    Object.assign(item, prepareEvidenceExcerpt(comment.body ?? void 0));
     return item;
   });
 }
@@ -1497,13 +2635,6 @@ function normalizeOptionalString2(value) {
   }
   const normalized = value.replace(/\s+/g, " ").trim();
   return normalized.length === 0 ? void 0 : normalized;
-}
-function normalizeOptionalExcerpt2(value) {
-  const normalized = normalizeOptionalString2(value);
-  if (normalized === void 0) {
-    return void 0;
-  }
-  return normalized.length > TEXT_LIMIT ? `${normalized.slice(0, TEXT_LIMIT - 1)}...` : normalized;
 }
 function normalizeOptionalHttpsUrl2(value, field) {
   const normalized = normalizeOptionalString2(value);
@@ -1545,7 +2676,7 @@ function dedupeEvidenceItems2(items) {
   }
   return deduped;
 }
-function assignOptional3(target, key, value) {
+function assignOptional4(target, key, value) {
   if (value !== void 0) {
     target[key] = value;
   }
@@ -1553,26 +2684,26 @@ function assignOptional3(target, key, value) {
 
 // packages/action/dist/event.js
 function resolveGitHubEventPayload(value) {
-  if (!isRecord2(value)) {
+  if (!isRecord3(value)) {
     return {
       kind: "skipped",
       reason: "GitHub event payload must be a JSON object."
     };
   }
-  if (!isRecord2(value.repository) || typeof value.repository.full_name !== "string") {
+  if (!isRecord3(value.repository) || typeof value.repository.full_name !== "string") {
     return {
       kind: "skipped",
       reason: "GitHub event payload does not include repository.full_name."
     };
   }
-  if (!isRecord2(value.pull_request)) {
+  if (!isRecord3(value.pull_request)) {
     return {
       kind: "skipped",
       reason: "GitHub event payload does not include a pull_request object."
     };
   }
   const pullRequest = value.pull_request;
-  const contributorKind = isRecord2(pullRequest.user) ? parseActorKind(pullRequest.user.type) : void 0;
+  const contributorKind = isRecord3(pullRequest.user) ? parseActorKind(pullRequest.user.type) : void 0;
   const mergedAt = typeof pullRequest.merged_at === "string" ? pullRequest.merged_at : void 0;
   if (mergedAt === void 0) {
     return {
@@ -1580,7 +2711,7 @@ function resolveGitHubEventPayload(value) {
       reason: "GitHub pull request event is not a merged pull request."
     };
   }
-  if (!isRecord2(pullRequest.user)) {
+  if (!isRecord3(pullRequest.user)) {
     return {
       kind: "skipped",
       reason: "GitHub pull request event does not include pull_request.user."
@@ -1629,7 +2760,7 @@ function parseLabels2(value) {
     return [];
   }
   return value.flatMap((entry) => {
-    if (!isRecord2(entry) || typeof entry.name !== "string") {
+    if (!isRecord3(entry) || typeof entry.name !== "string") {
       return [];
     }
     return [
@@ -1642,7 +2773,7 @@ function parseLabels2(value) {
 function optionalString(value) {
   return typeof value === "string" ? value : void 0;
 }
-function isRecord2(value) {
+function isRecord3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -1966,7 +3097,7 @@ function createGitHubPullRequestClient(options) {
         }
         throw error;
       }
-      if (!isRecord3(response)) {
+      if (!isRecord4(response)) {
         throw new ProposalPullRequestClientError("unexpected", "GitHub repository permission response must be an object.");
       }
       const permission = response.permission;
@@ -2189,12 +3320,12 @@ function parseRetryAfterMs(response) {
   return Number.isFinite(date) ? Math.max(0, date - Date.now()) : void 0;
 }
 function parsePullRequest2(value) {
-  if (!isRecord3(value)) {
+  if (!isRecord4(value)) {
     throw new ProposalPullRequestClientError("unexpected", "GitHub pull request response must be an object.");
   }
   const head = value.head;
   const base = value.base;
-  if (!isRecord3(head) || !isRecord3(base)) {
+  if (!isRecord4(head) || !isRecord4(base)) {
     throw new ProposalPullRequestClientError("unexpected", "GitHub pull request response must include head and base refs.");
   }
   return {
@@ -2206,7 +3337,7 @@ function parsePullRequest2(value) {
   };
 }
 function parseSourcePullRequestComment(value) {
-  if (!isRecord3(value) || !isRecord3(value.user)) {
+  if (!isRecord4(value) || !isRecord4(value.user)) {
     throw new ProposalPullRequestClientError("unexpected", "GitHub source pull request comment response must include an author.");
   }
   const app = value.performed_via_github_app;
@@ -2218,7 +3349,7 @@ function parseSourcePullRequestComment(value) {
     authorType: expectString3(value.user.type, "user.type")
   };
   const authorAssociation = typeof value.author_association === "string" && value.author_association.trim().length > 0 ? value.author_association : void 0;
-  if (isRecord3(app) && typeof app.slug === "string" && app.slug.trim().length > 0) {
+  if (isRecord4(app) && typeof app.slug === "string" && app.slug.trim().length > 0) {
     return {
       ...comment,
       ...authorAssociation === void 0 ? {} : { authorAssociation },
@@ -2261,7 +3392,7 @@ function parseOptionalJson2(text) {
   }
 }
 function githubMessage2(value) {
-  if (isRecord3(value) && typeof value.message === "string") {
+  if (isRecord4(value) && typeof value.message === "string") {
     const normalized = value.message.replace(/\s+/g, " ").trim();
     if (normalized.length > 0) {
       return normalized.length <= 500 ? normalized : `${normalized.slice(0, 497)}...`;
@@ -2299,623 +3430,8 @@ function expectNumber3(value, field) {
   }
   return value;
 }
-function isRecord3(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-// packages/schemas/dist/types.js
-var ASSESSMENT_SCHEMA_VERSION = "clarissimi.assessment/v1";
-var REVIEW_DECISION_SCHEMA_VERSION = "clarissimi.review-decision/v1";
-var REVIEW_GATE_MODES = ["advisory", "required"];
-var REVIEW_DECISIONS = ["approved", "skip"];
-var CONFIG_PROVIDERS = ["fake", "openai-compatible"];
-var CONFIG_PROVIDER_THINKING_VALUES = ["disabled"];
-var CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES = ["public", "private-network"];
-var CONFIG_MODES = ["dry-run", "propose", "commit"];
-var CONFIG_MARKDOWN_SUMMARIES = ["none", "table", "gallery"];
-var CONTRIBUTOR_KINDS = ["human", "bot", "ai_agent"];
-var CONTRIBUTION_TYPES = [
-  "bug_fix",
-  "bug_report",
-  "reproduction",
-  "test",
-  "performance",
-  "documentation",
-  "security",
-  "accessibility",
-  "api_design",
-  "maintenance",
-  "translation",
-  "release_validation",
-  "example",
-  "other"
-];
-var IMPACT_LEVELS = ["low", "medium", "high"];
-var APPROVAL_STATUSES = [
-  "draft",
-  "auto_approved",
-  "approved",
-  "rejected",
-  "skipped"
-];
-var EVIDENCE_KINDS = [
-  "pull_request",
-  "issue",
-  "review",
-  "comment",
-  "commit",
-  "file",
-  "label",
-  "test",
-  "maintainer_note",
-  "advisory"
-];
-var CLAIM_EVIDENCE_FIELDS = ["evidenceSummary", "publicRecognitionText"];
-
-// packages/schemas/dist/diagnostics.js
-var FIELDS = /* @__PURE__ */ new Set([
-  "schemaVersion",
-  "contributor",
-  "platform",
-  "id",
-  "login",
-  "profileUrl",
-  "kind",
-  "contributionType",
-  "affectedArea",
-  "impactLevel",
-  "evidenceSummary",
-  "evidenceRefs",
-  "url",
-  "title",
-  "excerpt",
-  "claimEvidenceLinks",
-  "field",
-  "text",
-  "evidenceRefIndexes",
-  "suggestedBadge",
-  "publicRecognitionText",
-  "confidence",
-  "maintainerApprovalStatus",
-  "approvalSnapshot",
-  "contentSha256",
-  "recordedAt",
-  "source",
-  "repository",
-  "event",
-  "pullRequestNumber",
-  "mergedAt",
-  "ledger",
-  "assessments",
-  "headSha",
-  "decision",
-  "reason"
-]);
-function sanitizeValidationIssuePath(path) {
-  let result = "$";
-  let rest = path.startsWith("$") ? path.slice(1) : "";
-  while (rest.length > 0) {
-    const index = /^\[(0|[1-9]\d{0,8})\]/.exec(rest);
-    if (index !== null) {
-      result += index[0];
-      rest = rest.slice(index[0].length);
-      continue;
-    }
-    const field = /^\.([A-Za-z][A-Za-z0-9]*)(?=\.|\[|$)/.exec(rest);
-    if (field === null || !FIELDS.has(field[1]))
-      return result;
-    result += field[0];
-    rest = rest.slice(field[0].length);
-  }
-  return result;
-}
-function publicValidationDiagnostics(issues) {
-  const bounded = issues.slice(0, 8);
-  const issueCodes = [
-    ...new Set(bounded.map((issue) => /^[a-z][a-z0-9_]{0,79}$/.test(issue.code) ? issue.code : "validation_failed"))
-  ];
-  const issuePaths = [...new Set(bounded.map((issue) => sanitizeValidationIssuePath(issue.path)))];
-  const recovery = issues.some((issue) => ["approval_snapshot_required", "approval_snapshot_mismatch", "invalid_stage_status"].includes(issue.code));
-  return {
-    issueCodes,
-    issuePaths,
-    ...recovery ? {
-      recoveryHint: "To approve edited text, set maintainerApprovalStatus back to draft, remove the old approvalSnapshot, review the content, and run clarissimi approve-draft again."
-    } : {}
-  };
-}
-
-// packages/schemas/dist/validation.js
-var RANKING_LANGUAGE_PATTERNS = [
-  /\bleaderboard\b/i,
-  /\btotal\s+score\b/i,
-  /\baverage\s+score\b/i,
-  /\bhigh\s+score\b/i,
-  /\bscore\s+share\b/i,
-  /\bpoint\s+share\b/i,
-  /\bpoints\s+share\b/i,
-  /\bimpact\s+weight\s+share\b/i,
-  /\bcontribution\s+weight\s+share\b/i,
-  /\bshare\s+of\s+(?:the\s+)?(?:(?:last|past)\s+\d+\s+(?:days'?|months'?)\s+|recent\s+|total\s+)?(?:score|points|impact\s+weight|contribution\s+weight)\b/i,
-  /\b\d+(?:\.\d+)?\s*%\s+of\s+(?:the\s+)?(?:(?:last|past)\s+\d+\s+(?:days'?|months'?)|recent|total)?\s*(?:contribution\s+)?(?:score|points|impact\s+weight|contribution\s+weight)\b/i,
-  /\b\d+(?:\.\d+)?\s+percent\s+of\s+(?:the\s+)?(?:(?:last|past)\s+\d+\s+(?:days'?|months'?)|recent|total)?\s*(?:contribution\s+)?(?:score|points|impact\s+weight|contribution\s+weight)\b/i,
-  /최근\s*\d+\s*개월(?:간)?\s*(?:전체\s*)?(?:기여\s*)?(?:점수|가중치)\s*(?:비율|점유율|몫)?/i,
-  /(?:기여\s*)?(?:점수|가중치)\s*(?:비율|점유율)/i,
-  /\bcontribution\s+points\b/i,
-  /\bleaderboard\s+points\b/i,
-  /\bcontributor\s+tier\b/i,
-  /\brank(?:ed|ing)?\b/i,
-  /\btop\s+\d+\s+contributor\b/i,
-  /\b(?:gold|silver|bronze)\s+contributor\b/i,
-  /\bmedium\s+contributor\b/i,
-  /\bmedium\s+quality\b/i,
-  /\blow-quality\s+contributor\b/i
-];
-var PUBLIC_SCORE_FIELD_NAMES = /* @__PURE__ */ new Set([
-  "score",
-  "totalscore",
-  "averagescore",
-  "scoreshare",
-  "pointshare",
-  "pointsshare",
-  "impactweightshare",
-  "contributionweightshare",
-  "recentscoreshare",
-  "recentpointshare",
-  "recentpointsshare",
-  "recentimpactweightshare",
-  "recentcontributionweightshare",
-  "contributionshare",
-  "recentcontributionshare",
-  "rank",
-  "ranking",
-  "leaderboard",
-  "leaderboardposition",
-  "contributortier",
-  "tier",
-  "points"
-]);
-var PUBLIC_SCORE_FIELD_SUFFIXES = [
-  "scoreshare",
-  "pointshare",
-  "pointsshare",
-  "impactweightshare",
-  "contributionweightshare",
-  "contributionshare",
-  "scorepercent",
-  "pointpercent",
-  "pointspercent",
-  "impactweightpercent",
-  "contributionweightpercent",
-  "contributionpercent"
-];
-function isContributionType(value) {
-  return CONTRIBUTION_TYPES.includes(value);
-}
-function isConfigProvider(value) {
-  return CONFIG_PROVIDERS.includes(value);
-}
-function isConfigProviderThinking(value) {
-  return CONFIG_PROVIDER_THINKING_VALUES.includes(value);
-}
-function isConfigProviderEndpointTrust(value) {
-  return CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES.includes(value);
-}
-function isConfigMarkdownSummary(value) {
-  return CONFIG_MARKDOWN_SUMMARIES.includes(value);
-}
-function isContributorKind(value) {
-  return CONTRIBUTOR_KINDS.includes(value);
-}
-function isImpactLevel(value) {
-  return IMPACT_LEVELS.includes(value);
-}
-function isApprovalStatus(value) {
-  return APPROVAL_STATUSES.includes(value);
-}
-function isReviewGateMode(value) {
-  return REVIEW_GATE_MODES.includes(value);
-}
-function isReviewDecisionValue(value) {
-  return REVIEW_DECISIONS.includes(value);
-}
-function validateReviewDecision(value) {
-  const issues = [];
-  if (!isRecord4(value)) {
-    return invalid([
-      { path: "$", code: "expected_object", message: "Review decision must be an object." }
-    ]);
-  }
-  expectLiteral(value.schemaVersion, REVIEW_DECISION_SCHEMA_VERSION, "$.schemaVersion", issues);
-  expectRepositoryName(value.repository, "$.repository", issues);
-  expectPositiveInteger(value.pullRequestNumber, "$.pullRequestNumber", issues);
-  if (typeof value.headSha !== "string" || !/^[a-f0-9]{40}$/i.test(value.headSha)) {
-    pushIssue(issues, "$.headSha", "invalid_commit_sha", "Head SHA must be a 40-character Git commit SHA.");
-  }
-  expectEnum(value.decision, isReviewDecisionValue, "$.decision", issues);
-  expectNonEmptyString(value.reason, "$.reason", issues);
-  if (typeof value.reason === "string" && value.reason.length > 1e3) {
-    pushIssue(issues, "$.reason", "string_too_long", "Review decision reason must not exceed 1000 characters.");
-  }
-  return issues.length === 0 ? { ok: true, value, issues: [] } : invalid(issues);
-}
-function isEvidenceKind(value) {
-  return EVIDENCE_KINDS.includes(value);
-}
-function hasPublicRankingLanguage(value) {
-  return RANKING_LANGUAGE_PATTERNS.some((pattern) => pattern.test(value));
-}
-function validateContributionAssessment(value) {
-  const issues = [];
-  if (!isRecord4(value)) {
-    return invalid([
-      {
-        path: "$",
-        code: "expected_object",
-        message: "Assessment must be an object."
-      }
-    ]);
-  }
-  expectLiteral(value.schemaVersion, ASSESSMENT_SCHEMA_VERSION, "$.schemaVersion", issues);
-  rejectPublicScoreFields(value, "$", issues);
-  validateContributor(value.contributor, "$.contributor", issues);
-  expectEnum(value.contributionType, isContributionType, "$.contributionType", issues);
-  expectPublicNarrativeText(value.affectedArea, "$.affectedArea", issues);
-  expectEnum(value.impactLevel, isImpactLevel, "$.impactLevel", issues);
-  expectPublicNarrativeText(value.evidenceSummary, "$.evidenceSummary", issues);
-  validateEvidenceRefs(value.evidenceRefs, "$.evidenceRefs", issues);
-  validateClaimEvidenceLinks(value.claimEvidenceLinks, value, issues);
-  expectPublicNarrativeText(value.suggestedBadge, "$.suggestedBadge", issues);
-  expectPublicNarrativeText(value.publicRecognitionText, "$.publicRecognitionText", issues);
-  expectConfidence(value.confidence, "$.confidence", issues);
-  expectEnum(value.maintainerApprovalStatus, isApprovalStatus, "$.maintainerApprovalStatus", issues);
-  validateDraftApprovalSnapshot(value.approvalSnapshot, value.maintainerApprovalStatus, issues);
-  validateSource(value.source, "$.source", issues);
-  if (issues.length > 0) {
-    return invalid(issues);
-  }
-  return {
-    ok: true,
-    value,
-    issues: []
-  };
-}
-function isClaimEvidenceField(value) {
-  return CLAIM_EVIDENCE_FIELDS.includes(value);
-}
-function validateClaimEvidenceLinks(value, assessment, issues) {
-  if (value === void 0) {
-    return;
-  }
-  if (!Array.isArray(value)) {
-    pushIssue(issues, "$.claimEvidenceLinks", "expected_array", "Claim evidence links must be an array.");
-    return;
-  }
-  const linksByField = /* @__PURE__ */ new Map();
-  value.forEach((link, index) => {
-    const path = `$.claimEvidenceLinks[${index}]`;
-    if (!isRecord4(link)) {
-      pushIssue(issues, path, "expected_object", "Claim evidence link must be an object.");
-      return;
-    }
-    if (typeof link.field !== "string" || !isClaimEvidenceField(link.field)) {
-      pushIssue(issues, `${path}.field`, "invalid_claim_field", "Claim evidence field is unknown.");
-      return;
-    }
-    expectNonEmptyString(link.text, `${path}.text`, issues);
-    if (typeof link.text === "string" && link.text.trim().length > 0) {
-      const texts = linksByField.get(link.field) ?? [];
-      texts.push(link.text);
-      linksByField.set(link.field, texts);
-    }
-    if (!Array.isArray(link.evidenceRefIndexes) || link.evidenceRefIndexes.length === 0) {
-      pushIssue(issues, `${path}.evidenceRefIndexes`, "empty_evidence_links", "A claim must link to at least one evidence reference.");
-      return;
-    }
-    const seen = /* @__PURE__ */ new Set();
-    link.evidenceRefIndexes.forEach((refIndex, refPosition) => {
-      const refPath = `${path}.evidenceRefIndexes[${refPosition}]`;
-      if (typeof refIndex !== "number" || !Number.isInteger(refIndex) || refIndex < 0 || !Array.isArray(assessment.evidenceRefs) || refIndex >= assessment.evidenceRefs.length) {
-        pushIssue(issues, refPath, "invalid_evidence_index", "Evidence reference index is invalid.");
-      } else if (seen.has(refIndex)) {
-        pushIssue(issues, refPath, "duplicate_evidence_index", "Evidence reference index is repeated.");
-      } else {
-        seen.add(refIndex);
-      }
-    });
-  });
-  for (const field of CLAIM_EVIDENCE_FIELDS) {
-    const texts = linksByField.get(field);
-    if (texts === void 0) {
-      pushIssue(issues, "$.claimEvidenceLinks", "missing_claim_field", `Claims must cover ${field}.`);
-    } else if (texts.join(" ") !== assessment[field]) {
-      pushIssue(issues, `$.${field}`, "claim_evidence_text_mismatch", `Claim evidence links must cover the complete ${field} text in order.`);
-    }
-  }
-}
-function validateDraftApprovalSnapshot(value, status, issues) {
-  if (value === void 0) {
-    return;
-  }
-  if (status !== "approved") {
-    pushIssue(issues, "$.approvalSnapshot", "invalid_approval_snapshot_status", "An approval snapshot requires maintainerApprovalStatus approved.");
-  }
-  if (!isRecord4(value)) {
-    pushIssue(issues, "$.approvalSnapshot", "expected_object", "Approval snapshot must be an object.");
-    return;
-  }
-  if (typeof value.contentSha256 !== "string" || !/^[0-9a-f]{64}$/.test(value.contentSha256)) {
-    pushIssue(issues, "$.approvalSnapshot.contentSha256", "invalid_digest", "Approval snapshot digest must be a lowercase SHA-256 hex string.");
-  }
-  expectIsoDateTime(value.recordedAt, "$.approvalSnapshot.recordedAt", issues);
-}
-function validateClarissimiConfig(value) {
-  const issues = [];
-  if (!isRecord4(value)) {
-    return invalid([
-      {
-        path: "$",
-        code: "expected_object",
-        message: "Clarissimi config must be a JSON object."
-      }
-    ]);
-  }
-  const provider = expectOptionalEnum(value.provider, CONFIG_PROVIDERS, "$.provider", issues);
-  const providerEndpoint = expectOptionalHttpUrl(value.providerEndpoint, "$.providerEndpoint", issues);
-  const providerEndpointTrust = expectOptionalEnum(value.providerEndpointTrust, CONFIG_PROVIDER_ENDPOINT_TRUST_VALUES, "$.providerEndpointTrust", issues);
-  const providerModel = expectOptionalNonEmptyString(value.providerModel, "$.providerModel", issues);
-  const providerThinking = expectOptionalEnum(value.providerThinking, CONFIG_PROVIDER_THINKING_VALUES, "$.providerThinking", issues);
-  const mode = expectOptionalEnum(value.mode, CONFIG_MODES, "$.mode", issues);
-  const markdownSummary = expectOptionalEnum(value.markdownSummary, CONFIG_MARKDOWN_SUMMARIES, "$.markdownSummary", issues);
-  const includeAutomationContributors = expectOptionalBoolean(value.includeAutomationContributors, "$.includeAutomationContributors", issues);
-  if (issues.length > 0) {
-    return invalid(issues);
-  }
-  const config = {};
-  if (provider !== void 0) {
-    config.provider = provider;
-  }
-  if (providerEndpoint !== void 0) {
-    config.providerEndpoint = providerEndpoint;
-  }
-  if (providerEndpointTrust !== void 0) {
-    config.providerEndpointTrust = providerEndpointTrust;
-  }
-  if (providerModel !== void 0) {
-    config.providerModel = providerModel;
-  }
-  if (providerThinking !== void 0) {
-    config.providerThinking = providerThinking;
-  }
-  if (mode !== void 0) {
-    config.mode = mode;
-  }
-  if (markdownSummary !== void 0) {
-    config.markdownSummary = markdownSummary;
-  }
-  if (includeAutomationContributors !== void 0) {
-    config.includeAutomationContributors = includeAutomationContributors;
-  }
-  return {
-    ok: true,
-    value: config,
-    issues: []
-  };
-}
-function validateContributor(value, path, issues) {
-  if (!isRecord4(value)) {
-    pushIssue(issues, path, "expected_object", "Contributor must be an object.");
-    return;
-  }
-  expectLiteral(value.platform, "github", `${path}.platform`, issues);
-  expectNonEmptyString(value.id, `${path}.id`, issues);
-  expectNonEmptyString(value.login, `${path}.login`, issues);
-  expectGitHubProfileUrl(value.profileUrl, value.login, value.kind, `${path}.profileUrl`, issues);
-  if (value.kind !== void 0) {
-    expectEnum(value.kind, isContributorKind, `${path}.kind`, issues);
-  }
-}
-function expectGitHubProfileUrl(value, login, kind, path, issues) {
-  if (typeof value !== "string" || typeof login !== "string") {
-    expectUrl(value, path, issues);
-    return;
-  }
-  try {
-    const parsed = new URL(value);
-    const normalizedPath = decodeURIComponent(parsed.pathname).replace(/\/$/, "");
-    const expectedUserPath = `/${login}`.toLowerCase();
-    const expectedAppPath = `/apps/${login.replace(/\[bot\]$/i, "")}`.toLowerCase();
-    const validPath = normalizedPath.toLowerCase() === expectedUserPath || kind === "bot" && normalizedPath.toLowerCase() === expectedAppPath;
-    if (parsed.protocol !== "https:" || parsed.hostname.toLowerCase() !== "github.com" || parsed.port !== "" || parsed.username !== "" || parsed.password !== "" || parsed.search !== "" || parsed.hash !== "" || !validPath) {
-      pushIssue(issues, path, "invalid_github_profile_url", "GitHub contributor profile URL must match the contributor login.");
-    }
-  } catch {
-    pushIssue(issues, path, "invalid_url", "Value must be a valid URL.");
-  }
-}
-function validateEvidenceRefs(value, path, issues) {
-  if (!Array.isArray(value)) {
-    pushIssue(issues, path, "expected_array", "Evidence refs must be an array.");
-    return;
-  }
-  if (value.length === 0) {
-    pushIssue(issues, path, "empty_array", "At least one evidence ref is required.");
-    return;
-  }
-  value.forEach((entry, index) => {
-    const entryPath = `${path}[${index}]`;
-    if (!isRecord4(entry)) {
-      pushIssue(issues, entryPath, "expected_object", "Evidence ref must be an object.");
-      return;
-    }
-    expectEnum(entry.kind, isEvidenceKind, `${entryPath}.kind`, issues);
-    expectNonEmptyString(entry.id, `${entryPath}.id`, issues);
-    if (entry.url !== void 0) {
-      expectUrl(entry.url, `${entryPath}.url`, issues);
-    }
-    if (entry.title !== void 0) {
-      expectNonEmptyString(entry.title, `${entryPath}.title`, issues);
-    }
-    if (entry.excerpt !== void 0) {
-      expectNonEmptyString(entry.excerpt, `${entryPath}.excerpt`, issues);
-    }
-  });
-}
-function validateSource(value, path, issues) {
-  if (!isRecord4(value)) {
-    pushIssue(issues, path, "expected_object", "Source must be an object.");
-    return;
-  }
-  expectRepositoryName(value.repository, `${path}.repository`, issues);
-  expectLiteral(value.event, "merged_pull_request", `${path}.event`, issues);
-  expectPositiveInteger(value.pullRequestNumber, `${path}.pullRequestNumber`, issues);
-  if (value.mergedAt !== void 0) {
-    expectIsoDateTime(value.mergedAt, `${path}.mergedAt`, issues);
-  }
-}
-function expectPublicNarrativeText(value, path, issues) {
-  expectNonEmptyString(value, path, issues);
-  if (typeof value === "string" && hasPublicRankingLanguage(value)) {
-    pushIssue(issues, path, "public_ranking_language", "Public recognition fields must not contain contributor scoring or ranking language.");
-  }
-}
-function expectConfidence(value, path, issues) {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    pushIssue(issues, path, "expected_number", "Confidence must be a finite number.");
-    return;
-  }
-  if (value < 0 || value > 1) {
-    pushIssue(issues, path, "out_of_range", "Confidence must be between 0 and 1.");
-  }
-}
-function rejectPublicScoreFields(value, path, issues) {
-  if (Array.isArray(value)) {
-    value.forEach((entry, index) => {
-      rejectPublicScoreFields(entry, `${path}[${index}]`, issues);
-    });
-    return;
-  }
-  if (!isRecord4(value)) {
-    return;
-  }
-  for (const [key, nestedValue] of Object.entries(value)) {
-    const fieldPath = `${path}.${key}`;
-    if (isPublicScoreFieldName(key)) {
-      pushIssue(issues, fieldPath, "public_score_field", "Assessment must not contain public score, rank, leaderboard, point, or contributor tier fields.");
-    }
-    rejectPublicScoreFields(nestedValue, fieldPath, issues);
-  }
-}
-function normalizeFieldName(value) {
-  return value.replace(/[^A-Za-z0-9]+/g, "").toLowerCase();
-}
-function isPublicScoreFieldName(value) {
-  const normalized = normalizeFieldName(value);
-  return PUBLIC_SCORE_FIELD_NAMES.has(normalized) || PUBLIC_SCORE_FIELD_SUFFIXES.some((suffix) => normalized.endsWith(suffix));
-}
-function expectEnum(value, guard, path, issues) {
-  if (typeof value !== "string" || !guard(value)) {
-    pushIssue(issues, path, "invalid_enum", "Value is not in the allowed set.");
-  }
-}
-function expectLiteral(value, expected, path, issues) {
-  if (value !== expected) {
-    pushIssue(issues, path, "invalid_literal", `Value must be ${expected}.`);
-  }
-}
-function expectNonEmptyString(value, path, issues) {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    pushIssue(issues, path, "empty_string", "Value must be a non-empty string.");
-  }
-}
-function expectOptionalNonEmptyString(value, path, issues) {
-  if (value === void 0) {
-    return void 0;
-  }
-  if (typeof value !== "string" || value.trim().length === 0) {
-    pushIssue(issues, path, "empty_string", "Value must be a non-empty string.");
-    return void 0;
-  }
-  return value;
-}
-function expectOptionalHttpUrl(value, path, issues) {
-  const normalized = expectOptionalNonEmptyString(value, path, issues);
-  if (normalized === void 0) {
-    return void 0;
-  }
-  try {
-    const parsed = new URL(normalized);
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-      pushIssue(issues, path, "invalid_url_protocol", "Value must be an HTTP(S) URL.");
-      return void 0;
-    }
-  } catch {
-    pushIssue(issues, path, "invalid_url", "Value must be a valid HTTP(S) URL.");
-    return void 0;
-  }
-  return normalized;
-}
-function expectOptionalEnum(value, allowedValues, path, issues) {
-  if (value === void 0) {
-    return void 0;
-  }
-  const selected = allowedValues.find((candidate) => candidate === value);
-  if (selected === void 0) {
-    pushIssue(issues, path, "invalid_enum", `Allowed values: ${allowedValues.join(", ")}.`);
-    return void 0;
-  }
-  return selected;
-}
-function expectOptionalBoolean(value, path, issues) {
-  if (value === void 0) {
-    return void 0;
-  }
-  if (typeof value !== "boolean") {
-    pushIssue(issues, path, "expected_boolean", "Value must be a boolean.");
-    return void 0;
-  }
-  return value;
-}
-function expectUrl(value, path, issues) {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    pushIssue(issues, path, "invalid_url", "Value must be a non-empty URL string.");
-    return;
-  }
-  try {
-    const parsed = new URL(value);
-    if (parsed.protocol !== "https:") {
-      pushIssue(issues, path, "invalid_url_protocol", "URL must use https.");
-    }
-  } catch {
-    pushIssue(issues, path, "invalid_url", "Value must be a valid URL.");
-  }
-}
-function expectRepositoryName(value, path, issues) {
-  if (typeof value !== "string" || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value)) {
-    pushIssue(issues, path, "invalid_repository", "Repository must use owner/name format.");
-  }
-}
-function expectPositiveInteger(value, path, issues) {
-  if (!Number.isInteger(value) || typeof value !== "number" || value <= 0) {
-    pushIssue(issues, path, "invalid_integer", "Value must be a positive integer.");
-  }
-}
-function expectIsoDateTime(value, path, issues) {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value) || Number.isNaN(Date.parse(value)) || new Date(value).toISOString() !== value) {
-    pushIssue(issues, path, "invalid_datetime", "Value must be a canonical RFC 3339 UTC date time with milliseconds.");
-  }
-}
 function isRecord4(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function pushIssue(issues, path, code, message) {
-  issues.push({ path, code, message });
-}
-function invalid(issues) {
-  return {
-    ok: false,
-    issues
-  };
 }
 
 // packages/action/dist/json-input.js
@@ -3235,525 +3751,6 @@ var RendererValidationError = class extends Error {
     this.issues = issues;
   }
 };
-
-// packages/redaction/dist/types.js
-var REDACTION_PLACEHOLDER = "[REDACTED]";
-
-// packages/redaction/dist/redact.js
-var SENSITIVE_KEYS = [
-  "api_key",
-  "authorization",
-  "client_secret",
-  "cookie",
-  "password",
-  "private_key",
-  "refresh_token",
-  "set_cookie",
-  "signature",
-  "token",
-  "access_token",
-  "secret"
-];
-var SENSITIVE_KEY_SOURCE = SENSITIVE_KEYS.map((key) => key.replaceAll("_", "[_-]?")).join("|");
-var SENSITIVE_JSON_KEY = new RegExp(`^(?:${SENSITIVE_KEY_SOURCE})$`, "i");
-var REDACTION_RULES = [
-  {
-    kind: "github_token",
-    pattern: /\b(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{16,}\b/g
-  },
-  {
-    kind: "openai_token",
-    pattern: /\bsk-(?:proj|live|test|admin|user|org|svc|key)-[A-Za-z0-9_-]{12,}\b/g
-  },
-  {
-    kind: "anthropic_token",
-    pattern: /\bsk-ant-[A-Za-z0-9_-]{12,}\b/g
-  },
-  {
-    kind: "gemini_token",
-    pattern: /\bAIza[A-Za-z0-9_-]{20,}\b/g
-  },
-  {
-    kind: "env_assignment",
-    pattern: /["']?\b(?:[A-Z][A-Z0-9_]*_)?(?:TOKEN|SECRET|PASSWORD|PRIVATE_KEY|API_KEY)\s*=\s*(?:"[^"\r\n]*"|'[^'\r\n]*'|[^"'\s]+)["']?/g
-  },
-  {
-    kind: "generic_secret_assignment",
-    pattern: new RegExp(String.raw`["']?\b(?:${SENSITIVE_KEY_SOURCE})["']?\s*[:=]\s*` + /(?:"[^"\r\n]{8,}"|'[^'\r\n]{8,}'|[^"'`\s]{8,})["']?/.source, "gi")
-  }
-];
-function redactText(input) {
-  const occurrences = [];
-  let text = redactPrivateKeyBlocks(input, occurrences);
-  for (const rule of REDACTION_RULES) {
-    text = text.replace(rule.pattern, (match, offset) => {
-      occurrences.push({
-        kind: rule.kind,
-        replacement: REDACTION_PLACEHOLDER,
-        start: offset,
-        end: offset + match.length
-      });
-      return REDACTION_PLACEHOLDER;
-    });
-  }
-  text = redactEmailAddresses(text, occurrences);
-  return {
-    text,
-    report: buildReport(occurrences)
-  };
-}
-function redactPrivateKeyBlocks(input, occurrences) {
-  const begin = /-----BEGIN (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----/g;
-  const end = /-----END (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----/g;
-  const parts = [];
-  let offset = 0;
-  for (let match = begin.exec(input); match !== null; match = begin.exec(input)) {
-    end.lastIndex = begin.lastIndex;
-    if (end.exec(input) === null) {
-      break;
-    }
-    parts.push(input.slice(offset, match.index), REDACTION_PLACEHOLDER);
-    occurrences.push({
-      kind: "private_key_block",
-      replacement: REDACTION_PLACEHOLDER,
-      start: match.index,
-      end: end.lastIndex
-    });
-    offset = end.lastIndex;
-    begin.lastIndex = offset;
-  }
-  if (parts.length === 0) {
-    return input;
-  }
-  parts.push(input.slice(offset));
-  return parts.join("");
-}
-function redactEmailAddresses(input, occurrences) {
-  const localParts = /[A-Z0-9._%+-]+/gi;
-  const email = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/iy;
-  const parts = [];
-  let end = 0;
-  for (let token = localParts.exec(input); token !== null; token = localParts.exec(input)) {
-    if (input[localParts.lastIndex] !== "@") {
-      continue;
-    }
-    const previousIsWord = /\w/.test(input[token.index - 1] ?? "");
-    const boundary = token[0].search(previousIsWord ? /\W/ : /\w/);
-    if (boundary === -1) {
-      continue;
-    }
-    email.lastIndex = token.index + boundary;
-    const match = email.exec(input);
-    if (match === null) {
-      continue;
-    }
-    parts.push(input.slice(end, match.index), REDACTION_PLACEHOLDER);
-    occurrences.push({
-      kind: "email",
-      replacement: REDACTION_PLACEHOLDER,
-      start: match.index,
-      end: email.lastIndex
-    });
-    end = email.lastIndex;
-    localParts.lastIndex = end;
-  }
-  if (parts.length === 0) {
-    return input;
-  }
-  parts.push(input.slice(end));
-  return parts.join("");
-}
-function redactJson(input) {
-  const occurrences = [];
-  const value = redactJsonValue(input, occurrences);
-  return {
-    value,
-    report: buildReport(occurrences)
-  };
-}
-function mergeRedactionReports(reports) {
-  const occurrences = reports.flatMap((report) => report.occurrences);
-  return buildReport(occurrences);
-}
-function redactJsonValue(value, occurrences) {
-  if (typeof value === "string") {
-    const redacted = redactText(value);
-    occurrences.push(...redacted.report.occurrences);
-    return redacted.text;
-  }
-  if (Array.isArray(value)) {
-    return value.map((entry) => redactJsonValue(entry, occurrences));
-  }
-  if (value !== null && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).map(([key, entry]) => {
-      if (isSensitiveJsonKey(key)) {
-        occurrences.push({
-          kind: "sensitive_json_key",
-          replacement: REDACTION_PLACEHOLDER,
-          start: 0,
-          end: typeof entry === "string" ? entry.length : 0
-        });
-        return [key, REDACTION_PLACEHOLDER];
-      }
-      return [key, redactJsonValue(entry, occurrences)];
-    }));
-  }
-  return value;
-}
-function isSensitiveJsonKey(key) {
-  return SENSITIVE_JSON_KEY.test(key.trim());
-}
-function buildReport(occurrences) {
-  return {
-    changed: occurrences.length > 0,
-    occurrences
-  };
-}
-
-// packages/core/dist/evidence.js
-var PROVIDER_EVIDENCE_LIMITS = {
-  maxItems: 256,
-  maxUtf8Bytes: 512 * 1024
-};
-var EvidencePreparationError = class extends Error {
-  code;
-  constructor(code, message) {
-    super(message);
-    this.name = "EvidencePreparationError";
-    this.code = code;
-  }
-};
-function prepareEvidenceForProvider(input) {
-  assertEvidenceItemCount(input.items.length);
-  const items = input.items.map(prepareEvidenceItem);
-  const redactionReport = mergeRedactionReports(items.map((item) => item.redactionReport));
-  const prepared = {
-    source: input.source,
-    items,
-    evidenceRefs: items.map(toEvidenceRef),
-    redactionReport
-  };
-  assertPreparedEvidenceForProvider(prepared);
-  return prepared;
-}
-function assertPreparedEvidenceForProvider(evidence) {
-  assertEvidenceItemCount(evidence.items.length);
-  for (const [index, item] of evidence.items.entries()) {
-    assertSafeStructuralField(item.id, `items[${index}].id`);
-    if (item.url !== void 0) {
-      assertSafeStructuralField(item.url, `items[${index}].url`);
-    }
-  }
-  for (const [index, ref] of evidence.evidenceRefs.entries()) {
-    assertSafeStructuralField(ref.id, `evidenceRefs[${index}].id`);
-    if (ref.url !== void 0) {
-      assertSafeStructuralField(ref.url, `evidenceRefs[${index}].url`);
-    }
-  }
-  const bytes = new TextEncoder().encode(JSON.stringify({
-    source: evidence.source,
-    items: evidence.items.map((item) => ({
-      kind: item.kind,
-      id: item.id,
-      url: item.url,
-      title: item.title,
-      excerpt: item.excerpt,
-      text: item.text,
-      metadata: item.metadata
-    })),
-    evidenceRefs: evidence.evidenceRefs
-  })).byteLength;
-  if (bytes > PROVIDER_EVIDENCE_LIMITS.maxUtf8Bytes) {
-    throw new EvidencePreparationError("evidence_bytes_limit", `Prepared provider evidence must not exceed ${PROVIDER_EVIDENCE_LIMITS.maxUtf8Bytes} UTF-8 bytes.`);
-  }
-}
-function prepareEvidenceItem(input) {
-  assertSafeStructuralField(input.id, "item.id");
-  if (input.url !== void 0) {
-    assertSafeStructuralField(input.url, "item.url");
-  }
-  const reports = [];
-  const title = redactOptionalText(input.title, reports);
-  const excerpt = redactOptionalText(input.excerpt, reports);
-  const text = redactOptionalText(input.text, reports);
-  const metadata = redactOptionalJson(input.metadata, reports);
-  const item = {
-    kind: input.kind,
-    id: input.id,
-    redactionReport: mergeRedactionReports(reports)
-  };
-  assignOptional4(item, "url", input.url);
-  assignOptional4(item, "title", title);
-  assignOptional4(item, "excerpt", excerpt);
-  assignOptional4(item, "text", text);
-  assignOptional4(item, "metadata", metadata);
-  return item;
-}
-function assertEvidenceItemCount(count) {
-  if (count > PROVIDER_EVIDENCE_LIMITS.maxItems) {
-    throw new EvidencePreparationError("evidence_item_limit", `Prepared provider evidence must not exceed ${PROVIDER_EVIDENCE_LIMITS.maxItems} items.`);
-  }
-}
-function assertSafeStructuralField(value, field) {
-  if (redactText(value).report.changed) {
-    throw new EvidencePreparationError("unsafe_structural_field", `Prepared provider evidence ${field} contains secret-bearing data.`);
-  }
-}
-function toEvidenceRef(item) {
-  const ref = {
-    kind: item.kind,
-    id: item.id
-  };
-  assignOptional4(ref, "url", item.url);
-  assignOptional4(ref, "title", item.title);
-  assignOptional4(ref, "excerpt", item.excerpt ?? item.text);
-  return ref;
-}
-function redactOptionalText(value, reports) {
-  if (value === void 0) {
-    return void 0;
-  }
-  const result = redactText(value);
-  reports.push(result.report);
-  return result.text;
-}
-function redactOptionalJson(value, reports) {
-  if (value === void 0) {
-    return void 0;
-  }
-  const result = redactJson(value);
-  reports.push(result.report);
-  return result.value;
-}
-function assignOptional4(target, key, value) {
-  if (value !== void 0) {
-    target[key] = value;
-  }
-}
-
-// packages/core/dist/hints.js
-function prepareProviderHints(value, evidence) {
-  const hints = {};
-  const reports = [evidence.redactionReport];
-  function invalid2(field) {
-    throw new Error(`Provider hints.${field} has an invalid value.`);
-  }
-  if (value !== void 0) {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) {
-      throw new Error("Provider hints must be an object.");
-    }
-    const input = value;
-    if (input.contributionType !== void 0) {
-      if (typeof input.contributionType !== "string" || !isContributionType(input.contributionType))
-        invalid2("contributionType");
-      hints.contributionType = input.contributionType;
-    }
-    if (input.impactLevel !== void 0) {
-      if (typeof input.impactLevel !== "string" || !isImpactLevel(input.impactLevel))
-        invalid2("impactLevel");
-      hints.impactLevel = input.impactLevel;
-    }
-    if (input.confidence !== void 0) {
-      if (typeof input.confidence !== "number" || !Number.isFinite(input.confidence) || input.confidence < 0 || input.confidence > 1)
-        invalid2("confidence");
-      hints.confidence = input.confidence;
-    }
-    for (const field of ["affectedArea", "suggestedBadge"]) {
-      const text = input[field];
-      if (text === void 0)
-        continue;
-      if (typeof text !== "string" || text.trim().length === 0)
-        invalid2(field);
-      const redacted = redactText(text);
-      hints[field] = redacted.text;
-      reports.push(redacted.report);
-    }
-  }
-  return {
-    hints,
-    preparedEvidence: { ...evidence, redactionReport: mergeRedactionReports(reports) }
-  };
-}
-
-// packages/core/dist/approval.js
-function canPublishAssessment(value) {
-  const validation = validateContributionAssessment(value);
-  if (!validation.ok) {
-    return validation;
-  }
-  if (!isPublicApprovalStatus(validation.value.maintainerApprovalStatus)) {
-    return {
-      ok: false,
-      issues: [
-        {
-          path: "$.maintainerApprovalStatus",
-          code: "not_approved",
-          message: "Only approved or auto_approved assessments can become public records."
-        }
-      ]
-    };
-  }
-  return {
-    ok: true,
-    value: {
-      assessment: validation.value
-    },
-    issues: []
-  };
-}
-function isPublicApprovalStatus(status) {
-  return status === "approved" || status === "auto_approved";
-}
-
-// packages/core/dist/draft-approval.js
-import { createHash as createHash2 } from "node:crypto";
-function checkExternalDraftApproval(assessment) {
-  if (assessment.maintainerApprovalStatus === "auto_approved") {
-    return "auto_approval_unconfigured";
-  }
-  return checkDraftApprovalSnapshot(assessment);
-}
-function checkDraftApprovalSnapshot(assessment) {
-  if (assessment.maintainerApprovalStatus !== "approved") {
-    return "not_required";
-  }
-  if (assessment.approvalSnapshot === void 0) {
-    return "missing";
-  }
-  return assessment.approvalSnapshot.contentSha256 === draftContentSha256(assessment) ? "valid" : "mismatch";
-}
-function draftContentSha256(assessment) {
-  const content = { ...assessment };
-  delete content.maintainerApprovalStatus;
-  delete content.approvalSnapshot;
-  return createHash2("sha256").update(JSON.stringify(sortJsonValue(content))).digest("hex");
-}
-function sortJsonValue(value) {
-  if (Array.isArray(value)) {
-    return value.map(sortJsonValue);
-  }
-  if (value !== null && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0).map(([key, item]) => [key, sortJsonValue(item)]));
-  }
-  return value;
-}
-
-// packages/core/dist/repository-safety.js
-var SENSITIVE_URL_PARAMETER_PATTERN = /(?:^|[_-])(?:access[_-]?token|auth[_-]?token|token|secret|password|api[_-]?key|private[_-]?key|signature|credential|authorization|cookie|session[_-]?(?:id|key|token))(?:$|[=_-])/i;
-var MAX_URL_DECODE_LAYERS = 6;
-var ENCODED_BYTE_PATTERN = /%[0-9a-f]{2}/i;
-function isSensitiveUrlParameterName(name) {
-  const decoded = decodeNestedUrlComponent(name);
-  return decoded === void 0 || SENSITIVE_URL_PARAMETER_PATTERN.test(decoded.replace(/([a-z0-9])([A-Z])/g, "$1_$2"));
-}
-function findUnsafeRepositoryAssessmentFields(assessment) {
-  const fields = [
-    { path: "$.contributor.id", value: assessment.contributor.id },
-    { path: "$.contributor.login", value: assessment.contributor.login },
-    { path: "$.contributor.profileUrl", value: assessment.contributor.profileUrl, url: true },
-    { path: "$.affectedArea", value: assessment.affectedArea },
-    { path: "$.evidenceSummary", value: assessment.evidenceSummary },
-    { path: "$.suggestedBadge", value: assessment.suggestedBadge },
-    { path: "$.publicRecognitionText", value: assessment.publicRecognitionText },
-    { path: "$.source.repository", value: assessment.source.repository }
-  ];
-  assessment.evidenceRefs.forEach((ref, index) => {
-    fields.push({ path: `$.evidenceRefs[${index}].id`, value: ref.id }, { path: "$.evidenceRefs[].url", value: ref.url, url: true }, { path: `$.evidenceRefs[${index}].title`, value: ref.title });
-  });
-  assessment.claimEvidenceLinks?.forEach((link, index) => {
-    fields.push({ path: `$.claimEvidenceLinks[${index}].text`, value: link.text });
-  });
-  const issues = [];
-  for (const field of fields) {
-    if (field.value === void 0) {
-      continue;
-    }
-    const match = findSensitiveTextKind(field.value, field.url === true);
-    if (match !== void 0) {
-      issues.push({
-        path: field.path,
-        code: match.code,
-        message: `Repository-visible content contains ${match.kind}; edit the assessment before writing it.`
-      });
-    }
-  }
-  return issues;
-}
-function findSensitiveTextKind(value, url) {
-  if (!url) {
-    return findDirectSensitiveText(value);
-  }
-  let parsed;
-  try {
-    parsed = new URL(value);
-  } catch {
-    return findDirectSensitiveText(value, false);
-  }
-  if (parsed.username.length > 0 || parsed.password.length > 0) {
-    return { code: "invalid_url_userinfo", kind: "URL credentials" };
-  }
-  for (const [name, parameterValue] of parsed.searchParams) {
-    const decodedName = decodeNestedUrlComponent(name);
-    const decodedValue = decodeNestedUrlComponent(parameterValue);
-    if (decodedName === void 0 || decodedValue === void 0) {
-      return { code: "invalid_url_encoding", kind: "an invalid URL encoding" };
-    }
-    if (isSensitiveUrlParameterName(decodedName)) {
-      return { code: "unsafe_url_parameter", kind: "a sensitive URL parameter" };
-    }
-    const kind = redactText(`${decodedName}=${decodedValue}`).report.occurrences[0]?.kind;
-    if (kind !== void 0) {
-      return { code: "unsafe_repository_text", kind };
-    }
-  }
-  const direct = findDirectSensitiveText(value, false);
-  if (direct !== void 0) {
-    return direct;
-  }
-  for (const encodedPart of [parsed.pathname, parsed.hash]) {
-    const decoded = decodeNestedUrlComponent(encodedPart);
-    if (decoded === void 0) {
-      return { code: "invalid_url_encoding", kind: "an invalid URL encoding" };
-    }
-    const kind = redactText(decoded).report.occurrences[0]?.kind;
-    if (kind !== void 0) {
-      return { code: "unsafe_repository_text", kind };
-    }
-    if (encodedPart === parsed.hash) {
-      const fragment = decoded.slice(1);
-      if (isSensitiveUrlParameterName(fragment) || fragment.split(/[?&/]/).some((part) => part.includes("=") && isSensitiveUrlParameterName(part.split("=")[0]))) {
-        return { code: "unsafe_url_parameter", kind: "a sensitive URL fragment" };
-      }
-    }
-  }
-  return void 0;
-}
-function decodeNestedUrlComponent(value) {
-  let decoded = value;
-  for (let layer = 0; layer < MAX_URL_DECODE_LAYERS && ENCODED_BYTE_PATTERN.test(decoded); layer += 1) {
-    try {
-      decoded = decodeURIComponent(decoded);
-    } catch {
-      return void 0;
-    }
-  }
-  return ENCODED_BYTE_PATTERN.test(decoded) ? void 0 : decoded;
-}
-function findDirectSensitiveText(value, scanEmbeddedUrls = true) {
-  const kind = redactText(value).report.occurrences[0]?.kind;
-  if (kind !== void 0) {
-    return { code: "unsafe_repository_text", kind };
-  }
-  if (scanEmbeddedUrls) {
-    for (const match of value.matchAll(/https?:\/\/[^\s<>"']+/gi)) {
-      const unsafeUrl = findSensitiveTextKind(match[0], true);
-      if (unsafeUrl !== void 0) {
-        return unsafeUrl;
-      }
-    }
-  }
-  return void 0;
-}
 
 // packages/renderers/dist/claim-evidence.js
 function copyClaimEvidenceLinks(assessment) {

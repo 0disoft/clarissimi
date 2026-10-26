@@ -1,4 +1,4 @@
-import type { EvidenceItemInput } from "@clarissimi/core";
+import { prepareEvidenceExcerpt, type EvidenceItemInput } from "@clarissimi/core";
 
 import { collectMergedPullRequestEvidence, GitHubEvidenceCollectionError } from "./merged-pr.js";
 import type {
@@ -10,7 +10,6 @@ import type {
 const DEFAULT_REVIEW_COMMENT_LIMIT = 25;
 const DEFAULT_LINKED_ISSUE_LIMIT = 25;
 const DEFAULT_CHANGED_FILE_LIMIT = 100;
-const TEXT_LIMIT = 2_000;
 const REPOSITORY_NAME_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
 export interface LiveGitHubMergedPullRequestInput {
@@ -170,7 +169,7 @@ function toMergedPullRequestFixture(
     },
   };
 
-  assignOptional(fixture.pullRequest, "body", normalizeOptionalString(pullRequest.body));
+  assignOptional(fixture.pullRequest, "body", pullRequest.body ?? undefined);
   assignOptional(
     fixture.pullRequest.user,
     "htmlUrl",
@@ -194,7 +193,8 @@ function toChangedFileFixture(file: LiveGitHubPullRequestFile): GitHubChangedFil
   assignOptional(changedFile, "status", normalizeOptionalString(file.status));
   assignOptional(changedFile, "additions", normalizeOptionalNonNegativeInteger(file.additions));
   assignOptional(changedFile, "deletions", normalizeOptionalNonNegativeInteger(file.deletions));
-  assignOptional(changedFile, "patchExcerpt", normalizeOptionalExcerpt(file.patch));
+  // The shared fixture collector redacts the complete patch before bounding it.
+  assignOptional(changedFile, "patchExcerpt", file.patch ?? undefined);
   return changedFile;
 }
 
@@ -273,7 +273,7 @@ function buildReviewCommentItems(
       "url",
       normalizeOptionalHttpsUrl(comment.htmlUrl, "reviewComment.htmlUrl"),
     );
-    assignOptional(item, "excerpt", normalizeOptionalExcerpt(comment.body));
+    Object.assign(item, prepareEvidenceExcerpt(comment.body ?? undefined));
     return item;
   });
 }
@@ -326,15 +326,6 @@ function normalizeOptionalString(value: string | null | undefined): string | und
 
   const normalized = value.replace(/\s+/g, " ").trim();
   return normalized.length === 0 ? undefined : normalized;
-}
-
-function normalizeOptionalExcerpt(value: string | null | undefined): string | undefined {
-  const normalized = normalizeOptionalString(value);
-  if (normalized === undefined) {
-    return undefined;
-  }
-
-  return normalized.length > TEXT_LIMIT ? `${normalized.slice(0, TEXT_LIMIT - 1)}...` : normalized;
 }
 
 function normalizeOptionalHttpsUrl(

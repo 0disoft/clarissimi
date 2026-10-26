@@ -1,7 +1,10 @@
 # Provider Result Dirty Corpus
 
 This dataset is the intake path for provider-result failures observed outside the deterministic
-golden corpus. It starts empty because no scrubbed observed failure has been accepted yet. Do not
+golden corpus. The 2026-10-26 review supplied three scrubbed validator reproductions: an English
+source-file rejection control, a Korean false acceptance, and a benchmark-path false acceptance.
+Their source document is identified only by SHA-256. They are promoted after deterministic replay;
+they are review reproductions, not production telemetry. Do not
 copy a synthetic case into this file and label it as production data.
 
 ## Case Contract

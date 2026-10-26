@@ -7,15 +7,18 @@ import {
 } from "@clarissimi/schemas";
 
 import type { ProviderAssessmentInput } from "./types.js";
+import {
+  PERFORMANCE_CLAIM_PATTERN,
+  numericPerformanceClaims,
+  supportsNumericPerformanceClaim,
+} from "./performance-measurements.js";
 
 const SECURITY_CLAIM_PATTERN =
   /\b(?:security|vulnerabilit(?:y|ies)|exploit|advisory|cve-\d{4}-\d{4,})\b/i;
 const REGRESSION_CLAIM_PATTERN =
   /\b(?:regression (?:coverage|test|guard|prevention)|prevent(?:ed|s|ing)? (?:a )?regression)\b/i;
-const MEASURED_PERFORMANCE_CLAIM_PATTERN =
-  /\b(?:faster|speedup|lower latency|reduced latency|improved throughput|benchmark(?:ed)?)\b/i;
 const MEASUREMENT_EVIDENCE_PATTERN =
-  /\b(?:bench(?:mark)?|perf(?:ormance)?|latency|throughput|memory)\b/i;
+  /\b(?:bench(?:mark)?|perf(?:ormance)?|latency|throughput|memory)\b|성능|지연|처리량|메모리|벤치마크/i;
 const BENCHMARK_FILE_PATTERN =
   /(?:^|[/\\])(?:benchmarks?|benches)[/\\].+\.(?:[cm]?[jt]sx?|py|rs|go|java|kt|cs|rb|php|swift|c|cc|cpp|json|csv|tsv|txt)$/i;
 const TEST_FILE_PATTERN =
@@ -118,7 +121,7 @@ export function validateProviderAssessmentResult(
         message: "A regression-prevention claim must link to test evidence.",
       },
       {
-        pattern: MEASURED_PERFORMANCE_CLAIM_PATTERN,
+        pattern: PERFORMANCE_CLAIM_PATTERN,
         supports: isMeasurementEvidence,
         enabled: true,
         code: "provider_result_performance_claim_unlinked",
@@ -126,9 +129,15 @@ export function validateProviderAssessmentResult(
       },
     ] as const;
     for (const field of ["evidenceSummary", "publicRecognitionText"] as const) {
+      let offset = 0;
       const links = assessment.claimEvidenceLinks
         .map((link, index) => ({ link, index }))
-        .filter(({ link }) => link.field === field);
+        .filter(({ link }) => link.field === field)
+        .map((entry) => {
+          const start = offset;
+          offset += entry.link.text.length + 1;
+          return { ...entry, start, end: offset - 1 };
+        });
       for (const rule of claimRules) {
         if (!rule.enabled) {
           continue;
@@ -136,11 +145,7 @@ export function validateProviderAssessmentResult(
         for (const match of assessment[field].matchAll(new RegExp(rule.pattern.source, "gi"))) {
           const claimStart = match.index;
           const claimEnd = claimStart + match[0].length;
-          let cursor = 0;
-          for (const { link, index } of links) {
-            const start = cursor;
-            const end = start + link.text.length;
-            cursor = end + 1;
+          for (const { link, index, start, end } of links) {
             if (
               start < claimEnd &&
               end > claimStart &&
@@ -153,6 +158,28 @@ export function validateProviderAssessmentResult(
               });
             }
           }
+        }
+      }
+      for (const claim of numericPerformanceClaims(assessment[field])) {
+        const supportingLinks = links.filter(
+          ({ start, end }) => start < claim.end && end > claim.start,
+        );
+        if (
+          supportingLinks.length === 0 ||
+          supportingLinks.some(
+            ({ link }) =>
+              !linkedItems(link.evidenceRefIndexes).some(
+                (item) =>
+                  isMeasurementEvidence(item) && supportsNumericPerformanceClaim(item, claim),
+              ),
+          )
+        ) {
+          issues.push({
+            path: `$.${field}`,
+            code: "provider_result_performance_measurement_missing",
+            message:
+              "Numeric performance claims require linked measured results with matching metric, value, and unit; maintainer review is required.",
+          });
         }
       }
     }

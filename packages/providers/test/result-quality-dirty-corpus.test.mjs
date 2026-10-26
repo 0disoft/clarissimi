@@ -66,6 +66,11 @@ for (const [index, entry] of corpus.cases.entries()) {
       contributor: corpus.contributor,
       ...corpus.baseCandidate,
       ...entry.candidate,
+      claimEvidenceLinks: ["evidenceSummary", "publicRecognitionText"].map((field) => ({
+        field,
+        text: entry.candidate[field] ?? corpus.baseCandidate[field],
+        evidenceRefIndexes: preparedEvidence.evidenceRefs.map((_, refIndex) => refIndex),
+      })),
       evidenceRefs: preparedEvidence.evidenceRefs,
       maintainerApprovalStatus: "draft",
       source,

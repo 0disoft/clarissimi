@@ -22,5 +22,48 @@
     "publicRecognitionText": "Improved a scrubbed provider-result regression path.",
     "confidence": 0.7
   },
-  "cases": []
+  "cases": [
+    {
+      "id": "numeric-latency-source-file-control",
+      "status": "promoted",
+      "provenance": {
+        "kind": "scrubbed-observed-failure",
+        "referenceHash": "sha256:94b5fc737ee1044f9ff54d787ad94f71a8dd3a702916291afc93a3d3f7846786",
+        "scrubbed": true
+      },
+      "items": [{ "kind": "file", "id": "src/parser.ts" }],
+      "candidate": { "publicRecognitionText": "Reduced latency by 99%." },
+      "expectedIssueCodes": [
+        "provider_result_performance_claim_unlinked",
+        "provider_result_performance_measurement_missing"
+      ]
+    },
+    {
+      "id": "numeric-korean-latency-without-measurements",
+      "status": "promoted",
+      "provenance": {
+        "kind": "scrubbed-observed-failure",
+        "referenceHash": "sha256:94b5fc737ee1044f9ff54d787ad94f71a8dd3a702916291afc93a3d3f7846786",
+        "scrubbed": true
+      },
+      "items": [{ "kind": "file", "id": "src/parser.ts" }],
+      "candidate": { "publicRecognitionText": "처리 지연을 99% 줄였습니다." },
+      "expectedIssueCodes": [
+        "provider_result_performance_claim_unlinked",
+        "provider_result_performance_measurement_missing"
+      ]
+    },
+    {
+      "id": "numeric-latency-benchmark-path-without-measurements",
+      "status": "promoted",
+      "provenance": {
+        "kind": "scrubbed-observed-failure",
+        "referenceHash": "sha256:94b5fc737ee1044f9ff54d787ad94f71a8dd3a702916291afc93a3d3f7846786",
+        "scrubbed": true
+      },
+      "items": [{ "kind": "file", "id": "benchmarks/parser.ts" }],
+      "candidate": { "publicRecognitionText": "Reduced latency by 99%." },
+      "expectedIssueCodes": ["provider_result_performance_measurement_missing"]
+    }
+  ]
 }

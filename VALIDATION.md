@@ -1,5 +1,13 @@
 # Validation
 
+## 2026-10-26 Numeric performance evidence
+
+English and Korean numeric performance claims now require matching linked measurement content;
+benchmark paths alone do not support numeric results. The provider suite passed all 100 tests,
+including 17 numeric cases and three scrubbed review reproductions promoted into the dirty corpus.
+The balanced 28-case synthetic golden corpus is unchanged. Unit conversion and inferred arithmetic
+are intentionally left for maintainer review. The Action bundle was regenerated.
+
 ## 2026-10-26 Collector redaction boundary
 
 Collector excerpts now redact before normalization and truncation, including incomplete private

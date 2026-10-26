@@ -42,6 +42,14 @@ or benches directories. They keep the existing file evidence kind. An ordinary s
 benchmark README is not a measurement candidate. Claim-specific links and maintainer review remain
 required; the path identifies a candidate and does not prove that a performance claim is true.
 
+Numeric English and Korean performance claims additionally require linked measurement content,
+including a measured/result/observed marker and the same metric, numeric value, and unit. A path
+alone cannot establish a numeric result. Percent, multiplier, and basic time-unit spellings are
+normalized, but values are not inferred through arithmetic or unit conversion. Each segment of a
+split numeric claim must link supporting measurements. Unsupported numeric claims fail with
+`provider_result_performance_measurement_missing` for maintainer review. This validates the stated
+support; it does not establish that a reported measurement is truthful or causal.
+
 Older `assessment/v1` records and manually authored drafts without links remain valid. Their
 missing map means support cannot be inferred, and maintainers must review the prose and references
 directly. Existing ledgers need no rewrite or migration edge; the migration compatibility fixture

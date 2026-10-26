@@ -172,9 +172,10 @@ function runGit(repositoryDir, args) {
 import { spawn as spawn2 } from "node:child_process";
 import { createHash } from "node:crypto";
 import { lstat, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, join, normalize, relative, sep } from "node:path";
-var proposalCommitAuthorName = "Clarissimi Bot";
-var proposalCommitAuthorEmail = "clarissimi-bot@users.noreply.github.com";
+import { dirname, isAbsolute as isAbsolute2, join, normalize as normalize2, relative, sep as sep2 } from "node:path";
+
+// packages/action/dist/branch-writer-support.js
+import { isAbsolute, normalize, sep } from "node:path";
 var ProposalBranchWriterError = class extends Error {
   code;
   constructor(code, message) {
@@ -183,6 +184,73 @@ var ProposalBranchWriterError = class extends Error {
     this.code = code;
   }
 };
+function assertOwnedStagedPath(file) {
+  const normalized = normalize(file.path);
+  const allowed = normalized === "CONTRIBUTORS.md" || normalized.startsWith(`.clarissimi${sep}`);
+  if (isAbsolute(file.path) || normalized.startsWith("..") || normalized.includes(`${sep}..${sep}`) || !allowed) {
+    throw new ProposalBranchWriterError("unowned_staged_path", "Proposal branch writing only accepts Clarissimi-owned staged output paths.");
+  }
+  if (file.bytes < 0 || !/^[a-f0-9]{64}$/.test(file.sha256)) {
+    throw new ProposalBranchWriterError("invalid_staged_manifest", "Proposal branch writing requires valid staged file byte counts and sha256 hashes.");
+  }
+}
+async function restoreOwnedPaths(repositoryDir, originalRef, files, runGit4) {
+  const git4 = async (cwd, args) => {
+    const result = await runGit4(cwd, args);
+    if (result.exitCode !== 0) {
+      throw new ProposalBranchWriterError("git_rollback_failed", "Owned output rollback could not inspect the checkout.");
+    }
+    return result.stdout;
+  };
+  const paths = files.map((file) => file.path);
+  const indexed = await git4(repositoryDir, [
+    "--literal-pathspecs",
+    "ls-files",
+    "--cached",
+    "-z",
+    "--",
+    ...paths
+  ]);
+  const original = await git4(repositoryDir, [
+    "--literal-pathspecs",
+    "ls-tree",
+    "-r",
+    "--name-only",
+    "-z",
+    originalRef,
+    "--",
+    ...paths
+  ]);
+  const trackedPaths = [.../* @__PURE__ */ new Set([...indexed.split("\0"), ...original.split("\0")])].filter((path) => path.length > 0);
+  if (trackedPaths.length > 0) {
+    const restored = await runGit4(repositoryDir, [
+      "--literal-pathspecs",
+      "restore",
+      `--source=${originalRef}`,
+      "--staged",
+      "--worktree",
+      "--",
+      ...trackedPaths
+    ]);
+    if (restored.exitCode !== 0) {
+      throw new ProposalBranchWriterError("git_rollback_failed", "Proposal branch writing failed and owned output rollback did not complete.");
+    }
+  }
+  const cleaned = await runGit4(repositoryDir, [
+    "--literal-pathspecs",
+    "clean",
+    "-f",
+    "--",
+    ...paths
+  ]);
+  if (cleaned.exitCode !== 0) {
+    throw new ProposalBranchWriterError("git_rollback_failed", "Proposal branch writing failed and owned output rollback did not complete.");
+  }
+}
+
+// packages/action/dist/branch-writer.js
+var proposalCommitAuthorName = "Clarissimi Bot";
+var proposalCommitAuthorEmail = "clarissimi-bot@users.noreply.github.com";
 async function writeProposalBranch(input) {
   validateBranchWriterInput(input);
   const branchName = proposalBranchName(input.manifest);
@@ -263,7 +331,7 @@ async function writeProposalBranch(input) {
     };
   } finally {
     if (!writeSucceeded && branchReset) {
-      await restoreOwnedPaths(input.repositoryDir, originalCommitSha, input.manifest.files);
+      await restoreOwnedPaths(input.repositoryDir, originalCommitSha, input.manifest.files, runGit2);
       if (previousProposalSha !== void 0) {
         await git2(input.repositoryDir, [
           "update-ref",
@@ -339,52 +407,6 @@ function assertChangedFilesAreOwned(changedFiles, files) {
     throw new ProposalBranchWriterError("proposal_has_unowned_changes", "Proposal branch contains changes outside the staged Clarissimi output manifest.");
   }
 }
-async function restoreOwnedPaths(repositoryDir, originalRef, files) {
-  const paths = files.map((file) => file.path);
-  const indexed = await git2(repositoryDir, [
-    "--literal-pathspecs",
-    "ls-files",
-    "--cached",
-    "-z",
-    "--",
-    ...paths
-  ]);
-  const original = await git2(repositoryDir, [
-    "--literal-pathspecs",
-    "ls-tree",
-    "-r",
-    "--name-only",
-    "-z",
-    originalRef,
-    "--",
-    ...paths
-  ]);
-  const trackedPaths = [.../* @__PURE__ */ new Set([...indexed.split("\0"), ...original.split("\0")])].filter((path) => path.length > 0);
-  if (trackedPaths.length > 0) {
-    const restored = await runGit2(repositoryDir, [
-      "--literal-pathspecs",
-      "restore",
-      `--source=${originalRef}`,
-      "--staged",
-      "--worktree",
-      "--",
-      ...trackedPaths
-    ]);
-    if (restored.exitCode !== 0) {
-      throw new ProposalBranchWriterError("git_rollback_failed", "Proposal branch writing failed and owned output rollback did not complete.");
-    }
-  }
-  const cleaned = await runGit2(repositoryDir, [
-    "--literal-pathspecs",
-    "clean",
-    "-f",
-    "--",
-    ...paths
-  ]);
-  if (cleaned.exitCode !== 0) {
-    throw new ProposalBranchWriterError("git_rollback_failed", "Proposal branch writing failed and owned output rollback did not complete.");
-  }
-}
 async function writeStagedFilesToRepository(input) {
   for (const file of input.manifest.files) {
     assertOwnedStagedPath(file);
@@ -405,7 +427,7 @@ async function writeStagedFilesToRepository(input) {
 async function assertSafeRepositoryOutputPath(repositoryDir, path) {
   const repositoryRoot = await realpath(repositoryDir);
   let currentPath = repositoryRoot;
-  for (const segment of normalize(path).split(sep)) {
+  for (const segment of normalize2(path).split(sep2)) {
     currentPath = join(currentPath, segment);
     try {
       const stats = await lstat(currentPath);
@@ -414,7 +436,7 @@ async function assertSafeRepositoryOutputPath(repositoryDir, path) {
       }
       const resolvedPath = await realpath(currentPath);
       const relativePath = relative(repositoryRoot, resolvedPath);
-      if (relativePath === ".." || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath)) {
+      if (relativePath === ".." || relativePath.startsWith(`..${sep2}`) || isAbsolute2(relativePath)) {
         throw unsafeRepositoryOutputPathError();
       }
     } catch (error) {
@@ -457,16 +479,6 @@ async function restoreRef(repositoryDir, ref) {
     return;
   }
   await git2(repositoryDir, ["checkout", ref]);
-}
-function assertOwnedStagedPath(file) {
-  const normalized = normalize(file.path);
-  const allowed = normalized === "CONTRIBUTORS.md" || normalized.startsWith(`.clarissimi${sep}`);
-  if (isAbsolute(file.path) || normalized.startsWith("..") || normalized.includes(`${sep}..${sep}`) || !allowed) {
-    throw new ProposalBranchWriterError("unowned_staged_path", "Proposal branch writing only accepts Clarissimi-owned staged output paths.");
-  }
-  if (file.bytes < 0 || !/^[a-f0-9]{64}$/.test(file.sha256)) {
-    throw new ProposalBranchWriterError("invalid_staged_manifest", "Proposal branch writing requires valid staged file byte counts and sha256 hashes.");
-  }
 }
 function defaultCommitMessage(manifest) {
   if (manifest.mode === "stage-draft") {
@@ -601,21 +613,20 @@ async function publishDirectCommit(input) {
   };
 }
 async function rollbackUnpublishedCommit(input, baseCommitSha) {
-  const reset = await runGit3(input.repositoryDir, ["reset", "--hard", baseCommitSha]);
-  const clean = await runGit3(input.repositoryDir, [
-    "clean",
-    "-f",
-    "--",
-    ...input.manifest.files.map((file) => file.path)
-  ]);
-  if (reset.exitCode !== 0 || clean.exitCode !== 0) {
-    throw new DirectCommitError("rollback_failed", "Direct commit failed and the clean checkout could not be restored automatically.");
+  if (await git3(input.repositoryDir, ["rev-parse", "HEAD"]) !== baseCommitSha) {
+    throw new DirectCommitError("rollback_failed", "Direct commit failed after HEAD changed. Automatic rollback was refused; inspect the preserved checkout before retrying.");
+  }
+  try {
+    await restoreOwnedPaths(input.repositoryDir, baseCommitSha, input.manifest.files, runGit3);
+  } catch {
+    throw new DirectCommitError("rollback_failed", "Direct commit failed and owned output rollback did not complete. Unrelated paths and HEAD were preserved.");
   }
 }
 function validateDirectCommitInput(input) {
   if (input.repositoryDir.trim().length === 0 || input.stagedOutputDir.trim().length === 0 || input.targetBranch.trim().length === 0 || input.manifest.files.length === 0) {
     throw new DirectCommitError("missing_commit_metadata", "Direct commit mode requires repository, staging, target branch, and staged file metadata.");
   }
+  input.manifest.files.forEach(assertOwnedStagedPath);
   if (input.expectedHeadSha !== void 0 && !/^[a-f0-9]{40}$/i.test(input.expectedHeadSha)) {
     throw new DirectCommitError("invalid_expected_head", "Direct commit mode requires expected-head to be a full Git commit SHA.");
   }
@@ -4568,7 +4579,7 @@ function sanitizeAssessmentForActionSummary(assessment) {
 // packages/action/dist/staging.js
 import { createHash as createHash3 } from "node:crypto";
 import { lstat as lstat4, mkdir as mkdir3, writeFile as writeFile2 } from "node:fs/promises";
-import { dirname as dirname3, isAbsolute as isAbsolute3, join as join4, normalize as normalize2, sep as sep3 } from "node:path";
+import { dirname as dirname3, isAbsolute as isAbsolute4, join as join4, normalize as normalize3, sep as sep4 } from "node:path";
 
 // packages/action/dist/staging-directory.js
 import { lstat as lstat3, mkdir as mkdir2, mkdtemp, realpath as realpath3, rm } from "node:fs/promises";
@@ -4585,7 +4596,7 @@ var ActionUsageError = class extends Error {
 
 // packages/action/dist/path-security.js
 import { lstat as lstat2, realpath as realpath2 } from "node:fs/promises";
-import { isAbsolute as isAbsolute2, join as join2, relative as relative2, resolve, sep as sep2 } from "node:path";
+import { isAbsolute as isAbsolute3, join as join2, relative as relative2, resolve, sep as sep3 } from "node:path";
 
 // packages/action/dist/environment.js
 function readEnvInput(value) {
@@ -4608,7 +4619,7 @@ async function resolveActionSummaryPath(env) {
   if (inputPath === void 0) {
     return void 0;
   }
-  if (isAbsolute2(inputPath)) {
+  if (isAbsolute3(inputPath)) {
     throw new ActionUsageError("INPUT_SUMMARY_PATH must be a relative path inside GITHUB_WORKSPACE.");
   }
   const workspace = resolve(readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd());
@@ -4653,7 +4664,7 @@ async function resolveActionSummaryPath(env) {
 }
 function isPathInside(basePath, targetPath) {
   const relativePath = relative2(basePath, targetPath);
-  return relativePath.length === 0 || relativePath !== ".." && !relativePath.startsWith(`..${sep2}`) && !isAbsolute2(relativePath);
+  return relativePath.length === 0 || relativePath !== ".." && !relativePath.startsWith(`..${sep3}`) && !isAbsolute3(relativePath);
 }
 function isNodeError2(error) {
   return error instanceof Error && "code" in error;
@@ -4876,9 +4887,9 @@ function sameSource(left, right) {
   return left.repository === right.repository && left.event === right.event && left.pullRequestNumber === right.pullRequestNumber && left.mergedAt === right.mergedAt;
 }
 function assertClarissimiOutputPath(path) {
-  const normalized = normalize2(path);
-  const allowed = normalized === "CONTRIBUTORS.md" || normalized.startsWith(`.clarissimi${sep3}`) || normalized === ".clarissimi";
-  if (isAbsolute3(path) || normalized.startsWith("..") || normalized.includes(`${sep3}..${sep3}`) || !allowed) {
+  const normalized = normalize3(path);
+  const allowed = normalized === "CONTRIBUTORS.md" || normalized.startsWith(`.clarissimi${sep4}`) || normalized === ".clarissimi";
+  if (isAbsolute4(path) || normalized.startsWith("..") || normalized.includes(`${sep4}..${sep4}`) || !allowed) {
     throw new ProposalOutputStagingError("Renderer output path is outside Clarissimi-owned files.", [
       {
         path: "$.files.path",
@@ -4891,7 +4902,7 @@ function assertClarissimiOutputPath(path) {
 
 // packages/action/dist/run.js
 import { readFile as readFile3, realpath as realpath4 } from "node:fs/promises";
-import { isAbsolute as isAbsolute5, join as join6, resolve as resolve3 } from "node:path";
+import { isAbsolute as isAbsolute6, join as join6, resolve as resolve3 } from "node:path";
 import { tmpdir as tmpdir2 } from "node:os";
 
 // packages/providers/dist/claim-evidence-ranges.js
@@ -6065,7 +6076,7 @@ function isRecord7(value) {
 }
 
 // packages/action/dist/config.js
-import { basename, isAbsolute as isAbsolute4, join as join5 } from "node:path";
+import { basename, isAbsolute as isAbsolute5, join as join5 } from "node:path";
 import { pathToFileURL } from "node:url";
 async function loadActionConfigFromEnvironment(env) {
   const configPath = readEnvInput(env.INPUT_CONFIG_PATH);
@@ -6073,7 +6084,7 @@ async function loadActionConfigFromEnvironment(env) {
     return {};
   }
   const workspace = readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd();
-  const resolvedPath = isAbsolute4(configPath) ? configPath : join5(workspace, configPath);
+  const resolvedPath = isAbsolute5(configPath) ? configPath : join5(workspace, configPath);
   const parsed = await loadActionConfigValue(configPath, resolvedPath);
   const result = validateClarissimiConfig(parsed);
   if (!result.ok) {
@@ -6799,7 +6810,7 @@ function resolvePromoteDraftPath(env) {
   if (inputPath === void 0) {
     throw new ActionUsageError("INPUT_DRAFT_PATH is required for promote-draft mode.");
   }
-  if (isAbsolute5(inputPath)) {
+  if (isAbsolute6(inputPath)) {
     throw new ActionUsageError("INPUT_DRAFT_PATH must be relative to GITHUB_WORKSPACE.");
   }
   const workspace = resolve3(readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd());

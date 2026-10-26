@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import test from "node:test";
 
 import {
@@ -187,6 +188,116 @@ test("refuses non-fast-forward publication after the target branch advances", as
       (error) => error instanceof DirectCommitError && error.code === "git_command_failed",
     );
     assert.notEqual(await git(remoteDir, ["rev-parse", "refs/heads/main"]), commit.commitSha);
+  });
+});
+
+test("failed commits preserve unrelated work and index changes made by a hook", async () => {
+  await withRepository(async ({ repositoryDir, stagedOutputDir }) => {
+    const staging = await stageRecognition(stagedOutputDir);
+    const base = await git(repositoryDir, ["rev-parse", "HEAD"]);
+    await writeFile(
+      join(repositoryDir, ".git", "hooks", "pre-commit"),
+      "#!/bin/sh\nprintf 'concurrent tracked work\\n' > README.md\ngit add README.md\nprintf 'unstaged tracked work\\n' >> README.md\nprintf 'concurrent untracked work\\n' > notes.txt\nexit 1\n",
+      { mode: 0o755 },
+    );
+    await assert.rejects(
+      () =>
+        createDirectCommit({
+          repositoryDir,
+          stagedOutputDir,
+          manifest: staging.manifest,
+          targetBranch: "main",
+        }),
+      (error) => error instanceof DirectCommitError && error.code === "git_command_failed",
+    );
+    assert.equal(
+      await readFile(join(repositoryDir, "README.md"), "utf8"),
+      "concurrent tracked work\nunstaged tracked work\n",
+    );
+    assert.equal(
+      await readFile(join(repositoryDir, "notes.txt"), "utf8"),
+      "concurrent untracked work\n",
+    );
+    assert.equal(await git(repositoryDir, ["diff", "--cached", "--name-only"]), "README.md");
+    assert.equal(await git(repositoryDir, ["show", ":README.md"]), "concurrent tracked work");
+    assert.equal(await git(repositoryDir, ["diff", "--name-only"]), "README.md");
+    assert.equal(await git(repositoryDir, ["rev-parse", "HEAD"]), base);
+    for (const file of staging.manifest.files) {
+      await assert.rejects(() => readFile(join(repositoryDir, file.path)), { code: "ENOENT" });
+    }
+  });
+});
+
+test("failed commits never rewind a HEAD advanced by a hook", async () => {
+  await withRepository(async ({ repositoryDir, stagedOutputDir }) => {
+    const staging = await stageRecognition(stagedOutputDir);
+    const base = await git(repositoryDir, ["rev-parse", "HEAD"]);
+    await writeFile(
+      join(repositoryDir, ".git", "hooks", "pre-commit"),
+      "#!/bin/sh\nprintf 'concurrent committed work\\n' > CONCURRENT.md\ngit add CONCURRENT.md\ngit -c core.hooksPath=/dev/null commit -m 'Concurrent commit'\nexit 1\n",
+      { mode: 0o755 },
+    );
+    let failure;
+    await assert.rejects(
+      () =>
+        createDirectCommit({
+          repositoryDir,
+          stagedOutputDir,
+          manifest: staging.manifest,
+          targetBranch: "main",
+        }),
+      (error) => {
+        failure = error;
+        return error instanceof DirectCommitError;
+      },
+    );
+    assert.notEqual(await git(repositoryDir, ["rev-parse", "HEAD"]), base);
+    assert.equal(await git(repositoryDir, ["log", "-1", "--format=%s"]), "Concurrent commit");
+    assert.equal(
+      await readFile(join(repositoryDir, "CONCURRENT.md"), "utf8"),
+      "concurrent committed work\n",
+    );
+    assert.equal(await git(repositoryDir, ["status", "--short"]), "");
+    assert.equal(failure.code, "rollback_failed");
+  });
+});
+
+test("mid-write rollback restores tracked recognition outputs without moving HEAD", async () => {
+  await withRepository(async ({ repositoryDir, stagedOutputDir }) => {
+    const staging = await stageRecognition(stagedOutputDir);
+    await createDirectCommit({
+      repositoryDir,
+      stagedOutputDir,
+      manifest: staging.manifest,
+      targetBranch: "main",
+    });
+    const base = await git(repositoryDir, ["rev-parse", "HEAD"]);
+    const first = staging.manifest.files[0];
+    const original = await readFile(join(repositoryDir, first.path), "utf8");
+    const modified = original + "\n";
+    await writeFile(join(stagedOutputDir, first.path), modified);
+    const files = staging.manifest.files.map((file, index) =>
+      index === 0
+        ? {
+            ...file,
+            bytes: Buffer.byteLength(modified),
+            sha256: createHash("sha256").update(modified).digest("hex"),
+          }
+        : index === 1
+          ? { ...file, sha256: "0".repeat(64) }
+          : file,
+    );
+    await assert.rejects(() =>
+      createDirectCommit({
+        repositoryDir,
+        stagedOutputDir,
+        manifest: { ...staging.manifest, files },
+        targetBranch: "main",
+      }),
+    );
+    assert.equal(await readFile(join(repositoryDir, first.path), "utf8"), original);
+    assert.equal(await git(repositoryDir, ["rev-parse", "HEAD"]), base);
+    assert.equal(await git(repositoryDir, ["status", "--short"]), "");
   });
 });
 

@@ -32,6 +32,15 @@ Add GitHub Action `mode: commit` as an explicit non-default write mode.
 - Push uses normal fast-forward Git semantics and never force-pushes. A concurrent branch update or
   branch protection rejection fails the run.
 - An unchanged deterministic rebuild creates and pushes no commit.
+- Failed local writes restore only validated manifest paths in the index and worktree, using the
+  same literal-path rollback helper as proposal mode. Newly created manifest files are removed;
+  existing manifest files are restored from the captured base. Unrelated staged, unstaged, and
+  untracked work remains untouched even if a hook or another process created it after the initial
+  clean-checkout check. Manifest ownership and metadata are validated before mutation and rollback.
+- Recovery never resets HEAD. If HEAD advanced before recovery (including a hook-created commit
+  or a failure after creating the recognition commit), recovery reports `rollback_failed` and leaves
+  the checkout intact for inspection rather than rewinding an unknown commit. Concurrent edits to
+  manifest-owned files and externally switched checkouts are not covered by a transaction lock.
 - `commit` requires `contents: write`; it does not require pull-request write permission.
 - `commit` must not run on untrusted pull request head code or use `pull_request_target` as its
   default event path.

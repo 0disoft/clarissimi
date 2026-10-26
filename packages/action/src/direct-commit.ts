@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 
 import { writeStagedFilesToRepository, type ProposalBranchWriterInput } from "./branch-writer.js";
+import { assertOwnedStagedPath, restoreOwnedPaths } from "./branch-writer-support.js";
 import type { ProposalOutputStagingManifest } from "./staging.js";
 
 const commitAuthorName = "Clarissimi Bot";
@@ -154,17 +155,18 @@ async function rollbackUnpublishedCommit(
   input: DirectCommitInput,
   baseCommitSha: string,
 ): Promise<void> {
-  const reset = await runGit(input.repositoryDir, ["reset", "--hard", baseCommitSha]);
-  const clean = await runGit(input.repositoryDir, [
-    "clean",
-    "-f",
-    "--",
-    ...input.manifest.files.map((file) => file.path),
-  ]);
-  if (reset.exitCode !== 0 || clean.exitCode !== 0) {
+  if ((await git(input.repositoryDir, ["rev-parse", "HEAD"])) !== baseCommitSha) {
     throw new DirectCommitError(
       "rollback_failed",
-      "Direct commit failed and the clean checkout could not be restored automatically.",
+      "Direct commit failed after HEAD changed. Automatic rollback was refused; inspect the preserved checkout before retrying.",
+    );
+  }
+  try {
+    await restoreOwnedPaths(input.repositoryDir, baseCommitSha, input.manifest.files, runGit);
+  } catch {
+    throw new DirectCommitError(
+      "rollback_failed",
+      "Direct commit failed and owned output rollback did not complete. Unrelated paths and HEAD were preserved.",
     );
   }
 }
@@ -181,6 +183,8 @@ function validateDirectCommitInput(input: DirectCommitInput): void {
       "Direct commit mode requires repository, staging, target branch, and staged file metadata.",
     );
   }
+
+  input.manifest.files.forEach(assertOwnedStagedPath);
 
   if (input.expectedHeadSha !== undefined && !/^[a-f0-9]{40}$/i.test(input.expectedHeadSha)) {
     throw new DirectCommitError(

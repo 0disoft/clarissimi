@@ -1,5 +1,31 @@
 # Validation
 
+## 2026-10-27 Scoped direct-commit failure recovery
+
+The direct writer used `git reset --hard` on local commit failure, despite initially checking for
+a clean checkout. Two real Git hook regressions failed on the original HEAD: a rejecting hook's
+tracked/staged README change was erased, and a hook-created commit was rewound to the old HEAD.
+The fixtures use temporary repositories and local bare remotes, with no hosted GitHub writes.
+
+Direct and proposal writers now share internal manifest ownership validation and literal-path
+restoration. Direct recovery restores only validated manifest paths, preserves unrelated work and
+index entries, and never resets HEAD. If HEAD changed it reports `rollback_failed` and preserves
+the checkout for inspection. An additional regression covers restoration of already tracked
+recognition output after a later staged-file hash failure. ADR 0038 records recovery boundaries.
+
+No public API signature/schema, DB, dependency, runner, or repository-hygiene policy change.
+The generated Action bundle is refreshed. Hosted CI, external publication/deployment, and process
+crashes are outside this run. Concurrent changes to owned outputs and branch switches still
+require external checkout coordination; this patch does not add repository-wide transaction locks.
+
+- Build/typecheck passed. The focused direct/proposal writer suite passed 22 tests; the final
+  complete suite with `--test-concurrency=4` passed 1,077 of 1,081 tests with four POSIX permission
+  cases skipped on Windows and zero failures. The stronger final hook case checks distinct staged
+  and unstaged README bytes plus unrelated untracked content.
+- Lint, formatting, documentation (160 Markdown files), CLI smoke, release-readiness static gates,
+  and Action bundle freshness passed. Failure reproductions ran before the implementation rebuild;
+  both the erased README and the rewound HEAD were observed against the original implementation.
+
 ## 2026-10-27 URL authority credential masking
 
 URL userinfo in connection strings bypassed assignment and email detection, leaving credential

@@ -4,6 +4,11 @@ import { lstat, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, normalize, relative, sep } from "node:path";
 
 import type { ProposalOutputStagingManifest, ProposalStagedFile } from "./staging.js";
+import {
+  ProposalBranchWriterError,
+  assertOwnedStagedPath,
+  restoreOwnedPaths,
+} from "./branch-writer-support.js";
 
 const proposalCommitAuthorName = "Clarissimi Bot";
 const proposalCommitAuthorEmail = "clarissimi-bot@users.noreply.github.com";
@@ -27,15 +32,7 @@ export interface ProposalBranchWriteResult {
   readonly rollbackHint: string;
 }
 
-export class ProposalBranchWriterError extends Error {
-  readonly code: string;
-
-  constructor(code: string, message: string) {
-    super(message);
-    this.name = "ProposalBranchWriterError";
-    this.code = code;
-  }
-}
+export { ProposalBranchWriterError } from "./branch-writer-support.js";
 
 export async function writeProposalBranch(
   input: ProposalBranchWriterInput,
@@ -161,7 +158,7 @@ export async function writeProposalBranch(
     };
   } finally {
     if (!writeSucceeded && branchReset) {
-      await restoreOwnedPaths(input.repositoryDir, originalCommitSha, input.manifest.files);
+      await restoreOwnedPaths(input.repositoryDir, originalCommitSha, input.manifest.files, runGit);
       if (previousProposalSha !== undefined) {
         await git(input.repositoryDir, [
           "update-ref",
@@ -291,65 +288,6 @@ function assertChangedFilesAreOwned(
   }
 }
 
-async function restoreOwnedPaths(
-  repositoryDir: string,
-  originalRef: string,
-  files: readonly ProposalStagedFile[],
-): Promise<void> {
-  const paths = files.map((file) => file.path);
-  const indexed = await git(repositoryDir, [
-    "--literal-pathspecs",
-    "ls-files",
-    "--cached",
-    "-z",
-    "--",
-    ...paths,
-  ]);
-  const original = await git(repositoryDir, [
-    "--literal-pathspecs",
-    "ls-tree",
-    "-r",
-    "--name-only",
-    "-z",
-    originalRef,
-    "--",
-    ...paths,
-  ]);
-  const trackedPaths = [...new Set([...indexed.split("\0"), ...original.split("\0")])].filter(
-    (path) => path.length > 0,
-  );
-  if (trackedPaths.length > 0) {
-    const restored = await runGit(repositoryDir, [
-      "--literal-pathspecs",
-      "restore",
-      `--source=${originalRef}`,
-      "--staged",
-      "--worktree",
-      "--",
-      ...trackedPaths,
-    ]);
-    if (restored.exitCode !== 0) {
-      throw new ProposalBranchWriterError(
-        "git_rollback_failed",
-        "Proposal branch writing failed and owned output rollback did not complete.",
-      );
-    }
-  }
-  const cleaned = await runGit(repositoryDir, [
-    "--literal-pathspecs",
-    "clean",
-    "-f",
-    "--",
-    ...paths,
-  ]);
-  if (cleaned.exitCode !== 0) {
-    throw new ProposalBranchWriterError(
-      "git_rollback_failed",
-      "Proposal branch writing failed and owned output rollback did not complete.",
-    );
-  }
-}
-
 export async function writeStagedFilesToRepository(
   input: ProposalBranchWriterInput,
 ): Promise<void> {
@@ -462,30 +400,6 @@ async function restoreRef(repositoryDir: string, ref: string): Promise<void> {
   }
 
   await git(repositoryDir, ["checkout", ref]);
-}
-
-function assertOwnedStagedPath(file: ProposalStagedFile): void {
-  const normalized = normalize(file.path);
-  const allowed = normalized === "CONTRIBUTORS.md" || normalized.startsWith(`.clarissimi${sep}`);
-
-  if (
-    isAbsolute(file.path) ||
-    normalized.startsWith("..") ||
-    normalized.includes(`${sep}..${sep}`) ||
-    !allowed
-  ) {
-    throw new ProposalBranchWriterError(
-      "unowned_staged_path",
-      "Proposal branch writing only accepts Clarissimi-owned staged output paths.",
-    );
-  }
-
-  if (file.bytes < 0 || !/^[a-f0-9]{64}$/.test(file.sha256)) {
-    throw new ProposalBranchWriterError(
-      "invalid_staged_manifest",
-      "Proposal branch writing requires valid staged file byte counts and sha256 hashes.",
-    );
-  }
 }
 
 function defaultCommitMessage(manifest: ProposalOutputStagingManifest): string {

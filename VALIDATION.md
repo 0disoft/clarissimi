@@ -1,5 +1,37 @@
 # Validation
 
+## 2026-10-27 Direct publication base boundary
+
+The direct publisher checked HEAD against the generated commit but did not compare its captured
+base with the actual remote target. A deterministic regression committed an unpublished README
+change on a feature branch, created a recognition commit with matching expected HEAD, and published
+to a temporary bare remote's main branch. The original implementation accepted it: the generated
+commit's owned-path diff omitted README, yet remote README became the unpublished feature content.
+The regression failed before the fix and passed afterward; the unrelated published file count in
+that reproduction drops from one to zero. No hosted writes or external provider calls were used.
+
+For new commits, the publisher now reads the exact target ref once with `git ls-remote --refs`
+against the configured remote and requires its SHA to equal `baseCommitSha`. An absent target or
+mismatch raises `remote_base_mismatch` before push and preserves the local commit. This adds one
+Git subprocess and one remote lookup, independent of ancestor count; it does not scan history.
+An unchanged rebuild performs no remote lookup or push. The existing captured-SHA push and normal
+fast-forward semantics remain in place: a deterministic update after the lookup is still rejected
+by Git. The preflight is not a remote transaction lock.
+
+ADR 0038 and the product spec record this existing-target requirement. Public API signatures,
+schemas, DB, dependencies, runner, and repository-hygiene policy are unchanged; the publisher adds
+the diagnostic above for remote base mismatches instead of accepting unpublished ancestors or
+creating absent target branches. The generated Action bundle is refreshed. Hosted CI, live
+provider verification, push, release, and deployment were not run.
+
+- Build/typecheck and all 21 focused direct-commit tests passed. Five new cases cover unpublished
+  ancestors, custom remotes, absent targets, a remote update after preflight, and unchanged-output
+  offline no-op; existing SHA-256 and verified-commit publication cases remain passing.
+- The full suite with `--test-concurrency=4` passed 1,099 of 1,103 tests, with four POSIX permission
+  cases skipped on Windows and zero failures.
+- Lint, formatting, documentation (160 Markdown files), CLI smoke, release-readiness static gates, Action
+  bundle freshness, secret scan, and Git whitespace checks passed.
+
 ## 2026-10-27 Scheme-independent authorization redaction
 
 The authorization rule recognized only Basic, Bearer, and Negotiate. Extension schemes and

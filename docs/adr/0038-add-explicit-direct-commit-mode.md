@@ -38,6 +38,14 @@ Add GitHub Action `mode: commit` as an explicit non-default write mode.
   behind its permitted destination. The check reuses the existing diff request and adds no Git
   subprocess or network call. A direct commit with extra paths fails with `unowned_commit_changes`
   before returning a publishable result; its local commit and checkout are preserved for inspection.
+- Before a new commit is pushed, one `git ls-remote --refs` request to the configured remote must
+  show the existing target branch at the captured `baseCommitSha`. Otherwise publication fails
+  with `remote_base_mismatch` and preserves the local commit for inspection. A clean checkout and
+  matching `GITHUB_SHA` alone do not establish this boundary: an unpublished feature commit can
+  already be an ancestor of HEAD, outside the generated commit's owned-path diff, while a normal
+  fast-forward push would publish it to the target branch. Missing target branches are rejected;
+  direct mode updates existing branches rather than implicitly creating them. Stale local remote
+  tracking refs are not used. SHA-1 and SHA-256 repositories and custom remotes share the check.
 - Push uses normal fast-forward Git semantics and never force-pushes. A concurrent branch update or
   branch protection rejection fails the run.
 - Before returning a publishable result, the committed tree must contain every manifest output
@@ -50,7 +58,7 @@ Add GitHub Action `mode: commit` as an explicit non-default write mode.
   inspection, with no publishable result. Hooks and Git clean filters must preserve the staged
   bytes. The additional verification costs one Git subprocess and one staged read per output,
   with no external request. The same verifier is used by proposal creation and reuse.
-- An unchanged deterministic rebuild creates and pushes no commit.
+- An unchanged deterministic rebuild creates and pushes no commit and performs no remote lookup.
 - Failed local writes restore only validated manifest paths in the index and worktree, using the
   same literal-path rollback helper as proposal mode. Newly created manifest files are removed;
   existing manifest files are restored from the captured base. Unrelated staged, unstaged, and
@@ -86,8 +94,9 @@ bypass of repository branch protection.
 
 - direct writer tests for clean checkout, expected HEAD, deterministic commit metadata, and owned
   output paths
-- direct publisher tests for successful fast-forward push, changed HEAD rejection, and concurrent
-  non-fast-forward rejection
+- direct publisher tests for successful fast-forward push, changed HEAD rejection, unpublished
+  ancestors, missing targets, custom remotes, SHA-256 repositories, unchanged-output no-op, and
+  concurrent non-fast-forward rejection both before and after the remote base lookup
 - Action environment tests for explicit mode selection, bounded outputs, and missing token failure
 - repository `format`, `lint`, `test`, `docs`, `smoke`, `check`, `contract`, bundle freshness, and
   release-readiness gates

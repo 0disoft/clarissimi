@@ -300,7 +300,9 @@ An explicit `commit` mode may write approved or auto-approved recognition direct
 configured target branch. It preserves the same validation, append-only ledger, duplicate
 rejection, complete derived-output rebuild, and owned-path checks as `propose`. It additionally
 requires a clean checkout, rejects a stale expected HEAD, uses a bot-authored commit, and performs
-only a normal fast-forward push. It must never infer approval, force-push, or become the default.
+only a normal fast-forward push. Before publication, the existing remote target branch must match
+the captured base commit; unpublished ancestor changes and missing target branches are rejected.
+It must never infer approval, force-push, or become the default.
 
 The Action may also support `stage-draft` mode. This mode creates a proposal pull request containing
 only sanitized `.clarissimi/drafts/*.json` review files for normal unapproved drafts. It must not

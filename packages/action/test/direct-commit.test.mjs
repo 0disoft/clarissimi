@@ -107,6 +107,76 @@ test("creates and publishes an explicit direct commit to the target branch", asy
   });
 });
 
+test("refuses to publish unpublished ancestor changes to the target branch", async () => {
+  await withRepository(async ({ repositoryDir, remoteDir, stagedOutputDir }) => {
+    const remoteBase = await git(remoteDir, ["rev-parse", "refs/heads/main"]);
+    await git(repositoryDir, ["checkout", "-b", "unpublished-feature"]);
+    await writeFile(join(repositoryDir, "README.md"), "Unpublished feature changes\n", "utf8");
+    await git(repositoryDir, ["add", "README.md"]);
+    await git(repositoryDir, ["commit", "-m", "Unpublished feature"]);
+    const featureSha = await git(repositoryDir, ["rev-parse", "HEAD"]);
+    const staging = await stageRecognition(stagedOutputDir);
+    const commit = await createDirectCommit({
+      repositoryDir,
+      stagedOutputDir,
+      manifest: staging.manifest,
+      targetBranch: "main",
+      expectedHeadSha: featureSha,
+    });
+    assert.equal(commit.changedFiles.includes("README.md"), false);
+
+    let publishError;
+    try {
+      await publishDirectCommit({ repositoryDir, commit });
+    } catch (error) {
+      publishError = error;
+    }
+    assert.equal(
+      await git(remoteDir, ["show", "refs/heads/main:README.md"]),
+      "# Fixture Repository",
+    );
+    assert.equal(await git(remoteDir, ["rev-parse", "refs/heads/main"]), remoteBase);
+    assert.ok(publishError instanceof DirectCommitError);
+    assert.equal(publishError.code, "remote_base_mismatch");
+    assert.equal(await git(repositoryDir, ["rev-parse", "HEAD"]), commit.commitSha);
+  });
+});
+
+test("uses the configured remote when checking the publication base", async () => {
+  await withRepository(async ({ repositoryDir, remoteDir, stagedOutputDir }) => {
+    await git(repositoryDir, ["remote", "rename", "origin", "publication"]);
+    const staging = await stageRecognition(stagedOutputDir);
+    const commit = await createDirectCommit({
+      repositoryDir,
+      stagedOutputDir,
+      manifest: staging.manifest,
+      targetBranch: "main",
+    });
+    await publishDirectCommit({ repositoryDir, commit, remoteName: "publication" });
+    assert.equal(await git(remoteDir, ["rev-parse", "refs/heads/main"]), commit.commitSha);
+  });
+});
+
+test("refuses to create an absent remote target branch", async () => {
+  await withRepository(async ({ repositoryDir, remoteDir, stagedOutputDir }) => {
+    const remoteBase = await git(remoteDir, ["rev-parse", "refs/heads/main"]);
+    const staging = await stageRecognition(stagedOutputDir);
+    const commit = await createDirectCommit({
+      repositoryDir,
+      stagedOutputDir,
+      manifest: staging.manifest,
+      targetBranch: "missing-target",
+    });
+    await assert.rejects(
+      () => publishDirectCommit({ repositoryDir, commit }),
+      (error) => error instanceof DirectCommitError && error.code === "remote_base_mismatch",
+    );
+    assert.equal(await git(remoteDir, ["branch", "--list", "missing-target"]), "");
+    assert.equal(await git(remoteDir, ["rev-parse", "refs/heads/main"]), remoteBase);
+    assert.equal(await git(repositoryDir, ["rev-parse", "HEAD"]), commit.commitSha);
+  });
+});
+
 test("verifies and publishes exact output in SHA-256 Git repositories", async () => {
   await withRepository(async ({ repositoryDir, remoteDir, stagedOutputDir }) => {
     const staging = await stageRecognition(stagedOutputDir);
@@ -169,6 +239,73 @@ test("publishes the verified commit when HEAD advances after preflight", async (
   });
 });
 
+test("keeps fast-forward rejection if the remote advances after the base check", async (t) => {
+  await withRepository(async ({ repositoryDir, remoteDir, stagedOutputDir }) => {
+    const staging = await stageRecognition(stagedOutputDir);
+    const commit = await createDirectCommit({
+      repositoryDir,
+      stagedOutputDir,
+      manifest: staging.manifest,
+      targetBranch: "main",
+    });
+    const competingSha = await git(repositoryDir, [
+      "commit-tree",
+      `${commit.baseCommitSha}^{tree}`,
+      "-p",
+      commit.baseCommitSha,
+      "-m",
+      "Concurrent target update",
+    ]);
+    // Make the competing object available to the bare remote without updating main.
+    await git(repositoryDir, ["push", "origin", `${competingSha}:refs/heads/competing`]);
+    const originalSpawn = childProcess.spawn;
+    let advanced = false;
+    const spawnMock = t.mock.method(childProcess, "spawn", (command, args, options) => {
+      if (command === "git" && args[0] === "push" && options.cwd === repositoryDir) {
+        const update = spawnSync("git", ["update-ref", "refs/heads/main", competingSha], {
+          cwd: remoteDir,
+          encoding: "utf8",
+        });
+        assert.equal(update.status, 0, update.stderr);
+        advanced = true;
+      }
+      return originalSpawn(command, args, options);
+    });
+    syncBuiltinESMExports();
+    try {
+      await assert.rejects(
+        () => publishDirectCommit({ repositoryDir, commit }),
+        (error) => error instanceof DirectCommitError && error.code === "git_command_failed",
+      );
+    } finally {
+      spawnMock.mock.restore();
+      syncBuiltinESMExports();
+    }
+    assert.equal(advanced, true);
+    assert.equal(await git(remoteDir, ["rev-parse", "refs/heads/main"]), competingSha);
+  });
+});
+
+test("unchanged output skips remote access and publication", async () => {
+  await withRepository(async ({ repositoryDir, remoteDir, stagedOutputDir }) => {
+    const staging = await stageRecognition(stagedOutputDir);
+    const input = {
+      repositoryDir,
+      stagedOutputDir,
+      manifest: staging.manifest,
+      targetBranch: "main",
+    };
+    await publishDirectCommit({ repositoryDir, commit: await createDirectCommit(input) });
+    const remoteHead = await git(remoteDir, ["rev-parse", "refs/heads/main"]);
+    const commit = await createDirectCommit(input);
+    await git(repositoryDir, ["remote", "remove", "origin"]);
+    const published = await publishDirectCommit({ repositoryDir, commit });
+    assert.equal(commit.commitCreated, false);
+    assert.equal(published.pushed, false);
+    assert.equal(await git(remoteDir, ["rev-parse", "refs/heads/main"]), remoteHead);
+  });
+});
+
 test("rejects a dirty worktree before writing recognition outputs", async () => {
   await withRepository(async ({ repositoryDir, stagedOutputDir }) => {
     const staging = await stageRecognition(stagedOutputDir);
@@ -227,7 +364,7 @@ test("restores the clean checkout when staged output verification fails mid-writ
   });
 });
 
-test("refuses non-fast-forward publication after the target branch advances", async () => {
+test("refuses publication when the remote target no longer matches the captured base", async () => {
   await withRepository(async ({ repositoryDir, remoteDir, stagedOutputDir }) => {
     const staging = await stageRecognition(stagedOutputDir);
     const commit = await createDirectCommit({
@@ -248,7 +385,7 @@ test("refuses non-fast-forward publication after the target branch advances", as
 
     await assert.rejects(
       () => publishDirectCommit({ repositoryDir, commit }),
-      (error) => error instanceof DirectCommitError && error.code === "git_command_failed",
+      (error) => error instanceof DirectCommitError && error.code === "remote_base_mismatch",
     );
     assert.notEqual(await git(remoteDir, ["rev-parse", "refs/heads/main"]), commit.commitSha);
   });

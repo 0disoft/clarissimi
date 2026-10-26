@@ -640,11 +640,21 @@ async function publishDirectCommit(input) {
     throw new DirectCommitError("commit_sha_mismatch", "Direct commit publishing refuses to push because HEAD no longer matches the created commit.");
   }
   if (input.commit.commitCreated) {
+    const targetRef = `refs/heads/${input.commit.targetBranch}`;
+    const remoteHead = await git3(input.repositoryDir, [
+      "ls-remote",
+      "--refs",
+      remoteName,
+      targetRef
+    ]);
+    if (remoteHead !== `${input.commit.baseCommitSha}	${targetRef}`) {
+      throw new DirectCommitError("remote_base_mismatch", "Direct commit publishing requires the existing remote target branch to match the captured base commit. Rebuild from the current target branch; the local commit was preserved for inspection.");
+    }
     await git3(input.repositoryDir, [
       "push",
       remoteName,
       // HEAD may move after preflight; publish only the verified commit.
-      `${currentSha}:refs/heads/${input.commit.targetBranch}`
+      `${currentSha}:${targetRef}`
     ]);
   }
   return {

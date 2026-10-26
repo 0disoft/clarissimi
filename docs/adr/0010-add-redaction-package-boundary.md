@@ -85,6 +85,20 @@ structured cookie keys; general thresholds and report kinds remain unchanged. Th
 favors masking the complete field over interpreting individual cookie names or preserving inline
 explanations after unquoted cookie data.
 
+URL authority userinfo is masked before assignment, token, and email rules. A forward scan of
+maximal scheme tokens followed by `://` examines each authority once, avoiding an unbounded
+scheme-expression retry at every character. Any nonempty userinfo before the authority's last
+`@` is replaced, including username-only and percent-encoded values, without a length threshold.
+This works for HTTP and connection-string schemes, single-label hosts, IP literals, and IPv6.
+Scheme, host, port, path, query, and fragment remain available as evidence; `@` in a path, query,
+or fragment does not indicate userinfo. Double quotes, whitespace, angle brackets, backticks, and
+backslashes delimit authorities; raw apostrophes in userinfo remain inside the masked region.
+Existing `generic_secret_assignment` report vocabulary is reused;
+reports contain offsets only. This text detector masks credential-shaped authority content without
+validating a URL or contacting its host. Encoded whole URLs and secrets in paths or query parameters
+are not newly covered by this rule. Structural evidence IDs and URLs reject detected userinfo rather
+than accepting a modified reference.
+
 The package must not own:
 
 - provider API calls

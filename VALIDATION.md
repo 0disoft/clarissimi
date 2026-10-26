@@ -1,5 +1,37 @@
 # Validation
 
+## 2026-10-27 URL authority credential masking
+
+URL userinfo in connection strings bypassed assignment and email detection, leaving credential
+content in provider evidence and accepting credential-bearing structural URLs. A comparison with
+the original HEAD retained an explicit non-credential marker in 84/84 combinations of seven
+schemes, four userinfo forms, and three hosts; the same cases now retain it in 0/84. Four common
+schemes also reproduce the original failure independently. No credentials were created or used.
+
+The shared redactor now scans maximal scheme tokens and each authority once before other text
+rules. Nonempty userinfo before the last authority `@` is masked without interpreting credentials;
+scheme, host, port, path, query, and fragment are preserved. The scan is O(n), including failed
+scheme candidates, rather than retrying an unbounded scheme regex from every character. Existing
+report kinds and positional metadata are preserved. ADR 0010 records the detector and boundaries.
+
+All 208 focused redaction/core/provider tests passed. Five added regressions cover the 84 forms,
+offsets, multiple authorities, quoted/nested JSON, preservation of non-userinfo `@`, structural
+field rejection, public-text checks, and a captured provider request body. A child process with a
+five-second deadline covers long scheme/userinfo tokens and repeated URL prefixes up to 262,144
+characters. Whole-URL encoding and secrets carried in paths or queries are outside the new rule.
+
+No public API/schema, DB, dependency, runner, or repository-hygiene policy change. The generated
+Action runtime is refreshed. Hosted CI, live model calls, publishing, and deployment are outside
+this local security change.
+
+- Build/typecheck and the final complete suite with `--test-concurrency=4`: 1,078 tests,
+  1,074 passed, four POSIX permission tests skipped on Windows, zero failures. The initial
+  `pnpm run check` had one PowerShell completion child-process timeout under default concurrency;
+  it is recorded as a failure, and that case passed in the complete bounded-concurrency rerun.
+- Lint, formatting, documentation (160 Markdown files), CLI smoke, and release-readiness static
+  gates passed. The Action bundle was regenerated and its freshness check passed.
+- Boundary regressions also cover punctuation-adjacent URLs and raw apostrophes in userinfo.
+
 ## 2026-10-27 Complete cookie field masking
 
 The whitespace-delimited generic rule masked only the first unquoted cookie component or skipped

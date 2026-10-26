@@ -9,6 +9,105 @@ import {
   redactText,
 } from "../dist/index.js";
 
+test("URL userinfo is masked across 84 scheme, credential, and host forms", () => {
+  const marker = "non-credential-marker";
+  let cases = 0;
+  for (const scheme of [
+    "https",
+    "postgresql",
+    "mysql",
+    "redis",
+    "mongodb+srv",
+    "amqps",
+    "git+ssh",
+  ]) {
+    for (const userinfo of [`app:${marker}`, `:${marker}`, `app:${marker}%40encoded`, marker]) {
+      for (const host of ["db", "127.0.0.1", "[::1]"]) {
+        const prefix = `before ${scheme}://`;
+        const suffix = `@${host}:1234/path?keep=yes#tail after`;
+        const input = `${prefix}${userinfo}${suffix}`;
+        assert.deepEqual(
+          redactText(input),
+          {
+            text: `${prefix}${REDACTION_PLACEHOLDER}${suffix}`,
+            report: {
+              changed: true,
+              occurrences: [
+                {
+                  kind: "generic_secret_assignment",
+                  replacement: REDACTION_PLACEHOLDER,
+                  start: prefix.length,
+                  end: prefix.length + userinfo.length,
+                },
+              ],
+            },
+          },
+          input,
+        );
+        cases += 1;
+      }
+    }
+  }
+  assert.equal(cases, 84);
+});
+
+test("URL masking handles multiple authorities, quoted JSON, and the last userinfo separator", () => {
+  const marker = "non-credential-marker";
+  const values = [`HTTPS://app:${marker}@db/path`, `redis://app:${marker}@extra@127.0.0.1:6379/0`];
+  assert.equal(
+    redactText(`'redis://app:${marker}'part@db/path'`).text,
+    `'redis://${REDACTION_PLACEHOLDER}@db/path'`,
+  );
+  for (const first of ["https://db", "https://app:short@db"]) {
+    const result = redactText(`${first},redis://app:${marker}@db`);
+    assert.equal(result.text.includes(marker), false);
+    assert.ok(result.text.endsWith(`redis://${REDACTION_PLACEHOLDER}@db`));
+  }
+  assert.equal(
+    redactText(values.join(" ")).text,
+    `HTTPS://${REDACTION_PLACEHOLDER}@db/path redis://${REDACTION_PLACEHOLDER}@127.0.0.1:6379/0`,
+  );
+  assert.deepEqual(redactJson({ note: values[0] }).value, {
+    note: `HTTPS://${REDACTION_PLACEHOLDER}@db/path`,
+  });
+  assert.equal(
+    redactText(JSON.stringify({ note: values[0] })).text,
+    JSON.stringify({ note: `HTTPS://${REDACTION_PLACEHOLDER}@db/path` }),
+  );
+  for (const text of [
+    "https://db/path@value",
+    "https://db?user@value",
+    "https://db#user@value",
+    "https://@db",
+    "version.1.2.3",
+    "123://app:value@db",
+  ]) {
+    assert.equal(redactText(text).text, text);
+  }
+});
+
+test("long scheme candidates and repeated URL prefixes stay within the redaction deadline", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "--eval",
+      `
+    import assert from "node:assert/strict";
+    import { redactText, REDACTION_PLACEHOLDER } from ${JSON.stringify(new URL("../dist/index.js", import.meta.url).href)};
+    for (const text of ["a.".repeat(65536), "https://".repeat(32768), "x".repeat(131072) + "://db/path"]) {
+      assert.equal(redactText(text).text, text);
+    }
+    const text = "https://" + "x".repeat(131072) + ":non-credential-marker@db/path";
+    assert.equal(redactText(text).text, "https://" + REDACTION_PLACEHOLDER + "@db/path");
+  `,
+    ],
+    { encoding: "utf8", timeout: 5000 },
+  );
+  assert.equal(result.error, undefined, result.error?.message);
+  assert.equal(result.status, 0, result.stderr);
+});
+
 test("redacts email addresses without changing surrounding evidence text", () => {
   const address = `dev@${["example", "invalid"].join(".")}`;
   const result = redactText(`Maintainer note from person at ${address}.`);

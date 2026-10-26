@@ -105,6 +105,7 @@ const REDACTION_RULES: readonly RedactionRule[] = [
 export function redactText(input: string): RedactedText {
   const occurrences: RedactionOccurrence[] = [];
   let text = redactPrivateKeyBlocks(input, occurrences);
+  text = redactUrlCredentials(text, occurrences);
 
   for (const rule of REDACTION_RULES) {
     text = text.replace(rule.pattern, (match: string, ...args: (string | number | undefined)[]) => {
@@ -158,6 +159,38 @@ function redactPrivateKeyBlocks(input: string, occurrences: RedactionOccurrence[
     return input;
   }
   parts.push(input.slice(offset));
+  return parts.join("");
+}
+
+function redactUrlCredentials(input: string, occurrences: RedactionOccurrence[]): string {
+  // Scan maximal scheme tokens once; retrying an unbounded scheme regex at each
+  // character of a failed candidate would make long non-URL strings quadratic.
+  const tokens = /[A-Z0-9+.-]+/gi;
+  const authority = /[^/\s?#"`<>\\]+/y;
+  const parts: string[] = [];
+  let end = 0;
+  for (let token = tokens.exec(input); token !== null; token = tokens.exec(input)) {
+    if (!/^[A-Z]/i.test(token[0]) || !input.startsWith("://", tokens.lastIndex)) continue;
+    authority.lastIndex = tokens.lastIndex + 3;
+    const match = authority.exec(input);
+    if (match === null) continue;
+    const separator = match[0].lastIndexOf("@");
+    if (separator <= 0) continue;
+    const start = match.index;
+    const credentialEnd = start + separator;
+    // Preserve discovery of a following URL joined to this host by punctuation.
+    tokens.lastIndex = credentialEnd + 1;
+    parts.push(input.slice(end, start), REDACTION_PLACEHOLDER);
+    occurrences.push({
+      kind: "generic_secret_assignment",
+      replacement: REDACTION_PLACEHOLDER,
+      start,
+      end: credentialEnd,
+    });
+    end = credentialEnd;
+  }
+  if (parts.length === 0) return input;
+  parts.push(input.slice(end));
   return parts.join("");
 }
 

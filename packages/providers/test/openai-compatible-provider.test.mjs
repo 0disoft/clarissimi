@@ -210,6 +210,36 @@ test("escaped credential suffixes never reach the provider request body", async 
   assert.equal(payload.redaction.matchCount, 3);
 });
 
+test("URL credentials never reach the provider request body", async () => {
+  const marker = "non-credential-marker";
+  let requestBody;
+  const provider = createOpenAiCompatibleContributionDraftProvider({
+    model: "clarissimi-test-model",
+    token: "unit-token",
+    fetch: async (_url, init) => {
+      requestBody = JSON.parse(init.body);
+      return jsonResponse({}, 503);
+    },
+  });
+  const evidence = prepareEvidenceForProvider({
+    source,
+    items: ["https", "postgresql", "redis", "mongodb+srv"].map((scheme, index) => ({
+      kind: "file",
+      id: `src/config-${index}.ts`,
+      text: `${scheme}://app:${marker}@db:1234/store`,
+    })),
+  });
+  await assert.rejects(
+    provider.createAssessment({ contributor, preparedEvidence: evidence }),
+    (error) => error instanceof OpenAiCompatibleProviderError && error.code === "http_error",
+  );
+  assert.equal(JSON.stringify(requestBody).includes(marker), false);
+  const payload = JSON.parse(requestBody.messages[1].content);
+  assert.equal(payload.redaction.matchCount, 4);
+  assert.ok(payload.evidenceItems.every((item) => item.text.includes("[REDACTED]@db")));
+  assert.ok(payload.evidenceRefs.every((ref) => ref.excerpt.includes("[REDACTED]@db")));
+});
+
 test("later cookie components never reach the provider request body", async () => {
   const marker = "non-credential-marker";
   let requestBody;

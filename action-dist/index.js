@@ -1117,6 +1117,7 @@ var REDACTION_RULES = [
 function redactText(input) {
   const occurrences = [];
   let text = redactPrivateKeyBlocks(input, occurrences);
+  text = redactUrlCredentials(text, occurrences);
   for (const rule of REDACTION_RULES) {
     text = text.replace(rule.pattern, (match, ...args) => {
       if (rule.minimumValueLength !== void 0) {
@@ -1162,6 +1163,38 @@ function redactPrivateKeyBlocks(input, occurrences) {
     return input;
   }
   parts.push(input.slice(offset));
+  return parts.join("");
+}
+function redactUrlCredentials(input, occurrences) {
+  const tokens = /[A-Z0-9+.-]+/gi;
+  const authority = /[^/\s?#"`<>\\]+/y;
+  const parts = [];
+  let end = 0;
+  for (let token = tokens.exec(input); token !== null; token = tokens.exec(input)) {
+    if (!/^[A-Z]/i.test(token[0]) || !input.startsWith("://", tokens.lastIndex))
+      continue;
+    authority.lastIndex = tokens.lastIndex + 3;
+    const match = authority.exec(input);
+    if (match === null)
+      continue;
+    const separator = match[0].lastIndexOf("@");
+    if (separator <= 0)
+      continue;
+    const start = match.index;
+    const credentialEnd = start + separator;
+    tokens.lastIndex = credentialEnd + 1;
+    parts.push(input.slice(end, start), REDACTION_PLACEHOLDER);
+    occurrences.push({
+      kind: "generic_secret_assignment",
+      replacement: REDACTION_PLACEHOLDER,
+      start,
+      end: credentialEnd
+    });
+    end = credentialEnd;
+  }
+  if (parts.length === 0)
+    return input;
+  parts.push(input.slice(end));
   return parts.join("");
 }
 function redactEmailAddresses(input, occurrences) {

@@ -347,6 +347,42 @@ test("escaped credential suffixes cannot escape through prepared evidence", () =
   }
 });
 
+test("URL userinfo cannot escape provider preparation or public structural fields", () => {
+  const marker = "non-credential-marker";
+  for (const scheme of ["https", "postgresql", "redis", "mongodb+srv"]) {
+    const url = `${scheme}://app:${marker}@db:1234/store`;
+    const prepared = prepareEvidenceForProvider({
+      source,
+      items: [
+        {
+          kind: "file",
+          id: "src/config.ts",
+          title: url,
+          text: url,
+          metadata: { note: url },
+          ...prepareEvidenceExcerpt(url, 40),
+        },
+      ],
+    });
+    assert.equal(JSON.stringify(prepared).includes(marker), false);
+    assert.ok(
+      findUnsafeRepositoryAssessmentFields({ ...validAssessment(), evidenceSummary: url }).some(
+        (issue) => issue.code === "unsafe_repository_text",
+      ),
+    );
+    for (const item of [
+      { kind: "file", id: url },
+      { kind: "file", id: "src/config.ts", url },
+    ]) {
+      assert.throws(
+        () => prepareEvidenceForProvider({ source, items: [item] }),
+        (error) =>
+          error instanceof EvidencePreparationError && error.code === "unsafe_structural_field",
+      );
+    }
+  }
+});
+
 test("later cookie components cannot escape provider preparation or public text checks", () => {
   const marker = "non-credential-marker";
   for (const header of [

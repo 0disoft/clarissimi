@@ -7,6 +7,7 @@ import {
 } from "@clarissimi/schemas";
 
 import type { ProviderAssessmentInput } from "./types.js";
+import { overlappingClaimLinks } from "./claim-evidence-ranges.js";
 import {
   PERFORMANCE_CLAIM_PATTERN,
   numericPerformanceClaims,
@@ -146,12 +147,8 @@ export function validateProviderAssessmentResult(
         for (const match of assessment[field].matchAll(new RegExp(rule.pattern.source, "gi"))) {
           const claimStart = match.index;
           const claimEnd = claimStart + match[0].length;
-          for (const { link, index, start, end } of links) {
-            if (
-              start < claimEnd &&
-              end > claimStart &&
-              !linkedItems(link.evidenceRefIndexes).some(rule.supports)
-            ) {
+          for (const { link, index } of overlappingClaimLinks(links, claimStart, claimEnd)) {
+            if (!linkedItems(link.evidenceRefIndexes).some(rule.supports)) {
               issues.push({
                 path: `$.claimEvidenceLinks[${index}]`,
                 code: rule.code,
@@ -162,9 +159,7 @@ export function validateProviderAssessmentResult(
         }
       }
       for (const claim of numericPerformanceClaims(assessment[field])) {
-        const supportingLinks = links.filter(
-          ({ start, end }) => start < claim.end && end > claim.start,
-        );
+        const supportingLinks = overlappingClaimLinks(links, claim.start, claim.end);
         if (
           supportingLinks.length === 0 ||
           supportingLinks.some(

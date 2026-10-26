@@ -37,6 +37,14 @@ security, measured performance, and regression-prevention claims, rather than ac
 references elsewhere in the draft. An unsupported claim fails draft generation for maintainer
 review instead of being silently rewritten or auto-approved.
 
+Schema-validated field coverage gives each field an ordered set of non-overlapping text ranges.
+Provider quality checks use binary search to locate the first linked range whose end is after the
+claim start, then visit only ranges starting before the claim end. This applies to both claim-rule
+matches and numeric sentences. Every overlapping segment still requires support, with the same
+strict boundary comparisons, original reference indexes, and issue ordering. For C claims and L
+links, range lookup costs O(C log L + K), where K is the total number of overlapping ranges visited,
+instead of scanning all L links for every claim.
+
 Measurement candidates also include source and result files under explicit benchmark, benchmarks,
 or benches directories. They keep the existing file evidence kind. An ordinary source file or a
 benchmark README is not a measurement candidate. Claim-specific links and maintainer review remain

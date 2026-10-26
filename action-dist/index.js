@@ -4840,6 +4840,27 @@ import { readFile as readFile3, realpath as realpath4 } from "node:fs/promises";
 import { isAbsolute as isAbsolute5, join as join6, resolve as resolve3 } from "node:path";
 import { tmpdir as tmpdir2 } from "node:os";
 
+// packages/providers/dist/claim-evidence-ranges.js
+function overlappingClaimLinks(links, start, end) {
+  let low = 0;
+  let high = links.length;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (links[middle].end <= start)
+      low = middle + 1;
+    else
+      high = middle;
+  }
+  const overlaps = [];
+  for (let index = low; index < links.length; index += 1) {
+    const link = links[index];
+    if (link.start >= end)
+      break;
+    overlaps.push(link);
+  }
+  return overlaps;
+}
+
 // packages/providers/dist/performance-measurements.js
 var PERFORMANCE_CLAIM_PATTERN = /\b(?:faster|speedup|speed|latency|throughput|memory|runtime|performance|benchmark(?:ed)?)\b|지연(?:\s*시간)?|처리\s*(?:속도|량)|응답\s*(?:시간|속도)|메모리|실행\s*시간|성능|벤치마크|빨라|빠르/i;
 var MEASUREMENT_CONTEXT_PATTERN = /\b(?:measur(?:ed|ement|ements)|results?|observed)\b|측정|실측|결과/i;
@@ -5056,8 +5077,8 @@ function validateProviderAssessmentResult(input, value) {
         for (const match of assessment[field].matchAll(new RegExp(rule.pattern.source, "gi"))) {
           const claimStart = match.index;
           const claimEnd = claimStart + match[0].length;
-          for (const { link, index, start, end } of links) {
-            if (start < claimEnd && end > claimStart && !linkedItems(link.evidenceRefIndexes).some(rule.supports)) {
+          for (const { link, index } of overlappingClaimLinks(links, claimStart, claimEnd)) {
+            if (!linkedItems(link.evidenceRefIndexes).some(rule.supports)) {
               issues.push({
                 path: `$.claimEvidenceLinks[${index}]`,
                 code: rule.code,
@@ -5068,7 +5089,7 @@ function validateProviderAssessmentResult(input, value) {
         }
       }
       for (const claim of numericPerformanceClaims(assessment[field])) {
-        const supportingLinks = links.filter(({ start, end }) => start < claim.end && end > claim.start);
+        const supportingLinks = overlappingClaimLinks(links, claim.start, claim.end);
         if (supportingLinks.length === 0 || supportingLinks.some(({ link }) => !linkedItems(link.evidenceRefIndexes).some((item) => isMeasurementEvidence(item) && supportsNumericPerformanceClaim(item, claim)))) {
           issues.push({
             path: `$.${field}`,

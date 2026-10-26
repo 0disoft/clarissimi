@@ -1,5 +1,35 @@
 # Validation
 
+## 2026-10-27 Indexed claim-to-evidence range lookup
+
+Provider validation previously visited every field link for each claim-rule match and filtered
+every field link again for each numeric sentence. Both paths now share a binary search over the
+ordered, non-overlapping ranges guaranteed by schema-validated field coverage. ADR 0061 records
+the lookup boundary. All overlapping segments, original issue indexes, strict endpoint comparisons,
+and evidence support checks are preserved. Range lookup drops from O(C * L) to O(C log L + K),
+where C is claim count, L is link count, and K is total overlaps visited; prose parsing and evidence
+comparison costs are separate.
+
+A synthetic assessment with 8,000 `"Latency is 5 ms."` sentences and one link per sentence in each
+public field, all pointing to one `"Measured latency is 5 ms."` excerpt, occupies 1,584,577 UTF-8
+bytes. The original HEAD validator and the updated validator ran in the same process with one
+warm-up and three samples each. Before: 2548.91/3082.72/2039.80 ms; after: 291.16/227.35/247.12 ms.
+Medians decreased from 2548.91 to 247.12 ms, about 10.3 times faster for this local fixture, not a
+production latency guarantee. Three focused regressions compare lookup against the previous
+linear predicate across boundaries, gaps, spanning queries, and uneven lengths, and cap endpoint
+probes to logarithmic growth for 16,384 links. All 144 focused provider tests passed.
+For a single overlap near the end of those 16,384 links, counted endpoint property reads decrease
+from 32,767 for the original linear predicate to 16 for binary lookup.
+
+No public API/schema, DB, dependency, repository layout policy, or CI runner changes are introduced.
+The generated Action runtime is refreshed for the shared provider change. Hosted CI, live model
+calls, publishing, and deployment are outside this local performance change.
+
+- `pnpm run check`: 1,057 tests, 1,053 passed, four POSIX permission tests skipped on Windows,
+  zero failures.
+- Lint, formatting, CLI smoke, documentation validation, and release-readiness static gates: passed.
+- Action bundle regenerated and its freshness check passed.
+
 ## 2026-10-27 Reuse numeric measurement parsing
 
 Provider result validation previously reread and reparsed the same evidence body for every numeric

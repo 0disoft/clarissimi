@@ -1,5 +1,33 @@
 # Validation
 
+## 2026-10-27 Escape-aware quoted assignment redaction
+
+Quoted JSON, dotenv, and authorization values previously ended at escaped delimiters, leaving the
+remaining value in prepared provider evidence despite a positive redaction report. All three
+reproduced paths retained a non-credential suffix marker. Their shared quote grammar now consumes
+escapes as character pairs, distinguishes escaped delimiters from closing quotes, and masks
+unterminated values to the end of the same line. The generic eight-character threshold is applied
+to captured raw content; occurrence offsets remain correct with positional captures. ADR 0010
+records the quote grammar, truncated-value policy, and threshold/report behavior.
+
+A same-input comparison with the original HEAD implementation covered 72 combinations of three
+assignment contexts, two quote types, six escape/parity patterns, and complete/truncated forms.
+Retained suffix markers decreased from 48/72 to 0/72. Five new regressions cover those combinations
+and exact report offsets, 7/8-character boundaries including escaped content, a child-process
+deadline for 131,072 backslashes, provider preparation, and a captured provider request. The prior
+whitespace deadline guard now expects conservative masking of the truncated quoted value. All
+198 focused redaction/core/provider tests passed. No credentials were generated or external model
+calls made; only explicit non-credential markers were used.
+
+No public API/schema, DB, dependency, or CI runner changes are introduced. The generated Action
+runtime is refreshed to include the shared redaction implementation. Hosted CI, live models,
+publishing, and deployment are outside this local security change.
+
+- `pnpm run check`: 1,068 tests, 1,064 passed, four POSIX permission tests skipped on Windows,
+  zero failures.
+- Lint, formatting, CLI smoke, documentation validation, and release-readiness static gates: passed.
+- Action bundle regenerated and its freshness check passed.
+
 ## 2026-10-27 Complete authorization credential masking
 
 The generic assignment matcher treated the first whitespace-delimited word as the entire value.

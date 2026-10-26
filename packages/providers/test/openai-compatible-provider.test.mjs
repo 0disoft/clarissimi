@@ -180,6 +180,36 @@ test("authorization credentials never reach the provider request body", async ()
   assert.ok(payload.evidenceRefs.every((ref) => ref.excerpt === "[REDACTED]"));
 });
 
+test("escaped credential suffixes never reach the provider request body", async () => {
+  const value = 'non-credential-prefix"non-credential-suffix';
+  let requestBody;
+  const provider = createOpenAiCompatibleContributionDraftProvider({
+    model: "clarissimi-test-model",
+    token: "unit-token",
+    fetch: async (_url, init) => {
+      requestBody = JSON.parse(init.body);
+      return jsonResponse({}, 503);
+    },
+  });
+  const evidence = prepareEvidenceForProvider({
+    source,
+    items: [
+      JSON.stringify({ password: value }),
+      `API_KEY=${JSON.stringify(value)}`,
+      JSON.stringify({ Authorization: `Bearer ${value}` }),
+    ].map((text, index) => ({ kind: "file", id: `src/config-${index}.ts`, text })),
+  });
+  await assert.rejects(
+    provider.createAssessment({ contributor, preparedEvidence: evidence }),
+    (error) => error instanceof OpenAiCompatibleProviderError && error.code === "http_error",
+  );
+  const serialized = JSON.stringify(requestBody);
+  assert.equal(serialized.includes("non-credential-prefix"), false);
+  assert.equal(serialized.includes("non-credential-suffix"), false);
+  const payload = JSON.parse(requestBody.messages[1].content);
+  assert.equal(payload.redaction.matchCount, 3);
+});
+
 test("quoted JSON credentials never reach the provider request body", async () => {
   const marker = "synthetic-quoted-json-value";
   let requestBody;

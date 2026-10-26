@@ -1074,11 +1074,14 @@ var SENSITIVE_KEY_SOURCE = SENSITIVE_KEYS.map((key) => key.replaceAll("_", "[_-]
 var SENSITIVE_JSON_KEY = new RegExp(`^(?:${SENSITIVE_KEY_SOURCE})$`, "i");
 var PRIVATE_KEY_LABEL_SOURCE = "(?:(?:RSA |OPENSSH |EC |DSA |ENCRYPTED |PGP )?PRIVATE KEY|PGP PRIVATE KEY BLOCK)";
 var AUTHORIZATION_SCHEME_SOURCE = "(?:Basic|Bearer|Negotiate)[ \\t]+";
+var DOUBLE_QUOTED_CHARACTER = String.raw`(?:\\[^\r\n]|[^"\\\r\n])`;
+var SINGLE_QUOTED_CHARACTER = String.raw`(?:\\[^\r\n]|[^'\\\r\n])`;
+var QUOTED_VALUE_SOURCE = `"${DOUBLE_QUOTED_CHARACTER}*"?|'${SINGLE_QUOTED_CHARACTER}*'?`;
 var REDACTION_RULES = [
   {
     kind: "generic_secret_assignment",
     // Consume the scheme and credential before generic rules can mask only the scheme.
-    pattern: new RegExp(String.raw`["']?\b(?:proxy-)?authorization["']?[ \t]*[:=][ \t]*` + `(?:"${AUTHORIZATION_SCHEME_SOURCE}[^"\\s][^"\\r\\n]*"|'${AUTHORIZATION_SCHEME_SOURCE}[^'\\s][^'\\r\\n]*'|["']?${AUTHORIZATION_SCHEME_SOURCE}` + /[^"'`\s]+/.source + String.raw`)["']?`, "gi")
+    pattern: new RegExp(String.raw`["']?\b(?:proxy-)?authorization["']?[ \t]*[:=][ \t]*` + `(?:"${AUTHORIZATION_SCHEME_SOURCE}(?=\\S)${DOUBLE_QUOTED_CHARACTER}+"?|'${AUTHORIZATION_SCHEME_SOURCE}(?=\\S)${SINGLE_QUOTED_CHARACTER}+'?|["']?${AUTHORIZATION_SCHEME_SOURCE}` + /[^"'`\s]+/.source + String.raw`)["']?`, "gi")
   },
   {
     kind: "github_token",
@@ -1098,18 +1101,25 @@ var REDACTION_RULES = [
   },
   {
     kind: "env_assignment",
-    pattern: /["']?\b(?:[A-Z][A-Z0-9_]*_)?(?:TOKEN|SECRET|PASSWORD|PRIVATE_KEY|API_KEY)\s*=\s*(?:"[^"\r\n]*"|'[^'\r\n]*'|[^"'\s]+)["']?/g
+    pattern: new RegExp(String.raw`["']?\b(?:[A-Z][A-Z0-9_]*_)?(?:TOKEN|SECRET|PASSWORD|PRIVATE_KEY|API_KEY)\s*=\s*(?:` + QUOTED_VALUE_SOURCE + /|[^"'\s]+/.source + String.raw`)["']?`, "g")
   },
   {
     kind: "generic_secret_assignment",
-    pattern: new RegExp(String.raw`["']?\b(?:${SENSITIVE_KEY_SOURCE})["']?\s*[:=]\s*` + /(?:"[^"\r\n]{8,}"|'[^'\r\n]{8,}'|[^"'`\s]{8,})["']?/.source, "gi")
+    pattern: new RegExp(String.raw`["']?\b(?:${SENSITIVE_KEY_SOURCE})["']?\s*[:=]\s*` + `(?:"(${DOUBLE_QUOTED_CHARACTER}*)"?|'(${SINGLE_QUOTED_CHARACTER}*)'?|` + /([^"'`\s]+)/.source + String.raw`)["']?`, "gi"),
+    minimumValueLength: 8
   }
 ];
 function redactText(input) {
   const occurrences = [];
   let text = redactPrivateKeyBlocks(input, occurrences);
   for (const rule of REDACTION_RULES) {
-    text = text.replace(rule.pattern, (match, offset) => {
+    text = text.replace(rule.pattern, (match, ...args) => {
+      if (rule.minimumValueLength !== void 0) {
+        const value = args[0] ?? args[1] ?? args[2];
+        if (typeof value === "string" && value.length < rule.minimumValueLength)
+          return match;
+      }
+      const offset = args.at(-2);
       occurrences.push({
         kind: rule.kind,
         replacement: REDACTION_PLACEHOLDER,

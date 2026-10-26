@@ -315,6 +315,38 @@ test("authorization credentials cannot escape through provider fields or reposit
   }
 });
 
+test("escaped credential suffixes cannot escape through prepared evidence", () => {
+  const value = 'non-credential-prefix"non-credential-suffix';
+  for (const assignment of [
+    JSON.stringify({ password: value }),
+    `API_KEY=${JSON.stringify(value)}`,
+    JSON.stringify({ Authorization: `Bearer ${value}` }),
+  ]) {
+    const prepared = prepareEvidenceForProvider({
+      source,
+      items: [
+        {
+          kind: "file",
+          id: "src/config.ts",
+          title: assignment,
+          text: assignment,
+          metadata: { note: assignment },
+          ...prepareEvidenceExcerpt(assignment, 24),
+        },
+      ],
+    });
+    const serialized = JSON.stringify(prepared);
+    assert.equal(serialized.includes("non-credential-prefix"), false);
+    assert.equal(serialized.includes("non-credential-suffix"), false);
+    assert.ok(
+      findUnsafeRepositoryAssessmentFields({
+        ...validAssessment(),
+        evidenceSummary: assignment,
+      }).some((issue) => issue.code === "unsafe_repository_text"),
+    );
+  }
+});
+
 test("quoted JSON credentials cannot escape through evidence text or references", () => {
   const marker = "synthetic-quoted-json-value";
   const prepared = prepareEvidenceForProvider({

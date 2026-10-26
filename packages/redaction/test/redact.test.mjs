@@ -161,10 +161,94 @@ test("unterminated authorization values cannot cause quadratic whitespace backtr
       "--eval",
       `
     import assert from "node:assert/strict";
-    import { redactText } from ${JSON.stringify(new URL("../dist/index.js", import.meta.url).href)};
+    import { redactText, REDACTION_PLACEHOLDER } from ${JSON.stringify(new URL("../dist/index.js", import.meta.url).href)};
     for (const scheme of ["Basic", "Bearer", "Negotiate"]) {
       const input = 'Authorization: "' + scheme + " ".repeat(131072);
-      assert.equal(redactText(input).text.includes(" ".repeat(131000)), true);
+      assert.equal(redactText(input).text, REDACTION_PLACEHOLDER);
+    }
+  `,
+    ],
+    { encoding: "utf8", timeout: 5000 },
+  );
+  assert.equal(result.error, undefined, result.error?.message);
+  assert.equal(result.status, 0, result.stderr);
+});
+
+function quoteAssignmentValue(value, quote) {
+  return quote + value.replaceAll("\\", "\\\\").replaceAll(quote, "\\" + quote) + quote;
+}
+
+test("escaped delimiters and backslash parity cannot expose quoted assignment suffixes", () => {
+  let cases = 0;
+  for (const [prefix, scheme] of [
+    ["password: ", ""],
+    ["API_KEY=", ""],
+    ["Authorization: ", "Bearer "],
+  ]) {
+    for (const quote of ['"', "'"]) {
+      for (const middle of [
+        quote,
+        "\\",
+        "\\\\" + quote,
+        quote + quote,
+        String.raw`\n`,
+        String.raw`\u0000`,
+      ]) {
+        const quoted = quoteAssignmentValue(
+          scheme + "non-credential-prefix" + middle + "non-credential-suffix",
+          quote,
+        );
+        for (const value of [quoted, quoted.slice(0, -1)]) {
+          const assignment = prefix + value;
+          const result = redactText(`before ${assignment}\nkeep after`);
+          assert.equal(result.text, `before ${REDACTION_PLACEHOLDER}\nkeep after`, assignment);
+          assert.equal(result.report.occurrences.length, 1);
+          assert.deepEqual(result.report.occurrences[0], {
+            kind: prefix === "API_KEY=" ? "env_assignment" : "generic_secret_assignment",
+            replacement: REDACTION_PLACEHOLDER,
+            start: 7,
+            end: 7 + assignment.length,
+          });
+          cases += 1;
+        }
+      }
+    }
+  }
+  assert.equal(cases, 72);
+});
+
+test("generic quoted values retain the eight raw character threshold with escapes", () => {
+  for (const quote of ['"', "'"]) {
+    for (const value of [
+      "1234567",
+      "12345678",
+      "12345" + quote,
+      "123456" + quote,
+      "12345\\",
+      "123456\\",
+    ]) {
+      const quoted = quoteAssignmentValue(value, quote);
+      const assignment = "password: " + quoted;
+      assert.equal(
+        redactText(assignment).text,
+        quoted.length - 2 >= 8 ? REDACTION_PLACEHOLDER : assignment,
+      );
+    }
+  }
+});
+
+test("long escaped quoted values are bounded by the child-process deadline", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "--eval",
+      `
+    import assert from "node:assert/strict";
+    import { redactText, REDACTION_PLACEHOLDER } from ${JSON.stringify(new URL("../dist/index.js", import.meta.url).href)};
+    const body = String.fromCharCode(92).repeat(131072) + "non-credential-suffix";
+    for (const prefix of ['password: "', 'API_KEY="', 'Authorization: "Bearer ']) {
+      for (const ending of ['"', '']) assert.equal(redactText(prefix + body + ending).text, REDACTION_PLACEHOLDER);
     }
   `,
     ],

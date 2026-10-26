@@ -11,6 +11,7 @@ import {
 interface RedactionRule {
   readonly kind: RedactionKind;
   readonly pattern: RegExp;
+  readonly minimumValueLength?: number;
 }
 
 const SENSITIVE_KEYS = [
@@ -32,6 +33,10 @@ const SENSITIVE_JSON_KEY = new RegExp(`^(?:${SENSITIVE_KEY_SOURCE})$`, "i");
 const PRIVATE_KEY_LABEL_SOURCE =
   "(?:(?:RSA |OPENSSH |EC |DSA |ENCRYPTED |PGP )?PRIVATE KEY|PGP PRIVATE KEY BLOCK)";
 const AUTHORIZATION_SCHEME_SOURCE = "(?:Basic|Bearer|Negotiate)[ \\t]+";
+// An escape consumes its following character, so only an unescaped quote ends a value.
+const DOUBLE_QUOTED_CHARACTER = String.raw`(?:\\[^\r\n]|[^"\\\r\n])`;
+const SINGLE_QUOTED_CHARACTER = String.raw`(?:\\[^\r\n]|[^'\\\r\n])`;
+const QUOTED_VALUE_SOURCE = `"${DOUBLE_QUOTED_CHARACTER}*"?|'${SINGLE_QUOTED_CHARACTER}*'?`;
 
 const REDACTION_RULES: readonly RedactionRule[] = [
   {
@@ -39,8 +44,8 @@ const REDACTION_RULES: readonly RedactionRule[] = [
     // Consume the scheme and credential before generic rules can mask only the scheme.
     pattern: new RegExp(
       String.raw`["']?\b(?:proxy-)?authorization["']?[ \t]*[:=][ \t]*` +
-        `(?:"${AUTHORIZATION_SCHEME_SOURCE}[^"\\s][^"\\r\\n]*"|` +
-        `'${AUTHORIZATION_SCHEME_SOURCE}[^'\\s][^'\\r\\n]*'|` +
+        `(?:"${AUTHORIZATION_SCHEME_SOURCE}(?=\\S)${DOUBLE_QUOTED_CHARACTER}+"?|` +
+        `'${AUTHORIZATION_SCHEME_SOURCE}(?=\\S)${SINGLE_QUOTED_CHARACTER}+'?|` +
         `["']?${AUTHORIZATION_SCHEME_SOURCE}` +
         /[^"'`\s]+/.source +
         String.raw`)["']?`,
@@ -65,16 +70,24 @@ const REDACTION_RULES: readonly RedactionRule[] = [
   },
   {
     kind: "env_assignment",
-    pattern:
-      /["']?\b(?:[A-Z][A-Z0-9_]*_)?(?:TOKEN|SECRET|PASSWORD|PRIVATE_KEY|API_KEY)\s*=\s*(?:"[^"\r\n]*"|'[^'\r\n]*'|[^"'\s]+)["']?/g,
+    pattern: new RegExp(
+      String.raw`["']?\b(?:[A-Z][A-Z0-9_]*_)?(?:TOKEN|SECRET|PASSWORD|PRIVATE_KEY|API_KEY)\s*=\s*(?:` +
+        QUOTED_VALUE_SOURCE +
+        /|[^"'\s]+/.source +
+        String.raw`)["']?`,
+      "g",
+    ),
   },
   {
     kind: "generic_secret_assignment",
     pattern: new RegExp(
       String.raw`["']?\b(?:${SENSITIVE_KEY_SOURCE})["']?\s*[:=]\s*` +
-        /(?:"[^"\r\n]{8,}"|'[^'\r\n]{8,}'|[^"'`\s]{8,})["']?/.source,
+        `(?:"(${DOUBLE_QUOTED_CHARACTER}*)"?|'(${SINGLE_QUOTED_CHARACTER}*)'?|` +
+        /([^"'`\s]+)/.source +
+        String.raw`)["']?`,
       "gi",
     ),
+    minimumValueLength: 8,
   },
 ];
 
@@ -83,7 +96,14 @@ export function redactText(input: string): RedactedText {
   let text = redactPrivateKeyBlocks(input, occurrences);
 
   for (const rule of REDACTION_RULES) {
-    text = text.replace(rule.pattern, (match, offset: number) => {
+    text = text.replace(rule.pattern, (match: string, ...args: (string | number | undefined)[]) => {
+      if (rule.minimumValueLength !== undefined) {
+        // Generic assignments capture raw value content, one alternative at a time.
+        const value = args[0] ?? args[1] ?? args[2];
+        if (typeof value === "string" && value.length < rule.minimumValueLength) return match;
+      }
+      // The offset precedes the input even when a rule has positional capture groups.
+      const offset = args.at(-2) as number;
       occurrences.push({
         kind: rule.kind,
         replacement: REDACTION_PLACEHOLDER,

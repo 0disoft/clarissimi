@@ -65,6 +65,16 @@ Quoted parsing requires a non-whitespace first value character so unterminated w
 values cannot trigger overlapping-quantifier backtracking. This is pattern-based masking for the
 named schemes, not credential validation or support for every HTTP authentication scheme.
 
+Quoted assignment values share an escape-aware character grammar across dotenv, generic sensitive
+keys, and the named authorization schemes. A backslash consumes the following non-newline character;
+an escaped quote is content, while an unescaped quote ends the value. Missing closing quotes mask
+the remaining value on the same line. The generic eight-character minimum is checked against the
+captured raw value content, preserving its existing UTF-16 length semantics even for escapes.
+Replacement offsets are taken from the argument preceding the input, so positional value captures
+cannot corrupt occurrence locations. Reports still contain no matched value. Regressions cover
+quote/backslash parity, complete and truncated values, length boundaries, preparation and captured
+provider requests, and child-process deadlines for long escape and whitespace sequences.
+
 The package must not own:
 
 - provider API calls

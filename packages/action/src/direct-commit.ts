@@ -1,7 +1,12 @@
 import { spawn } from "node:child_process";
 
 import { writeStagedFilesToRepository, type ProposalBranchWriterInput } from "./branch-writer.js";
-import { assertOwnedStagedPath, restoreOwnedPaths } from "./branch-writer-support.js";
+import {
+  assertChangedFilesAreOwned,
+  assertOwnedStagedPath,
+  readChangedFiles,
+  restoreOwnedPaths,
+} from "./branch-writer-support.js";
 import type { ProposalOutputStagingManifest } from "./staging.js";
 
 const commitAuthorName = "Clarissimi Bot";
@@ -89,10 +94,26 @@ export async function createDirectCommit(input: DirectCommitInput): Promise<Dire
 
     const commitSha = await git(input.repositoryDir, ["rev-parse", "HEAD"]);
     const changedFiles = commitCreated
-      ? (await git(input.repositoryDir, ["diff", "--name-only", `${baseCommitSha}..${commitSha}`]))
-          .split(/\r?\n/)
-          .filter((line) => line.length > 0)
+      ? await readChangedFiles(
+          input.repositoryDir,
+          `${baseCommitSha}..${commitSha}`,
+          runGit,
+          () =>
+            new DirectCommitError(
+              "git_command_failed",
+              "Git diff failed while verifying direct commit changes.",
+            ),
+        )
       : [];
+    assertChangedFilesAreOwned(
+      changedFiles,
+      input.manifest.files,
+      () =>
+        new DirectCommitError(
+          "unowned_commit_changes",
+          "Created commit contains changes outside the staged output manifest. The local commit was preserved for inspection; no publish result was returned.",
+        ),
+    );
 
     return {
       targetBranch: input.targetBranch,
@@ -105,6 +126,9 @@ export async function createDirectCommit(input: DirectCommitInput): Promise<Dire
         : "No commit was created because the rendered recognition outputs were unchanged.",
     };
   } catch (error) {
+    // The rejected commit already exists; preserve it instead of masking the
+    // ownership failure with a second error from the HEAD-change rollback guard.
+    if (error instanceof DirectCommitError && error.code === "unowned_commit_changes") throw error;
     await rollbackUnpublishedCommit(input, baseCommitSha);
     throw error;
   }

@@ -40,6 +40,31 @@ export function assertOwnedStagedPath(file: ProposalStagedFile): void {
   }
 }
 
+export async function readChangedFiles(
+  repositoryDir: string,
+  range: string,
+  runGit: GitRunner,
+  createError: () => Error,
+): Promise<readonly string[]> {
+  const result = await runGit(repositoryDir, ["diff", "--no-renames", "--name-only", "-z", range]);
+  if (result.exitCode !== 0) throw createError();
+  // Preserve literal filenames, including leading whitespace, without Git quoting.
+  return result.stdout.split("\0").filter((path) => path.length > 0);
+}
+
+export function assertChangedFilesAreOwned(
+  changedFiles: readonly string[],
+  files: readonly ProposalStagedFile[],
+  createError: () => Error = () =>
+    new ProposalBranchWriterError(
+      "proposal_has_unowned_changes",
+      "Proposal branch contains changes outside the staged Clarissimi output manifest.",
+    ),
+): void {
+  const ownedPaths = new Set(files.map((file) => file.path));
+  if (changedFiles.some((path) => !ownedPaths.has(path))) throw createError();
+}
+
 export async function restoreOwnedPaths(
   repositoryDir: string,
   originalRef: string,

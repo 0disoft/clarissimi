@@ -6,7 +6,9 @@ import { dirname, isAbsolute, join, normalize, relative, sep } from "node:path";
 import type { ProposalOutputStagingManifest, ProposalStagedFile } from "./staging.js";
 import {
   ProposalBranchWriterError,
+  assertChangedFilesAreOwned,
   assertOwnedStagedPath,
+  readChangedFiles,
   restoreOwnedPaths,
 } from "./branch-writer-support.js";
 
@@ -275,19 +277,6 @@ async function assertCleanWorktree(repositoryDir: string): Promise<void> {
   }
 }
 
-function assertChangedFilesAreOwned(
-  changedFiles: readonly string[],
-  files: readonly ProposalStagedFile[],
-): void {
-  const ownedPaths = new Set(files.map((file) => file.path));
-  if (changedFiles.some((path) => !ownedPaths.has(path))) {
-    throw new ProposalBranchWriterError(
-      "proposal_has_unowned_changes",
-      "Proposal branch contains changes outside the staged Clarissimi output manifest.",
-    );
-  }
-}
-
 export async function writeStagedFilesToRepository(
   input: ProposalBranchWriterInput,
 ): Promise<void> {
@@ -365,8 +354,16 @@ async function changedFilesFromBase(
   baseBranch: string,
   branchName: string,
 ): Promise<readonly string[]> {
-  const output = await git(repositoryDir, ["diff", "--name-only", `${baseBranch}...${branchName}`]);
-  return output.split(/\r?\n/).filter((line) => line.length > 0);
+  return readChangedFiles(
+    repositoryDir,
+    `${baseBranch}...${branchName}`,
+    runGit,
+    () =>
+      new ProposalBranchWriterError(
+        "git_command_failed",
+        "Git diff failed while verifying proposal changes.",
+      ),
+  );
 }
 
 async function hasCachedChanges(repositoryDir: string): Promise<boolean> {

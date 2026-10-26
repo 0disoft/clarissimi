@@ -29,6 +29,12 @@ Add GitHub Action `mode: commit` as an explicit non-default write mode.
 - When `GITHUB_SHA` is available, checkout HEAD must equal it before mutation.
 - The Action writes only Clarissimi-owned public recognition outputs, creates one bot-authored
   commit, and pushes `HEAD` to the explicitly configured target branch.
+- After commit hooks finish, every changed path must exactly match the staged output manifest.
+  Direct and proposal writers share this ownership check and read NUL-delimited Git filenames
+  without trimming. Rename detection is disabled so a rename's removed source path cannot hide
+  behind its permitted destination. The check reuses the existing diff request and adds no Git
+  subprocess or network call. A direct commit with extra paths fails with `unowned_commit_changes`
+  before returning a publishable result; its local commit and checkout are preserved for inspection.
 - Push uses normal fast-forward Git semantics and never force-pushes. A concurrent branch update or
   branch protection rejection fails the run.
 - An unchanged deterministic rebuild creates and pushes no commit.
@@ -41,6 +47,8 @@ Add GitHub Action `mode: commit` as an explicit non-default write mode.
   or a failure after creating the recognition commit), recovery reports `rollback_failed` and leaves
   the checkout intact for inspection rather than rewinding an unknown commit. Concurrent edits to
   manifest-owned files and externally switched checkouts are not covered by a transaction lock.
+  A rejected unowned commit retains its specific `unowned_commit_changes` diagnostic instead of
+  entering recovery and hiding the ownership violation behind a second HEAD-change error.
 - `commit` requires `contents: write`; it does not require pull-request write permission.
 - `commit` must not run on untrusted pull request head code or use `pull_request_target` as its
   default event path.

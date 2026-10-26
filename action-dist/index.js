@@ -194,6 +194,17 @@ function assertOwnedStagedPath(file) {
     throw new ProposalBranchWriterError("invalid_staged_manifest", "Proposal branch writing requires valid staged file byte counts and sha256 hashes.");
   }
 }
+async function readChangedFiles(repositoryDir, range, runGit4, createError) {
+  const result = await runGit4(repositoryDir, ["diff", "--no-renames", "--name-only", "-z", range]);
+  if (result.exitCode !== 0)
+    throw createError();
+  return result.stdout.split("\0").filter((path) => path.length > 0);
+}
+function assertChangedFilesAreOwned(changedFiles, files, createError = () => new ProposalBranchWriterError("proposal_has_unowned_changes", "Proposal branch contains changes outside the staged Clarissimi output manifest.")) {
+  const ownedPaths = new Set(files.map((file) => file.path));
+  if (changedFiles.some((path) => !ownedPaths.has(path)))
+    throw createError();
+}
 async function restoreOwnedPaths(repositoryDir, originalRef, files, runGit4) {
   const git4 = async (cwd, args) => {
     const result = await runGit4(cwd, args);
@@ -401,12 +412,6 @@ async function assertCleanWorktree(repositoryDir) {
     throw new ProposalBranchWriterError("dirty_worktree", "Proposal branch writing requires a clean worktree before writing recognition outputs.");
   }
 }
-function assertChangedFilesAreOwned(changedFiles, files) {
-  const ownedPaths = new Set(files.map((file) => file.path));
-  if (changedFiles.some((path) => !ownedPaths.has(path))) {
-    throw new ProposalBranchWriterError("proposal_has_unowned_changes", "Proposal branch contains changes outside the staged Clarissimi output manifest.");
-  }
-}
 async function writeStagedFilesToRepository(input) {
   for (const file of input.manifest.files) {
     assertOwnedStagedPath(file);
@@ -454,8 +459,7 @@ function isNodeError(error) {
   return error instanceof Error && "code" in error;
 }
 async function changedFilesFromBase(repositoryDir, baseBranch, branchName) {
-  const output = await git2(repositoryDir, ["diff", "--name-only", `${baseBranch}...${branchName}`]);
-  return output.split(/\r?\n/).filter((line) => line.length > 0);
+  return readChangedFiles(repositoryDir, `${baseBranch}...${branchName}`, runGit2, () => new ProposalBranchWriterError("git_command_failed", "Git diff failed while verifying proposal changes."));
 }
 async function hasCachedChanges(repositoryDir) {
   const exitCode2 = await gitExitCode(repositoryDir, ["diff", "--cached", "--quiet"]);
@@ -573,7 +577,8 @@ async function createDirectCommit(input) {
       ]);
     }
     const commitSha = await git3(input.repositoryDir, ["rev-parse", "HEAD"]);
-    const changedFiles = commitCreated ? (await git3(input.repositoryDir, ["diff", "--name-only", `${baseCommitSha}..${commitSha}`])).split(/\r?\n/).filter((line) => line.length > 0) : [];
+    const changedFiles = commitCreated ? await readChangedFiles(input.repositoryDir, `${baseCommitSha}..${commitSha}`, runGit3, () => new DirectCommitError("git_command_failed", "Git diff failed while verifying direct commit changes.")) : [];
+    assertChangedFilesAreOwned(changedFiles, input.manifest.files, () => new DirectCommitError("unowned_commit_changes", "Created commit contains changes outside the staged output manifest. The local commit was preserved for inspection; no publish result was returned."));
     return {
       targetBranch: input.targetBranch,
       baseCommitSha,
@@ -583,6 +588,8 @@ async function createDirectCommit(input) {
       rollbackHint: commitCreated ? `Revert commit ${commitSha} on ${input.targetBranch} to undo this recognition update.` : "No commit was created because the rendered recognition outputs were unchanged."
     };
   } catch (error) {
+    if (error instanceof DirectCommitError && error.code === "unowned_commit_changes")
+      throw error;
     await rollbackUnpublishedCommit(input, baseCommitSha);
     throw error;
   }

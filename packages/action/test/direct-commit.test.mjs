@@ -301,6 +301,48 @@ test("mid-write rollback restores tracked recognition outputs without moving HEA
   });
 });
 
+for (const [name, hook] of [
+  ["tracked edit", "printf 'unexpected tracked change\\n' > README.md\ngit add README.md"],
+  ["new file", "printf 'unexpected new file\\n' > SURPRISE.txt\ngit add SURPRISE.txt"],
+  ["rename into an owned path", "mv README.md CONTRIBUTORS.md\ngit add --all"],
+  [
+    "leading-space filename",
+    "printf 'unexpected filename\\n' > ' CONTRIBUTORS.md'\ngit add -- ' CONTRIBUTORS.md'",
+  ],
+]) {
+  test(`blocks publishing a hook's unowned ${name}`, async () => {
+    await withRepository(async ({ repositoryDir, remoteDir, stagedOutputDir }) => {
+      const staging = await stageRecognition(stagedOutputDir);
+      const base = await git(remoteDir, ["rev-parse", "refs/heads/main"]);
+      await git(repositoryDir, ["config", "diff.renames", "true"]);
+      await writeFile(join(repositoryDir, ".git", "hooks", "pre-commit"), `#!/bin/sh\n${hook}\n`, {
+        mode: 0o755,
+      });
+      let failure;
+      try {
+        const commit = await createDirectCommit({
+          repositoryDir,
+          stagedOutputDir,
+          manifest: staging.manifest,
+          targetBranch: "main",
+        });
+        await publishDirectCommit({ repositoryDir, commit });
+      } catch (error) {
+        failure = error;
+      }
+      assert.equal(
+        await git(remoteDir, ["rev-parse", "refs/heads/main"]),
+        base,
+        "Unowned hook changes must never reach the target branch.",
+      );
+      assert.ok(failure instanceof DirectCommitError);
+      assert.equal(failure.code, "unowned_commit_changes");
+      assert.notEqual(await git(repositoryDir, ["rev-parse", "HEAD"]), base);
+      assert.equal(await git(repositoryDir, ["status", "--short"]), "");
+    });
+  });
+}
+
 function git(repositoryDir, args) {
   return new Promise((resolve, reject) => {
     const child = spawn("git", args, {

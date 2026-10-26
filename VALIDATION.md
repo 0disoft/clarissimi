@@ -1,5 +1,35 @@
 # Validation
 
+## 2026-10-27 Direct commit publication path boundary
+
+The direct writer listed changed paths after commit hooks but returned a publishable result
+without checking the manifest. Three real pre-commit hook cases on the original implementation
+published unrelated tracked edits, new files, and a rename from README into CONTRIBUTORS to local
+bare target branches. All three violated the unchanged-target assertion. No hosted GitHub writes
+were made. A fourth case exposed leading-whitespace filename normalization in the first guard
+iteration; preserving raw NUL-delimited output prevents that normalization bypass.
+
+Direct and proposal writers now share exact manifest membership validation and raw Git diff
+parsing with `--no-renames --name-only -z`. Both sides of renames are checked and filenames are
+not quoted or trimmed. Direct mode rejects extra paths with `unowned_commit_changes`, preserves
+the local commit for inspection, and returns no publishable result. Validation costs O(M + C)
+time and O(M) membership storage for M manifest paths and C changed paths. Existing diff calls
+are reused with no additional Git subprocess, network request, or dependency.
+
+ADR 0038 records the post-hook ownership boundary and diagnostic. Public function signatures and
+schemas, DB, dependency, runner, and repository-hygiene policy are unchanged. The generated Action
+bundle is refreshed. Hosted CI and external publication/deployment are outside this local run.
+The check constrains paths; validating hook edits within already permitted files and coordinating
+concurrent checkout changes remain outside this change.
+
+- Build/typecheck passed. The initial direct/proposal writer suite passed 25 tests; after the
+  filename-parsing hardening, all four focused publication regressions passed. The final complete
+  suite with `--test-concurrency=4` passed 1,081 of 1,085 tests, with four POSIX permission cases
+  skipped on Windows and zero failures.
+- Lint, formatting, documentation (160 Markdown files), CLI smoke, release-readiness static gates,
+  and regenerated Action bundle freshness passed. No new workflow run or external provider call
+  was triggered.
+
 ## 2026-10-27 Scoped direct-commit failure recovery
 
 The direct writer used `git reset --hard` on local commit failure, despite initially checking for

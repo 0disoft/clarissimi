@@ -364,7 +364,7 @@ async function writeProposalBranch(input) {
     }
     const commitSha = await git2(input.repositoryDir, ["rev-parse", "HEAD"]);
     proposalHeadSha = commitSha;
-    const changedFiles = await changedFilesFromBase(input.repositoryDir, baseCommitSha, branchName);
+    const changedFiles = await changedFilesFromBase(input.repositoryDir, baseCommitSha, commitSha);
     assertChangedFilesAreOwned(changedFiles, input.manifest.files);
     await assertCommittedFilesMatchManifest(input, commitSha, runGit2, () => new ProposalBranchWriterError("committed_output_mismatch", "Committed proposal output differs from the staged manifest; no publishable result was returned."));
     writeSucceeded = true;
@@ -430,17 +430,18 @@ function validateBranchWriterInput(input) {
   input.manifest.files.forEach(assertOwnedStagedPath);
 }
 async function assertExistingProposalBranchIsOwned(repositoryDir, baseBranch, branchName, files) {
-  const exists = await gitOk(repositoryDir, ["rev-parse", "--verify", `${branchName}^{commit}`]);
-  if (!exists) {
+  const existing = await runGit2(repositoryDir, ["rev-parse", "--verify", `${branchName}^{commit}`]);
+  if (existing.exitCode !== 0) {
     return void 0;
   }
-  const changedFiles = await changedFilesFromBase(repositoryDir, baseBranch, branchName);
+  const proposalSha = existing.stdout.trim();
+  const changedFiles = await changedFilesFromBase(repositoryDir, baseBranch, proposalSha);
   const ownedPaths = new Set(files.map((file) => file.path));
   const outsideOwnedFiles = changedFiles.filter((file) => !ownedPaths.has(file));
   if (outsideOwnedFiles.length > 0) {
     throw new ProposalBranchWriterError("existing_branch_has_unowned_changes", "Existing proposal branch has changes outside the staged Clarissimi output manifest.");
   }
-  return git2(repositoryDir, ["rev-parse", "--verify", `${branchName}^{commit}`]);
+  return proposalSha;
 }
 async function assertCleanWorktree(repositoryDir) {
   const status = await git2(repositoryDir, ["status", "--porcelain", "--untracked-files=all"]);
@@ -535,9 +536,6 @@ async function git2(repositoryDir, args) {
     throw new ProposalBranchWriterError("git_command_failed", result.stderr.trim() || `git ${args.join(" ")} failed.`);
   }
   return result.stdout.trim();
-}
-async function gitOk(repositoryDir, args) {
-  return await gitExitCode(repositoryDir, args) === 0;
 }
 async function gitExitCode(repositoryDir, args) {
   return (await runGit2(repositoryDir, args)).exitCode;

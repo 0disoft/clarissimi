@@ -1,5 +1,33 @@
 # Validation
 
+## 2026-10-27 Immutable proposal ownership snapshot
+
+Existing-proposal reuse checked changed paths through a branch name and resolved the branch SHA
+again afterward. Two regressions moved that ref immediately after the ownership diff completed.
+Both original paths (recognition and stage-draft) accepted and published a descendant commit with
+an unrelated README change to temporary local bare remotes. The output hashes and base ancestry
+still matched, so those checks did not detect the substituted commit. No hosted writes occurred.
+
+The writer now captures the proposal SHA once and uses it for the ownership diff, output checks,
+base checks, and returned metadata. New-proposal ownership checks also use the captured commit SHA.
+The publisher's existing branch-mismatch guard rejects the concurrently moved local ref, preserving
+the unowned local commit for inspection without publishing it. Ownership preflight drops from three
+Git subprocesses to two; membership validation remains O(M + C) for M manifest files and C changed
+paths, with no extra network request or checkout lock. The two deterministic regressions use real
+refs and a process-completion interposition, restored in `finally`, without timing sleeps.
+
+ADR 0017 records this snapshot boundary; the generated Action bundle is refreshed. Public API
+signatures, schemas, DB, dependencies, runner, and repository-hygiene policy are unchanged. Concurrent
+checkout/staging writes during generation still require external coordination. Hosted CI and external
+publication/deployment were not run.
+
+- Both focused race regressions failed before the implementation change and passed afterward.
+  Build/typecheck passed. The complete suite with `--test-concurrency=4` passed 1,090 of 1,094 tests,
+  with four POSIX permission tests skipped on Windows and zero failures. The cases confirm the
+  rejected branch remains local, the remote proposal stays absent, and remote main is unchanged.
+- Lint, formatting, documentation (160 Markdown files), CLI smoke, release-readiness static gates,
+  regenerated Action bundle freshness, secret scan, and Git whitespace checks passed.
+
 ## 2026-10-27 Pin publication to verified commits
 
 Both publishers checked a local commit SHA but pushed a mutable ref (`HEAD` or the proposal

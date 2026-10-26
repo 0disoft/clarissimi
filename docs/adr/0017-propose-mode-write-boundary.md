@@ -103,6 +103,14 @@ the local branch after preflight cannot substitute unvalidated content into publ
 the returned commit SHA disagree with the pushed commit. The existing mismatch preflight and
 remote lease reconciliation remain in place; no additional Git command or network call is needed.
 
+Local proposal reuse resolves the full commit SHA once before checking changed paths. Ownership,
+staged-content verification, base checks, and the returned result all use that same immutable SHA;
+the branch name is not resolved again after ownership validation. A concurrent local ref change
+therefore cannot substitute a commit with unowned edits into the writer result. New proposals also
+check their captured commit SHA rather than the mutable branch name. Publication retains its
+branch-mismatch rejection if the local ref moved in the meantime. The reuse ownership preflight
+uses two Git subprocesses instead of three, with no added network request or repository lock.
+
 ## Rollback And Recovery
 
 `propose` mode rollback is closing or deleting the proposal branch and pull request before merge.

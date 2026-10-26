@@ -157,7 +157,7 @@ export async function writeProposalBranch(
 
     const commitSha = await git(input.repositoryDir, ["rev-parse", "HEAD"]);
     proposalHeadSha = commitSha;
-    const changedFiles = await changedFilesFromBase(input.repositoryDir, baseCommitSha, branchName);
+    const changedFiles = await changedFilesFromBase(input.repositoryDir, baseCommitSha, commitSha);
     assertChangedFilesAreOwned(changedFiles, input.manifest.files);
     await assertCommittedFilesMatchManifest(
       input,
@@ -270,12 +270,14 @@ async function assertExistingProposalBranchIsOwned(
   branchName: string,
   files: readonly ProposalStagedFile[],
 ): Promise<string | undefined> {
-  const exists = await gitOk(repositoryDir, ["rev-parse", "--verify", `${branchName}^{commit}`]);
-  if (!exists) {
+  const existing = await runGit(repositoryDir, ["rev-parse", "--verify", `${branchName}^{commit}`]);
+  if (existing.exitCode !== 0) {
     return undefined;
   }
 
-  const changedFiles = await changedFilesFromBase(repositoryDir, baseBranch, branchName);
+  // Use one immutable snapshot for ownership, content checks, and the returned result.
+  const proposalSha = existing.stdout.trim();
+  const changedFiles = await changedFilesFromBase(repositoryDir, baseBranch, proposalSha);
   const ownedPaths = new Set(files.map((file) => file.path));
   const outsideOwnedFiles = changedFiles.filter((file) => !ownedPaths.has(file));
 
@@ -285,7 +287,7 @@ async function assertExistingProposalBranchIsOwned(
       "Existing proposal branch has changes outside the staged Clarissimi output manifest.",
     );
   }
-  return git(repositoryDir, ["rev-parse", "--verify", `${branchName}^{commit}`]);
+  return proposalSha;
 }
 
 async function assertCleanWorktree(repositoryDir: string): Promise<void> {
@@ -445,10 +447,6 @@ async function git(repositoryDir: string, args: readonly string[]): Promise<stri
   }
 
   return result.stdout.trim();
-}
-
-async function gitOk(repositoryDir: string, args: readonly string[]): Promise<boolean> {
-  return (await gitExitCode(repositoryDir, args)) === 0;
 }
 
 async function gitExitCode(repositoryDir: string, args: readonly string[]): Promise<number> {

@@ -2,13 +2,15 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawn } from "node:child_process";
+import childProcess, { spawn, spawnSync } from "node:child_process";
+import { syncBuiltinESMExports } from "node:module";
 import test from "node:test";
 
 import {
   ProposalBranchWriterError,
   assertProposalBaseCheckout,
   proposalBranchName,
+  publishProposalBranch,
   stageProposalDraftReviewOutput,
   stageProposalRecognitionOutputs,
   writeProposalBranch,
@@ -99,6 +101,90 @@ for (const [name, command] of [
       );
       assert.equal(await git(repositoryDir, ["rev-parse", "main"]), base);
       assert.equal(await git(repositoryDir, ["branch", "--show-current"]), "main");
+      assert.equal(await git(repositoryDir, ["status", "--short"]), "");
+    });
+  });
+}
+
+for (const mode of ["propose", "stage-draft"]) {
+  test(`pins the reused ${mode} commit before inspecting owned paths`, async (t) => {
+    await withTempDir(async (dir) => {
+      const repositoryDir = join(dir, "repo");
+      const remoteDir = join(dir, "remote.git");
+      const stagedOutputDir = join(dir, "staged");
+      await initRepository(repositoryDir);
+      await git(dir, ["init", "--bare", remoteDir]);
+      await git(repositoryDir, ["remote", "add", "origin", remoteDir]);
+      await git(repositoryDir, ["push", "origin", "main"]);
+      const stage =
+        mode === "propose" ? stageProposalRecognitionOutputs : stageProposalDraftReviewOutput;
+      const staging = await stage({
+        outputDir: stagedOutputDir,
+        assessments: [
+          assessment({ maintainerApprovalStatus: mode === "propose" ? "approved" : "draft" }),
+        ],
+        redactionMatchCount: 0,
+      });
+      const input = {
+        repositoryDir,
+        stagedOutputDir,
+        manifest: staging.manifest,
+        baseBranch: "main",
+      };
+      const first = await writeProposalBranch(input);
+      await git(repositoryDir, ["checkout", first.branchName]);
+      await writeFile(join(repositoryDir, "README.md"), "Unrelated concurrent change.\n");
+      await git(repositoryDir, ["add", "README.md"]);
+      await git(repositoryDir, ["commit", "-m", "Unowned concurrent commit"]);
+      const unownedSha = await git(repositoryDir, ["rev-parse", "HEAD"]);
+      await git(repositoryDir, ["checkout", "main"]);
+      await git(repositoryDir, ["update-ref", `refs/heads/${first.branchName}`, first.commitSha]);
+
+      const originalSpawn = childProcess.spawn;
+      let update;
+      const spawnMock = t.mock.method(childProcess, "spawn", (command, args, options) => {
+        const child = originalSpawn(command, args, options);
+        if (
+          command === "git" &&
+          args[0] === "diff" &&
+          options.cwd === repositoryDir &&
+          update === undefined
+        ) {
+          // Change the ref only after the ownership diff has finished reading it.
+          child.prependOnceListener("close", () => {
+            update = spawnSync(
+              "git",
+              ["update-ref", `refs/heads/${first.branchName}`, unownedSha],
+              {
+                cwd: repositoryDir,
+                encoding: "utf8",
+              },
+            );
+          });
+        }
+        return child;
+      });
+      syncBuiltinESMExports();
+      let reused;
+      try {
+        reused = await writeProposalBranch(input);
+      } finally {
+        spawnMock.mock.restore();
+        syncBuiltinESMExports();
+      }
+      assert.equal(update?.status, 0, update?.stderr);
+      assert.equal(await git(repositoryDir, ["rev-parse", first.branchName]), unownedSha);
+      await assert.rejects(
+        () => publishProposalBranch({ repositoryDir, branch: reused }),
+        (error) => error.code === "branch_commit_mismatch",
+      );
+      assert.equal(reused.commitSha, first.commitSha);
+      assert.equal(reused.changedFiles.includes("README.md"), false);
+      assert.equal(
+        await git(repositoryDir, ["ls-remote", "origin", `refs/heads/${first.branchName}`]),
+        "",
+      );
+      assert.equal(await git(remoteDir, ["rev-parse", "refs/heads/main"]), first.baseCommitSha);
       assert.equal(await git(repositoryDir, ["status", "--short"]), "");
     });
   });

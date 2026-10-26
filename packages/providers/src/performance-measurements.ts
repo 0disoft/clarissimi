@@ -51,26 +51,53 @@ export function numericPerformanceClaims(text: string): NumericPerformanceClaim[
   });
 }
 
-export function supportsNumericPerformanceClaim(
+export function createNumericPerformanceSupportChecker() {
+  const cache = new WeakMap<
+    PreparedEvidenceItem,
+    {
+      parsed: (readonly MeasurementValue[])[];
+      remaining: Generator<readonly MeasurementValue[], void>;
+    }
+  >();
+  return (item: PreparedEvidenceItem, claim: NumericPerformanceClaim): boolean => {
+    let measurements = cache.get(item);
+    if (measurements === undefined) {
+      measurements = { parsed: [], remaining: measuredSentences(item) };
+      cache.set(item, measurements);
+    }
+    for (let index = 0; ; index += 1) {
+      let observed = measurements.parsed[index];
+      if (observed === undefined) {
+        const next = measurements.remaining.next();
+        if (next.done) return false;
+        observed = next.value;
+        measurements.parsed.push(observed);
+      }
+      if (
+        claim.values.every((value) =>
+          observed.some(
+            (other) =>
+              value.change !== undefined &&
+              other.metric === value.metric &&
+              other.value === value.value &&
+              other.unit === value.unit &&
+              other.change === value.change,
+          ),
+        )
+      )
+        return true;
+    }
+  };
+}
+
+function* measuredSentences(
   item: PreparedEvidenceItem,
-  claim: NumericPerformanceClaim,
-): boolean {
+): Generator<readonly MeasurementValue[], void> {
   // Titles and paths identify candidates; only content can support measured results.
   const content = [item.excerpt, item.text].filter(Boolean).join(" ");
-  return [...content.matchAll(/[\s\S]+?(?:[.!?](?=\s|$)|$)/g)].some((sentence) => {
-    if (!MEASUREMENT_CONTEXT_PATTERN.test(sentence[0])) return false;
-    const observed = measurementValues(sentence[0]);
-    return claim.values.every((value) =>
-      observed.some(
-        (other) =>
-          value.change !== undefined &&
-          other.metric === value.metric &&
-          other.value === value.value &&
-          other.unit === value.unit &&
-          other.change === value.change,
-      ),
-    );
-  });
+  for (const sentence of content.matchAll(/[\s\S]+?(?:[.!?](?=\s|$)|$)/g)) {
+    if (MEASUREMENT_CONTEXT_PATTERN.test(sentence[0])) yield measurementValues(sentence[0]);
+  }
 }
 
 function measurementValues(text: string): MeasurementValue[] {

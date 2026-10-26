@@ -10,7 +10,7 @@ import type { ProviderAssessmentInput } from "./types.js";
 import {
   PERFORMANCE_CLAIM_PATTERN,
   numericPerformanceClaims,
-  supportsNumericPerformanceClaim,
+  createNumericPerformanceSupportChecker,
 } from "./performance-measurements.js";
 
 const SECURITY_CLAIM_PATTERN =
@@ -90,6 +90,7 @@ export function validateProviderAssessmentResult(
       message: "Provider drafts must link both public narrative fields to prepared evidence.",
     });
   } else if (evidenceMatches) {
+    const supportsNumericPerformanceClaim = createNumericPerformanceSupportChecker();
     const linkedItems = (indexes: readonly number[]) =>
       indexes.flatMap((index) => {
         const item = input.preparedEvidence.items[index];

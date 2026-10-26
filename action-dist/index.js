@@ -4866,14 +4866,34 @@ function numericPerformanceClaims(text) {
     return values.length === 0 ? [] : [{ start: sentence.index, end: sentence.index + sentence[0].length, values }];
   });
 }
-function supportsNumericPerformanceClaim(item, claim) {
+function createNumericPerformanceSupportChecker() {
+  const cache = /* @__PURE__ */ new WeakMap();
+  return (item, claim) => {
+    let measurements = cache.get(item);
+    if (measurements === void 0) {
+      measurements = { parsed: [], remaining: measuredSentences(item) };
+      cache.set(item, measurements);
+    }
+    for (let index = 0; ; index += 1) {
+      let observed = measurements.parsed[index];
+      if (observed === void 0) {
+        const next = measurements.remaining.next();
+        if (next.done)
+          return false;
+        observed = next.value;
+        measurements.parsed.push(observed);
+      }
+      if (claim.values.every((value) => observed.some((other) => value.change !== void 0 && other.metric === value.metric && other.value === value.value && other.unit === value.unit && other.change === value.change)))
+        return true;
+    }
+  };
+}
+function* measuredSentences(item) {
   const content = [item.excerpt, item.text].filter(Boolean).join(" ");
-  return [...content.matchAll(/[\s\S]+?(?:[.!?](?=\s|$)|$)/g)].some((sentence) => {
-    if (!MEASUREMENT_CONTEXT_PATTERN.test(sentence[0]))
-      return false;
-    const observed = measurementValues(sentence[0]);
-    return claim.values.every((value) => observed.some((other) => value.change !== void 0 && other.metric === value.metric && other.value === value.value && other.unit === value.unit && other.change === value.change));
-  });
+  for (const sentence of content.matchAll(/[\s\S]+?(?:[.!?](?=\s|$)|$)/g)) {
+    if (MEASUREMENT_CONTEXT_PATTERN.test(sentence[0]))
+      yield measurementValues(sentence[0]);
+  }
 }
 function measurementValues(text) {
   return text.split(CLAUSE_SEPARATOR).flatMap(clauseMeasurements);
@@ -4986,6 +5006,7 @@ function validateProviderAssessmentResult(input, value) {
       message: "Provider drafts must link both public narrative fields to prepared evidence."
     });
   } else if (evidenceMatches) {
+    const supportsNumericPerformanceClaim = createNumericPerformanceSupportChecker();
     const linkedItems = (indexes) => indexes.flatMap((index) => {
       const item = input.preparedEvidence.items[index];
       return item === void 0 ? [] : [item];

@@ -1,5 +1,31 @@
 # Validation
 
+## 2026-10-27 Reuse numeric measurement parsing
+
+Provider result validation previously reread and reparsed the same evidence body for every numeric
+claim in both public fields. A per-validation, per-evidence checker now lazily parses measurement
+sentences and reuses them. Sentence-local matching and the metadata/content boundary are preserved;
+no cache survives a validation. ADR 0061 records the cache lifetime and matching boundary.
+
+A local synthetic comparison against the original HEAD implementation used one 160,026-character
+excerpt (`"Unrelated text. "` repeated 10,000 times followed by `"Measured latency is 5 ms. "`)
+and 200 identical `"Latency is 5 ms."` claims in each public field. After one warm-up per version,
+three samples measured 816.83/797.81/848.91 ms before and 9.37/9.93/8.83 ms after: medians
+816.83 and 9.37 ms (about 87 times faster for this fixture). A counting getter verified 400 body
+reads before and one after per validation. Evidence-body scans drop from O(claims * body length)
+to O(body length); numeric-value comparison costs remain. This is a local synthetic result, not a
+production latency guarantee. Five regressions cover matching/nonmatching/empty body reuse,
+resumed parsing without cross-sentence support, and evidence changes between validations.
+
+No public API/schema, DB, dependency, or runner changes are introduced. The generated Action runtime
+is refreshed to include the shared provider change. Hosted CI, live model calls, publishing, and
+deployment are outside this local performance change.
+
+- `pnpm run check`: 1,054 tests, 1,050 passed, four POSIX permission tests skipped on Windows,
+  zero failures. The focused provider suite passed all 141 tests.
+- Lint, formatting, CLI smoke, documentation validation, and release-readiness static gates: passed.
+- Action bundle regenerated and its freshness check passed.
+
 ## 2026-10-27 Private-key armor format coverage
 
 Encrypted PKCS #8 and OpenPGP private-key armor previously passed through redaction in both complete

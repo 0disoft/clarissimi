@@ -254,7 +254,53 @@ test("GitHub changed-file names cannot supply numeric measurement content", () =
   );
 });
 
-function validate(claim, excerpt, { split = false, evidenceItem = {} } = {}) {
+for (const [name, excerpt, expected] of [
+  ["matching", "Measured latency is 5 ms.", true],
+  ["nonmatching", "Measured memory is 5 MB.", false],
+  ["empty", undefined, false],
+]) {
+  test(`numeric measurement parsing is reused for ${name} evidence across both fields`, () => {
+    let reads = 0;
+    const result = validate(Array(20).fill("Latency is 5 ms.").join(" "), excerpt, {
+      onPrepared(input) {
+        Object.defineProperty(input.preparedEvidence.items[0], "excerpt", {
+          get() {
+            reads += 1;
+            return excerpt;
+          },
+        });
+      },
+    });
+    assert.equal(result.ok, expected);
+    assert.equal(reads, 1);
+  });
+}
+
+test("numeric measurement parsing resumes for later claims without combining evidence sentences", () => {
+  const excerpt = "Measured latency is 5 ms. Observed memory is 20 MB.";
+  assert.equal(validate("Latency is 5 ms. Memory is 20 MB.", excerpt).ok, true);
+  assert.equal(validate("Latency is 5 ms and memory is 20 MB.", excerpt).ok, false);
+});
+
+test("numeric measurement parsing is fresh for each validation", () => {
+  let captured;
+  assert.equal(
+    validate("Latency is 5 ms.", "Measured latency is 5 ms.", {
+      onPrepared(input, assessment) {
+        captured = { input, assessment };
+      },
+    }).ok,
+    true,
+  );
+  captured.input.preparedEvidence.items[0].excerpt = "Measured latency is 6 ms.";
+  captured.input.preparedEvidence.evidenceRefs[0].excerpt = "Measured latency is 6 ms.";
+  assert.equal(validateProviderAssessmentResult(captured.input, captured.assessment).ok, false);
+  captured.input.preparedEvidence.items[0].excerpt = "Measured latency is 5 ms.";
+  captured.input.preparedEvidence.evidenceRefs[0].excerpt = "Measured latency is 5 ms.";
+  assert.equal(validateProviderAssessmentResult(captured.input, captured.assessment).ok, true);
+});
+
+function validate(claim, excerpt, { split = false, evidenceItem = {}, onPrepared } = {}) {
   const preparedEvidence = prepareEvidenceForProvider({
     source,
     items: [
@@ -267,29 +313,29 @@ function validate(claim, excerpt, { split = false, evidenceItem = {} } = {}) {
       { kind: "file", id: "src/parser.ts" },
     ],
   });
-  return validateProviderAssessmentResult(
-    { contributor, preparedEvidence },
-    {
-      schemaVersion: ASSESSMENT_SCHEMA_VERSION,
-      contributor,
-      source,
-      contributionType: "performance",
-      affectedArea: "parser",
-      impactLevel: "low",
-      evidenceSummary: claim,
-      publicRecognitionText: claim,
-      suggestedBadge: "Parser Care",
-      confidence: 0.7,
-      maintainerApprovalStatus: "draft",
-      evidenceRefs: preparedEvidence.evidenceRefs,
-      claimEvidenceLinks: ["evidenceSummary", "publicRecognitionText"].flatMap((field) =>
-        split
-          ? [
-              { field, text: "Reduced latency by", evidenceRefIndexes: [0] },
-              { field, text: "99%.", evidenceRefIndexes: [1] },
-            ]
-          : [{ field, text: claim, evidenceRefIndexes: [0] }],
-      ),
-    },
-  );
+  const input = { contributor, preparedEvidence };
+  const assessment = {
+    schemaVersion: ASSESSMENT_SCHEMA_VERSION,
+    contributor,
+    source,
+    contributionType: "performance",
+    affectedArea: "parser",
+    impactLevel: "low",
+    evidenceSummary: claim,
+    publicRecognitionText: claim,
+    suggestedBadge: "Parser Care",
+    confidence: 0.7,
+    maintainerApprovalStatus: "draft",
+    evidenceRefs: preparedEvidence.evidenceRefs,
+    claimEvidenceLinks: ["evidenceSummary", "publicRecognitionText"].flatMap((field) =>
+      split
+        ? [
+            { field, text: "Reduced latency by", evidenceRefIndexes: [0] },
+            { field, text: "99%.", evidenceRefIndexes: [1] },
+          ]
+        : [{ field, text: claim, evidenceRefIndexes: [0] }],
+    ),
+  };
+  onPrepared?.(input, assessment);
+  return validateProviderAssessmentResult(input, assessment);
 }

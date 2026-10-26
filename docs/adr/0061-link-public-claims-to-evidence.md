@@ -54,6 +54,12 @@ Measurement support is read only from `excerpt` and `text`. Titles and reference
 (including filenames), URLs, and metadata identify evidence but never supply measured values or
 measurement context. This separation applies to file, test, and maintainer-note candidates.
 
+Within one provider-result validation, measurement sentences are parsed lazily and cached by
+prepared evidence object across both public fields. Later claims reuse parsed sentences and resume
+the scan only when needed. All values in a claim must still match within one measurement sentence;
+separate sentences are not combined. The cache is discarded after validation, so later validations
+read current evidence content without global retention or stale support.
+
 Numeric support also distinguishes absolute values from increases and decreases. Common English
 and Korean change expressions are normalized within each clause; an improvement means a decrease
 for latency, memory, and runtime, and an increase for throughput, speed, and performance. Negated

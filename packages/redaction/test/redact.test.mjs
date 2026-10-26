@@ -258,6 +258,84 @@ test("long escaped quoted values are bounded by the child-process deadline", () 
   assert.equal(result.status, 0, result.stderr);
 });
 
+test("all cookie components are masked across 48 same-line text forms", () => {
+  let cases = 0;
+  const marker = "non-credential-marker";
+  for (const key of ["Cookie", "cookie", "Set-Cookie", "setCookie"]) {
+    for (const separator of [":", "="]) {
+      for (const value of [
+        `theme=light; session=${marker}`,
+        `theme="dark mode"; session=${marker}`,
+        `a=b; s=${marker}`,
+      ]) {
+        for (const assignment of [`${key}${separator} ${value}`, `'${key}${separator} ${value}'`]) {
+          const result = redactText(`before ${assignment}\nkeep after`);
+          assert.deepEqual(
+            result,
+            {
+              text: `before ${REDACTION_PLACEHOLDER}\nkeep after`,
+              report: {
+                changed: true,
+                occurrences: [
+                  {
+                    kind: "generic_secret_assignment",
+                    replacement: REDACTION_PLACEHOLDER,
+                    start: 7,
+                    end: 7 + assignment.length,
+                  },
+                ],
+              },
+            },
+            assignment,
+          );
+          cases += 1;
+        }
+      }
+    }
+  }
+  assert.equal(cases, 48);
+});
+
+test("cookie masking preserves quoted value boundaries and unrelated field names", () => {
+  const quoted = JSON.stringify({
+    Cookie: 'theme="dark mode"; session=non-credential-marker',
+    count: 7,
+  });
+  assert.equal(redactText(quoted).text, `{${REDACTION_PLACEHOLDER},"count":7}`);
+  assert.equal(redactText("Cookie: x").text, REDACTION_PLACEHOLDER);
+  assert.equal(
+    redactText("Cookie: a=b; s=non-credential-marker trailing explanation").text,
+    REDACTION_PLACEHOLDER,
+  );
+  for (const text of [
+    "cookieCount: theme=light; session=non-credential-marker",
+    "setCookiePolicy: theme=light; session=non-credential-marker",
+    "Cookies describe browser state.",
+  ])
+    assert.equal(redactText(text).text, text);
+});
+
+test("long cookie lists cannot block redaction past the child-process deadline", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "--eval",
+      `
+    import assert from "node:assert/strict";
+    import { redactText, REDACTION_PLACEHOLDER } from ${JSON.stringify(new URL("../dist/index.js", import.meta.url).href)};
+    for (const key of ["Cookie", "Set-Cookie"]) {
+      const text = key + ": theme=light; " + "x=y; ".repeat(65536) + "session=non-credential-marker";
+      assert.equal(redactText(text + "\\nkeep after").text, REDACTION_PLACEHOLDER + "\\nkeep after");
+    }
+  `,
+    ],
+    { encoding: "utf8", timeout: 5000 },
+  );
+  assert.equal(result.error, undefined, result.error?.message);
+  assert.equal(result.status, 0, result.stderr);
+});
+
 test("redacts environment-style secret assignments", () => {
   const keyName = ["OPENAI", "API", "KEY"].join("_");
   const result = redactText(`${keyName}=sample-value-for-tests`);

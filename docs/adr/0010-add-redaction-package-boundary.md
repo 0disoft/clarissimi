@@ -75,6 +75,16 @@ cannot corrupt occurrence locations. Reports still contain no matched value. Reg
 quote/backslash parity, complete and truncated values, length boundaries, preparation and captured
 provider requests, and child-process deadlines for long escape and whitespace sequences.
 
+Cookie and Set-Cookie text fields receive an opaque-value rule before token and generic rules.
+Case-insensitive `cookie` and `set_cookie` naming variants share the existing underscore/hyphen/
+joined spelling policy. A quoted value uses the common escape-aware grammar. An unquoted value
+consumes the rest of that line, including spaces, quoted cookie components, attributes, and any
+trailing prose; whitespace cannot expose later session components. Following lines remain outside
+the match. Explicit cookie fields have no eight-character minimum, matching the sensitivity of
+structured cookie keys; general thresholds and report kinds remain unchanged. This deliberately
+favors masking the complete field over interpreting individual cookie names or preserving inline
+explanations after unquoted cookie data.
+
 The package must not own:
 
 - provider API calls

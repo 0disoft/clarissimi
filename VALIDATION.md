@@ -1,5 +1,31 @@
 # Validation
 
+## 2026-10-27 Complete cookie field masking
+
+The whitespace-delimited generic rule masked only the first unquoted cookie component or skipped
+a short/quoted first component, leaving later session data in provider evidence. Four reproduced
+header forms retained an explicit non-credential marker. Cookie/Set-Cookie fields now run through
+an opaque-value rule before token and generic rules. Quoted values reuse the escape-aware grammar;
+unquoted values consume the rest of the same line, including inline explanations, while following
+lines remain intact. Explicit cookie fields also mask short values. ADR 0010 records this policy.
+
+A same-input comparison with the original HEAD covered 48 combinations of four field spellings,
+two separators, three cookie-list shapes, and bare/whole-header-quoted forms. Retained session
+markers decreased from 48/48 to 0/48. Five regressions cover those forms and occurrence offsets,
+quoted JSON boundaries, short values and unrelated fields, a child-process deadline for 65,536
+cookie components, provider preparation/public text rejection, and a captured provider request.
+All 203 focused redaction/core/provider tests passed. Only explicit non-credential markers were
+used; no credentials were generated and no external model requests were made.
+
+No public API/schema, DB, dependency, or CI runner changes are introduced. The generated Action
+runtime is refreshed for the shared redaction rule. Hosted CI, live models, publishing, and
+deployment are outside this local security change.
+
+- `pnpm run check`: 1,073 tests, 1,069 passed, four POSIX permission tests skipped on Windows,
+  zero failures.
+- Lint, formatting, CLI smoke, documentation validation, and release-readiness static gates: passed.
+- Action bundle regenerated and its freshness check passed.
+
 ## 2026-10-27 Escape-aware quoted assignment redaction
 
 Quoted JSON, dotenv, and authorization values previously ended at escaped delimiters, leaving the

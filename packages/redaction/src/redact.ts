@@ -41,6 +41,17 @@ const QUOTED_VALUE_SOURCE = `"${DOUBLE_QUOTED_CHARACTER}*"?|'${SINGLE_QUOTED_CHA
 const REDACTION_RULES: readonly RedactionRule[] = [
   {
     kind: "generic_secret_assignment",
+    // Cookie fields are opaque: later whitespace-separated components can carry credentials.
+    pattern: new RegExp(
+      String.raw`["']?\b(?:set[_-]?)?cookie["']?[ \t]*[:=][ \t]*(?=\S)(?:` +
+        QUOTED_VALUE_SOURCE +
+        /|[^\r\n]+/.source +
+        ")",
+      "gi",
+    ),
+  },
+  {
+    kind: "generic_secret_assignment",
     // Consume the scheme and credential before generic rules can mask only the scheme.
     pattern: new RegExp(
       String.raw`["']?\b(?:proxy-)?authorization["']?[ \t]*[:=][ \t]*` +

@@ -1,5 +1,19 @@
 # Validation
 
+## 2026-10-26 Additional contributor candidates
+
+Live CLI collection now suggests reviewers and linked-issue reporters by stable GitHub account ID
+with evidence links, without assigning credit. Seven new GitHub discovery/transport/date cases and
+the CLI candidate/staging case pass; the focused GitHub/live-CLI suite passed all 64 tests. Limits,
+inaccessible APIs, pending/deleted actors, account renames, and long-key redaction in fetched review
+and issue bodies are covered. Existing Action clients keep candidate API calls opt-in. Build and
+lint pass; shared Action runtime was regenerated for the collector additions.
+
+An actual read-only CLI run against `0disoft/clarissimi#9` succeeded with the deterministic provider:
+11 changed files, one additional candidate, zero reported omissions or unavailable issue lookups.
+That run uncovered and fixed GitHub REST UTC timestamps lacking milliseconds before shared source
+validation. No external model call or repository write was involved in this live dry-run.
+
 ## 2026-10-26 Live CLI and batch review
 
 Added selected real PR collection, explicit staging, optional partial-file coverage, and one-step

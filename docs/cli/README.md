@@ -43,6 +43,14 @@ and publishes the whole selected batch in one rendering/atomic replacement pass.
 invalid record, duplicate ledger identity, or output conflict rejects the import. This local
 explicit maintainer approval does not replace GitHub's Action permission or SHA review checks.
 
+Live results also include `contributorCandidates`: inline reviewers, submitted-review authors, and
+linked-issue reporters, merged by stable account ID with roles and evidence links. Pending reviews,
+deleted accounts, and the PR author are excluded from this additional list. Up to 25 submitted
+reviews and 10 linked issues are queried per PR. `collectionCoverage` reports missing APIs,
+inaccessible issues, and exceeded candidate limits. These suggestions receive no automatic credit;
+stage/approve a separately authored draft if the maintainer decides to recognize a candidate.
+The existing Action collector does not add these API requests unless explicitly opted in.
+
 - `clarissimi help`
 - `clarissimi --help`
 - `clarissimi validate-config`

@@ -5,6 +5,8 @@ import type {
   LiveGitHubPullRequestFile,
   LiveGitHubPullRequestLookup,
   LiveGitHubReviewComment,
+  LiveGitHubReview,
+  LiveGitHubIssue,
 } from "./live.js";
 
 const DEFAULT_GITHUB_API_URL = "https://api.github.com";
@@ -105,6 +107,30 @@ export function createGitHubApiClient(options: GitHubApiClientOptions = {}): Liv
       );
 
       return response.map(parseReviewComment);
+    },
+    async listPullRequestReviews(input, limit): Promise<readonly LiveGitHubReview[]> {
+      if (limit === 0) return [];
+      const response = await requestPaginatedArray(
+        fetchImpl,
+        options.token,
+        `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/reviews`,
+        "GitHub reviews response must be an array.",
+        timeoutMs,
+        maxResponseBytes,
+        limit,
+        true,
+      );
+      return response.map(parseReview);
+    },
+    async getIssue(input): Promise<LiveGitHubIssue> {
+      const response = await requestJson(
+        fetchImpl,
+        options.token,
+        `${apiUrl}/repos/${input.repository}/issues/${input.issueNumber}`,
+        timeoutMs,
+        maxResponseBytes,
+      );
+      return parseIssue(response);
     },
   };
 }
@@ -274,6 +300,46 @@ function parseReviewComment(value: unknown): LiveGitHubReviewComment {
   }
 
   return comment;
+}
+
+function parseReview(value: unknown): LiveGitHubReview {
+  assertRecord(value, "review");
+  const state = expectString(value.state, "review.state");
+  if (!["APPROVED", "CHANGES_REQUESTED", "COMMENTED", "DISMISSED", "PENDING"].includes(state)) {
+    throw new GitHubApiClientError("unexpected_response", "Unexpected review state.");
+  }
+  const review: LiveGitHubReview = { id: expectStringOrNumber(value.id, "review.id"), state };
+  assignOptional(review, "body", expectOptionalNullableString(value.body, "review.body"));
+  assignOptional(
+    review,
+    "htmlUrl",
+    expectOptionalNullableString(value.html_url, "review.html_url"),
+  );
+  if (isRecord(value.user)) assignOptional(review, "user", parseActor(value.user));
+  return review;
+}
+
+function parseIssue(value: unknown): LiveGitHubIssue {
+  assertRecord(value, "issue");
+  const issue: LiveGitHubIssue = {
+    number: expectNumber(value.number, "issue.number"),
+    title: expectString(value.title, "issue.title"),
+    htmlUrl: expectString(value.html_url, "issue.html_url"),
+    isPullRequest: isRecord(value.pull_request),
+  };
+  assignOptional(issue, "body", expectOptionalNullableString(value.body, "issue.body"));
+  if (isRecord(value.user)) assignOptional(issue, "user", parseActor(value.user));
+  return issue;
+}
+
+function parseActor(value: Record<string, unknown>): LiveGitHubActor {
+  const actor: LiveGitHubActor = {
+    id: expectStringOrNumber(value.id, "user.id"),
+    login: expectString(value.login, "user.login"),
+  };
+  assignOptional(actor, "htmlUrl", expectOptionalNullableString(value.html_url, "user.html_url"));
+  assignOptional(actor, "kind", parseGitHubActorKind(value.type, "user.type"));
+  return actor;
 }
 
 function parseGitHubActorKind(value: unknown, path: string): LiveGitHubActor["kind"] {

@@ -85,6 +85,8 @@ This repository type owns workspace boundaries, package ownership, dependency po
 ## Distribution Table
 
 ADR 0063 extends CLI orchestration to selected live PR collection and hash-bound batch review.
+ADR 0064 adds opt-in GitHub reviewer/reporter candidate discovery and CLI presentation; it does
+not change public assessment schemas, ledger ownership, or approval policy.
 The GitHub package owns bounded collection coverage and optional partial-file transport; the CLI
 owns token loading and selection. Core approval/hash policy and renderer record/uniqueness policy
 are reused. Shared CLI output planning/options live in internal helper modules so single and batch

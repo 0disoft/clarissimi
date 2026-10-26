@@ -107,7 +107,7 @@ export function collectMergedPullRequestEvidence(
   const title = normalizeRequiredString(pullRequest.title, "pullRequest.title");
   const mergedAt = normalizeOptionalDateTime(pullRequest.mergedAt, "pullRequest.mergedAt");
   const pullRequestUrl = normalizeOptionalHttpsUrl(pullRequest.htmlUrl, "pullRequest.htmlUrl");
-  const contributor = collectContributor(pullRequest.user);
+  const contributor = collectGitHubContributor(pullRequest.user);
   const source: RecognitionSource = {
     repository,
     event: "merged_pull_request",
@@ -131,7 +131,7 @@ export function collectMergedPullRequestEvidence(
   };
 }
 
-function collectContributor(user: GitHubActorFixture): ContributorIdentity {
+export function collectGitHubContributor(user: GitHubActorFixture): ContributorIdentity {
   const id = normalizeRequiredString(String(user.id), "pullRequest.user.id");
   const login = normalizeRequiredString(user.login, "pullRequest.user.login");
   const profileUrl =
@@ -440,7 +440,9 @@ function normalizeOptionalDateTime(value: string | undefined, field: string): st
     throw new GitHubEvidenceCollectionError(field, `${field} must be an ISO-compatible date time.`);
   }
 
-  return normalized;
+  // GitHub REST timestamps omit milliseconds; preserve their calendar fields so
+  // downstream canonical validation can still reject impossible dates.
+  return normalized.replace(/(T\d{2}:\d{2}:\d{2})Z$/, "$1.000Z");
 }
 
 function normalizeOptionalHttpsUrl(value: string | undefined, field: string): string | undefined {

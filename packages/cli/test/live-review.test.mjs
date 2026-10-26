@@ -22,7 +22,7 @@ test("live recognition accepts a real PR URL and stays read-only by default", as
     assert.equal(result.value.fixtureKind, "live-github");
     assert.equal(result.value.results[0].assessment.maintainerApprovalStatus, "draft");
     assert.deepEqual(await readdir(cwd), []);
-    assert.equal(api.requests.length, 3);
+    assert.equal(api.requests.length, 4);
   });
 });
 
@@ -53,6 +53,26 @@ test("selected real PRs stage, review, approve and publish in one batch", async 
     const nextReview = await run(["review-drafts", "--review", "next-review.json"], cwd);
     assert.equal(nextReview.code, 0, nextReview.stdout);
     assert.equal(nextReview.value.manifest.entries.length, 1);
+  });
+});
+
+test("CLI surfaces other contributors as candidates and stages only the PR author's draft", async () => {
+  await withTemp(async (cwd) => {
+    const result = await run(
+      ["recognize", "--pr", "https://github.com/sample/project/pull/42", "--mode", "stage-draft"],
+      cwd,
+      githubApi(1, true).fetch,
+    );
+    assert.equal(result.code, 0, result.stdout);
+    const entry = result.value.results[0];
+    assert.equal(entry.assessment.contributor.login, "octocat");
+    assert.deepEqual(
+      entry.contributorCandidates.map((candidate) => candidate.roles),
+      [["reviewer"], ["issue_reporter"]],
+    );
+    assert.equal(result.value.stagedDraftPaths.length, 1);
+    assert.equal((await readdir(join(cwd, ".clarissimi/drafts"))).length, 1);
+    assert.equal(result.value.publicOutputsRendered, false);
   });
 });
 
@@ -213,7 +233,7 @@ async function run(argv, cwd, fetch = async () => assert.fail("review must stay 
   return { code, stdout, stderr, value: JSON.parse(stdout) };
 }
 
-function githubApi(fileCount = 1) {
+function githubApi(fileCount = 1, withCandidates = false) {
   const requests = [];
   return {
     requests,
@@ -228,9 +248,9 @@ function githubApi(fileCount = 1) {
         value = {
           number: Number(match[1]),
           title: "Update parser",
-          body: "Improve parser input handling.",
+          body: withCandidates ? "Closes #7." : "Improve parser input handling.",
           html_url: `https://github.com/sample/project/pull/${match[1]}`,
-          merged_at: "2026-07-08T00:00:00.000Z",
+          merged_at: "2026-07-08T00:00:00Z",
           user: { id: 123456, login: "octocat" },
           labels: [],
         };
@@ -242,6 +262,17 @@ function githubApi(fileCount = 1) {
           status: "modified",
         })).slice(start, start + Number(url.searchParams.get("per_page")));
       } else if (url.pathname.endsWith("/comments")) value = [];
+      else if (url.pathname.endsWith("/reviews"))
+        value = withCandidates
+          ? [{ id: 101, state: "APPROVED", user: { id: 2, login: "reviewer" } }]
+          : [];
+      else if (url.pathname.endsWith("/issues/7") && withCandidates)
+        value = {
+          number: 7,
+          title: "Parser report",
+          html_url: "https://github.com/sample/project/issues/7",
+          user: { id: 3, login: "reporter" },
+        };
       else assert.fail(`Unexpected API route: ${url.pathname}`);
       return new Response(JSON.stringify(value), {
         status: 200,

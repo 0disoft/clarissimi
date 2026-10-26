@@ -1,5 +1,5 @@
 import type { EvidenceBundleInput } from "@clarissimi/core";
-import type { ContributorIdentity, ContributorKind } from "@clarissimi/schemas";
+import type { ContributorIdentity, ContributorKind, EvidenceRef } from "@clarissimi/schemas";
 
 export interface GitHubRepositoryFixture {
   readonly fullName: string;
@@ -43,6 +43,7 @@ export interface CollectedGitHubEvidence {
   readonly contributor: ContributorIdentity;
   readonly evidence: EvidenceBundleInput;
   readonly collectionCoverage?: GitHubCollectionCoverage;
+  readonly contributorCandidates?: readonly GitHubContributorCandidate[];
 }
 
 export interface GitHubCollectionCoverage {
@@ -50,4 +51,14 @@ export interface GitHubCollectionCoverage {
   readonly changedFilesOmittedAtLeast: number;
   readonly reviewCommentsMayBeOmitted: boolean;
   readonly linkedIssuesOmitted: boolean;
+  readonly candidateReviewsMayBeOmitted?: boolean;
+  readonly candidateIssuesMayBeOmitted?: boolean;
+  readonly candidateIssueLookupsUnavailable?: number;
+}
+
+export interface GitHubContributorCandidate {
+  readonly contributor: ContributorIdentity;
+  readonly roles: readonly ("reviewer" | "issue_reporter")[];
+  readonly evidenceRefs: readonly EvidenceRef[];
+  readonly requiresMaintainerReview: true;
 }

@@ -1,6 +1,7 @@
 import { prepareEvidenceExcerpt, type EvidenceItemInput } from "@clarissimi/core";
 
 import { collectMergedPullRequestEvidence, GitHubEvidenceCollectionError } from "./merged-pr.js";
+import { discoverContributorCandidates } from "./contributor-candidates.js";
 import type {
   CollectedGitHubEvidence,
   GitHubChangedFileFixture,
@@ -19,6 +20,7 @@ export interface LiveGitHubMergedPullRequestInput {
   readonly reviewCommentLimit?: number;
   readonly linkedIssueLimit?: number;
   readonly allowPartialFiles?: boolean;
+  readonly collectContributorCandidates?: boolean;
 }
 
 export interface LiveGitHubClient {
@@ -32,6 +34,31 @@ export interface LiveGitHubClient {
     input: LiveGitHubPullRequestLookup,
     limit?: number,
   ): Promise<readonly LiveGitHubReviewComment[]>;
+  listPullRequestReviews?(
+    input: LiveGitHubPullRequestLookup,
+    limit: number,
+  ): Promise<readonly LiveGitHubReview[]>;
+  getIssue?(input: {
+    readonly repository: string;
+    readonly issueNumber: number;
+  }): Promise<LiveGitHubIssue>;
+}
+
+export interface LiveGitHubReview {
+  readonly id: number | string;
+  readonly state: string;
+  readonly body?: string | null;
+  readonly htmlUrl?: string | null;
+  readonly user?: LiveGitHubActor | null;
+}
+
+export interface LiveGitHubIssue {
+  readonly number: number;
+  readonly title: string;
+  readonly body?: string | null;
+  readonly htmlUrl: string;
+  readonly user?: LiveGitHubActor | null;
+  readonly isPullRequest: boolean;
 }
 
 export interface LiveGitHubPullRequestLookup {
@@ -140,24 +167,44 @@ export async function collectLiveMergedPullRequestEvidence(
   const collected = collectMergedPullRequestEvidence(fixture);
   const linkedIssueLimit = input.linkedIssueLimit ?? DEFAULT_LINKED_ISSUE_LIMIT;
   const linkedIssues = buildLinkedIssueItems(pullRequest, input.repository, linkedIssueLimit + 1);
+  const discovery =
+    input.collectContributorCandidates === true
+      ? await discoverContributorCandidates({
+          client: input.client,
+          lookup,
+          author: collected.contributor,
+          reviewComments: reviewComments.slice(0, reviewCommentLimit),
+          linkedIssues: linkedIssues.slice(0, linkedIssueLimit),
+        })
+      : undefined;
   const collectionCoverage = {
     changedFilesCollected: Math.min(files.length, DEFAULT_CHANGED_FILE_LIMIT),
     changedFilesOmittedAtLeast: Math.max(0, files.length - DEFAULT_CHANGED_FILE_LIMIT),
     reviewCommentsMayBeOmitted:
       reviewCommentLimit === 0 || reviewComments.length >= reviewCommentLimit,
     linkedIssuesOmitted: linkedIssues.length > linkedIssueLimit,
+    ...discovery?.coverage,
   };
   const extraItems = [
     ...linkedIssues.slice(0, linkedIssueLimit),
     ...buildReviewCommentItems(reviewComments, reviewCommentLimit),
   ];
+  const discoveredItems = discovery?.evidenceItems ?? [];
+  const enriched = new Map(discoveredItems.map((item) => [`${item.kind}:${item.id}`, item]));
+  const items = dedupeEvidenceItems([
+    ...[...collected.evidence.items, ...extraItems].map(
+      (item) => enriched.get(`${item.kind}:${item.id}`) ?? item,
+    ),
+    ...discoveredItems,
+  ]);
 
   return {
     contributor: collected.contributor,
     collectionCoverage,
+    ...(discovery === undefined ? {} : { contributorCandidates: discovery.candidates }),
     evidence: {
       source: collected.evidence.source,
-      items: dedupeEvidenceItems([...collected.evidence.items, ...extraItems]).map((item) =>
+      items: items.map((item) =>
         item.kind === "pull_request" ? { ...item, metadata: { collectionCoverage } } : item,
       ),
     },

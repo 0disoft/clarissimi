@@ -710,6 +710,16 @@ function createGitHubApiClient(options = {}) {
         return [];
       const response = await requestPaginatedArray(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/comments`, "GitHub pull request review comments response must be an array.", timeoutMs, maxResponseBytes, limit ?? MAX_LIST_PAGES * DEFAULT_PAGE_SIZE, limit !== void 0);
       return response.map(parseReviewComment);
+    },
+    async listPullRequestReviews(input, limit) {
+      if (limit === 0)
+        return [];
+      const response = await requestPaginatedArray(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/pulls/${input.pullRequestNumber}/reviews`, "GitHub reviews response must be an array.", timeoutMs, maxResponseBytes, limit, true);
+      return response.map(parseReview);
+    },
+    async getIssue(input) {
+      const response = await requestJson(fetchImpl, options.token, `${apiUrl}/repos/${input.repository}/issues/${input.issueNumber}`, timeoutMs, maxResponseBytes);
+      return parseIssue(response);
     }
   };
 }
@@ -818,6 +828,41 @@ function parseReviewComment(value) {
     assignOptional(comment, "user", user);
   }
   return comment;
+}
+function parseReview(value) {
+  assertRecord(value, "review");
+  const state = expectString(value.state, "review.state");
+  if (!["APPROVED", "CHANGES_REQUESTED", "COMMENTED", "DISMISSED", "PENDING"].includes(state)) {
+    throw new GitHubApiClientError("unexpected_response", "Unexpected review state.");
+  }
+  const review = { id: expectStringOrNumber(value.id, "review.id"), state };
+  assignOptional(review, "body", expectOptionalNullableString(value.body, "review.body"));
+  assignOptional(review, "htmlUrl", expectOptionalNullableString(value.html_url, "review.html_url"));
+  if (isRecord(value.user))
+    assignOptional(review, "user", parseActor(value.user));
+  return review;
+}
+function parseIssue(value) {
+  assertRecord(value, "issue");
+  const issue = {
+    number: expectNumber(value.number, "issue.number"),
+    title: expectString(value.title, "issue.title"),
+    htmlUrl: expectString(value.html_url, "issue.html_url"),
+    isPullRequest: isRecord(value.pull_request)
+  };
+  assignOptional(issue, "body", expectOptionalNullableString(value.body, "issue.body"));
+  if (isRecord(value.user))
+    assignOptional(issue, "user", parseActor(value.user));
+  return issue;
+}
+function parseActor(value) {
+  const actor = {
+    id: expectStringOrNumber(value.id, "user.id"),
+    login: expectString(value.login, "user.login")
+  };
+  assignOptional(actor, "htmlUrl", expectOptionalNullableString(value.html_url, "user.html_url"));
+  assignOptional(actor, "kind", parseGitHubActorKind(value.type, "user.type"));
+  return actor;
 }
 function parseGitHubActorKind(value, path) {
   if (value === void 0 || value === null) {
@@ -1714,6 +1759,11 @@ function validateClarissimiConfig(value) {
     issues: []
   };
 }
+function validateContributorIdentity(value) {
+  const issues = [];
+  validateContributor(value, "$", issues);
+  return issues.length === 0 ? { ok: true, value, issues: [] } : invalid(issues);
+}
 function validateContributor(value, path, issues) {
   if (!isRecord2(value)) {
     pushIssue(issues, path, "expected_object", "Contributor must be an object.");
@@ -2204,7 +2254,7 @@ function collectMergedPullRequestEvidence(fixture) {
   const title = normalizeRequiredString(pullRequest.title, "pullRequest.title");
   const mergedAt = normalizeOptionalDateTime(pullRequest.mergedAt, "pullRequest.mergedAt");
   const pullRequestUrl = normalizeOptionalHttpsUrl(pullRequest.htmlUrl, "pullRequest.htmlUrl");
-  const contributor = collectContributor(pullRequest.user);
+  const contributor = collectGitHubContributor(pullRequest.user);
   const source = {
     repository,
     event: "merged_pull_request",
@@ -2225,7 +2275,7 @@ function collectMergedPullRequestEvidence(fixture) {
     }
   };
 }
-function collectContributor(user) {
+function collectGitHubContributor(user) {
   const id = normalizeRequiredString(String(user.id), "pullRequest.user.id");
   const login = normalizeRequiredString(user.login, "pullRequest.user.login");
   const profileUrl = normalizeOptionalHttpsUrl(user.htmlUrl, "pullRequest.user.htmlUrl") ?? `https://github.com/${encodeURIComponent(login)}`;
@@ -2443,7 +2493,7 @@ function normalizeOptionalDateTime(value, field) {
   if (Number.isNaN(Date.parse(normalized))) {
     throw new GitHubEvidenceCollectionError(field, `${field} must be an ISO-compatible date time.`);
   }
-  return normalized;
+  return normalized.replace(/(T\d{2}:\d{2}:\d{2})Z$/, "$1.000Z");
 }
 function normalizeOptionalHttpsUrl(value, field) {
   const normalized = normalizeOptionalString(value);
@@ -2470,6 +2520,121 @@ function assignOptional3(target, key, value) {
   if (value !== void 0) {
     target[key] = value;
   }
+}
+
+// packages/github/dist/contributor-candidates.js
+var REVIEW_LIMIT = 25;
+var ISSUE_LIMIT = 10;
+async function discoverContributorCandidates(input) {
+  const candidates = /* @__PURE__ */ new Map();
+  const evidenceItems = [];
+  const prUrl = `https://github.com/${input.lookup.repository}/pull/${input.lookup.pullRequestNumber}`;
+  const source = { ...input.lookup, event: "merged_pull_request" };
+  const add = (actor, role, ref) => {
+    if (actor === void 0 || actor === null || String(actor.id) === input.author.id)
+      return;
+    const identity = collectGitHubContributor({
+      id: actor.id,
+      login: actor.login,
+      ...actor.htmlUrl == null ? {} : { htmlUrl: actor.htmlUrl },
+      ...actor.kind === void 0 ? {} : { kind: actor.kind }
+    });
+    if (!validateContributorIdentity(identity).ok)
+      return;
+    const safe = prepareEvidenceForProvider({
+      source,
+      items: [
+        { kind: ref.kind, id: identity.id, url: identity.profileUrl, title: identity.login },
+        ref
+      ]
+    });
+    if (safe.redactionReport.changed)
+      return;
+    const candidate = candidates.get(identity.id) ?? {
+      contributor: identity,
+      roles: [],
+      evidenceRefs: [],
+      requiresMaintainerReview: true
+    };
+    candidate.contributor = identity;
+    if (!candidate.roles.includes(role))
+      candidate.roles.push(role);
+    if (!candidate.evidenceRefs.some((existing) => existing.kind === ref.kind && existing.id === ref.id))
+      candidate.evidenceRefs.push(ref);
+    candidates.set(identity.id, candidate);
+  };
+  for (const comment of input.reviewComments) {
+    add(comment.user, "reviewer", {
+      kind: "review",
+      id: `review-comment:${comment.id}`,
+      url: `${prUrl}#discussion_r${encodeURIComponent(String(comment.id))}`,
+      title: `Review comment ${comment.id}`
+    });
+  }
+  let candidateReviewsMayBeOmitted = input.client.listPullRequestReviews === void 0;
+  if (input.client.listPullRequestReviews !== void 0) {
+    try {
+      const reviews = await input.client.listPullRequestReviews(input.lookup, REVIEW_LIMIT + 1);
+      candidateReviewsMayBeOmitted = reviews.length > REVIEW_LIMIT;
+      for (const review of reviews.slice(0, REVIEW_LIMIT)) {
+        if (review.state === "PENDING")
+          continue;
+        const item = {
+          kind: "review",
+          id: `review:${review.id}`,
+          url: `${prUrl}#pullrequestreview-${encodeURIComponent(String(review.id))}`,
+          title: `Submitted review (${review.state})`,
+          ...prepareEvidenceExcerpt(review.body ?? void 0)
+        };
+        const { excerpt: _excerpt, excerptRedactionReport: _report, ...ref } = item;
+        add(review.user, "reviewer", ref);
+        evidenceItems.push(item);
+      }
+    } catch {
+      candidateReviewsMayBeOmitted = true;
+    }
+  }
+  let candidateIssueLookupsUnavailable = 0;
+  for (const reference of input.linkedIssues.slice(0, ISSUE_LIMIT)) {
+    if (input.client.getIssue === void 0) {
+      candidateIssueLookupsUnavailable += 1;
+      continue;
+    }
+    const separator = reference.id.lastIndexOf("#");
+    const repository = separator === 0 ? input.lookup.repository : reference.id.slice(0, separator);
+    const issueNumber = Number(reference.id.slice(separator + 1));
+    try {
+      const issue = await input.client.getIssue({ repository, issueNumber });
+      if (issue.isPullRequest)
+        continue;
+      if (issue.number !== issueNumber) {
+        candidateIssueLookupsUnavailable += 1;
+        continue;
+      }
+      const item = {
+        kind: "issue",
+        id: reference.id,
+        url: `https://github.com/${repository}/issues/${issueNumber}`,
+        title: `Linked issue ${issueNumber}`,
+        ...prepareEvidenceExcerpt(`${issue.title}
+${issue.body ?? ""}`)
+      };
+      const { excerpt: _excerpt, excerptRedactionReport: _report, ...ref } = item;
+      add(issue.user, "issue_reporter", ref);
+      evidenceItems.push(item);
+    } catch {
+      candidateIssueLookupsUnavailable += 1;
+    }
+  }
+  return {
+    candidates: [...candidates.values()],
+    evidenceItems,
+    coverage: {
+      candidateReviewsMayBeOmitted,
+      candidateIssuesMayBeOmitted: input.linkedIssues.length > ISSUE_LIMIT,
+      candidateIssueLookupsUnavailable
+    }
+  };
 }
 
 // packages/github/dist/live.js
@@ -2510,22 +2675,37 @@ async function collectLiveMergedPullRequestEvidence(input) {
   const collected = collectMergedPullRequestEvidence(fixture);
   const linkedIssueLimit = input.linkedIssueLimit ?? DEFAULT_LINKED_ISSUE_LIMIT;
   const linkedIssues = buildLinkedIssueItems(pullRequest, input.repository, linkedIssueLimit + 1);
+  const discovery = input.collectContributorCandidates === true ? await discoverContributorCandidates({
+    client: input.client,
+    lookup,
+    author: collected.contributor,
+    reviewComments: reviewComments.slice(0, reviewCommentLimit),
+    linkedIssues: linkedIssues.slice(0, linkedIssueLimit)
+  }) : void 0;
   const collectionCoverage = {
     changedFilesCollected: Math.min(files.length, DEFAULT_CHANGED_FILE_LIMIT),
     changedFilesOmittedAtLeast: Math.max(0, files.length - DEFAULT_CHANGED_FILE_LIMIT),
     reviewCommentsMayBeOmitted: reviewCommentLimit === 0 || reviewComments.length >= reviewCommentLimit,
-    linkedIssuesOmitted: linkedIssues.length > linkedIssueLimit
+    linkedIssuesOmitted: linkedIssues.length > linkedIssueLimit,
+    ...discovery?.coverage
   };
   const extraItems = [
     ...linkedIssues.slice(0, linkedIssueLimit),
     ...buildReviewCommentItems(reviewComments, reviewCommentLimit)
   ];
+  const discoveredItems = discovery?.evidenceItems ?? [];
+  const enriched = new Map(discoveredItems.map((item) => [`${item.kind}:${item.id}`, item]));
+  const items = dedupeEvidenceItems2([
+    ...[...collected.evidence.items, ...extraItems].map((item) => enriched.get(`${item.kind}:${item.id}`) ?? item),
+    ...discoveredItems
+  ]);
   return {
     contributor: collected.contributor,
     collectionCoverage,
+    ...discovery === void 0 ? {} : { contributorCandidates: discovery.candidates },
     evidence: {
       source: collected.evidence.source,
-      items: dedupeEvidenceItems2([...collected.evidence.items, ...extraItems]).map((item) => item.kind === "pull_request" ? { ...item, metadata: { collectionCoverage } } : item)
+      items: items.map((item) => item.kind === "pull_request" ? { ...item, metadata: { collectionCoverage } } : item)
     }
   };
 }

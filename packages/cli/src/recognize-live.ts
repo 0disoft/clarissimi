@@ -44,6 +44,7 @@ export async function runRecognizeLive(args: ParsedArgs, io: CliIo): Promise<Cli
         repository: selected.repository,
         pullRequestNumber,
         allowPartialFiles: getBooleanFlag(args, "allow-partial"),
+        collectContributorCandidates: true,
       });
       const result = await recognizeCollectedEvidence(collected, "live-github", provider);
       results.push({
@@ -52,6 +53,7 @@ export async function runRecognizeLive(args: ParsedArgs, io: CliIo): Promise<Cli
         redactionChanged: result.redactionChanged,
         redactionMatchCount: result.redactionMatchCount,
         collectionCoverage: collected.collectionCoverage,
+        contributorCandidates: collected.contributorCandidates ?? [],
       });
     }
     if (mode === "stage-draft") {
@@ -87,6 +89,12 @@ export async function runRecognizeLive(args: ParsedArgs, io: CliIo): Promise<Cli
             `PR #${result.pullRequestNumber} coverage: ${JSON.stringify(result.collectionCoverage)}`,
         ),
         ...stagedDraftPaths.map((path) => `Staged draft: ${path}`),
+        ...results.flatMap((result) =>
+          result.contributorCandidates.map(
+            (candidate) =>
+              `PR #${result.pullRequestNumber} candidate: ${candidate.contributor.login} (${candidate.roles.join(", ")}); separate maintainer review required. ${candidate.evidenceRefs.map((ref) => ref.url ?? ref.id).join(" ")}`,
+          ),
+        ),
       ],
     );
     return CLI_EXIT_CODES.success;

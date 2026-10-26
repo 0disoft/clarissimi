@@ -115,6 +115,8 @@ engine.
 
 - `0063-add-live-cli-and-batch-review.md`: collect selected real PRs and explicitly approve a
   hash-bound batch with one ledger rendering pass
+- `0064-discover-contributor-candidates.md`: surface reviewers and linked-issue reporters for
+  maintainer review without assigning credit or changing the public assessment schema
 
 ## Review Blockers
 

@@ -50,6 +50,10 @@ split numeric claim must link supporting measurements. Unsupported numeric claim
 `provider_result_performance_measurement_missing` for maintainer review. This validates the stated
 support; it does not establish that a reported measurement is truthful or causal.
 
+Measurement support is read only from `excerpt` and `text`. Titles and reference identifiers
+(including filenames), URLs, and metadata identify evidence but never supply measured values or
+measurement context. This separation applies to file, test, and maintainer-note candidates.
+
 Numeric support also distinguishes absolute values from increases and decreases. Common English
 and Korean change expressions are normalized within each clause; an improvement means a decrease
 for latency, memory, and runtime, and an increase for throughput, speed, and performance. Negated

@@ -4,6 +4,7 @@ import test from "node:test";
 import { prepareEvidenceForProvider } from "@clarissimi/core";
 import { ASSESSMENT_SCHEMA_VERSION } from "@clarissimi/schemas";
 
+import { collectMergedPullRequestEvidence } from "../../github/dist/index.js";
 import { validateProviderAssessmentResult } from "../dist/index.js";
 
 const contributor = {
@@ -175,18 +176,94 @@ for (const [name, claim, excerpt, expected] of cases) {
 }
 
 test("numeric performance support must be linked to every segment of a split claim", () => {
-  const result = validate("Reduced latency by 99%.", measured, true);
+  const result = validate("Reduced latency by 99%.", measured, { split: true });
   assert.equal(result.ok, false);
   assert.ok(
     result.issues.some((issue) => issue.code === "provider_result_performance_measurement_missing"),
   );
 });
 
-function validate(claim, excerpt, split = false) {
+const filenameClaim = "benchmarks/results/latency reduced by 99%.json";
+const metadataCases = [
+  ["filename without content", { id: filenameClaim, title: filenameClaim }, false],
+  [
+    "filename with generic content",
+    { id: filenameClaim, title: filenameClaim, excerpt: "Benchmark implementation only." },
+    false,
+  ],
+  [
+    "measurement marker only in title",
+    { title: "Measured results", excerpt: "Latency reduced by 99%." },
+    false,
+  ],
+  [
+    "measurement value only in title",
+    { title: "Latency reduced by 99%", excerpt: "Measured results." },
+    false,
+  ],
+  ["complete measurement only in title", { title: measured }, false],
+  [
+    "maintainer note title only",
+    { kind: "maintainer_note", id: "benchmark-run", title: measured },
+    false,
+  ],
+  ["test title only", { kind: "test", id: "benchmark-run", title: measured }, false],
+  [
+    "conflicting title with measured excerpt",
+    { title: "Measured latency increased by 99%", excerpt: measured },
+    true,
+  ],
+  ["measured text without excerpt", { title: "Benchmark results", text: measured }, true],
+  [
+    "Korean measured excerpt",
+    { title: filenameClaim, excerpt: "측정 결과 처리 지연이 99% 감소했습니다." },
+    true,
+  ],
+];
+
+for (const [name, evidenceItem, expected] of metadataCases) {
+  test(`numeric measurement content boundary: ${name}`, () => {
+    const result = validate("Reduced latency by 99%.", undefined, { evidenceItem });
+    assert.equal(result.ok, expected, JSON.stringify(result.issues));
+    if (!expected)
+      assert.ok(
+        result.issues.some(
+          (issue) => issue.code === "provider_result_performance_measurement_missing",
+        ),
+      );
+  });
+}
+
+test("GitHub changed-file names cannot supply numeric measurement content", () => {
+  const collected = collectMergedPullRequestEvidence({
+    repository: { fullName: source.repository },
+    pullRequest: {
+      number: source.pullRequestNumber,
+      title: "Update parser benchmark",
+      user: contributor,
+      changedFiles: [{ filename: filenameClaim }],
+    },
+  });
+  const evidenceItem = collected.evidence.items.find((item) => item.id === filenameClaim);
+  assert.equal(evidenceItem.title, filenameClaim);
+  assert.equal(evidenceItem.excerpt, "changed");
+  const result = validate("Reduced latency by 99%.", undefined, { evidenceItem });
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.issues.some((issue) => issue.code === "provider_result_performance_measurement_missing"),
+  );
+});
+
+function validate(claim, excerpt, { split = false, evidenceItem = {} } = {}) {
   const preparedEvidence = prepareEvidenceForProvider({
     source,
     items: [
-      { kind: "file", id: "benchmarks/parser.ts", ...(excerpt === undefined ? {} : { excerpt }) },
+      {
+        kind: "file",
+        id: "benchmarks/parser.ts",
+        ...(excerpt === undefined ? {} : { excerpt }),
+        ...evidenceItem,
+      },
       { kind: "file", id: "src/parser.ts" },
     ],
   });

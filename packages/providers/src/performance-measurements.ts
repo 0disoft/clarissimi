@@ -55,8 +55,8 @@ export function supportsNumericPerformanceClaim(
   item: PreparedEvidenceItem,
   claim: NumericPerformanceClaim,
 ): boolean {
-  // File paths identify candidates, never a measured result by themselves.
-  const content = [item.title, item.excerpt, item.text].filter(Boolean).join(" ");
+  // Titles and paths identify candidates; only content can support measured results.
+  const content = [item.excerpt, item.text].filter(Boolean).join(" ");
   return [...content.matchAll(/[\s\S]+?(?:[.!?](?=\s|$)|$)/g)].some((sentence) => {
     if (!MEASUREMENT_CONTEXT_PATTERN.test(sentence[0])) return false;
     const observed = measurementValues(sentence[0]);

@@ -1,5 +1,20 @@
 # Validation
 
+## 2026-10-26 Measurement content excludes evidence metadata
+
+Numeric support now reads only `excerpt` and `text`; titles and filenames still identify candidates
+but cannot supply measurement context or values. Before the fix, eight unsupported cases passed,
+including a filename produced by the real GitHub collector, and two supported body-content cases
+were rejected because titles contaminated the comparison. All eleven added boundary cases and the
+41 existing numeric cases now pass. ADR 0061 records the content/metadata boundary. No additional
+filesystem or network calls, public schema changes, or runner changes are introduced.
+
+- `pnpm run check`: 1,036 tests, 1,032 passed, four POSIX permission tests skipped on Windows,
+  zero failures. All 52 numeric performance tests passed.
+- Lint, formatting, and CLI smoke validation: passed.
+- Action bundle regenerated and freshness verified; release-readiness static gates: passed.
+- Hosted CI, external model calls, publication, and deployment were not run for this local fix.
+
 ## 2026-10-26 Numeric measurement change direction
 
 Seventeen newly added counterexamples reproduced false acceptance of reversed, negated, ambiguous,

@@ -4856,7 +4856,7 @@ function numericPerformanceClaims(text) {
   });
 }
 function supportsNumericPerformanceClaim(item, claim) {
-  const content = [item.title, item.excerpt, item.text].filter(Boolean).join(" ");
+  const content = [item.excerpt, item.text].filter(Boolean).join(" ");
   return [...content.matchAll(/[\s\S]+?(?:[.!?](?=\s|$)|$)/g)].some((sentence) => {
     if (!MEASUREMENT_CONTEXT_PATTERN.test(sentence[0]))
       return false;

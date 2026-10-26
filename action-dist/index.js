@@ -1483,6 +1483,7 @@ function publicValidationDiagnostics(issues) {
 }
 
 // packages/schemas/dist/validation.js
+var MAX_ASSESSMENT_NESTING_DEPTH = 64;
 var RANKING_LANGUAGE_PATTERNS = [
   /\bleaderboard\b/i,
   /\btotal\s+score\b/i,
@@ -1614,7 +1615,9 @@ function validateContributionAssessment(value) {
     ]);
   }
   expectLiteral(value.schemaVersion, ASSESSMENT_SCHEMA_VERSION, "$.schemaVersion", issues);
-  rejectPublicScoreFields(value, "$", issues);
+  if (!rejectPublicScoreFields(value, "$", issues)) {
+    return invalid(issues);
+  }
   validateContributor(value.contributor, "$.contributor", issues);
   expectEnum(value.contributionType, isContributionType, "$.contributionType", issues);
   expectPublicNarrativeText(value.affectedArea, "$.affectedArea", issues);
@@ -1850,23 +1853,30 @@ function expectConfidence(value, path, issues) {
     pushIssue(issues, path, "out_of_range", "Confidence must be between 0 and 1.");
   }
 }
-function rejectPublicScoreFields(value, path, issues) {
+function rejectPublicScoreFields(value, path, issues, depth = 0) {
+  if (depth > MAX_ASSESSMENT_NESTING_DEPTH) {
+    pushIssue(issues, path, "assessment_nesting_limit", "Assessment values must not be nested more than 64 levels below the root.");
+    return false;
+  }
   if (Array.isArray(value)) {
-    value.forEach((entry, index) => {
-      rejectPublicScoreFields(entry, `${path}[${index}]`, issues);
-    });
-    return;
+    for (const [index, entry] of value.entries()) {
+      if (!rejectPublicScoreFields(entry, `${path}[${index}]`, issues, depth + 1))
+        return false;
+    }
+    return true;
   }
   if (!isRecord2(value)) {
-    return;
+    return true;
   }
   for (const [key, nestedValue] of Object.entries(value)) {
     const fieldPath = `${path}.${key}`;
     if (isPublicScoreFieldName(key)) {
       pushIssue(issues, fieldPath, "public_score_field", "Assessment must not contain public score, rank, leaderboard, point, or contributor tier fields.");
     }
-    rejectPublicScoreFields(nestedValue, fieldPath, issues);
+    if (!rejectPublicScoreFields(nestedValue, fieldPath, issues, depth + 1))
+      return false;
   }
+  return true;
 }
 function normalizeFieldName(value) {
   return value.replace(/[^A-Za-z0-9]+/g, "").toLowerCase();

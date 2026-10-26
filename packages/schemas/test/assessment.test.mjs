@@ -55,6 +55,36 @@ test("accepts a valid contribution assessment draft", () => {
   assert.deepEqual(result.issues, []);
 });
 
+for (const [name, open, close] of [
+  ["arrays", "[", "]"],
+  ["objects", '{"child":', "}"],
+]) {
+  test(`rejects deeply nested assessment ${name} without a stack overflow`, () => {
+    const nested = JSON.parse(open.repeat(6_000) + "null" + close.repeat(6_000));
+    const result = validateContributionAssessment({ ...validAssessment, extra: nested });
+    assert.equal(result.ok, false);
+    assert.ok(result.issues.some((issue) => issue.code === "assessment_nesting_limit"));
+  });
+}
+
+test("assessment nesting permits values at depth 64 and rejects depth 65", () => {
+  let nested = null;
+  for (let depth = 0; depth < 63; depth++) nested = [nested];
+  assert.equal(validateContributionAssessment({ ...validAssessment, extra: nested }).ok, true);
+  const result = validateContributionAssessment({ ...validAssessment, extra: [nested] });
+  assert.equal(result.ok, false);
+  assert.ok(result.issues.some((issue) => issue.code === "assessment_nesting_limit"));
+});
+
+test("assessment nesting guard retains score checks within the permitted depth", () => {
+  let nested = { score: 1 };
+  for (let depth = 0; depth < 62; depth++) nested = [nested];
+  const result = validateContributionAssessment({ ...validAssessment, extra: nested });
+  assert.equal(result.ok, false);
+  assert.ok(!result.issues.some((issue) => issue.code === "assessment_nesting_limit"));
+  assert.ok(result.issues.some((issue) => issue.code === "public_score_field"));
+});
+
 test("claim evidence links cover both public narratives with valid reference positions", () => {
   const claimEvidenceLinks = [
     {

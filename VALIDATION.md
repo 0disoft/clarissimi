@@ -1,5 +1,21 @@
 # Validation
 
+## 2026-10-26 Bounded assessment nesting
+
+The recursive public-score inspection previously threw `RangeError` for 6,000-level JSON, including
+a model-produced malformed `affectedArea` under 13 KiB. Assessment validation now stops at the first
+value deeper than 64 levels below the root and returns `assessment_nesting_limit`; the external
+provider maps this to its existing typed `invalid_assessment` error. ADR 0009 records the limit.
+Five added regressions cover deep arrays/objects, the 64/65 boundary, score rejection within the
+limit, and the provider response path. All 164 schema/provider tests passed. No dependency,
+database, or runner changes are introduced; the new depth bound is an input-validation constraint.
+
+- `pnpm run check`: 1,041 tests, 1,037 passed, four POSIX permission tests skipped on Windows,
+  zero failures.
+- Lint, formatting, CLI smoke, documentation validation, and release-readiness static gates: passed.
+- Action runtime regenerated and its bundle freshness check passed.
+- Hosted CI, live model calls, publication, and deployment were not run for this local fix.
+
 ## 2026-10-26 Measurement content excludes evidence metadata
 
 Numeric support now reads only `excerpt` and `text`; titles and filenames still identify candidates

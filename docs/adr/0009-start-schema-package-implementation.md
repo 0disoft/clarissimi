@@ -22,6 +22,12 @@ The package owns:
 - minimal runtime validation for assessment drafts
 - public-output guardrails that reject obvious scoring or ranking language
 
+Assessment validation bounds recursive inspection to values at depth 64 below the root (depth 0).
+The first value beyond that limit stops the inspection and returns `assessment_nesting_limit`.
+This applies to unknown fields and malformed model-produced fields before field-specific checks,
+so small, deeply nested JSON cannot overflow the validator's call stack. Fields within the limit
+retain existing validation, including recursive rejection of public score fields.
+
 The package must not own:
 
 - GitHub API collection

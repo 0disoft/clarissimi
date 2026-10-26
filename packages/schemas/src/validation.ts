@@ -35,6 +35,8 @@ import {
   type RecognitionSource,
 } from "./types.js";
 
+const MAX_ASSESSMENT_NESTING_DEPTH = 64;
+
 const RANKING_LANGUAGE_PATTERNS: readonly RegExp[] = [
   /\bleaderboard\b/i,
   /\btotal\s+score\b/i,
@@ -204,7 +206,9 @@ export function validateContributionAssessment(
   }
 
   expectLiteral(value.schemaVersion, ASSESSMENT_SCHEMA_VERSION, "$.schemaVersion", issues);
-  rejectPublicScoreFields(value, "$", issues);
+  if (!rejectPublicScoreFields(value, "$", issues)) {
+    return invalid(issues);
+  }
   validateContributor(value.contributor, "$.contributor", issues);
   expectEnum(value.contributionType, isContributionType, "$.contributionType", issues);
   expectPublicNarrativeText(value.affectedArea, "$.affectedArea", issues);
@@ -617,16 +621,30 @@ function expectConfidence(value: unknown, path: string, issues: ValidationIssue[
   }
 }
 
-function rejectPublicScoreFields(value: unknown, path: string, issues: ValidationIssue[]): void {
+function rejectPublicScoreFields(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[],
+  depth = 0,
+): boolean {
+  if (depth > MAX_ASSESSMENT_NESTING_DEPTH) {
+    pushIssue(
+      issues,
+      path,
+      "assessment_nesting_limit",
+      "Assessment values must not be nested more than 64 levels below the root.",
+    );
+    return false;
+  }
   if (Array.isArray(value)) {
-    value.forEach((entry, index) => {
-      rejectPublicScoreFields(entry, `${path}[${index}]`, issues);
-    });
-    return;
+    for (const [index, entry] of value.entries()) {
+      if (!rejectPublicScoreFields(entry, `${path}[${index}]`, issues, depth + 1)) return false;
+    }
+    return true;
   }
 
   if (!isRecord(value)) {
-    return;
+    return true;
   }
 
   for (const [key, nestedValue] of Object.entries(value)) {
@@ -640,8 +658,9 @@ function rejectPublicScoreFields(value: unknown, path: string, issues: Validatio
       );
     }
 
-    rejectPublicScoreFields(nestedValue, fieldPath, issues);
+    if (!rejectPublicScoreFields(nestedValue, fieldPath, issues, depth + 1)) return false;
   }
+  return true;
 }
 
 function normalizeFieldName(value: string): string {

@@ -768,6 +768,23 @@ test("cancels unread HTTP error streams without waiting for cleanup", async () =
   }
 });
 
+test("deeply nested model fields produce a typed validation failure", async () => {
+  const content = '{"affectedArea":' + "[".repeat(6_000) + "null" + "]".repeat(6_000) + "}";
+  assert.ok(Buffer.byteLength(content) < 13 * 1024);
+  const provider = createOpenAiCompatibleContributionDraftProvider({
+    model: "clarissimi-test-model",
+    token: "unit-token",
+    fetch: async () => jsonResponse({ choices: [{ message: { content } }] }),
+  });
+  await assert.rejects(
+    provider.createAssessment({ contributor, preparedEvidence: preparedEvidence() }),
+    (error) =>
+      error instanceof OpenAiCompatibleProviderError &&
+      error.code === "invalid_assessment" &&
+      error.issues.some((issue) => issue.code === "assessment_nesting_limit"),
+  );
+});
+
 test("rejects invalid model drafts after schema validation", async () => {
   const provider = createOpenAiCompatibleContributionDraftProvider({
     model: "clarissimi-test-model",

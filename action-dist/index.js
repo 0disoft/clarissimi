@@ -170,12 +170,14 @@ function runGit(repositoryDir, args) {
 
 // packages/action/dist/branch-writer.js
 import { spawn as spawn2 } from "node:child_process";
-import { createHash } from "node:crypto";
-import { lstat, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute as isAbsolute2, join, normalize as normalize2, relative, sep as sep2 } from "node:path";
+import { createHash as createHash2 } from "node:crypto";
+import { lstat, mkdir, readFile as readFile2, realpath, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute as isAbsolute2, join as join2, normalize as normalize2, relative, sep as sep2 } from "node:path";
 
 // packages/action/dist/branch-writer-support.js
-import { isAbsolute, normalize, sep } from "node:path";
+import { isAbsolute, join, normalize, sep } from "node:path";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 var ProposalBranchWriterError = class extends Error {
   code;
   constructor(code, message) {
@@ -192,6 +194,37 @@ function assertOwnedStagedPath(file) {
   }
   if (file.bytes < 0 || !/^[a-f0-9]{64}$/.test(file.sha256)) {
     throw new ProposalBranchWriterError("invalid_staged_manifest", "Proposal branch writing requires valid staged file byte counts and sha256 hashes.");
+  }
+}
+async function assertCommittedFilesMatchManifest(input, commitSha, runGit4, createError) {
+  const result = await runGit4(input.repositoryDir, [
+    "--literal-pathspecs",
+    "ls-tree",
+    "-r",
+    "-z",
+    "--full-tree",
+    commitSha,
+    "--",
+    ...input.manifest.files.map((file) => file.path)
+  ]);
+  if (result.exitCode !== 0)
+    throw createError();
+  const blobs = /* @__PURE__ */ new Map();
+  for (const entry of result.stdout.split("\0")) {
+    const match = /^(?:100644|100755) blob ([a-f0-9]{40}|[a-f0-9]{64})\t([\s\S]+)$/.exec(entry);
+    if (match !== null)
+      blobs.set(match[2], match[1]);
+  }
+  for (const file of input.manifest.files) {
+    const objectId = blobs.get(file.path);
+    if (objectId === void 0)
+      throw createError();
+    const content = await readFile(join(input.stagedOutputDir, file.path));
+    if (content.length !== file.bytes || createHash("sha256").update(content).digest("hex") !== file.sha256)
+      throw createError();
+    const expectedObjectId = createHash(objectId.length === 40 ? "sha1" : "sha256").update(`blob ${content.length}\0`).update(content).digest("hex");
+    if (objectId !== expectedObjectId)
+      throw createError();
   }
 }
 async function readChangedFiles(repositoryDir, range, runGit4, createError) {
@@ -278,8 +311,8 @@ async function writeProposalBranch(input) {
   const previousProposalSha = await assertExistingProposalBranchIsOwned(input.repositoryDir, baseCommitSha, branchName, input.manifest.files);
   if (previousProposalSha !== void 0) {
     for (const file of input.manifest.files) {
-      const content = await readFile(join(input.stagedOutputDir, file.path));
-      if (createHash("sha256").update(content).digest("hex") !== file.sha256) {
+      const content = await readFile2(join2(input.stagedOutputDir, file.path));
+      if (createHash2("sha256").update(content).digest("hex") !== file.sha256) {
         throw new ProposalBranchWriterError("staged_file_hash_mismatch", `Staged file hash does not match manifest for ${file.path}.`);
       }
       if (content.byteLength !== file.bytes) {
@@ -293,6 +326,7 @@ async function writeProposalBranch(input) {
         throw new ProposalBranchWriterError("existing_branch_content_changed", "Existing proposal differs from the generated output. Review or close that proposal before regenerating it; maintainer edits and approval were preserved.");
       }
     }
+    await assertCommittedFilesMatchManifest(input, previousProposalSha, runGit2, () => new ProposalBranchWriterError("committed_output_mismatch", "Existing proposal tree does not match the staged manifest."));
     if (await git2(input.repositoryDir, ["merge-base", baseCommitSha, previousProposalSha]) !== baseCommitSha) {
       throw new ProposalBranchWriterError("existing_branch_base_changed", "Existing proposal has a different base. Review or close that proposal before regenerating it.");
     }
@@ -331,6 +365,7 @@ async function writeProposalBranch(input) {
     proposalHeadSha = commitSha;
     const changedFiles = await changedFilesFromBase(input.repositoryDir, baseCommitSha, branchName);
     assertChangedFilesAreOwned(changedFiles, input.manifest.files);
+    await assertCommittedFilesMatchManifest(input, commitSha, runGit2, () => new ProposalBranchWriterError("committed_output_mismatch", "Committed proposal output differs from the staged manifest; no publishable result was returned."));
     writeSucceeded = true;
     return {
       branchName,
@@ -416,15 +451,15 @@ async function writeStagedFilesToRepository(input) {
   for (const file of input.manifest.files) {
     assertOwnedStagedPath(file);
     await assertSafeRepositoryOutputPath(input.repositoryDir, file.path);
-    const content = await readFile(join(input.stagedOutputDir, file.path));
-    const sha256 = createHash("sha256").update(content).digest("hex");
+    const content = await readFile2(join2(input.stagedOutputDir, file.path));
+    const sha256 = createHash2("sha256").update(content).digest("hex");
     if (sha256 !== file.sha256) {
       throw new ProposalBranchWriterError("staged_file_hash_mismatch", `Staged file hash does not match manifest for ${file.path}.`);
     }
     if (content.byteLength !== file.bytes) {
       throw new ProposalBranchWriterError("staged_file_size_mismatch", `Staged file byte count does not match manifest for ${file.path}.`);
     }
-    const destination = join(input.repositoryDir, file.path);
+    const destination = join2(input.repositoryDir, file.path);
     await mkdir(dirname(destination), { recursive: true });
     await writeFile(destination, content);
   }
@@ -433,7 +468,7 @@ async function assertSafeRepositoryOutputPath(repositoryDir, path) {
   const repositoryRoot = await realpath(repositoryDir);
   let currentPath = repositoryRoot;
   for (const segment of normalize2(path).split(sep2)) {
-    currentPath = join(currentPath, segment);
+    currentPath = join2(currentPath, segment);
     try {
       const stats = await lstat(currentPath);
       if (stats.isSymbolicLink() || stats.isFile() && stats.nlink > 1) {
@@ -579,6 +614,7 @@ async function createDirectCommit(input) {
     const commitSha = await git3(input.repositoryDir, ["rev-parse", "HEAD"]);
     const changedFiles = commitCreated ? await readChangedFiles(input.repositoryDir, `${baseCommitSha}..${commitSha}`, runGit3, () => new DirectCommitError("git_command_failed", "Git diff failed while verifying direct commit changes.")) : [];
     assertChangedFilesAreOwned(changedFiles, input.manifest.files, () => new DirectCommitError("unowned_commit_changes", "Created commit contains changes outside the staged output manifest. The local commit was preserved for inspection; no publish result was returned."));
+    await assertCommittedFilesMatchManifest(input, commitSha, runGit3, () => new DirectCommitError("committed_output_mismatch", "Committed output differs from the staged manifest. The local commit was preserved for inspection; no publishable result was returned."));
     return {
       targetBranch: input.targetBranch,
       baseCommitSha,
@@ -588,7 +624,7 @@ async function createDirectCommit(input) {
       rollbackHint: commitCreated ? `Revert commit ${commitSha} on ${input.targetBranch} to undo this recognition update.` : "No commit was created because the rendered recognition outputs were unchanged."
     };
   } catch (error) {
-    if (error instanceof DirectCommitError && error.code === "unowned_commit_changes")
+    if (error instanceof DirectCommitError && (error.code === "unowned_commit_changes" || error.code === "committed_output_mismatch"))
       throw error;
     await rollbackUnpublishedCommit(input, baseCommitSha);
     throw error;
@@ -2138,7 +2174,7 @@ function isPublicApprovalStatus(status) {
 }
 
 // packages/core/dist/draft-approval.js
-import { createHash as createHash2 } from "node:crypto";
+import { createHash as createHash3 } from "node:crypto";
 function checkExternalDraftApproval(assessment) {
   if (assessment.maintainerApprovalStatus === "auto_approved") {
     return "auto_approval_unconfigured";
@@ -2158,7 +2194,7 @@ function draftContentSha256(assessment) {
   const content = { ...assessment };
   delete content.maintainerApprovalStatus;
   delete content.approvalSnapshot;
-  return createHash2("sha256").update(JSON.stringify(sortJsonValue(content))).digest("hex");
+  return createHash3("sha256").update(JSON.stringify(sortJsonValue(content))).digest("hex");
 }
 function sortJsonValue(value) {
   if (Array.isArray(value)) {
@@ -3707,9 +3743,9 @@ function isRecord4(value) {
 }
 
 // packages/action/dist/json-input.js
-import { readFile as readFile2 } from "node:fs/promises";
+import { readFile as readFile3 } from "node:fs/promises";
 async function readActionJsonFile(path) {
-  const text = await readFile2(path, "utf8");
+  const text = await readFile3(path, "utf8");
   try {
     return JSON.parse(text.replace(/^\uFEFF/, ""));
   } catch (error) {
@@ -4584,13 +4620,13 @@ function sanitizeAssessmentForActionSummary(assessment) {
 }
 
 // packages/action/dist/staging.js
-import { createHash as createHash3 } from "node:crypto";
+import { createHash as createHash4 } from "node:crypto";
 import { lstat as lstat4, mkdir as mkdir3, writeFile as writeFile2 } from "node:fs/promises";
-import { dirname as dirname3, isAbsolute as isAbsolute4, join as join4, normalize as normalize3, sep as sep4 } from "node:path";
+import { dirname as dirname3, isAbsolute as isAbsolute4, join as join5, normalize as normalize3, sep as sep4 } from "node:path";
 
 // packages/action/dist/staging-directory.js
 import { lstat as lstat3, mkdir as mkdir2, mkdtemp, realpath as realpath3, rm } from "node:fs/promises";
-import { dirname as dirname2, join as join3, resolve as resolve2 } from "node:path";
+import { dirname as dirname2, join as join4, resolve as resolve2 } from "node:path";
 import { tmpdir } from "node:os";
 
 // packages/action/dist/errors.js
@@ -4603,7 +4639,7 @@ var ActionUsageError = class extends Error {
 
 // packages/action/dist/path-security.js
 import { lstat as lstat2, realpath as realpath2 } from "node:fs/promises";
-import { isAbsolute as isAbsolute3, join as join2, relative as relative2, resolve, sep as sep3 } from "node:path";
+import { isAbsolute as isAbsolute3, join as join3, relative as relative2, resolve, sep as sep3 } from "node:path";
 
 // packages/action/dist/environment.js
 function readEnvInput(value) {
@@ -4646,7 +4682,7 @@ async function resolveActionSummaryPath(env) {
     throw new ActionUsageError("INPUT_SUMMARY_PATH must point to a file inside GITHUB_WORKSPACE.");
   }
   for (const [index, segment] of segments.entries()) {
-    currentPath = join2(currentPath, segment);
+    currentPath = join3(currentPath, segment);
     try {
       const stats = await lstat2(currentPath);
       if (stats.isSymbolicLink() || stats.isFile() && stats.nlink > 1) {
@@ -4716,7 +4752,7 @@ async function withActionStaging(input, task) {
     throw new ActionUsageError("Staging parent must not overlap the checkout. Choose a separate temporary directory outside the repository.");
   }
   await mkdir2(parent, { recursive: true });
-  const stagingDir = await mkdtemp(join3(parent, "clarissimi-"));
+  const stagingDir = await mkdtemp(join4(parent, "clarissimi-"));
   let outcome;
   try {
     outcome = { ok: true, value: await task({ ...input, stagingDir }) };
@@ -4858,19 +4894,19 @@ async function writeRenderedOutputs(outputDir, outputs) {
 }
 async function writeStagedFile(outputDir, path, content) {
   await assertUnusedStagedDestination(outputDir, path);
-  const destination = join4(outputDir, path);
+  const destination = join5(outputDir, path);
   await mkdir3(dirname3(destination), { recursive: true });
   await writeFile2(destination, content, { encoding: "utf8", flag: "wx", mode: 384 });
   return [
     {
       path,
       bytes: Buffer.byteLength(content, "utf8"),
-      sha256: createHash3("sha256").update(content, "utf8").digest("hex")
+      sha256: createHash4("sha256").update(content, "utf8").digest("hex")
     }
   ];
 }
 async function assertUnusedStagedDestination(outputDir, path) {
-  const destination = join4(outputDir, path);
+  const destination = join5(outputDir, path);
   await assertSafeStagingDirectory(dirname3(destination));
   try {
     await lstat4(destination);
@@ -4908,8 +4944,8 @@ function assertClarissimiOutputPath(path) {
 }
 
 // packages/action/dist/run.js
-import { readFile as readFile3, realpath as realpath4 } from "node:fs/promises";
-import { isAbsolute as isAbsolute6, join as join6, resolve as resolve3 } from "node:path";
+import { readFile as readFile4, realpath as realpath4 } from "node:fs/promises";
+import { isAbsolute as isAbsolute6, join as join7, resolve as resolve3 } from "node:path";
 import { tmpdir as tmpdir2 } from "node:os";
 
 // packages/providers/dist/claim-evidence-ranges.js
@@ -6083,7 +6119,7 @@ function isRecord7(value) {
 }
 
 // packages/action/dist/config.js
-import { basename, isAbsolute as isAbsolute5, join as join5 } from "node:path";
+import { basename, isAbsolute as isAbsolute5, join as join6 } from "node:path";
 import { pathToFileURL } from "node:url";
 async function loadActionConfigFromEnvironment(env) {
   const configPath = readEnvInput(env.INPUT_CONFIG_PATH);
@@ -6091,7 +6127,7 @@ async function loadActionConfigFromEnvironment(env) {
     return {};
   }
   const workspace = readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd();
-  const resolvedPath = isAbsolute5(configPath) ? configPath : join5(workspace, configPath);
+  const resolvedPath = isAbsolute5(configPath) ? configPath : join6(workspace, configPath);
   const parsed = await loadActionConfigValue(configPath, resolvedPath);
   const result = validateClarissimiConfig(parsed);
   if (!result.ok) {
@@ -6602,9 +6638,9 @@ function validateSourceCommentInput(input) {
   }
 }
 async function readExistingRecognitionRecords(repositoryDir) {
-  const ledgerPath = join6(repositoryDir, CONTRIBUTIONS_JSONL_PATH);
+  const ledgerPath = join7(repositoryDir, CONTRIBUTIONS_JSONL_PATH);
   try {
-    return parseContributionsJsonl(await readFile3(ledgerPath, "utf8"));
+    return parseContributionsJsonl(await readFile4(ledgerPath, "utf8"));
   } catch (error) {
     if (isNodeError3(error) && error.code === "ENOENT") {
       return [];
@@ -6723,7 +6759,7 @@ function buildActionCommitInput(input, env, runtime) {
     ...input,
     mode: "commit",
     repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
-    stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join6(readEnvInput(env.RUNNER_TEMP) ?? tmpdir2(), "clarissimi-commit"),
+    stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join7(readEnvInput(env.RUNNER_TEMP) ?? tmpdir2(), "clarissimi-commit"),
     targetBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
     liveGitHubClient: runtime.liveGitHubClient ?? createGitHubApiClient(clientOptions)
   };
@@ -6759,7 +6795,7 @@ function buildActionWriteInput(input, env, runtime, mode) {
       ...input,
       mode,
       repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
-      stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join6(readEnvInput(env.RUNNER_TEMP) ?? tmpdir2(), "clarissimi-propose"),
+      stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join7(readEnvInput(env.RUNNER_TEMP) ?? tmpdir2(), "clarissimi-propose"),
       baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
       pullRequestClient,
       commentMode,
@@ -6776,7 +6812,7 @@ function buildActionWriteInput(input, env, runtime, mode) {
       draftPath: resolvePromoteDraftPath(env),
       allowLegacyApproval: parseLegacyApprovalInput(env.INPUT_ALLOW_LEGACY_APPROVAL),
       repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
-      stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join6(readEnvInput(env.RUNNER_TEMP) ?? tmpdir2(), "clarissimi-promote-draft"),
+      stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join7(readEnvInput(env.RUNNER_TEMP) ?? tmpdir2(), "clarissimi-promote-draft"),
       baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
       pullRequestClient,
       commentMode,
@@ -6793,7 +6829,7 @@ function buildActionWriteInput(input, env, runtime, mode) {
     ...input,
     mode,
     repositoryDir: readEnvInput(env.GITHUB_WORKSPACE) ?? process.cwd(),
-    stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join6(readEnvInput(env.RUNNER_TEMP) ?? tmpdir2(), "clarissimi-stage-draft"),
+    stagingDir: readEnvInput(env.INPUT_STAGING_DIR) ?? join7(readEnvInput(env.RUNNER_TEMP) ?? tmpdir2(), "clarissimi-stage-draft"),
     baseBranch: readEnvInput(env.INPUT_BASE_BRANCH) ?? "main",
     pullRequestClient,
     commentMode,
@@ -6838,7 +6874,7 @@ async function readApprovedDraft(path, repositoryDir, allowLegacyApproval) {
   try {
     [realDraftPath, realDraftsRoot, realRepositoryDir] = await Promise.all([
       realpath4(path),
-      realpath4(join6(repositoryDir, ".clarissimi", "drafts")),
+      realpath4(join7(repositoryDir, ".clarissimi", "drafts")),
       realpath4(repositoryDir)
     ]);
   } catch {

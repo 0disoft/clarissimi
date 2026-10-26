@@ -7,6 +7,7 @@ import type { ProposalOutputStagingManifest, ProposalStagedFile } from "./stagin
 import {
   ProposalBranchWriterError,
   assertChangedFilesAreOwned,
+  assertCommittedFilesMatchManifest,
   assertOwnedStagedPath,
   readChangedFiles,
   restoreOwnedPaths,
@@ -97,6 +98,16 @@ export async function writeProposalBranch(
         );
       }
     }
+    await assertCommittedFilesMatchManifest(
+      input,
+      previousProposalSha,
+      runGit,
+      () =>
+        new ProposalBranchWriterError(
+          "committed_output_mismatch",
+          "Existing proposal tree does not match the staged manifest.",
+        ),
+    );
     if (
       (await git(input.repositoryDir, ["merge-base", baseCommitSha, previousProposalSha])) !==
       baseCommitSha
@@ -148,6 +159,16 @@ export async function writeProposalBranch(
     proposalHeadSha = commitSha;
     const changedFiles = await changedFilesFromBase(input.repositoryDir, baseCommitSha, branchName);
     assertChangedFilesAreOwned(changedFiles, input.manifest.files);
+    await assertCommittedFilesMatchManifest(
+      input,
+      commitSha,
+      runGit,
+      () =>
+        new ProposalBranchWriterError(
+          "committed_output_mismatch",
+          "Committed proposal output differs from the staged manifest; no publishable result was returned.",
+        ),
+    );
     writeSucceeded = true;
 
     return {

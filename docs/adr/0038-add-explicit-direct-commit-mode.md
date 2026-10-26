@@ -37,6 +37,16 @@ Add GitHub Action `mode: commit` as an explicit non-default write mode.
   before returning a publishable result; its local commit and checkout are preserved for inspection.
 - Push uses normal fast-forward Git semantics and never force-pushes. A concurrent branch update or
   branch protection rejection fails the run.
+- Before returning a publishable result, the committed tree must contain every manifest output
+  as a regular-file blob with exactly the staged bytes. One literal-path, NUL-delimited `ls-tree`
+  request obtains all output blob IDs. Staged files are rechecked against manifest byte counts and
+  SHA-256 digests; their Git blob IDs are computed with the repository's SHA-1 or SHA-256 object
+  format and compared to the actual commit. This detects equal-length content edits, missing
+  outputs, and symlink substitutions without decoding or reading committed blob bodies.
+- A post-hook mismatch fails with `committed_output_mismatch` and leaves the local commit for
+  inspection, with no publishable result. Hooks and Git clean filters must preserve the staged
+  bytes. The additional verification costs one Git subprocess and one staged read per output,
+  with no external request. The same verifier is used by proposal creation and reuse.
 - An unchanged deterministic rebuild creates and pushes no commit.
 - Failed local writes restore only validated manifest paths in the index and worktree, using the
   same literal-path rollback helper as proposal mode. Newly created manifest files are removed;
@@ -47,8 +57,9 @@ Add GitHub Action `mode: commit` as an explicit non-default write mode.
   or a failure after creating the recognition commit), recovery reports `rollback_failed` and leaves
   the checkout intact for inspection rather than rewinding an unknown commit. Concurrent edits to
   manifest-owned files and externally switched checkouts are not covered by a transaction lock.
-  A rejected unowned commit retains its specific `unowned_commit_changes` diagnostic instead of
-  entering recovery and hiding the ownership violation behind a second HEAD-change error.
+  A rejected unowned or content-mismatched commit retains its specific `unowned_commit_changes`
+  or `committed_output_mismatch` diagnostic instead of entering recovery and hiding the violation
+  behind a second HEAD-change error.
 - `commit` requires `contents: write`; it does not require pull-request write permission.
 - `commit` must not run on untrusted pull request head code or use `pull_request_target` as its
   default event path.

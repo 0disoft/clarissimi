@@ -60,6 +60,50 @@ async function withTempDir(callback) {
   }
 }
 
+for (const [name, command] of [
+  [
+    "same-size approval rewrite",
+    `node -e 'const fs=require("node:fs"),p=".clarissimi/contributions.jsonl";fs.writeFileSync(p,fs.readFileSync(p,"utf8").replaceAll("approved","rejected"))'`,
+  ],
+  [
+    "appended invalid record",
+    "printf '\\n{\"unexpected\":true}\\n' >> .clarissimi/contributions.jsonl",
+  ],
+]) {
+  test(`rejects a proposal's committed output with ${name}`, async () => {
+    await withTempDir(async (dir) => {
+      const repositoryDir = join(dir, "repo"),
+        stagedOutputDir = join(dir, "staged");
+      await initRepository(repositoryDir);
+      const base = await git(repositoryDir, ["rev-parse", "main"]);
+      const staging = await stageProposalRecognitionOutputs({
+        outputDir: stagedOutputDir,
+        assessments: [assessment()],
+        redactionMatchCount: 0,
+      });
+      await writeFile(
+        join(repositoryDir, ".git", "hooks", "pre-commit"),
+        `#!/bin/sh\n${command}\ngit add -- .clarissimi/contributions.jsonl\n`,
+        { mode: 0o755 },
+      );
+      await assert.rejects(
+        () =>
+          writeProposalBranch({
+            repositoryDir,
+            stagedOutputDir,
+            manifest: staging.manifest,
+            baseBranch: "main",
+          }),
+        (error) =>
+          error instanceof ProposalBranchWriterError && error.code === "committed_output_mismatch",
+      );
+      assert.equal(await git(repositoryDir, ["rev-parse", "main"]), base);
+      assert.equal(await git(repositoryDir, ["branch", "--show-current"]), "main");
+      assert.equal(await git(repositoryDir, ["status", "--short"]), "");
+    });
+  });
+}
+
 test("writes staged outputs to a deterministic proposal branch without mutating main", async () => {
   await withTempDir(async (dir) => {
     const repositoryDir = join(dir, "repo");

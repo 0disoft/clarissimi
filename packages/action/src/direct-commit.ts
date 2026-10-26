@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { writeStagedFilesToRepository, type ProposalBranchWriterInput } from "./branch-writer.js";
 import {
   assertChangedFilesAreOwned,
+  assertCommittedFilesMatchManifest,
   assertOwnedStagedPath,
   readChangedFiles,
   restoreOwnedPaths,
@@ -115,6 +116,16 @@ export async function createDirectCommit(input: DirectCommitInput): Promise<Dire
         ),
     );
 
+    await assertCommittedFilesMatchManifest(
+      input,
+      commitSha,
+      runGit,
+      () =>
+        new DirectCommitError(
+          "committed_output_mismatch",
+          "Committed output differs from the staged manifest. The local commit was preserved for inspection; no publishable result was returned.",
+        ),
+    );
     return {
       targetBranch: input.targetBranch,
       baseCommitSha,
@@ -128,7 +139,11 @@ export async function createDirectCommit(input: DirectCommitInput): Promise<Dire
   } catch (error) {
     // The rejected commit already exists; preserve it instead of masking the
     // ownership failure with a second error from the HEAD-change rollback guard.
-    if (error instanceof DirectCommitError && error.code === "unowned_commit_changes") throw error;
+    if (
+      error instanceof DirectCommitError &&
+      (error.code === "unowned_commit_changes" || error.code === "committed_output_mismatch")
+    )
+      throw error;
     await rollbackUnpublishedCommit(input, baseCommitSha);
     throw error;
   }

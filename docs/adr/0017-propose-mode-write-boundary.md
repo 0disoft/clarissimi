@@ -45,6 +45,14 @@ The first `propose` implementation must:
 - fail closed before branch or pull request mutation when config, redaction, provider output,
   schema validation, policy evaluation, or renderer rebuild fails
 
+After commit hooks run, proposal creation verifies every committed output blob against the
+staging manifest using the shared verifier documented in ADR 0038. Reusing an existing proposal
+also checks its committed tree. A missing, non-regular, or content-mismatched output fails with
+`committed_output_mismatch` before returning a result to the publisher. Equal byte counts alone
+are insufficient: approved content must retain its SHA-256 identity. Failed proposal creation
+keeps the rejected branch commit for inspection and restores the original checkout through the
+existing owned-path recovery boundary; it never publishes the rejected branch.
+
 `propose` mode must not:
 
 - commit to the default branch

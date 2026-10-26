@@ -1,4 +1,6 @@
-import { isAbsolute, normalize, sep } from "node:path";
+import { isAbsolute, join, normalize, sep } from "node:path";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import type { ProposalStagedFile } from "./staging.js";
 
 type GitRunner = (
@@ -37,6 +39,49 @@ export function assertOwnedStagedPath(file: ProposalStagedFile): void {
       "invalid_staged_manifest",
       "Proposal branch writing requires valid staged file byte counts and sha256 hashes.",
     );
+  }
+}
+
+export async function assertCommittedFilesMatchManifest(
+  input: {
+    readonly repositoryDir: string;
+    readonly stagedOutputDir: string;
+    readonly manifest: { readonly files: readonly ProposalStagedFile[] };
+  },
+  commitSha: string,
+  runGit: GitRunner,
+  createError: () => Error,
+): Promise<void> {
+  const result = await runGit(input.repositoryDir, [
+    "--literal-pathspecs",
+    "ls-tree",
+    "-r",
+    "-z",
+    "--full-tree",
+    commitSha,
+    "--",
+    ...input.manifest.files.map((file) => file.path),
+  ]);
+  if (result.exitCode !== 0) throw createError();
+  const blobs = new Map<string, string>();
+  for (const entry of result.stdout.split("\0")) {
+    const match = /^(?:100644|100755) blob ([a-f0-9]{40}|[a-f0-9]{64})\t([\s\S]+)$/.exec(entry);
+    if (match !== null) blobs.set(match[2]!, match[1]!);
+  }
+  for (const file of input.manifest.files) {
+    const objectId = blobs.get(file.path);
+    if (objectId === undefined) throw createError();
+    const content = await readFile(join(input.stagedOutputDir, file.path));
+    if (
+      content.length !== file.bytes ||
+      createHash("sha256").update(content).digest("hex") !== file.sha256
+    )
+      throw createError();
+    const expectedObjectId = createHash(objectId.length === 40 ? "sha1" : "sha256")
+      .update(`blob ${content.length}\0`)
+      .update(content)
+      .digest("hex");
+    if (objectId !== expectedObjectId) throw createError();
   }
 }
 

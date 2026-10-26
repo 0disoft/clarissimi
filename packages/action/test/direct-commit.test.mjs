@@ -49,15 +49,15 @@ function assessment() {
   };
 }
 
-async function withRepository(callback) {
+async function withRepository(callback, objectFormat = "sha1") {
   const dir = await mkdtemp(join(tmpdir(), "clarissimi-direct-commit-"));
   const repositoryDir = join(dir, "repo");
   const remoteDir = join(dir, "remote.git");
   const stagedOutputDir = join(dir, "staged");
   try {
-    await git(dir, ["init", "--bare", remoteDir]);
+    await git(dir, ["init", "--bare", `--object-format=${objectFormat}`, remoteDir]);
     await mkdir(repositoryDir);
-    await git(repositoryDir, ["init", "-b", "main"]);
+    await git(repositoryDir, ["init", "-b", "main", `--object-format=${objectFormat}`]);
     await git(repositoryDir, ["config", "user.name", "Clarissimi Tests"]);
     await git(repositoryDir, ["config", "user.email", "clarissimi-tests.invalid"]);
     await writeFile(join(repositoryDir, "README.md"), "# Fixture Repository\n", "utf8");
@@ -104,6 +104,21 @@ test("creates and publishes an explicit direct commit to the target branch", asy
     assert.equal(await git(remoteDir, ["rev-parse", "refs/heads/main"]), commit.commitSha);
     assert.match(await readFile(join(repositoryDir, "CONTRIBUTORS.md"), "utf8"), /octocat/);
   });
+});
+
+test("verifies and publishes exact output in SHA-256 Git repositories", async () => {
+  await withRepository(async ({ repositoryDir, remoteDir, stagedOutputDir }) => {
+    const staging = await stageRecognition(stagedOutputDir);
+    const commit = await createDirectCommit({
+      repositoryDir,
+      stagedOutputDir,
+      manifest: staging.manifest,
+      targetBranch: "main",
+    });
+    assert.equal(commit.commitSha.length, 64);
+    await publishDirectCommit({ repositoryDir, commit });
+    assert.equal(await git(remoteDir, ["rev-parse", "refs/heads/main"]), commit.commitSha);
+  }, "sha256");
 });
 
 test("rejects a dirty worktree before writing recognition outputs", async () => {
@@ -337,6 +352,58 @@ for (const [name, hook] of [
       );
       assert.ok(failure instanceof DirectCommitError);
       assert.equal(failure.code, "unowned_commit_changes");
+      assert.notEqual(await git(repositoryDir, ["rev-parse", "HEAD"]), base);
+      assert.equal(await git(repositoryDir, ["status", "--short"]), "");
+    });
+  });
+}
+
+for (const [name, command] of [
+  [
+    "same-size approval rewrite",
+    `node -e 'const fs=require("node:fs"),p=".clarissimi/contributions.jsonl";fs.writeFileSync(p,fs.readFileSync(p,"utf8").replaceAll("approved","rejected"))'`,
+  ],
+  [
+    "appended invalid record",
+    "printf '\\n{\"unexpected\":true}\\n' >> .clarissimi/contributions.jsonl",
+  ],
+]) {
+  test(`blocks publishing committed output with ${name}`, async () => {
+    await withRepository(async ({ repositoryDir, remoteDir, stagedOutputDir }) => {
+      const staging = await stageRecognition(stagedOutputDir);
+      const base = await git(remoteDir, ["rev-parse", "refs/heads/main"]);
+      await writeFile(
+        join(repositoryDir, ".git", "hooks", "pre-commit"),
+        `#!/bin/sh\n${command}\ngit add -- .clarissimi/contributions.jsonl\n`,
+        { mode: 0o755 },
+      );
+      let failure;
+      try {
+        const commit = await createDirectCommit({
+          repositoryDir,
+          stagedOutputDir,
+          manifest: staging.manifest,
+          targetBranch: "main",
+        });
+        await publishDirectCommit({ repositoryDir, commit });
+      } catch (error) {
+        failure = error;
+      }
+      assert.equal(await git(remoteDir, ["rev-parse", "refs/heads/main"]), base);
+      assert.ok(failure instanceof DirectCommitError);
+      assert.equal(failure.code, "committed_output_mismatch");
+      const actual = await readFile(
+        join(repositoryDir, ".clarissimi", "contributions.jsonl"),
+        "utf8",
+      );
+      if (name === "same-size approval rewrite") {
+        assert.ok(actual.includes('"maintainerApprovalStatus":"rejected"'));
+        assert.equal(
+          Buffer.byteLength(actual),
+          staging.manifest.files.find((file) => file.path === ".clarissimi/contributions.jsonl")
+            .bytes,
+        );
+      } else assert.ok(actual.includes('"unexpected":true'));
       assert.notEqual(await git(repositoryDir, ["rev-parse", "HEAD"]), base);
       assert.equal(await git(repositoryDir, ["status", "--short"]), "");
     });

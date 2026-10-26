@@ -1073,7 +1073,13 @@ var SENSITIVE_KEYS = [
 var SENSITIVE_KEY_SOURCE = SENSITIVE_KEYS.map((key) => key.replaceAll("_", "[_-]?")).join("|");
 var SENSITIVE_JSON_KEY = new RegExp(`^(?:${SENSITIVE_KEY_SOURCE})$`, "i");
 var PRIVATE_KEY_LABEL_SOURCE = "(?:(?:RSA |OPENSSH |EC |DSA |ENCRYPTED |PGP )?PRIVATE KEY|PGP PRIVATE KEY BLOCK)";
+var AUTHORIZATION_SCHEME_SOURCE = "(?:Basic|Bearer|Negotiate)[ \\t]+";
 var REDACTION_RULES = [
+  {
+    kind: "generic_secret_assignment",
+    // Consume the scheme and credential before generic rules can mask only the scheme.
+    pattern: new RegExp(String.raw`["']?\b(?:proxy-)?authorization["']?[ \t]*[:=][ \t]*` + `(?:"${AUTHORIZATION_SCHEME_SOURCE}[^"\\s][^"\\r\\n]*"|'${AUTHORIZATION_SCHEME_SOURCE}[^'\\s][^'\\r\\n]*'|["']?${AUTHORIZATION_SCHEME_SOURCE}` + /[^"'`\s]+/.source + String.raw`)["']?`, "gi")
+  },
   {
     kind: "github_token",
     pattern: /\b(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{16,}\b/g

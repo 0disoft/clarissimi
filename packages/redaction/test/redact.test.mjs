@@ -78,6 +78,102 @@ test("email-like near misses cannot block redaction past the child-process deadl
   assert.equal(result.status, 0, result.stderr);
 });
 
+test("authorization schemes and credentials are masked together across 96 text forms", () => {
+  const marker = "non-credential-marker";
+  const forms = [
+    (key, separator, value) => `${key}${separator} ${value}`,
+    (key, separator, value) => `"${key}"${separator} ${value}`,
+    (key, separator, value) => `${key}${separator} "${value}"`,
+    (key, separator, value) => `'${key}${separator} ${value}'`,
+  ];
+  let cases = 0;
+  for (const scheme of ["Basic", "Bearer", "Negotiate"]) {
+    for (const key of ["Authorization", "authorization", "AUTHORIZATION", "Proxy-Authorization"]) {
+      for (const separator of [":", "="]) {
+        for (const form of forms) {
+          const assignment = form(key, separator, `${scheme} ${marker}`);
+          const result = redactText(`before ${assignment} after`);
+          assert.deepEqual(
+            result,
+            {
+              text: `before ${REDACTION_PLACEHOLDER} after`,
+              report: {
+                changed: true,
+                occurrences: [
+                  {
+                    kind: "generic_secret_assignment",
+                    replacement: REDACTION_PLACEHOLDER,
+                    start: 7,
+                    end: 7 + assignment.length,
+                  },
+                ],
+              },
+            },
+            assignment,
+          );
+          cases += 1;
+        }
+      }
+    }
+  }
+  assert.equal(cases, 96);
+});
+
+test("authorization masking preserves full quoted values and masks short or truncated credentials", () => {
+  for (const scheme of ["Basic", "Bearer", "Negotiate"]) {
+    for (const quote of ['"', "'"]) {
+      assert.equal(
+        redactText(
+          `{${quote}authorization${quote}:${quote}${scheme} non-credential-marker extra text${quote}}`,
+        ).text,
+        `{${REDACTION_PLACEHOLDER}}`,
+      );
+      assert.equal(
+        redactText(`Authorization: ${quote}${scheme} non-credential-marker`).text,
+        REDACTION_PLACEHOLDER,
+      );
+    }
+    assert.equal(redactText(`Authorization: ${scheme} x`).text, REDACTION_PLACEHOLDER);
+  }
+});
+
+test("authorization masking does not consume unrelated fields, prose, or following lines", () => {
+  for (const input of [
+    "authorizationHint: Bearer non-credential-marker",
+    "preauthorization: Basic non-credential-marker",
+    "Basic and Bearer describe authentication schemes.",
+    "Authorization: Bearer ",
+    "Authorization:\nBearer describes a scheme.",
+  ]) {
+    assert.equal(redactText(input).text, input);
+  }
+  assert.equal(
+    redactText("Authorization: Bearer non-credential-marker\nKeep this evidence.").text,
+    `${REDACTION_PLACEHOLDER}\nKeep this evidence.`,
+  );
+});
+
+test("unterminated authorization values cannot cause quadratic whitespace backtracking", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "--eval",
+      `
+    import assert from "node:assert/strict";
+    import { redactText } from ${JSON.stringify(new URL("../dist/index.js", import.meta.url).href)};
+    for (const scheme of ["Basic", "Bearer", "Negotiate"]) {
+      const input = 'Authorization: "' + scheme + " ".repeat(131072);
+      assert.equal(redactText(input).text.includes(" ".repeat(131000)), true);
+    }
+  `,
+    ],
+    { encoding: "utf8", timeout: 5000 },
+  );
+  assert.equal(result.error, undefined, result.error?.message);
+  assert.equal(result.status, 0, result.stderr);
+});
+
 test("redacts environment-style secret assignments", () => {
   const keyName = ["OPENAI", "API", "KEY"].join("_");
   const result = redactText(`${keyName}=sample-value-for-tests`);

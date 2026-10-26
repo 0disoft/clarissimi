@@ -54,6 +54,17 @@ Compound names accept underscore, hyphen, and joined case-insensitive spellings,
 to the entire trimmed key; longer unrelated names remain unchanged. Text value-length thresholds,
 rule order, and report kinds remain unchanged. Patterns are compiled once at module initialization.
 
+Same-line `Authorization` and `Proxy-Authorization` text assignments receive a scheme-aware rule
+for Basic, Bearer, and Negotiate before token and generic assignment rules run. The rule masks the
+scheme together with its credential instead of treating the scheme as the entire value. Quoted
+values are consumed in full; unquoted credentials end at whitespace or a quote, and truncated
+quoted credentials are still masked. Even short credentials are covered in this explicit context;
+the general eight-character threshold remains unchanged. The existing `generic_secret_assignment`
+report kind is reused. Matching stays on one line and excludes longer unrelated field names.
+Quoted parsing requires a non-whitespace first value character so unterminated whitespace-only
+values cannot trigger overlapping-quantifier backtracking. This is pattern-based masking for the
+named schemes, not credential validation or support for every HTTP authentication scheme.
+
 The package must not own:
 
 - provider API calls

@@ -1,5 +1,32 @@
 # Validation
 
+## 2026-10-27 Complete authorization credential masking
+
+The generic assignment matcher treated the first whitespace-delimited word as the entire value.
+Consequently, plain Basic/Bearer headers were not masked (their scheme names are under eight
+characters), while Negotiate lost only its scheme and retained its credential. All three reproduced
+forms retained a non-credential marker in prepared provider evidence. A same-line scheme-aware
+Authorization/Proxy-Authorization rule now runs before generic/token rules and masks the credential
+with its scheme. ADR 0010 records this boundary; general value thresholds and report kinds remain
+unchanged.
+
+Comparing original HEAD redaction with the new code on the same 96 inputs (three schemes, four
+header spellings, two assignment separators, four quote forms) reduced retained markers from
+72/96 to 0/96. Six added regressions cover those forms and exact occurrence offsets, short and
+truncated values, quoted-value preservation, unrelated fields and following lines, a child-process
+deadline for 131,072-space unterminated values, core preparation/repository-visible rejection,
+and the actual request body captured by an injected provider. All 193 redaction/core/provider
+tests passed. Tests use only an explicit non-credential marker and make no external model calls.
+
+No public API/schema, DB, dependency, or CI runner changes are introduced. The generated Action
+runtime is refreshed to include the shared redaction rule. Hosted CI, live models, publishing,
+and deployment are outside this local security change.
+
+- `pnpm run check`: 1,063 tests, 1,059 passed, four POSIX permission tests skipped on Windows,
+  zero failures.
+- Lint, formatting, CLI smoke, documentation validation, and release-readiness static gates: passed.
+- Action bundle regenerated and its freshness check passed.
+
 ## 2026-10-27 Indexed claim-to-evidence range lookup
 
 Provider validation previously visited every field link for each claim-rule match and filtered

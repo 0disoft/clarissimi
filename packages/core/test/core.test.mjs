@@ -284,6 +284,37 @@ test("prepares provider evidence by redacting all text-bearing fields", () => {
   assert.equal(prepared.evidenceRefs[0].excerpt, REDACTION_PLACEHOLDER);
 });
 
+test("authorization credentials cannot escape through provider fields or repository-visible prose", () => {
+  const marker = "non-credential-marker";
+  for (const scheme of ["Basic", "Bearer", "Negotiate"]) {
+    const header = `Authorization: ${scheme} ${marker}`;
+    const prepared = prepareEvidenceForProvider({
+      source,
+      items: [
+        {
+          kind: "file",
+          id: "src/request.ts",
+          title: header,
+          text: header,
+          metadata: { note: header },
+          ...prepareEvidenceExcerpt(header, 20),
+        },
+      ],
+    });
+    const item = prepared.items[0];
+    assert.equal(item.title, REDACTION_PLACEHOLDER);
+    assert.equal(item.text, REDACTION_PLACEHOLDER);
+    assert.equal(item.excerpt, REDACTION_PLACEHOLDER);
+    assert.deepEqual(item.metadata, { note: REDACTION_PLACEHOLDER });
+    assert.equal(JSON.stringify(prepared).includes(marker), false);
+    assert.ok(
+      findUnsafeRepositoryAssessmentFields({ ...validAssessment(), evidenceSummary: header }).some(
+        (issue) => issue.code === "unsafe_repository_text",
+      ),
+    );
+  }
+});
+
 test("quoted JSON credentials cannot escape through evidence text or references", () => {
   const marker = "synthetic-quoted-json-value";
   const prepared = prepareEvidenceForProvider({

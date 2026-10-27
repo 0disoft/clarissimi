@@ -26,6 +26,16 @@ When `summary-path` is set:
 - the Action writes the same sanitized JSON summary that it prints to stdout
 - the Action emits `summary-json-path` with the resolved artifact path
 
+All `GITHUB_OUTPUT` fields share one serializer that keeps names separate from values.
+Single-line values retain `name=value` formatting. Values containing CR or LF use GitHub's
+multiline output syntax with a newly generated UUID delimiter checked against the entire value;
+a collision generates another delimiter before writing. Native newline framing preserves value
+content, including trailing carriage returns, on Windows and POSIX runners. Output values cannot
+create extra commands or replace other output keys. This applies to the artifact path, API
+metadata, and every mode's summary fields, and still uses one append operation per summary.
+
+The format follows the [GitHub workflow commands reference](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands#setting-an-output-parameter).
+
 The summary artifact must not include raw pull request bodies, raw patch excerpts, raw diffs,
 provider raw output, tokens, secrets, or unredacted private data.
 

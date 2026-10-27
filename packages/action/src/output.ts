@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { appendFile, mkdir, writeFile } from "node:fs/promises";
+import { EOL } from "node:os";
 import { OpenAiCompatibleProviderError } from "@clarissimi/providers";
 import { dirname } from "node:path";
 
@@ -19,17 +21,17 @@ export async function writeGitHubOutputs(
     return;
   }
 
-  const lines = [
-    `draft-count=${summary.draftCount}`,
-    `proposed-entry-count=${summary.proposedEntryCount}`,
-    `skipped-entry-count=${summary.skippedEntryCount}`,
-    `mode=${summary.mode}`,
-    `input-source=${summary.inputSource}`,
-    `approval-status=${summary.approvalStatus ?? ""}`,
-    `redaction-match-count=${summary.redactionMatchCount}`,
-  ];
+  const outputs: Record<string, string | number | boolean> = {
+    "draft-count": summary.draftCount,
+    "proposed-entry-count": summary.proposedEntryCount,
+    "skipped-entry-count": summary.skippedEntryCount,
+    mode: summary.mode,
+    "input-source": summary.inputSource,
+    "approval-status": summary.approvalStatus ?? "",
+    "redaction-match-count": summary.redactionMatchCount,
+  };
   if (summaryJsonPath !== undefined) {
-    lines.push(`summary-json-path=${summaryJsonPath}`);
+    outputs["summary-json-path"] = summaryJsonPath;
   }
 
   if (
@@ -37,39 +39,56 @@ export async function writeGitHubOutputs(
     summary.mode === "stage-draft" ||
     summary.mode === "promote-draft"
   ) {
-    lines.push(
-      `staged-file-count=${summary.stagedFileCount}`,
-      `proposal-branch=${summary.proposalBranch}`,
-      `proposal-commit-sha=${summary.proposalCommitSha}`,
-      `proposal-pull-request-number=${summary.proposalPullRequestNumber}`,
-      `proposal-pull-request-url=${summary.proposalPullRequestUrl}`,
-      `proposal-pull-request-action=${summary.proposalPullRequestAction}`,
-      `source-comment-action=${summary.sourceCommentAction ?? ""}`,
-      `source-comment-url=${summary.sourceCommentUrl ?? ""}`,
-    );
+    Object.assign(outputs, {
+      "staged-file-count": summary.stagedFileCount,
+      "proposal-branch": summary.proposalBranch,
+      "proposal-commit-sha": summary.proposalCommitSha,
+      "proposal-pull-request-number": summary.proposalPullRequestNumber,
+      "proposal-pull-request-url": summary.proposalPullRequestUrl,
+      "proposal-pull-request-action": summary.proposalPullRequestAction,
+      "source-comment-action": summary.sourceCommentAction ?? "",
+      "source-comment-url": summary.sourceCommentUrl ?? "",
+    });
   }
 
   if (summary.mode === "commit") {
-    lines.push(
-      `staged-file-count=${summary.stagedFileCount}`,
-      `direct-commit-branch=${summary.directCommitBranch}`,
-      `direct-commit-base-sha=${summary.directCommitBaseSha}`,
-      `direct-commit-sha=${summary.directCommitSha}`,
-      `direct-commit-created=${summary.directCommitCreated}`,
-      `direct-commit-pushed=${summary.directCommitPushed}`,
-    );
+    Object.assign(outputs, {
+      "staged-file-count": summary.stagedFileCount,
+      "direct-commit-branch": summary.directCommitBranch,
+      "direct-commit-base-sha": summary.directCommitBaseSha,
+      "direct-commit-sha": summary.directCommitSha,
+      "direct-commit-created": summary.directCommitCreated,
+      "direct-commit-pushed": summary.directCommitPushed,
+    });
   }
 
   if (summary.mode === "gate") {
-    lines.push(
-      `gate-mode=${summary.gateMode}`,
-      `gate-passed=${summary.gatePassed}`,
-      `gate-decision=${summary.gateDecision ?? ""}`,
-      `gate-reason=${summary.gateReason}`,
-    );
+    Object.assign(outputs, {
+      "gate-mode": summary.gateMode,
+      "gate-passed": summary.gatePassed,
+      "gate-decision": summary.gateDecision ?? "",
+      "gate-reason": summary.gateReason,
+    });
   }
 
+  const lines = Object.entries(outputs).map(([name, value]) =>
+    encodeGitHubOutput(name, String(value)),
+  );
   await appendFile(outputPath, `${lines.join("\n")}\n`, "utf8");
+}
+
+function encodeGitHubOutput(name: string, value: string): string {
+  if (!/[\r\n]/.test(value)) {
+    return `${name}=${value}`;
+  }
+
+  // Never let a value terminate its own multiline command, even on UUID collision.
+  let delimiter: string;
+  do {
+    delimiter = `clarissimi_${randomUUID()}`;
+  } while (value.includes(delimiter));
+
+  return `${name}<<${delimiter}${EOL}${value}${EOL}${delimiter}`;
 }
 
 export async function writeActionSummaryJson(

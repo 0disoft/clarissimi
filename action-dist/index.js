@@ -6274,35 +6274,69 @@ function assignOptional5(target, key, value) {
 }
 
 // packages/action/dist/output.js
+import { randomUUID } from "node:crypto";
 import { appendFile, mkdir as mkdir4, writeFile as writeFile3 } from "node:fs/promises";
+import { EOL } from "node:os";
 import { dirname as dirname4 } from "node:path";
 async function writeGitHubOutputs(outputPath, summary, summaryJsonPath) {
   if (outputPath === void 0 || outputPath.trim().length === 0) {
     return;
   }
-  const lines = [
-    `draft-count=${summary.draftCount}`,
-    `proposed-entry-count=${summary.proposedEntryCount}`,
-    `skipped-entry-count=${summary.skippedEntryCount}`,
-    `mode=${summary.mode}`,
-    `input-source=${summary.inputSource}`,
-    `approval-status=${summary.approvalStatus ?? ""}`,
-    `redaction-match-count=${summary.redactionMatchCount}`
-  ];
+  const outputs = {
+    "draft-count": summary.draftCount,
+    "proposed-entry-count": summary.proposedEntryCount,
+    "skipped-entry-count": summary.skippedEntryCount,
+    mode: summary.mode,
+    "input-source": summary.inputSource,
+    "approval-status": summary.approvalStatus ?? "",
+    "redaction-match-count": summary.redactionMatchCount
+  };
   if (summaryJsonPath !== void 0) {
-    lines.push(`summary-json-path=${summaryJsonPath}`);
+    outputs["summary-json-path"] = summaryJsonPath;
   }
   if (summary.mode === "propose" || summary.mode === "stage-draft" || summary.mode === "promote-draft") {
-    lines.push(`staged-file-count=${summary.stagedFileCount}`, `proposal-branch=${summary.proposalBranch}`, `proposal-commit-sha=${summary.proposalCommitSha}`, `proposal-pull-request-number=${summary.proposalPullRequestNumber}`, `proposal-pull-request-url=${summary.proposalPullRequestUrl}`, `proposal-pull-request-action=${summary.proposalPullRequestAction}`, `source-comment-action=${summary.sourceCommentAction ?? ""}`, `source-comment-url=${summary.sourceCommentUrl ?? ""}`);
+    Object.assign(outputs, {
+      "staged-file-count": summary.stagedFileCount,
+      "proposal-branch": summary.proposalBranch,
+      "proposal-commit-sha": summary.proposalCommitSha,
+      "proposal-pull-request-number": summary.proposalPullRequestNumber,
+      "proposal-pull-request-url": summary.proposalPullRequestUrl,
+      "proposal-pull-request-action": summary.proposalPullRequestAction,
+      "source-comment-action": summary.sourceCommentAction ?? "",
+      "source-comment-url": summary.sourceCommentUrl ?? ""
+    });
   }
   if (summary.mode === "commit") {
-    lines.push(`staged-file-count=${summary.stagedFileCount}`, `direct-commit-branch=${summary.directCommitBranch}`, `direct-commit-base-sha=${summary.directCommitBaseSha}`, `direct-commit-sha=${summary.directCommitSha}`, `direct-commit-created=${summary.directCommitCreated}`, `direct-commit-pushed=${summary.directCommitPushed}`);
+    Object.assign(outputs, {
+      "staged-file-count": summary.stagedFileCount,
+      "direct-commit-branch": summary.directCommitBranch,
+      "direct-commit-base-sha": summary.directCommitBaseSha,
+      "direct-commit-sha": summary.directCommitSha,
+      "direct-commit-created": summary.directCommitCreated,
+      "direct-commit-pushed": summary.directCommitPushed
+    });
   }
   if (summary.mode === "gate") {
-    lines.push(`gate-mode=${summary.gateMode}`, `gate-passed=${summary.gatePassed}`, `gate-decision=${summary.gateDecision ?? ""}`, `gate-reason=${summary.gateReason}`);
+    Object.assign(outputs, {
+      "gate-mode": summary.gateMode,
+      "gate-passed": summary.gatePassed,
+      "gate-decision": summary.gateDecision ?? "",
+      "gate-reason": summary.gateReason
+    });
   }
+  const lines = Object.entries(outputs).map(([name, value]) => encodeGitHubOutput(name, String(value)));
   await appendFile(outputPath, `${lines.join("\n")}
 `, "utf8");
+}
+function encodeGitHubOutput(name, value) {
+  if (!/[\r\n]/.test(value)) {
+    return `${name}=${value}`;
+  }
+  let delimiter;
+  do {
+    delimiter = `clarissimi_${randomUUID()}`;
+  } while (value.includes(delimiter));
+  return `${name}<<${delimiter}${EOL}${value}${EOL}${delimiter}`;
 }
 async function writeActionSummaryJson(summaryJsonPath, summary) {
   if (summaryJsonPath === void 0) {

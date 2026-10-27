@@ -1,5 +1,38 @@
 # Validation
 
+## 2026-10-27 GitHub Action output command isolation
+
+The Action interpolated summary paths and API metadata directly into `name=value` commands.
+Six deterministic cases (three fields with LF and CRLF) changed the parsed `mode` output from
+`propose` to `gate` and introduced `gate-passed=true`. A seventh pre-fix regression rejected
+delimiter-like content as an invalid output file. These are local serializer reproductions using
+the documented runner parsing rules; no live GitHub metadata manipulation or permission bypass
+was attempted. Summary-path influence requires control of the input, and URL influence requires
+control of API metadata or a supplied client.
+
+The writer now separates fixed output names from values and serializes every mode through one
+encoder. Single-line commands remain byte-compatible. CR/LF values use UUID-delimited multiline
+commands; the encoder retries delimiter collisions before the existing single append operation.
+Native newline framing preserves trailing CR, LF, blank lines, equals signs, and delimiter-like
+content without allowing extra commands. All six injection cases now preserve the original mode,
+contain no extra gate output, and round-trip the complete value. No network I/O is added; the
+writer still performs one file append. For B value characters and k delimiter attempts, scanning
+is O(kB), normally O(B) with one attempt, and output storage remains O(B).
+
+ADR 0030 records the serialization boundary, and the checked-in Action bundle is regenerated.
+API signatures, output names and values, schemas, DB, dependencies, runner configuration, and
+repository-hygiene policy are unchanged. Only multiline command encoding changes. Hosted CI and
+live runner execution were skipped because this slice is local; cross-platform behavior follows
+the runner source but was executed on Windows only. No push, publication, or deployment was run.
+
+- Build/typecheck and all 11 focused output tests passed, including six injection cases,
+  existing single-line/append behavior, missing destinations, multiline content, trailing CR,
+  and forced delimiter collision/retry.
+- The full suite with `--test-concurrency=4` passed 1,124 of 1,128 tests with zero failures;
+  four existing POSIX permission cases were skipped on Windows.
+- Lint, formatting, documentation (160 Markdown files), CLI smoke, Action bundle freshness, secret scan,
+  static release-readiness gates, and Git whitespace checks passed.
+
 ## 2026-10-27 GitHub HTTP error response privacy
 
 Both GitHub clients copied upstream JSON `message` fields into public errors. The read-only

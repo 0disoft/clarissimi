@@ -37,8 +37,10 @@ correct boundary for this recovery policy.
   found and sends another create request only when lookup confirms none exists.
 - An HTTP 422 create response is reconciled once through the same deterministic lookup. If no
   matching pull request exists, the original validation failure remains permanent.
-- Non-JSON error bodies are not copied into Action diagnostics. GitHub JSON messages are normalized
-  and bounded before they reach logs.
+- JSON and non-JSON error bodies are not copied into Action diagnostics. GitHub messages may be
+  inspected internally for error classification; public errors use application-owned category and
+  HTTP-status descriptions under ADR 0040. Status, retryability, Retry-After handling, and
+  repository-setting diagnostics are preserved without retaining raw messages in errors or causes.
 - Timeout, byte, sleep, and random sources remain constructor-only test seams. They are not new
   Action inputs.
 

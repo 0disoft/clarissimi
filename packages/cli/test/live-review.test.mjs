@@ -10,6 +10,43 @@ import { runCli } from "../dist/index.js";
 
 const repoFlags = ["--repo", "sample/project", "--prs", "42,43"];
 
+for (const jsonOutput of [true, false]) {
+  for (const jsonBody of [true, false]) {
+    test(`live CLI hides GitHub error bodies (${jsonOutput}:${jsonBody})`, async () => {
+      await withTemp(async (cwd) => {
+        const marker = "AUDIT_RESPONSE_MARKER";
+        const message = marker.repeat(2_048);
+        let stdout = "",
+          stderr = "";
+        const code = await runCli(
+          [
+            "recognize",
+            "--pr",
+            "https://github.com/sample/project/pull/42",
+            ...(jsonOutput ? ["--json"] : []),
+          ],
+          {
+            cwd,
+            env: {},
+            fetch: async () =>
+              new Response(jsonBody ? JSON.stringify({ message }) : message, { status: 403 }),
+            stdout: (text) => {
+              stdout += text;
+            },
+            stderr: (text) => {
+              stderr += text;
+            },
+          },
+        );
+        assert.notEqual(code, 0);
+        assert.equal((stdout + stderr).includes(marker), false);
+        assert.ok(stdout.length + stderr.length < 512);
+        assert.deepEqual(await readdir(cwd), []);
+      });
+    });
+  }
+}
+
 test("live recognition accepts a real PR URL and stays read-only by default", async () => {
   await withTemp(async (cwd) => {
     const api = githubApi();

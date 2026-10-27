@@ -25,6 +25,8 @@ Sensitive data rules:
 - logs and summaries must not include provider tokens, GitHub tokens, raw provider responses, raw
   diffs, patch excerpts, private keys, or unredacted sensitive evidence
 - provider failures should expose actionable categories without raw response bodies
+- GitHub HTTP failures expose application-owned category/status descriptions, never upstream JSON
+  messages or plain-text error bodies; response text is reserved for internal classification
 - draft review files may include evidence refs but must not include raw evidence excerpts or
   AI/provider provenance
 

@@ -1,5 +1,37 @@
 # Validation
 
+## 2026-10-27 GitHub HTTP error response privacy
+
+Both GitHub clients copied upstream JSON `message` fields into public errors. The read-only
+client also wrapped non-JSON error text as a message, allowing the default 2 MiB response budget
+to flow into CLI diagnostics. With harmless response markers, the original read client exposed
+all 12 JSON/plain-text cases; the Action client exposed nine of 15 cases, including repository
+settings and rate-limit responses. Six initial regressions failed before implementation. No
+real credential or external API request was used.
+
+Both mappers now return application-owned category/status messages instead of upstream text.
+Response text is used only internally for existing rate-limit and repository-setting detection.
+All 27 client cases now keep the marker out of error stacks and serialized fields while preserving
+codes, retryability, status, and Retry-After metadata. Messages are at most 160 characters for real
+HTTP status codes. CLI text/JSON tests with 42 KiB response messages produce fewer than 512 output
+characters and no marker; Action environment tests also confirm no marker in stderr and no output
+or summary file on failure. Request limits, retry counts, create reconciliation, and cleanup are
+unchanged; no extra Git subprocess, network request, or redaction pass is added.
+
+ADR 0040, ADR 0046, and the observability contract record the privacy boundary; the Action bundle
+is refreshed. Public API signatures, error-code vocabulary, schemas, DB, dependencies, runner,
+and repository-hygiene policy are unchanged. Public error wording intentionally no longer
+includes upstream diagnostic text. Hosted CI, external provider calls, external push, release,
+and deployment were not run.
+
+- Build/typecheck passed. The targeted GitHub clients/live CLI suite passed 56 tests, and Action
+  JSON/log privacy passed seven tests. Eight new tests cover 27 response/classification cases,
+  four CLI output/body combinations, and two Action log/body combinations.
+- The full suite with `--test-concurrency=4` passed 1,113 of 1,117 tests, with four POSIX permission
+  cases skipped on Windows and zero failures.
+- Lint, formatting, documentation (160 Markdown files), CLI smoke, release-readiness static gates,
+  regenerated Action bundle freshness, secret scan, and Git whitespace checks passed.
+
 ## 2026-10-27 Unpublished commit history ownership
 
 The shared ownership reader inspected only the final tree difference. A post-commit hook could

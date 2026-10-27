@@ -35,7 +35,13 @@ failures without adding automatic retries inside packages that do not own retry 
 - Review evidence collection forwards its requested comment count to the transport, which uses
   bounded partial pagination and stops when enough comments are collected. A zero limit makes
   no comment request. Changed-file collection and approval-gate scans retain complete-scan rules.
-- Provider transport errors must not include raw response bodies, request bodies, or credentials.
+- Provider and GitHub transport errors must not include raw response bodies, request bodies, or
+  credentials. GitHub HTTP error messages use application-owned descriptions of the category and
+  HTTP status, bounded to 160 characters for real HTTP status codes. Response messages may be
+  inspected internally for rate-limit or repository-setting classification but never attached to
+  public errors, stacks, or causes. Existing error codes and retryability metadata remain intact;
+  CLI human/JSON output and Action logs inherit this boundary without extra requests or redaction
+  passes. Non-JSON upstream error bodies have the same privacy boundary as JSON messages.
 
 ## Consequences
 

@@ -218,6 +218,39 @@ test("GitHub API client maps permission failures without leaking tokens", async 
   );
 });
 
+test("GitHub API errors never expose JSON or plain-text response bodies", async () => {
+  const marker = "AUDIT_RESPONSE_MARKER";
+  const exposed = [];
+  for (const [status, code] of [
+    [401, "permission_denied"],
+    [403, "permission_denied"],
+    [404, "not_found"],
+    [422, "request_failed"],
+    [429, "rate_limited"],
+    [503, "server_error"],
+  ]) {
+    for (const json of [true, false]) {
+      const client = createGitHubApiClient({
+        fetch: async () =>
+          new Response(json ? JSON.stringify({ message: marker }) : marker, { status }),
+      });
+      await assert.rejects(
+        () => client.getPullRequest({ repository: "sample/project", pullRequestNumber: 42 }),
+        (error) => {
+          assert.ok(error instanceof GitHubApiClientError);
+          assert.equal(error.code, code);
+          assert.equal(error.retryable, status === 429 || status === 503);
+          assert.ok(error.message.length <= 160);
+          if (`${error.stack}${JSON.stringify(error)}`.includes(marker))
+            exposed.push(`${status}:${json}`);
+          return true;
+        },
+      );
+    }
+  }
+  assert.deepEqual(exposed, []);
+});
+
 test("GitHub API client times out stalled requests as retryable failures", async () => {
   const client = createGitHubApiClient({
     timeoutMs: 5,

@@ -380,6 +380,7 @@ function parseLabels(value: unknown): readonly { readonly name: string }[] {
 
 function mapGitHubApiError(response: Response, body: unknown): GitHubApiClientError {
   const status = response.status;
+  // The body may contain private diagnostics; use it only for classification.
   const message = githubMessage(body);
   if (
     status === 429 ||
@@ -388,22 +389,37 @@ function mapGitHubApiError(response: Response, body: unknown): GitHubApiClientEr
         Boolean(response.headers?.get?.("retry-after")?.trim()) ||
         /\bsecondary rate limit\b/i.test(message)))
   ) {
-    return new GitHubApiClientError("rate_limited", message);
+    return new GitHubApiClientError(
+      "rate_limited",
+      `GitHub API rate limit exceeded (HTTP ${status}). Retry after the rate limit resets.`,
+    );
   }
 
   if (status === 401 || status === 403) {
-    return new GitHubApiClientError("permission_denied", message);
+    return new GitHubApiClientError(
+      "permission_denied",
+      `GitHub API permission denied (HTTP ${status}). Check token permissions and repository access.`,
+    );
   }
 
   if (status === 404) {
-    return new GitHubApiClientError("not_found", message);
+    return new GitHubApiClientError(
+      "not_found",
+      `GitHub API resource not found (HTTP ${status}). Check the repository and resource number.`,
+    );
   }
 
   if (status >= 500) {
-    return new GitHubApiClientError("server_error", message);
+    return new GitHubApiClientError(
+      "server_error",
+      `GitHub API server error (HTTP ${status}). Retry later.`,
+    );
   }
 
-  return new GitHubApiClientError("request_failed", message);
+  return new GitHubApiClientError(
+    "request_failed",
+    `GitHub API request rejected (HTTP ${status}). Check request parameters.`,
+  );
 }
 
 async function readBoundedResponseText(response: Response, maxBytes: number): Promise<string> {

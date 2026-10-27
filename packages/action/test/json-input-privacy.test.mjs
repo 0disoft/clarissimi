@@ -3,6 +3,7 @@ import { mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { createGitHubApiClient } from "@clarissimi/github";
 
 import { readActionJsonFile } from "../dist/json-input.js";
 import { runActionFromEnvironment } from "../dist/index.js";
@@ -16,6 +17,58 @@ async function withInput(text, task) {
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+}
+
+for (const json of [true, false]) {
+  test(`Action keeps upstream GitHub error bodies out of logs (${json})`, async () => {
+    const event = {
+      repository: { full_name: "sample/project" },
+      pull_request: {
+        number: 42,
+        title: "Fixture pull request",
+        merged_at: "2026-07-08T00:00:00.000Z",
+        user: { id: 123456, login: "octocat" },
+      },
+    };
+    await withInput(JSON.stringify(event), async (path, directory) => {
+      const marker = "AUDIT_RESPONSE_MARKER";
+      let stdout = "",
+        stderr = "",
+        requests = 0;
+      const liveGitHubClient = createGitHubApiClient({
+        fetch: async () => {
+          requests += 1;
+          return new Response(json ? JSON.stringify({ message: marker }) : marker, { status: 403 });
+        },
+      });
+      const output = join(directory, "output.txt"),
+        summary = join(directory, "summary.md");
+      const code = await runActionFromEnvironment(
+        {
+          INPUT_MODE: "dry-run",
+          INPUT_EVENT_PATH: path,
+          GITHUB_OUTPUT: output,
+          GITHUB_STEP_SUMMARY: summary,
+        },
+        {
+          stdout: (text) => {
+            stdout += text;
+          },
+          stderr: (text) => {
+            stderr += text;
+          },
+        },
+        { liveGitHubClient },
+      );
+      assert.equal(code, 4);
+      assert.equal(requests, 1);
+      assert.equal(stdout, "");
+      assert.equal(stderr.includes(marker), false);
+      assert.ok(stderr.includes("HTTP 403"));
+      await assert.rejects(stat(output), { code: "ENOENT" });
+      await assert.rejects(stat(summary), { code: "ENOENT" });
+    });
+  });
 }
 
 test("Action JSON errors preserve SyntaxError without input excerpts or a raw cause", async () => {

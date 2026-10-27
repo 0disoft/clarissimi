@@ -169,6 +169,75 @@ test("GitHub pull request client maps permission failures without leaking tokens
   );
 });
 
+test("GitHub Action errors keep response bodies private while preserving classification", async () => {
+  const marker = "AUDIT_RESPONSE_MARKER";
+  const cases = [401, 403, 404, 422, 429, 503].flatMap((status) =>
+    [true, false].map((json) => ({ status, json, message: marker, headers: {} })),
+  );
+  cases.push(
+    {
+      status: 403,
+      json: true,
+      message: `Workflow pull request creation disabled: ${marker}`,
+      headers: {},
+      code: "repository_setting_blocked",
+    },
+    {
+      status: 403,
+      json: true,
+      message: marker,
+      headers: { "x-ratelimit-remaining": "0" },
+      code: "rate_limited",
+    },
+    {
+      status: 403,
+      json: true,
+      message: marker,
+      headers: { "retry-after": "60" },
+      code: "rate_limited",
+      retryAfterMs: 60_000,
+    },
+  );
+  const exposed = [];
+  for (const item of cases) {
+    const client = createGitHubPullRequestClient({
+      token: "[REDACTED]",
+      sleep: async () => {},
+      random: () => 0.5,
+      fetch: async () =>
+        new Response(item.json ? JSON.stringify({ message: item.message }) : item.message, {
+          status: item.status,
+          headers: item.headers,
+        }),
+    });
+    await assert.rejects(
+      () => client.findOpenPullRequest(lookupInput()),
+      (error) => {
+        assert.ok(error instanceof ProposalPullRequestClientError);
+        const code =
+          item.code ??
+          {
+            401: "permission_denied",
+            403: "permission_denied",
+            404: "not_found",
+            422: "request_failed",
+            429: "rate_limited",
+            503: "server_error",
+          }[item.status];
+        assert.equal(error.code, code);
+        assert.equal(error.status, item.status);
+        assert.equal(error.retryable, code === "rate_limited" || code === "server_error");
+        assert.equal(error.retryAfterMs, item.retryAfterMs);
+        assert.ok(error.message.length <= 160);
+        if (`${error.stack}${JSON.stringify(error)}`.includes(marker))
+          exposed.push(`${item.status}:${item.json}:${item.code ?? "default"}`);
+        return true;
+      },
+    );
+  }
+  assert.deepEqual(exposed, []);
+});
+
 test("GitHub pull request client retries safe requests after transient HTML failures", async () => {
   const sleeps = [];
   let attempts = 0;

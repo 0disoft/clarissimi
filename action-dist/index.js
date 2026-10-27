@@ -968,18 +968,18 @@ function mapGitHubApiError(response, body) {
   const status = response.status;
   const message = githubMessage(body);
   if (status === 429 || status === 403 && (response.headers?.get?.("x-ratelimit-remaining") === "0" || Boolean(response.headers?.get?.("retry-after")?.trim()) || /\bsecondary rate limit\b/i.test(message))) {
-    return new GitHubApiClientError("rate_limited", message);
+    return new GitHubApiClientError("rate_limited", `GitHub API rate limit exceeded (HTTP ${status}). Retry after the rate limit resets.`);
   }
   if (status === 401 || status === 403) {
-    return new GitHubApiClientError("permission_denied", message);
+    return new GitHubApiClientError("permission_denied", `GitHub API permission denied (HTTP ${status}). Check token permissions and repository access.`);
   }
   if (status === 404) {
-    return new GitHubApiClientError("not_found", message);
+    return new GitHubApiClientError("not_found", `GitHub API resource not found (HTTP ${status}). Check the repository and resource number.`);
   }
   if (status >= 500) {
-    return new GitHubApiClientError("server_error", message);
+    return new GitHubApiClientError("server_error", `GitHub API server error (HTTP ${status}). Retry later.`);
   }
-  return new GitHubApiClientError("request_failed", message);
+  return new GitHubApiClientError("request_failed", `GitHub API request rejected (HTTP ${status}). Check request parameters.`);
 }
 async function readBoundedResponseText(response, maxBytes) {
   const contentLength = response.headers?.get?.("content-length");
@@ -3546,7 +3546,7 @@ function mapGitHubError(response, body) {
   const retryAfterMs = parseRetryAfterMs(response);
   const rateLimited = status === 429 || status === 403 && (retryAfterMs !== void 0 || response.headers?.get?.("x-ratelimit-remaining") === "0");
   if (rateLimited) {
-    return new ProposalPullRequestClientError("rate_limited", message, {
+    return new ProposalPullRequestClientError("rate_limited", `GitHub API rate limit exceeded (HTTP ${status}). Retry after the rate limit resets.`, {
       retryable: true,
       status,
       ...retryAfterMs === void 0 ? {} : { retryAfterMs }
@@ -3554,21 +3554,21 @@ function mapGitHubError(response, body) {
   }
   if (status === 401 || status === 403) {
     if (/workflow|actions.*pull request|pull request.*disabled|repository setting/i.test(message)) {
-      return new ProposalPullRequestClientError("repository_setting_blocked", message, { status });
+      return new ProposalPullRequestClientError("repository_setting_blocked", `GitHub repository settings block pull request creation (HTTP ${status}). Enable workflow pull request creation in repository settings.`, { status });
     }
-    return new ProposalPullRequestClientError("permission_denied", message, { status });
+    return new ProposalPullRequestClientError("permission_denied", `GitHub API permission denied (HTTP ${status}). Check token permissions and repository access.`, { status });
   }
   if (status === 404) {
-    return new ProposalPullRequestClientError("not_found", message, { status });
+    return new ProposalPullRequestClientError("not_found", `GitHub API resource not found (HTTP ${status}). Check the repository and resource number.`, { status });
   }
   if (status >= 500) {
-    return new ProposalPullRequestClientError("server_error", message, {
+    return new ProposalPullRequestClientError("server_error", `GitHub API server error (HTTP ${status}). Retry later.`, {
       retryable: true,
       status,
       ...retryAfterMs === void 0 ? {} : { retryAfterMs }
     });
   }
-  return new ProposalPullRequestClientError("request_failed", message, { status });
+  return new ProposalPullRequestClientError("request_failed", `GitHub API request rejected (HTTP ${status}). Check request parameters.`, { status });
 }
 async function readBoundedResponseText2(response, maxBytes) {
   const contentLength = response.headers?.get?.("content-length");

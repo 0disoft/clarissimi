@@ -1,5 +1,20 @@
 # Validation
 
+## 2026-10-27 Stable 1.1.0 release preparation
+
+Action `v1.1.0` and standalone CLI `clarissimi@1.1.0` collect the additive live-PR,
+batch-review, contributor-candidate, redaction, publication-integrity, and output-isolation
+changes since 1.0.1. Current installation guides, distribution metadata, release contracts,
+contract fixtures, ADR 0062, and release notes name the new compatible minor candidate.
+Private workspace packages and persisted schema versions remain unchanged.
+
+Build/typecheck, isolated standalone package installation and stage/approve/import/rebuild,
+lint, formatting, documentation, migration compatibility, CLI smoke, bundle freshness,
+static release-readiness, secret scan, and whitespace checks passed. The full suite passed
+1,124 of 1,128 tests with zero failures; four POSIX permission tests were skipped on Windows.
+Hosted exact-SHA evidence, immutable release publication, moving-alias promotion, and staged
+npm approval are recorded separately after their actual completion.
+
 ## 2026-10-27 GitHub Action output command isolation
 
 The Action interpolated summary paths and API metadata directly into `name=value` commands.

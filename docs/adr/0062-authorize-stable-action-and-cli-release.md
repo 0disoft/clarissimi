@@ -65,6 +65,15 @@ rollback, and reduced ledger reads. Existing Action and CLI signatures, permissi
 persisted schemas, and private workspace versions remain unchanged. Publication and alias promotion
 still require the exact-source evidence and npm maintainer approval described above.
 
+## Compatible 1.1.0 Candidate
+
+On 2026-10-27, Action `v1.1.0` and standalone CLI `clarissimi@1.1.0` are selected
+for the additive live-PR collection and hash-bound batch-review commands, contributor-candidate
+discovery, and accumulated redaction, publication-integrity, output-isolation, and performance
+fixes. Existing command names, Action inputs and outputs, permissions, defaults, and persisted
+schemas remain compatible. All exact-source publication gates and npm maintainer approval remain
+required. Consumer workflows may intentionally follow the supported moving `v1` channel.
+
 ## Consequences
 
 Action consumers gain a stable major contract, and CLI consumers gain an explicit `1.x` compatibility

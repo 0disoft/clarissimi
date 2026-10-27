@@ -64,8 +64,8 @@ Do not publicly disclose:
 
 ## Supported Versions
 
-Security fixes are supported for the current immutable Action release `v1.0.1`, the
-moving `v1` release line, and the current standalone CLI `clarissimi@1.0.1`.
+Security fixes are supported for the current immutable Action release `v1.1.0`, the
+moving `v1` release line, and the current standalone CLI `clarissimi@1.1.0`.
 Fixes land on the default branch, ship in a new
 immutable `v1.x.y` release after release validation, and reach `v1` only after that release passes
 the alias promotion gates. The `v1` release preserves the existing `v0.x.y` tags and the `v0` alias

@@ -10,7 +10,7 @@ const defaultRepoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 export const standaloneCliPackageContract = {
   name: "clarissimi",
-  version: "1.0.1",
+  version: "1.1.0",
   bin: { clarissimi: "dist/clarissimi.js" },
   files: ["dist", "README.md", "LICENSE"],
   license: "Apache-2.0",

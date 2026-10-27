@@ -1,6 +1,6 @@
 {
   "name": "clarissimi",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Local-first contributor recognition CLI for auditable maintainer workflows.",
   "keywords": [
     "cli",

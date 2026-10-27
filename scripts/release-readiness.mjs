@@ -515,7 +515,7 @@ export const readmeValidationContract = {
   path: "README.md",
   requiredSnippets: [
     "## Start in 30 Seconds",
-    "- uses: 0disoft/clarissimi@v1.0.1",
+    "- uses: 0disoft/clarissimi@v1.1.0",
     "mode: dry-run",
     "## Choose How Results Are Written",
     "`propose` remains the default write mode and accepts an already approved assessment.",

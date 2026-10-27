@@ -1,5 +1,35 @@
 # Validation
 
+## 2026-10-27 Stable 1.1.0 publication and consumer rollout
+
+Action `v1.1.0`, Marketplace Latest, moving alias `v1`, and npm `clarissimi@1.1.0` are public
+from `aeb23a8e5efed45c145d4dffa91498db7304ff76`. Exact-source hosted CI passed all 1,126 tests
+without failures or skips. Candidate, immutable-tag, and alias live-provider, external dry-run,
+full-write, cleanup, and orphan-audit gates passed, including Ubuntu, macOS, and Windows matrices.
+Alias promotion used a compare-and-swap lease and verified the final remote SHA.
+
+The maintainer approved npm stage `0ad404ce-df85-41ce-ac0a-4d39e1f27c6f` with 2FA. The public
+four-file package matches the inspected stage and local shasum. An empty external consumer
+installed exactly `1.1.0` with scripts disabled. Executable help, rejection of unapproved import,
+stage/approve/import/rebuild, canonical-ledger preservation, damaged-output repair, rebuild check,
+and temporary-file cleanup passed against the registry-installed executable. npm signature and
+attestation audits passed; SLSA provenance identifies the exact release commit and stage run.
+
+Four Action consumers were updated and pushed: velox, clarissimi-example, integration-lab, and
+mustflow. Workflow parsing, actionlint, and whitespace checks passed; the example and integration
+matrices passed remotely. A stale mustflow workflow-test pin was corrected in a follow-up commit,
+and both focused tests passed locally. No npm package consumer was found. Two archived repositories
+rejected pushes, and shovefall returned HTTP 404; their updates remain local only. Unrelated
+consumer changes were preserved. The complete run ids, package hash, consumer commits, and blocked
+repositories are recorded in `docs/ops/release.md`.
+
+Source-of-truth publication records changed in this document and `docs/ops/release.md`. This
+release operation changes no public API, persisted schema, DB, permissions, runner configuration,
+or repository-hygiene policy. The four Windows POSIX skips in local release preparation were
+covered by hosted Linux CI. Application/package deployment of consumers was skipped because
+only their GitHub Action references and matching docs/tests changed. Archived-repository and
+inaccessible-remote publication remain blocked as described above.
+
 ## 2026-10-27 Stable 1.1.0 release preparation
 
 Action `v1.1.0` and standalone CLI `clarissimi@1.1.0` collect the additive live-PR,

@@ -29,6 +29,65 @@ The current root and workspace packages stay private at `0.0.0`. ADR 0056 accept
 dependency-free `distribution/npm/clarissimi` CLI distribution beginning at `0.1.0`; it does not
 authorize publishing internal workspace packages or couple the CLI version to an Action tag.
 
+## Stable 1.1.0 Publication Record
+
+- Completed on 2026-10-27: root Action `v1.1.0`, moving alias `v1`, and npm
+  `clarissimi@1.1.0` are public.
+- Release source: `aeb23a8e5efed45c145d4dffa91498db7304ff76`.
+- GitHub release: <https://github.com/0disoft/clarissimi/releases/tag/v1.1.0>.
+- Release evidence: <https://github.com/0disoft/clarissimi/issues/28>.
+- Marketplace verification passed: `v1.1.0` is Latest and renders the matching Action reference.
+- Local validation passed 1,124 of 1,128 tests with zero failures; four POSIX permission cases
+  were skipped on Windows. Hosted Linux CI passed all 1,126 applicable tests with zero skips.
+
+| Validation                      | Source candidate | Immutable tag | Moving alias  |
+| ------------------------------- | ---------------- | ------------- | ------------- |
+| Hosted CI                       | `40480747399`    | `40480747399` | `40480747399` |
+| Live provider                   | `40480871717`    | `40481604026` | `40482072203` |
+| External dry-run                | `40480936170`    | `40481656427` | `40482130530` |
+| External full-write and cleanup | `40481012935`    | `40481741742` | `40482199025` |
+| Orphan audit                    | `40481170207`    | `40481926356` | `40482356692` |
+
+- Correlation ids: candidate `83e260de4bd27dc9ada21f9cf8839472`, immutable tag
+  `187767436ff098cef461c0a1d73cc6ea`, moving alias `0711a3e75cd1e99e413b79b9209578b6`.
+- All three external dry-run and full-write matrices passed on Ubuntu, macOS, and Windows.
+  Cleanup and final orphan audits passed. Compare-and-swap alias promotion moved `v1` from
+  `20991a4cdd55208bb6c37d798e44eae263ad0537` to the release source; immutable tags and `v0`
+  remain unchanged.
+- npm OIDC stage: <https://github.com/0disoft/clarissimi/actions/runs/40480746902>.
+- Stage `0ad404ce-df85-41ce-ac0a-4d39e1f27c6f` was inspected and approved by the maintainer
+  with 2FA. Public npm `latest` is `1.1.0`; the four-file tarball shasum
+  `879e4b1a304acdd7e056fd9dfb1127e534bf2180` matches the inspected stage and local package.
+- Exact registry installation in an empty consumer, executable help, rejection before approval,
+  draft staging, approval, import, derived-output repair, canonical-ledger preservation, rebuild
+  check, and generation-file cleanup passed. `npm audit signatures` verified the registry signature
+  and attestation. Provenance resolves to the release source and stage workflow at
+  <https://registry.npmjs.org/-/npm/v1/attestations/clarissimi@1.1.0>.
+
+Consumer updates were limited to their Clarissimi Action references and corresponding docs/tests;
+the workspace search found no npm dependency on `clarissimi`.
+
+| Repository                   | Published commit       | Action reference                |
+| ---------------------------- | ---------------------- | ------------------------------- |
+| `0disoft/velox`              | `5f8df6d`              | `v1`                            |
+| `0disoft/clarissimi-example` | `ac7ded0`              | `v1.1.0`                        |
+| `0disoft/integration-lab`    | `c2f86fa`              | `v1.1.0`                        |
+| `0disoft/mustflow`           | `8df9aab8`, `862d0485` | release SHA, annotated `v1.1.0` |
+
+- Consumer workflow parsing, actionlint, and whitespace checks passed. The example dry-run
+  (`40481586620`) and integration-lab release matrices passed. Mustflow's initial CI found a stale
+  expected SHA in its workflow test; `862d0485` updates that expectation and passes both focused
+  workflow tests.
+- Archived, read-only repositories `ai-bom-generator` and `service-catalog-generator` rejected
+  pushes. Their prepared local commits are `73d9263` and `89ceef2`, respectively; neither is
+  published, and neither repository was unarchived.
+- `0disoft/shovefall` returned HTTP 404 with the current GitHub credentials, and its Git remote
+  could not be fetched. Update `de2ecd0` remains local only. Existing unrelated local commits
+  and working-tree changes in consumer repositories were preserved.
+- Only the standalone CLI and root Action were released. No internal workspace package,
+  persisted schema, DB, permission, runner, or repository-hygiene policy changed in this release
+  operation; consumer application/package releases were not required for Action-only updates.
+
 ## Stable 1.0.1 Publication Record
 
 - Completed on 2026-10-26: root Action `v1.0.1` and npm `clarissimi@1.0.1` are public.
